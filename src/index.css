@@ -1,0 +1,118 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  /* Soft blush — primary #BE739A */
+  --color-sage-50: #faf5f8;
+  --color-sage-100: #f5e8ef;
+  --color-sage-200: #ebd1dc;
+  --color-sage-300: #ddb3c4;
+  --color-sage-400: #ce93ad;
+  --color-sage-500: #be739a;
+  --color-sage-600: #a86082;
+  --color-sage-700: #8f4d6b;
+  --color-sage-800: #6f3d54;
+  --color-sage-900: #4a2838;
+
+  /* White & warm neutrals */
+  --color-sand-50: #ffffff;
+  --color-sand-100: #faf6f8;
+  --color-sand-200: #f2eaee;
+  --color-sand-300: #e2d4da;
+  --color-sand-400: #c8b4bc;
+
+  /* Mauve accent */
+  --color-clay-400: #d4a0b5;
+  --color-clay-500: #be739a;
+  --color-clay-600: #9a5a78;
+
+  /* Semantic */
+  --color-success: #5a8a4a;
+  --color-warning: #c4946c;
+  --color-danger: #b54f4f;
+  --color-info: #8a6a7a;
+
+  /* Typography */
+  --font-display: 'Fraunces', 'Georgia', serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-white text-sage-800 text-base leading-relaxed;
+    margin: 0;
+    min-height: 100vh;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+  }
+
+  h1 {
+    @apply text-3xl font-semibold tracking-tight text-sage-800;
+    letter-spacing: -0.02em;
+  }
+
+  h2 {
+    @apply text-2xl font-medium text-sage-800;
+  }
+
+  h3 {
+    @apply text-lg font-medium text-sage-800;
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  .font-body {
+    font-family: var(--font-body);
+  }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+}
