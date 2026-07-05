@@ -1,82 +1,54 @@
 # TrackHer
 
-HRT/BHRT symptom and wellness tracker for menopausal women. Batch 1 foundation: auth, onboarding, app shell, database schema, and static data catalogs.
+HRT/BHRT symptom and wellness tracker for menopausal women. Track medications, symptoms, and lab results — then surface patterns showing what's helping and what's hurting.
 
 ## Tech Stack
 
-- React 19 + TypeScript (strict) + Vite
-- Tailwind CSS v4 (CSS-first config)
+- React 19 + TypeScript + Vite
+- Tailwind CSS v4
 - Supabase (auth + PostgreSQL)
 - React Router v7
 - Zustand
-- Lucide React
+- Recharts
 
-## Getting Started
+## Features (current)
 
-### 1. Install dependencies
+- Auth, onboarding, and settings
+- Medication management with dose change history
+- Symptom check-ins (MRS core + extended + wellbeing)
+- Lab results with reference ranges and trends
+- Dashboard with charts, heatmaps, and drill-down
+- Rule-based insights (pattern engine)
+- PDF provider report export
+- Dev mode with mock data for UI testing without Supabase
+
+## Quick start (local)
 
 ```bash
 npm install
-```
-
-### 2. Configure Supabase
-
-Copy the environment template and add your Supabase project credentials:
-
-```bash
 cp .env.example .env
 ```
 
-Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in `.env`.
-
-### 3. Run database migration
-
-Apply the initial schema in your Supabase project SQL editor or via CLI:
-
-```bash
-# Using Supabase CLI (if linked)
-supabase db push
-```
-
-Or run `supabase/migrations/001_initial_schema.sql` manually in the Supabase dashboard.
-
-### 4. Configure auth redirect URLs
-
-In Supabase Dashboard → Authentication → URL Configuration, add:
-
-- Site URL: `http://localhost:5173`
-- Redirect URLs: `http://localhost:5173/reset-password`
-
-### 5. Start dev server
+For fastest local demo, set `VITE_DEV_MODE=true` in `.env`, then:
 
 ```bash
 npm run dev
 ```
 
-## Project Structure
+Open `http://localhost:5173`
 
-```
-src/
-├── components/   # UI, auth, onboarding, layout
-├── data/         # Medication catalog, symptom catalog, lab ranges
-├── hooks/        # useAuth, useProfile
-├── lib/          # Supabase client, constants
-├── pages/        # Route pages
-├── stores/       # Zustand auth + onboarding state
-├── types/        # TypeScript types for DB + domain
-└── utils/        # Validation, formatters
-```
+For real auth and persistence, see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
-## Batch 1 Features
+## Share with a tester
 
-- Email/password authentication (signup, login, forgot/reset password)
-- 3-step onboarding wizard (profile → menopause stage → check-in frequency)
-- Protected routes with onboarding gate
-- App shell with sidebar (desktop) and bottom tabs (mobile)
-- Settings page (profile edit, password change)
-- Placeholder pages for Dashboard, Medications, Check-in, Labs, Insights
-- Complete database schema with RLS policies
-- Static data: 60+ medications, 55 symptoms, 28 lab biomarkers
+You do **not** need your own domain. Deploy to Vercel and send a link.
+
+| Goal | Guide |
+|------|-------|
+| Deploy + test URL + production path | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) |
+| Instructions for your tester | [docs/TESTER.md](docs/TESTER.md) |
+
+**Fast path:** GitHub → Vercel → set `VITE_DEV_MODE=true` → share the URL.
 
 ## Scripts
 
@@ -84,9 +56,26 @@ src/
 |---------|-------------|
 | `npm run dev` | Start development server |
 | `npm run build` | Production build |
-| `npm run preview` | Preview production build |
+| `npm run preview` | Preview production build locally |
 | `npm run lint` | Run oxlint |
 
-## Medical Disclaimer
+## Project structure
+
+```
+src/
+├── components/   # UI, pages, dashboard, insights
+├── engine/       # Rule-based pattern recognition (Batch 6)
+├── data/         # Medication, symptom, lab catalogs
+├── hooks/        # Data fetching and business logic
+├── lib/          # Supabase, dev mode, mock data
+├── pages/        # Route pages
+├── stores/       # Zustand state
+└── utils/        # Helpers, formatters, PDF
+
+supabase/migrations/   # Database schema
+docs/                  # Deployment and tester guides
+```
+
+## Medical disclaimer
 
 This app is for educational and personal record-keeping purposes only. It is not intended to provide medical advice or replace the guidance of your physician or healthcare provider.

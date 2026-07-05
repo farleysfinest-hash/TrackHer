@@ -1,12 +1,14 @@
 import { Link } from 'react-router-dom';
 import { Lightbulb, ArrowRight } from 'lucide-react';
-import { useInsights } from '../../hooks/useInsights';
+import type { Insight } from '../../engine/types';
 import { Card } from '../ui/Card';
-import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { InsightCard } from './InsightCard';
 
-export function DashboardInsightsPanel() {
-  const { insights, isLoading } = useInsights();
+interface DashboardInsightsPanelProps {
+  insights: Insight[];
+}
+
+export function DashboardInsightsPanel({ insights }: DashboardInsightsPanelProps) {
   const topInsights = insights.slice(0, 3);
 
   return (
@@ -27,11 +29,7 @@ export function DashboardInsightsPanel() {
         )}
       </div>
 
-      {isLoading ? (
-        <Card className="flex justify-center py-8">
-          <LoadingSpinner size="sm" />
-        </Card>
-      ) : topInsights.length === 0 ? (
+      {topInsights.length === 0 ? (
         <Card variant="outlined" padding="md">
           <p className="text-sm text-sage-500">
             Not enough data for insights yet. Keep tracking check-ins, medications, and labs.

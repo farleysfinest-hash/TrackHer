@@ -101,6 +101,11 @@ export function useChartData(dateRange: DateRange) {
     [labResults, dateRange],
   );
 
+  const allMedicationChanges = useMemo(
+    () => changes.map(({ medication: _medication, ...change }) => change),
+    [changes],
+  );
+
   const getSymptomTrendData = useCallback((): SymptomTrendPoint[] => {
     return filteredCheckins.map((c) => ({
       date: c.checkin_date,
@@ -201,6 +206,7 @@ export function useChartData(dateRange: DateRange) {
     checkins: filteredCheckins,
     allCheckins: checkins,
     medications,
+    allMedicationChanges,
     changes: filteredChanges,
     labResults: filteredLabs,
     allLabResults: labResults,

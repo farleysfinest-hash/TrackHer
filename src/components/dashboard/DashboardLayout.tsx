@@ -2,6 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useDashboardStore } from '../../stores/dashboardStore';
 import { useChartData } from '../../hooks/useChartData';
 import { useCheckinStatus } from '../../hooks/useCheckinStatus';
+import { useAuthStore } from '../../stores/authStore';
+import { runPatternEngine } from '../../engine/patternEngine';
+import { IS_DEV_MODE } from '../../lib/devMode';
+import { getDevExtendedSymptomLogs } from '../../lib/devStore';
+import type { ExtendedSymptomLog } from '../../types/database';
 import { DateRangeSelector } from './DateRangeSelector';
 import { ScoreSummaryCards } from './ScoreSummaryCards';
 import { CheckinPromptWidget } from '../checkin/CheckinPromptWidget';
@@ -18,6 +23,7 @@ import { DashboardInsightsPanel } from '../insights/DashboardInsightsPanel';
 
 export function DashboardLayout() {
   const dateRange = useDashboardStore((s) => s.dateRange);
+  const profile = useAuthStore((s) => s.profile);
   const checkinStatus = useCheckinStatus();
   const {
     getSymptomTrendData,
@@ -28,10 +34,34 @@ export function DashboardLayout() {
     checkins,
     allCheckins,
     medications,
+    allMedicationChanges,
     labResults,
     allLabResults,
     refreshAll,
   } = useChartData(dateRange);
+
+  const [extendedSymptoms] = useState<ExtendedSymptomLog[]>(() =>
+    IS_DEV_MODE ? getDevExtendedSymptomLogs() : [],
+  );
+
+  const insights = useMemo(() => {
+    if (!profile || allCheckins.length === 0) return [];
+    return runPatternEngine({
+      checkins: allCheckins,
+      extendedSymptoms,
+      medications,
+      medicationChanges: allMedicationChanges,
+      labResults: allLabResults,
+      profile,
+    });
+  }, [
+    profile,
+    allCheckins,
+    extendedSymptoms,
+    medications,
+    allMedicationChanges,
+    allLabResults,
+  ]);
 
   const [biomarkerKey, setBiomarkerKey] = useState('estradiol');
 
@@ -69,7 +99,7 @@ export function DashboardLayout() {
 
       <CheckinPromptWidget {...checkinStatus} />
 
-      <DashboardInsightsPanel />
+      <DashboardInsightsPanel insights={insights} />
 
       <OverlayChart data={symptomTrend} changeMarkers={changeMarkers} />
 
