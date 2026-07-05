@@ -14,6 +14,7 @@ import { DrillDownControls } from './DrillDownControls';
 import { ActiveMedicationsSummary } from './ActiveMedicationsSummary';
 import { LabSummaryWidget } from './LabSummaryWidget';
 import { ProviderReportButton } from './ProviderReportButton';
+import { DashboardInsightsPanel } from '../insights/DashboardInsightsPanel';
 
 export function DashboardLayout() {
   const dateRange = useDashboardStore((s) => s.dateRange);
@@ -67,6 +68,8 @@ export function DashboardLayout() {
       <ScoreSummaryCards checkins={allCheckins} streak={checkinStatus.streak} />
 
       <CheckinPromptWidget {...checkinStatus} />
+
+      <DashboardInsightsPanel />
 
       <OverlayChart data={symptomTrend} changeMarkers={changeMarkers} />
 
