@@ -4,7 +4,7 @@ import type { UserOptions } from 'jspdf-autotable';
 import type { Profile, Medication, MedicationChange, SymptomCheckin, LabResult } from '../types/database';
 import { APP_NAME } from '../lib/constants';
 import { formatChartDateLong } from './chartHelpers';
-import { formatFrequency } from './medicationHelpers';
+import { formatMedicationDoseShort } from './medicationHelpers';
 import { MRS_CORE_SYMPTOMS } from '../data/symptoms';
 import { getMRSSeverityTier, getMRSSeverityLabel } from './checkinHelpers';
 import { getBiomarkerByKey } from '../data/labRanges';
@@ -95,11 +95,10 @@ export async function generateProviderReport(data: {
   const activeMeds = data.medications.filter((m) => m.is_active);
   autoTable(doc, {
     startY: 88,
-    head: [['Medication', 'Dose', 'Frequency', 'Started']],
+    head: [['Medication', 'Dose & schedule', 'Started']],
     body: activeMeds.map((m) => [
       m.medication_name,
-      `${m.dose_amount} ${m.dose_unit}`,
-      formatFrequency(m.frequency),
+      formatMedicationDoseShort(m),
       formatChartDateLong(m.start_date),
     ]),
     theme: 'grid',
@@ -166,7 +165,7 @@ export async function generateProviderReport(data: {
     )
     .map((m) => [
       m.medication_name,
-      `${m.dose_amount} ${m.dose_unit}`,
+      formatMedicationDoseShort(m),
       m.is_active ? 'Active' : 'Stopped',
       formatChartDateLong(m.start_date),
       m.end_date ? formatChartDateLong(m.end_date) : '—',

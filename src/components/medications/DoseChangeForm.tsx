@@ -1,13 +1,18 @@
-import { useState } from 'react';
-import type { Medication } from '../../types/database';
+import { useMemo, useState } from 'react';
+import type { Medication, MedicationFrequency } from '../../types/database';
 import type { MedicationOption } from '../../types/medications';
-import type { MedicationFrequency } from '../../types/database';
 import { useMedications } from '../../hooks/useMedications';
 import { useToast } from '../../stores/toastStore';
+import {
+  catalogOffersDoseShortcuts,
+  formatMedicationDoseDetail,
+  getUnitsPerDose,
+} from '../../utils/medicationHelpers';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
 import { FREQUENCY_OPTIONS } from '../../lib/medicationConstants';
+import { DoseScheduleFields, type DoseScheduleValue } from './DoseScheduleFields';
 
 type ChangeMode = 'dose' | 'frequency' | 'both';
 
@@ -27,22 +32,26 @@ export function DoseChangeForm({
   const { changeDose, changeFrequency } = useMedications();
   const toast = useToast();
   const [mode, setMode] = useState<ChangeMode>('dose');
-  const [newDose, setNewDose] = useState<string>(
-    catalogProduct?.allowCustomDose ? String(medication.dose_amount) : String(medication.dose_amount),
-  );
-  const [customDose, setCustomDose] = useState(String(medication.dose_amount));
+
+  const initialUseCustom = useMemo(() => {
+    if (!catalogProduct || catalogProduct.allowCustomDose) return true;
+    if (!catalogOffersDoseShortcuts(catalogProduct)) return true;
+    return !catalogProduct.doseOptions.amounts.includes(medication.dose_amount);
+  }, [catalogProduct, medication.dose_amount]);
+
+  const [schedule, setSchedule] = useState<DoseScheduleValue>({
+    dose_amount: medication.dose_amount,
+    dose_unit: medication.dose_unit,
+    units_per_dose: getUnitsPerDose(medication),
+    use_custom_dose: initialUseCustom,
+    frequency: medication.frequency,
+    frequency_details: medication.frequency_details,
+  });
+
   const [newFrequency, setNewFrequency] = useState<MedicationFrequency>(medication.frequency);
   const [effectiveDate, setEffectiveDate] = useState(new Date().toISOString().split('T')[0]);
   const [reason, setReason] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-
-  const doseOptions =
-    catalogProduct && !catalogProduct.allowCustomDose
-      ? catalogProduct.doseOptions.amounts.map((a) => ({
-          value: String(a),
-          label: `${a} ${catalogProduct.doseOptions.unit}`,
-        }))
-      : [];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,13 +60,18 @@ export function DoseChangeForm({
     let success = true;
 
     if (mode === 'dose' || mode === 'both') {
-      const doseVal = catalogProduct?.allowCustomDose
-        ? Number(customDose)
-        : Number(newDose);
+      if (schedule.dose_amount === null) {
+        setIsSaving(false);
+        return;
+      }
       const ok = await changeDose(
         medication.id,
-        doseVal,
-        medication.dose_unit,
+        {
+          dose_amount: schedule.dose_amount,
+          dose_unit: schedule.dose_unit,
+          units_per_dose: schedule.units_per_dose,
+          frequency_details: schedule.frequency_details,
+        },
         effectiveDate,
         reason || undefined,
       );
@@ -65,10 +79,11 @@ export function DoseChangeForm({
     }
 
     if (mode === 'frequency' || mode === 'both') {
+      const frequencyToApply = mode === 'both' ? schedule.frequency! : newFrequency;
       const ok = await changeFrequency(
         medication.id,
-        newFrequency,
-        medication.frequency_details ?? undefined,
+        frequencyToApply,
+        schedule.frequency_details ?? undefined,
         effectiveDate,
         reason || undefined,
       );
@@ -89,7 +104,7 @@ export function DoseChangeForm({
     <form onSubmit={handleSubmit} className="space-y-4">
       <h4 className="font-medium text-sage-800">Change dose or frequency</h4>
       <p className="text-sm text-sage-500">
-        Current: {medication.dose_amount} {medication.dose_unit}
+        Current: {formatMedicationDoseDetail(medication)}
       </p>
 
       <div className="flex gap-2">
@@ -108,25 +123,17 @@ export function DoseChangeForm({
         ))}
       </div>
 
-      {(mode === 'dose' || mode === 'both') &&
-        (catalogProduct?.allowCustomDose || doseOptions.length === 0 ? (
-          <Input
-            label="New dose"
-            type="number"
-            step="any"
-            value={customDose}
-            onChange={(e) => setCustomDose(e.target.value)}
-          />
-        ) : (
-          <Select
-            label="New dose"
-            value={newDose}
-            onChange={(e) => setNewDose(e.target.value)}
-            options={doseOptions}
-          />
-        ))}
+      {(mode === 'dose' || mode === 'both') && (
+        <DoseScheduleFields
+          product={catalogProduct}
+          deliveryMethod={medication.delivery_method}
+          value={schedule}
+          onChange={(updates) => setSchedule((prev) => ({ ...prev, ...updates }))}
+          showFrequency={mode === 'both'}
+        />
+      )}
 
-      {(mode === 'frequency' || mode === 'both') && (
+      {(mode === 'frequency' || mode === 'both') && mode !== 'both' && (
         <Select
           label="New frequency"
           value={newFrequency}

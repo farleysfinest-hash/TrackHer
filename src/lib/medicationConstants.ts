@@ -86,6 +86,21 @@ export const APPLICATION_SITE_LABELS: Record<string, string> = {
   chest: 'Chest',
 };
 
+export const TIME_OF_DAY_OPTIONS = [
+  { value: '', label: 'No preference / not specified' },
+  { value: 'bedtime', label: 'At bedtime' },
+  { value: 'morning', label: 'Morning' },
+  { value: 'evening', label: 'Evening' },
+  { value: 'with_meals', label: 'With meals' },
+] as const;
+
+export const UNITS_PER_DOSE_OPTIONS = [
+  { value: '1', label: '1' },
+  { value: '2', label: '2' },
+  { value: '3', label: '3' },
+  { value: '4', label: '4' },
+] as const;
+
 export const FREQUENCY_OPTIONS: { value: import('../types/database').MedicationFrequency; label: string }[] = [
   { value: 'daily', label: 'Daily' },
   { value: 'twice_daily', label: 'Twice daily' },

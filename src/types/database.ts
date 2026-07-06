@@ -99,6 +99,7 @@ export interface Medication {
   medication_name: string;
   dose_amount: number;
   dose_unit: string;
+  units_per_dose: number;
   secondary_dose_amount: number | null;
   secondary_dose_unit: string | null;
   tertiary_dose_amount: number | null;
@@ -124,6 +125,7 @@ export interface MedicationInsert {
   medication_name: string;
   dose_amount: number;
   dose_unit: string;
+  units_per_dose?: number;
   frequency: MedicationFrequency;
   start_date: string;
   secondary_dose_amount?: number;

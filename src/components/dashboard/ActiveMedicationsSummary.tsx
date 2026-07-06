@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import type { Medication } from '../../types/database';
 import { Card } from '../ui/Card';
-import { getHormoneColor, getHormoneLabel, formatFrequency } from '../../utils/medicationHelpers';
+import { getHormoneColor, getHormoneLabel, formatMedicationDoseShort } from '../../utils/medicationHelpers';
 
 interface ActiveMedicationsSummaryProps {
   medications: Medication[];
@@ -29,8 +29,7 @@ export function ActiveMedicationsSummary({ medications }: ActiveMedicationsSumma
                 {getHormoneLabel(med.hormone_category).charAt(0)}
               </span>
               <span className="text-sage-700">
-                <strong>{med.medication_name}</strong> {med.dose_amount} {med.dose_unit} ·{' '}
-                {formatFrequency(med.frequency)}
+                <strong>{med.medication_name}</strong> {formatMedicationDoseShort(med)}
               </span>
             </li>
           ))}

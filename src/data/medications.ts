@@ -15,11 +15,16 @@ const STANDARD_ESTRADIOL_PATCH_DOSES = [0.025, 0.0375, 0.05, 0.075, 0.1] as cons
 
 const PATCH_APPLICATION_SITES = ['lower_abdomen', 'upper_buttock'] as const;
 
-const WEEKLY_PATCH_FREQUENCY: MedicationFrequency[] = ['weekly'];
+const WEEKLY_PATCH_FREQUENCY: MedicationFrequency[] = ['weekly', 'twice_weekly'];
 
 const DAILY_FREQUENCY: MedicationFrequency[] = ['daily'];
 
-const CYCLIC_AND_DAILY_FREQUENCY: MedicationFrequency[] = ['daily', 'cyclic'];
+const ORAL_PROGESTERONE_FREQUENCY: MedicationFrequency[] = [
+  'daily',
+  'twice_daily',
+  'three_times_daily',
+  'cyclic',
+];
 
 const PELLET_DURATION_OPTIONS = [3, 4, 5, 6] as const;
 
@@ -543,11 +548,11 @@ const progesteroneOral: MedicationOption[] = [
     isBioidentical: true,
     isCompounded: false,
     doseOptions: {
-      amounts: [100, 200, 300],
+      amounts: [100, 200],
       unit: 'mg',
       description: 'Micronized progesterone in peanut oil capsules; take at bedtime with food',
     },
-    frequencyOptions: CYCLIC_AND_DAILY_FREQUENCY,
+    frequencyOptions: ORAL_PROGESTERONE_FREQUENCY,
     clinicalNotes:
       'Bioidentical micronized progesterone. Continuous: 100–200 mg nightly for endometrial protection with systemic estrogen. Cyclic: 200 mg nightly days 14–28 of calendar month (or days 1–12 of estrogen cycle). May cause drowsiness — take at bedtime. Contains peanut oil.',
     allowCustomDose: false,
@@ -562,10 +567,10 @@ const progesteroneOral: MedicationOption[] = [
     isBioidentical: true,
     isCompounded: false,
     doseOptions: {
-      amounts: [100, 200, 300],
+      amounts: [100, 200],
       unit: 'mg',
     },
-    frequencyOptions: CYCLIC_AND_DAILY_FREQUENCY,
+    frequencyOptions: ORAL_PROGESTERONE_FREQUENCY,
     clinicalNotes:
       'Generic micronized progesterone capsules bioequivalent to Prometrium. Same continuous and cyclic scheduling options. Preferred progestogen for endometrial protection per NAMS guidelines.',
     allowCustomDose: false,

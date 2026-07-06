@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import type { Medication } from '../../types/database';
 import {
-  formatFrequency,
   formatApplicationSite,
   getHormoneColor,
   getHormoneLabel,
   isPelletDueSoon,
   getPelletReplacementDate,
   findCatalogProductForMedication,
+  formatMedicationDoseShort,
 } from '../../utils/medicationHelpers';
 import { DELIVERY_METHOD_LABELS } from '../../lib/medicationConstants';
 import { formatDateLong } from '../../utils/formatters';
@@ -76,7 +76,7 @@ export function MedicationCard({
       <h3 className="font-display text-lg text-sage-800">{medication.medication_name}</h3>
       <p className="mt-1 text-sm text-sage-600">{typeLabel}</p>
       <p className="mt-2 text-sage-700">
-        {medication.dose_amount} {medication.dose_unit} · {formatFrequency(medication.frequency)}
+        {formatMedicationDoseShort(medication)}
       </p>
 
       <p className="mt-3 text-sm text-sage-400">

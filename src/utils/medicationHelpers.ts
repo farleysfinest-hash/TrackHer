@@ -27,7 +27,114 @@ export function getProductsForMethod(
 }
 
 export function formatMedicationDisplay(med: Medication): string {
-  return `${med.medication_name} ${med.dose_amount} ${med.dose_unit}`;
+  return `${med.medication_name} ${formatMedicationDoseShort(med)}`;
+}
+
+export function getDosesPerDay(frequency: MedicationFrequency | string): number {
+  switch (frequency) {
+    case 'twice_daily':
+      return 2;
+    case 'three_times_daily':
+      return 3;
+    default:
+      return 1;
+  }
+}
+
+export function getUnitsPerDose(med: Pick<Medication, 'units_per_dose'>): number {
+  return med.units_per_dose ?? 1;
+}
+
+export function getTotalPerAdministration(
+  med: Pick<Medication, 'dose_amount' | 'units_per_dose'>,
+): number {
+  return med.dose_amount * getUnitsPerDose(med);
+}
+
+export function getEffectiveDailyDose(med: Medication): number {
+  const perAdmin = getTotalPerAdministration(med);
+  const administrationsPerDay = getDosesPerDay(med.frequency);
+
+  if (med.frequency === 'cyclic') {
+    const daysOn = Number(med.frequency_details?.days_on) || 0;
+    const daysOff = Number(med.frequency_details?.days_off) || 0;
+    const cycleLength = daysOn + daysOff;
+    if (cycleLength > 0) {
+      return (perAdmin * administrationsPerDay * daysOn) / cycleLength;
+    }
+  }
+
+  if (med.frequency === 'every_other_day') {
+    return (perAdmin * administrationsPerDay) / 2;
+  }
+
+  return perAdmin * administrationsPerDay;
+}
+
+export function formatTimeOfDay(timeOfDay: string | undefined | null): string {
+  if (!timeOfDay) return '';
+  const labels: Record<string, string> = {
+    bedtime: 'bedtime',
+    morning: 'morning',
+    evening: 'evening',
+    with_meals: 'with meals',
+  };
+  return labels[timeOfDay] ?? timeOfDay.replace(/_/g, ' ');
+}
+
+type DoseScheduleFields = Pick<
+  Medication,
+  'dose_amount' | 'dose_unit' | 'units_per_dose' | 'frequency' | 'frequency_details'
+>;
+
+export function formatMedicationDoseShort(med: DoseScheduleFields): string {
+  const units = getUnitsPerDose(med);
+  const timeOfDay = med.frequency_details?.time_of_day as string | undefined;
+
+  let strength: string;
+  if (units > 1) {
+    strength = `${units} × ${med.dose_amount} ${med.dose_unit}`;
+  } else {
+    strength = `${med.dose_amount} ${med.dose_unit}`;
+  }
+
+  const timePart = timeOfDay ? ` at ${formatTimeOfDay(timeOfDay)}` : '';
+  return `${strength}${timePart} · ${formatFrequency(med.frequency)}`;
+}
+
+export function formatMedicationDoseDetail(med: DoseScheduleFields): string {
+  const units = getUnitsPerDose(med);
+  const perAdmin = getTotalPerAdministration(med);
+  const timeOfDay = med.frequency_details?.time_of_day as string | undefined;
+  const base = formatMedicationDoseShort(med);
+
+  if (units > 1) {
+    const timePart = timeOfDay ? ` at ${formatTimeOfDay(timeOfDay)}` : '';
+    return `${units} × ${med.dose_amount} ${med.dose_unit}${timePart} (${perAdmin} ${med.dose_unit} each time) · ${formatFrequency(med.frequency)}`;
+  }
+
+  return base;
+}
+
+export function supportsUnitsPerDose(method: DeliveryMethod): boolean {
+  return [
+    'oral_capsule',
+    'oral_tablet',
+    'troche',
+    'sublingual',
+    'gel',
+    'spray',
+    'nasal_spray',
+    'vaginal_tablet',
+  ].includes(method);
+}
+
+export function catalogHasFixedDoses(product: MedicationOption): boolean {
+  return product.doseOptions.amounts.length > 0 && !product.allowCustomDose;
+}
+
+export function catalogOffersDoseShortcuts(product: MedicationOption): boolean {
+  return product.doseOptions.amounts.length > 0;
 }
 
 export function formatFrequency(freq: MedicationFrequency | string): string {

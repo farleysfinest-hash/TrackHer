@@ -7,8 +7,9 @@ import type { SymptomCheckin, Medication, MedicationChange } from '../types/data
 import { MRS_CORE_SYMPTOMS } from '../data/symptoms';
 import type { MRSSymptomKey } from '../utils/checkinHelpers';
 import { formatChartDate, filterByDateRange } from '../utils/chartHelpers';
-import type { DateRange } from '../stores/dashboardStore';
+import { getEffectiveDailyDose } from '../utils/medicationHelpers';
 import { getBiomarkerValue } from '../utils/labHelpers';
+import type { DateRange } from '../stores/dashboardStore';
 
 export interface SymptomTrendPoint {
   date: string;
@@ -141,7 +142,7 @@ export function useChartData(dateRange: DateRange) {
         hormoneCategory: m.hormone_category,
         startDate: m.start_date,
         endDate: m.end_date ?? today,
-        dose: m.dose_amount,
+        dose: getEffectiveDailyDose(m),
         doseUnit: m.dose_unit,
       }));
   }, [medications, dateRange]);

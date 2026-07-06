@@ -15,6 +15,14 @@ import type {
   MedicationFrequency,
   MedicationChange,
 } from '../types/database';
+import { getEffectiveDailyDose } from '../utils/medicationHelpers';
+
+export interface MedicationDoseUpdate {
+  dose_amount: number;
+  dose_unit?: string;
+  units_per_dose?: number;
+  frequency_details?: Record<string, unknown> | null;
+}
 
 async function fetchMedicationById(id: string): Promise<Medication | null> {
   const { data, error } = await supabase.from('medications').select('*').eq('id', id).single();
@@ -125,6 +133,7 @@ export function useMedications() {
         secondary_dose_unit: data.secondary_dose_unit ?? null,
         tertiary_dose_amount: data.tertiary_dose_amount ?? null,
         tertiary_dose_unit: data.tertiary_dose_unit ?? null,
+        units_per_dose: data.units_per_dose ?? 1,
         frequency_details: data.frequency_details ?? null,
         application_site: data.application_site ?? null,
         end_date: data.end_date ?? null,
@@ -213,8 +222,7 @@ export function useMedications() {
 
   const changeDose = async (
     id: string,
-    newDose: number,
-    newUnit?: string,
+    update: MedicationDoseUpdate,
     effectiveDate?: string,
     notes?: string,
   ): Promise<boolean> => {
@@ -229,15 +237,30 @@ export function useMedications() {
       }
 
       const changeDate = effectiveDate ?? new Date().toISOString().split('T')[0];
-      const changeType = newDose > currentMed.dose_amount ? 'dose_increased' : 'dose_decreased';
+      const previousEffective = getEffectiveDailyDose(currentMed);
+      const nextMed: Medication = {
+        ...currentMed,
+        dose_amount: update.dose_amount,
+        dose_unit: update.dose_unit ?? currentMed.dose_unit,
+        units_per_dose: update.units_per_dose ?? currentMed.units_per_dose ?? 1,
+        frequency_details:
+          update.frequency_details !== undefined
+            ? update.frequency_details
+            : currentMed.frequency_details,
+      };
+      const nextEffective = getEffectiveDailyDose(nextMed);
+      const changeType =
+        nextEffective > previousEffective ? 'dose_increased' : 'dose_decreased';
 
       setDevMedications(
         getDevMedications().map((m) =>
           m.id === id
             ? {
                 ...m,
-                dose_amount: newDose,
-                dose_unit: newUnit || m.dose_unit,
+                dose_amount: nextMed.dose_amount,
+                dose_unit: nextMed.dose_unit,
+                units_per_dose: nextMed.units_per_dose,
+                frequency_details: nextMed.frequency_details,
                 updated_at: new Date().toISOString(),
               }
             : m,
@@ -247,15 +270,15 @@ export function useMedications() {
         user_id: MOCK_USER.id,
         medication_id: id,
         change_type: changeType,
-        previous_dose: currentMed.dose_amount,
-        new_dose: newDose,
+        previous_dose: previousEffective,
+        new_dose: nextEffective,
         previous_method: null,
         new_method: null,
         change_date: changeDate,
         notes: notes ?? null,
       });
       syncDevMedications();
-      console.log(`[DEV] Dose changed for ${id}: ${newDose}`);
+      console.log(`[DEV] Dose changed for ${id}:`, update);
       return true;
     }
 
@@ -266,10 +289,28 @@ export function useMedications() {
     }
 
     const changeDate = effectiveDate ?? new Date().toISOString().split('T')[0];
-    const changeType = newDose > currentMed.dose_amount ? 'dose_increased' : 'dose_decreased';
+    const previousEffective = getEffectiveDailyDose(currentMed);
+    const nextMed: Medication = {
+      ...currentMed,
+      dose_amount: update.dose_amount,
+      dose_unit: update.dose_unit ?? currentMed.dose_unit,
+      units_per_dose: update.units_per_dose ?? currentMed.units_per_dose ?? 1,
+      frequency_details:
+        update.frequency_details !== undefined
+          ? update.frequency_details
+          : currentMed.frequency_details,
+    };
+    const nextEffective = getEffectiveDailyDose(nextMed);
+    const changeType = nextEffective > previousEffective ? 'dose_increased' : 'dose_decreased';
 
-    const updatePayload: Partial<MedicationInsert> = { dose_amount: newDose };
-    if (newUnit) updatePayload.dose_unit = newUnit;
+    const updatePayload: Partial<MedicationInsert> = {
+      dose_amount: update.dose_amount,
+      units_per_dose: update.units_per_dose ?? currentMed.units_per_dose ?? 1,
+    };
+    if (update.dose_unit) updatePayload.dose_unit = update.dose_unit;
+    if (update.frequency_details !== undefined) {
+      updatePayload.frequency_details = update.frequency_details ?? undefined;
+    }
 
     const { error: updateError } = await supabase
       .from('medications')
@@ -285,8 +326,8 @@ export function useMedications() {
       user_id: userId,
       medication_id: id,
       change_type: changeType,
-      previous_dose: currentMed.dose_amount,
-      new_dose: newDose,
+      previous_dose: previousEffective,
+      new_dose: nextEffective,
       change_date: changeDate,
       notes: notes ?? null,
     });

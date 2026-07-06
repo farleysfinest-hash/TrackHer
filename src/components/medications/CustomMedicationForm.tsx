@@ -1,8 +1,9 @@
 import { useMedicationEntryStore } from '../../stores/medicationEntryStore';
-import { HORMONE_CATEGORIES, DELIVERY_METHOD_LABELS, FREQUENCY_OPTIONS } from '../../lib/medicationConstants';
+import { HORMONE_CATEGORIES, DELIVERY_METHOD_LABELS } from '../../lib/medicationConstants';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
+import { DoseScheduleFields } from './DoseScheduleFields';
 import { validators } from '../../utils/validation';
 import type { HormoneCategory, DeliveryMethod } from '../../types/database';
 
@@ -89,35 +90,17 @@ export function CustomMedicationForm({ onBack, onNext }: CustomMedicationFormPro
         </label>
       </div>
 
-      <div className="flex gap-3">
-        <Input
-          label="Dose amount"
-          type="number"
-          step="any"
-          min="0"
-          value={formData.dose_amount ?? ''}
-          onChange={(e) =>
-            updateFormData({ dose_amount: e.target.value ? Number(e.target.value) : null })
-          }
-          className="flex-1"
-        />
-        <Input
-          label="Unit"
-          value={formData.dose_unit}
-          onChange={(e) => updateFormData({ dose_unit: e.target.value })}
-          placeholder="mg, mcg, IU..."
-          className="w-32"
-        />
-      </div>
-
-      <Select
-        label="Frequency"
-        value={formData.frequency ?? ''}
-        onChange={(e) =>
-          updateFormData({ frequency: e.target.value as typeof formData.frequency })
-        }
-        placeholder="Select frequency"
-        options={FREQUENCY_OPTIONS}
+      <DoseScheduleFields
+        deliveryMethod={formData.custom_delivery_method ?? selectedMethod ?? undefined}
+        value={{
+          dose_amount: formData.dose_amount,
+          dose_unit: formData.dose_unit,
+          units_per_dose: formData.units_per_dose,
+          use_custom_dose: true,
+          frequency: formData.frequency,
+          frequency_details: formData.frequency_details,
+        }}
+        onChange={(updates) => updateFormData(updates)}
       />
 
       <Input

@@ -8,11 +8,11 @@ import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { DoseChangeForm } from './DoseChangeForm';
 import {
-  formatFrequency,
   formatApplicationSite,
   getHormoneLabel,
   getPelletReplacementDate,
   findCatalogProductForMedication,
+  formatMedicationDoseShort,
 } from '../../utils/medicationHelpers';
 import { DELIVERY_METHOD_LABELS } from '../../lib/medicationConstants';
 import { formatDateLong } from '../../utils/formatters';
@@ -99,7 +99,7 @@ export function MedicationDetailModal({
         <div>
           <p className="text-sm text-sage-500">{typeLabel}</p>
           <p className="mt-1 text-lg text-sage-800">
-            {medication.dose_amount} {medication.dose_unit} · {formatFrequency(medication.frequency)}
+            {formatMedicationDoseShort(medication)}
           </p>
         </div>
 

@@ -6,6 +6,7 @@ import { Modal } from '../ui/Modal';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { DISCONTINUE_REASONS } from '../../lib/medicationConstants';
+import { formatMedicationDoseShort } from '../../utils/medicationHelpers';
 
 interface DiscontinueModalProps {
   medication: Medication | null;
@@ -57,7 +58,7 @@ export function DiscontinueModal({
         <p className="text-sage-600">
           Are you sure you want to discontinue{' '}
           <strong>
-            {medication.medication_name} ({medication.dose_amount} {medication.dose_unit})
+            {medication.medication_name} ({formatMedicationDoseShort(medication)})
           </strong>
           ?
         </p>

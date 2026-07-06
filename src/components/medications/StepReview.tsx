@@ -3,9 +3,9 @@ import { useMedicationEntryStore } from '../../stores/medicationEntryStore';
 import { useMedications } from '../../hooks/useMedications';
 import { useToast } from '../../stores/toastStore';
 import {
-  formatFrequency,
   formatApplicationSite,
   getHormoneLabel,
+  formatMedicationDoseDetail,
 } from '../../utils/medicationHelpers';
 import { DELIVERY_METHOD_LABELS } from '../../lib/medicationConstants';
 import { formatDateLong } from '../../utils/formatters';
@@ -55,6 +55,7 @@ export function StepReview({ onBack, onSuccess, onAddAnother }: StepReviewProps)
       medication_name: medicationName,
       dose_amount: formData.dose_amount,
       dose_unit: formData.dose_unit || selectedProduct?.doseOptions.unit || 'mg',
+      units_per_dose: formData.units_per_dose,
       secondary_dose_amount: formData.secondary_dose_amount ?? undefined,
       secondary_dose_unit: formData.secondary_dose_unit ?? undefined,
       tertiary_dose_amount: formData.tertiary_dose_amount ?? undefined,
@@ -121,19 +122,21 @@ export function StepReview({ onBack, onSuccess, onAddAnother }: StepReviewProps)
             <dd className="font-medium text-sage-800">{typeLabel}</dd>
           </div>
           <div className="flex justify-between gap-4">
-            <dt className="text-sage-500">Dose</dt>
-            <dd className="font-medium text-sage-800">
-              {formData.dose_amount} {formData.dose_unit || selectedProduct?.doseOptions.unit}
+            <dt className="text-sage-500">Dose & schedule</dt>
+            <dd className="text-right font-medium text-sage-800">
+              {formData.dose_amount != null && formData.frequency
+                ? formatMedicationDoseDetail({
+                    dose_amount: formData.dose_amount,
+                    dose_unit: formData.dose_unit || selectedProduct?.doseOptions.unit || 'mg',
+                    units_per_dose: formData.units_per_dose,
+                    frequency: formData.frequency,
+                    frequency_details: formData.frequency_details,
+                  })
+                : '—'}
               {formData.secondary_dose_amount != null &&
                 ` + ${formData.secondary_dose_amount} ${formData.secondary_dose_unit}`}
               {formData.tertiary_dose_amount != null &&
                 ` + ${formData.tertiary_dose_amount} ${formData.tertiary_dose_unit}`}
-            </dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-sage-500">Frequency</dt>
-            <dd className="font-medium text-sage-800">
-              {formData.frequency ? formatFrequency(formData.frequency) : '—'}
             </dd>
           </div>
           <div className="flex justify-between gap-4">

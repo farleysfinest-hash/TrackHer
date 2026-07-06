@@ -10,6 +10,8 @@ import { todayISO } from '../utils/medicationHelpers';
 export interface MedicationEntryFormData {
   dose_amount: number | null;
   dose_unit: string;
+  units_per_dose: number;
+  use_custom_dose: boolean;
   secondary_dose_amount: number | null;
   secondary_dose_unit: string | null;
   tertiary_dose_amount: number | null;
@@ -33,6 +35,8 @@ export interface MedicationEntryFormData {
 const initialFormData: MedicationEntryFormData = {
   dose_amount: null,
   dose_unit: '',
+  units_per_dose: 1,
+  use_custom_dose: false,
   secondary_dose_amount: null,
   secondary_dose_unit: null,
   tertiary_dose_amount: null,
@@ -106,6 +110,9 @@ export const useMedicationEntryStore = create<MedicationEntryState>((set, get) =
         ...get().formData,
         dose_unit: product.doseOptions.unit,
         frequency: product.frequencyOptions[0] ?? null,
+        units_per_dose: 1,
+        use_custom_dose: product.allowCustomDose,
+        dose_amount: null,
       },
     });
   },
