@@ -91,7 +91,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (!mounted) return;
 
       if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && session?.user) {
-        set({ user: session.user, isAuthenticated: true, isLoading: false });
+        set({ user: session.user, isAuthenticated: true, isLoading: false, isInitialized: true });
         await get().fetchProfile(session.user.id);
       } else if (event === 'SIGNED_OUT') {
         set({ user: null, profile: null, isAuthenticated: false, isLoading: false });
