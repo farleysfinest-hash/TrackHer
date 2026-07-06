@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOnboardingStore } from '../../stores/onboardingStore';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuthStore } from '../../stores/authStore';
 import { StepProfile } from './StepProfile';
 import { StepStrawStaging } from './StepStrawStaging';
 import { StepSymptomSelection } from './StepSymptomSelection';
@@ -13,22 +13,23 @@ const TOTAL_STEPS = 4;
 
 export function OnboardingWizard() {
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
-  const { currentStep, updateFormData, reset } = useOnboardingStore();
+  const { currentStep, updateFormData } = useOnboardingStore();
   const [isComplete, setIsComplete] = useState(false);
 
   useEffect(() => {
-    if (user) {
+    const currentUser = useAuthStore.getState().user;
+    const currentProfile = useAuthStore.getState().profile;
+    if (currentUser) {
       updateFormData({
-        displayName: profile?.display_name ?? user.user_metadata?.display_name ?? '',
-        email: user.email ?? '',
-        hasUterus: profile?.has_uterus ?? null,
-        dateOfBirth: profile?.date_of_birth ?? '',
-        lastPeriodDate: profile?.last_period_date ?? '',
+        displayName: currentProfile?.display_name ?? currentUser.user_metadata?.display_name ?? '',
+        email: currentUser.email ?? '',
+        hasUterus: currentProfile?.has_uterus ?? null,
+        dateOfBirth: currentProfile?.date_of_birth ?? '',
+        lastPeriodDate: currentProfile?.last_period_date ?? '',
       });
     }
-    return () => reset();
-  }, [user, profile, updateFormData, reset]);
+    return () => useOnboardingStore.getState().reset();
+  }, [updateFormData]);
 
   const handleComplete = () => {
     setIsComplete(true);
