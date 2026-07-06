@@ -14,7 +14,7 @@ import { OverlayChart } from './OverlayChart';
 import { SubscaleChart } from './SubscaleChart';
 import { SymptomHeatmap } from './SymptomHeatmap';
 import { LabTrendChart } from './LabTrendChart';
-import { LabTrendSelector, getDefaultBiomarkerKey } from './LabTrendSelector';
+import { getDefaultBiomarkerKey } from './LabTrendSelector';
 import { DrillDownControls } from './DrillDownControls';
 import { ActiveMedicationsSummary } from './ActiveMedicationsSummary';
 import { LabSummaryWidget } from './LabSummaryWidget';
@@ -108,12 +108,12 @@ export function DashboardLayout() {
         <SymptomHeatmap rows={heatmapRows} />
       </div>
 
-      <LabTrendSelector
+      <LabTrendChart
+        data={labTrend}
+        biomarkerKey={biomarkerKey}
         labResults={labResults}
-        selectedKey={biomarkerKey}
-        onChange={setBiomarkerKey}
+        onBiomarkerChange={setBiomarkerKey}
       />
-      <LabTrendChart data={labTrend} biomarkerKey={biomarkerKey} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <ActiveMedicationsSummary medications={medications} />
