@@ -61,7 +61,7 @@ export function ScoreSummaryCards({ checkins, streak }: ScoreSummaryCardsProps) 
       <StatCard
         label="MRS Score"
         value={latest?.total_score ?? '—'}
-        subtext="/64"
+        subtext={`/44 · Psych ${latest?.psychological_score ?? '—'} · Som ${latest?.somatic_score ?? '—'} · Uro ${latest?.urogenital_score ?? '—'}`}
         color={mrsColor}
       />
       <StatCard

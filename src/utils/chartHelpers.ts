@@ -31,9 +31,9 @@ export const HEATMAP_COLORS: Record<number, string> = {
 };
 
 export const MRS_SEVERITY_HEX: Record<string, string> = {
-  well_managed: '#5a8a4a',
-  moderate: '#d97706',
-  significant: '#ea580c',
+  none: '#5a8a4a',
+  mild: '#d97706',
+  moderate: '#ea580c',
   severe: '#dc2626',
 };
 

@@ -20,6 +20,8 @@ import { ActiveMedicationsSummary } from './ActiveMedicationsSummary';
 import { LabSummaryWidget } from './LabSummaryWidget';
 import { ProviderReportButton } from './ProviderReportButton';
 import { DashboardInsightsPanel } from '../insights/DashboardInsightsPanel';
+import { QuickLogWidget } from './QuickLogWidget';
+import { PersonalSymptomTrends } from './PersonalSymptomTrends';
 
 export function DashboardLayout() {
   const dateRange = useDashboardStore((s) => s.dateRange);
@@ -40,9 +42,15 @@ export function DashboardLayout() {
     refreshAll,
   } = useChartData(dateRange);
 
-  const [extendedSymptoms] = useState<ExtendedSymptomLog[]>(() =>
+  const [extendedSymptoms, setExtendedSymptoms] = useState<ExtendedSymptomLog[]>(() =>
     IS_DEV_MODE ? getDevExtendedSymptomLogs() : [],
   );
+
+  useEffect(() => {
+    if (IS_DEV_MODE) {
+      setExtendedSymptoms(getDevExtendedSymptomLogs());
+    }
+  }, [allCheckins]);
 
   const insights = useMemo(() => {
     if (!profile || allCheckins.length === 0) return [];
@@ -97,11 +105,15 @@ export function DashboardLayout() {
 
       <ScoreSummaryCards checkins={allCheckins} streak={checkinStatus.streak} />
 
+      <QuickLogWidget />
+
       <CheckinPromptWidget {...checkinStatus} />
 
       <DashboardInsightsPanel insights={insights} />
 
       <OverlayChart data={symptomTrend} changeMarkers={changeMarkers} />
+
+      <PersonalSymptomTrends checkins={checkins} extendedLogs={extendedSymptoms} />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <SubscaleChart data={symptomTrend} />

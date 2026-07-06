@@ -211,8 +211,43 @@ export interface ExtendedSymptomLog {
   user_id: string;
   checkin_id: string;
   symptom_key: string;
+  /** @deprecated Use severity_score — legacy mild/moderate/severe */
   severity: SymptomSeverity | null;
+  severity_score: MRSScore | null;
   created_at: string;
+}
+
+export type QuickLogTriggerTag =
+  | 'stress'
+  | 'food'
+  | 'exercise'
+  | 'heat'
+  | 'poor_sleep'
+  | 'missed_dose'
+  | 'alcohol'
+  | 'caffeine'
+  | 'unknown'
+  | 'other';
+
+export interface QuickLogEvent {
+  id: string;
+  user_id: string;
+  symptom_id: string;
+  severity: number;
+  logged_at: string;
+  duration_minutes: number | null;
+  trigger_tag: QuickLogTriggerTag | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface QuickLogEventInsert {
+  symptom_id: string;
+  severity: number;
+  logged_at?: string;
+  duration_minutes?: number | null;
+  trigger_tag?: QuickLogTriggerTag | null;
+  notes?: string | null;
 }
 
 export interface LabResult {
@@ -386,6 +421,12 @@ export type Database = {
         Row: UserSymptomSelection;
         Insert: Omit<UserSymptomSelection, 'id' | 'selected_at'>;
         Update: Partial<Omit<UserSymptomSelection, 'id' | 'selected_at'>>;
+        Relationships: [];
+      };
+      quick_log_events: {
+        Row: QuickLogEvent;
+        Insert: QuickLogEventInsert & { user_id: string };
+        Update: Partial<QuickLogEventInsert>;
         Relationships: [];
       };
     };

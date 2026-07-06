@@ -1,18 +1,30 @@
 import type { MRSScore } from '../types/database';
-import { MRS_CORE_SYMPTOMS } from '../data/symptoms';
+import type { InstrumentDefinition } from '../types/instruments';
+import { MRS_CANONICAL_SYMPTOMS } from '../data/symptoms';
+import { MRS_INSTRUMENT } from '../data/instruments/mrs';
+import {
+  scoreInstrument,
+  getItemStorageKey,
+  getSeverityLabel,
+} from '../data/instruments/scoring';
 
-export const MRS_SYMPTOM_KEYS = [
-  'hot_flashes',
-  'heart_discomfort',
-  'sleep_problems',
-  'depressed_mood',
-  'irritability',
-  'anxiety',
-  'exhaustion',
-  'sexual_problems',
-  'bladder_problems',
-  'vaginal_dryness',
-  'joint_muscle_pain',
+/** Canonical 11-item Menopause Rating Scale — only these count toward MRS total (max 44). */
+export const MRS_ITEMS = {
+  psychological: ['depressed_mood', 'irritability', 'anxiety', 'exhaustion'] as const,
+  somatic: ['hot_flashes', 'heart_discomfort', 'sleep_problems', 'joint_muscle_pain'] as const,
+  urogenital: ['sexual_problems', 'bladder_problems', 'vaginal_dryness'] as const,
+} as const;
+
+export const MRS_CANONICAL_KEYS = [
+  ...MRS_ITEMS.psychological,
+  ...MRS_ITEMS.somatic,
+  ...MRS_ITEMS.urogenital,
+] as const;
+
+export type MRSSymptomKey = (typeof MRS_CANONICAL_KEYS)[number];
+
+/** Legacy DB columns — stored on check-ins but excluded from MRS scoring. */
+export const LEGACY_MRS_EXTRA_KEYS = [
   'dry_itchy_skin',
   'brain_fog',
   'irregular_periods',
@@ -20,7 +32,16 @@ export const MRS_SYMPTOM_KEYS = [
   'misophonia',
 ] as const;
 
-export type MRSSymptomKey = (typeof MRS_SYMPTOM_KEYS)[number];
+export type LegacyMRSSymptomKey = (typeof LEGACY_MRS_EXTRA_KEYS)[number];
+
+/** All symptom columns on symptom_checkins table. */
+export const ALL_CHECKIN_SYMPTOM_KEYS = [
+  ...MRS_CANONICAL_KEYS,
+  ...LEGACY_MRS_EXTRA_KEYS,
+] as const;
+
+/** @deprecated Use MRS_CANONICAL_KEYS — kept for gradual migration of imports. */
+export const MRS_SYMPTOM_KEYS = ALL_CHECKIN_SYMPTOM_KEYS;
 
 export type MRSScoresMap = Record<MRSSymptomKey, MRSScore | null>;
 
@@ -36,12 +57,143 @@ export const INITIAL_MRS_SCORES: MRSScoresMap = {
   bladder_problems: null,
   vaginal_dryness: null,
   joint_muscle_pain: null,
-  dry_itchy_skin: null,
-  brain_fog: null,
-  irregular_periods: null,
-  heavy_bleeding: null,
-  misophonia: null,
 };
+
+export type MRSSeverityLevel = 'none' | 'mild' | 'moderate' | 'severe';
+
+export interface MRSScoreResult {
+  total: number;
+  psychological: number;
+  somatic: number;
+  urogenital: number;
+  totalSeverity: MRSSeverityLevel;
+  psychologicalSeverity: MRSSeverityLevel;
+  somaticSeverity: MRSSeverityLevel;
+  urogenitalSeverity: MRSSeverityLevel;
+}
+
+function subscaleSeverity(
+  score: number,
+  subscale: 'psychological' | 'somatic' | 'urogenital',
+): MRSSeverityLevel {
+  if (subscale === 'urogenital') {
+    if (score <= 2) return 'none';
+    if (score <= 5) return 'mild';
+    if (score <= 8) return 'moderate';
+    return 'severe';
+  }
+  if (score <= 3) return 'none';
+  if (score <= 7) return 'mild';
+  if (score <= 11) return 'moderate';
+  return 'severe';
+}
+
+function totalSeverity(score: number): MRSSeverityLevel {
+  if (score <= 4) return 'none';
+  if (score <= 16) return 'mild';
+  if (score <= 24) return 'moderate';
+  return 'severe';
+}
+
+export function calculateMRS(responses: Record<string, number | null | undefined>): MRSScoreResult {
+  const instrumentScore = scoreInstrument(responses, MRS_INSTRUMENT);
+  return {
+    total: instrumentScore.total,
+    psychological: instrumentScore.subscales.psychological?.score ?? 0,
+    somatic: instrumentScore.subscales.somatic?.score ?? 0,
+    urogenital: instrumentScore.subscales.urogenital?.score ?? 0,
+    totalSeverity: instrumentScore.totalSeverity,
+    psychologicalSeverity: instrumentScore.subscales.psychological?.severity ?? 'none',
+    somaticSeverity: instrumentScore.subscales.somatic?.severity ?? 'none',
+    urogenitalSeverity: instrumentScore.subscales.urogenital?.severity ?? 'none',
+  };
+}
+
+export function calculateInstrumentScore(
+  responses: Record<string, number | null | undefined>,
+  instrument: InstrumentDefinition,
+  completedAt?: string,
+) {
+  return scoreInstrument(responses, instrument, completedAt);
+}
+
+export function countRatedInstrumentItems(
+  scores: Record<string, number | null | undefined>,
+  instrument: InstrumentDefinition,
+): number {
+  return instrument.items.filter((item) => {
+    const key = getItemStorageKey(item);
+    return scores[key] !== null && scores[key] !== undefined;
+  }).length;
+}
+
+export function computeTotalMRS(scores: MRSScoresMap): number {
+  return calculateMRS(scores).total;
+}
+
+export function computeSomaticScore(scores: MRSScoresMap): number {
+  return calculateMRS(scores).somatic;
+}
+
+export function computePsychologicalScore(scores: MRSScoresMap): number {
+  return calculateMRS(scores).psychological;
+}
+
+export function computeUrogenitalScore(scores: MRSScoresMap): number {
+  return calculateMRS(scores).urogenital;
+}
+
+/** @deprecated Use MRSSeverityLevel — alias for chart compatibility */
+export type MRSSeverityTier = MRSSeverityLevel;
+
+export function getMRSSeverityTier(total: number): MRSSeverityLevel {
+  return totalSeverity(total);
+}
+
+export function getSubscaleSeverityTier(
+  score: number,
+  subscale: 'psychological' | 'somatic' | 'urogenital',
+): MRSSeverityLevel {
+  return subscaleSeverity(score, subscale);
+}
+
+export function getMRSSeverityLabel(tier: MRSSeverityLevel): string {
+  return getSeverityLabel(tier);
+}
+
+export function getMRSSeverityColor(tier: MRSSeverityLevel): string {
+  const colors: Record<MRSSeverityLevel, string> = {
+    none: 'text-success',
+    mild: 'text-amber-600',
+    moderate: 'text-orange-600',
+    severe: 'text-red-600',
+  };
+  return colors[tier];
+}
+
+export function getMRSSeverityDot(tier: MRSSeverityLevel): string {
+  const colors: Record<MRSSeverityLevel, string> = {
+    none: 'bg-success',
+    mild: 'bg-amber-500',
+    moderate: 'bg-orange-500',
+    severe: 'bg-red-500',
+  };
+  return colors[tier];
+}
+
+export const MRS_SUBSCALE_LABELS = {
+  psychological: 'Psychological',
+  somatic: 'Somatic',
+  urogenital: 'Urogenital',
+} as const;
+
+export const MRS_SUBSCALE_MAX = {
+  psychological: 16,
+  somatic: 16,
+  urogenital: 12,
+} as const;
+
+export const MRS_TOTAL_MAX = 44;
 
 export function getLocalDateISO(timezone = 'America/Los_Angeles'): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date());
@@ -66,77 +218,8 @@ export function getTimeframeLabel(frequency: string | null | undefined): string 
   }
 }
 
-export function computeTotalMRS(scores: MRSScoresMap): number {
-  return MRS_SYMPTOM_KEYS.reduce((sum, key) => sum + (scores[key] ?? 0), 0);
-}
-
-export function computeSomaticScore(scores: MRSScoresMap): number {
-  return (
-    (scores.hot_flashes ?? 0) +
-    (scores.heart_discomfort ?? 0) +
-    (scores.joint_muscle_pain ?? 0)
-  );
-}
-
-export function computePsychologicalScore(scores: MRSScoresMap): number {
-  return (
-    (scores.sleep_problems ?? 0) +
-    (scores.depressed_mood ?? 0) +
-    (scores.irritability ?? 0) +
-    (scores.anxiety ?? 0) +
-    (scores.exhaustion ?? 0)
-  );
-}
-
-export function computeUrogenitalScore(scores: MRSScoresMap): number {
-  return (
-    (scores.sexual_problems ?? 0) +
-    (scores.bladder_problems ?? 0) +
-    (scores.vaginal_dryness ?? 0)
-  );
-}
-
-export type MRSSeverityTier = 'well_managed' | 'moderate' | 'significant' | 'severe';
-
-export function getMRSSeverityTier(total: number): MRSSeverityTier {
-  if (total <= 15) return 'well_managed';
-  if (total <= 30) return 'moderate';
-  if (total <= 45) return 'significant';
-  return 'severe';
-}
-
-export function getMRSSeverityLabel(tier: MRSSeverityTier): string {
-  const labels: Record<MRSSeverityTier, string> = {
-    well_managed: 'Well managed',
-    moderate: 'Moderate symptoms',
-    significant: 'Significant symptoms',
-    severe: 'Severe symptoms',
-  };
-  return labels[tier];
-}
-
-export function getMRSSeverityColor(tier: MRSSeverityTier): string {
-  const colors: Record<MRSSeverityTier, string> = {
-    well_managed: 'text-success',
-    moderate: 'text-amber-600',
-    significant: 'text-orange-600',
-    severe: 'text-red-600',
-  };
-  return colors[tier];
-}
-
-export function getMRSSeverityDot(tier: MRSSeverityTier): string {
-  const colors: Record<MRSSeverityTier, string> = {
-    well_managed: 'bg-success',
-    moderate: 'bg-amber-500',
-    significant: 'bg-orange-500',
-    severe: 'bg-red-500',
-  };
-  return colors[tier];
-}
-
 export function getTopConcerns(scores: MRSScoresMap, limit = 3) {
-  const rated = MRS_CORE_SYMPTOMS.map((s) => ({
+  const rated = MRS_CANONICAL_SYMPTOMS.map((s) => ({
     key: s.key,
     label: s.label,
     score: scores[s.key as MRSSymptomKey],
@@ -151,7 +234,11 @@ export function getTopConcerns(scores: MRSScoresMap, limit = 3) {
 }
 
 export function countRatedMRS(scores: MRSScoresMap): number {
-  return MRS_SYMPTOM_KEYS.filter((k) => scores[k] !== null).length;
+  return MRS_CANONICAL_KEYS.filter((k) => scores[k] !== null).length;
+}
+
+export function isMRSCanonicalKey(key: string): key is MRSSymptomKey {
+  return (MRS_CANONICAL_KEYS as readonly string[]).includes(key);
 }
 
 export const SEVERITY_LABELS = ['None', 'Mild', 'Moderate', 'Severe', 'Very Severe'] as const;

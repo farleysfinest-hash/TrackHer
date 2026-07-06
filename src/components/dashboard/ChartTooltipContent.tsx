@@ -1,4 +1,4 @@
-import { getTopConcerns, MRS_SYMPTOM_KEYS, type MRSScoresMap, type MRSSymptomKey } from '../../utils/checkinHelpers';
+import { getTopConcerns, MRS_CANONICAL_KEYS, MRS_TOTAL_MAX, type MRSScoresMap, type MRSSymptomKey } from '../../utils/checkinHelpers';
 import type { SymptomCheckin } from '../../types/database';
 import { formatChartDateLong, severityLabel } from '../../utils/chartHelpers';
 
@@ -10,7 +10,7 @@ interface ChartTooltipProps {
 
 function checkinToScores(checkin: SymptomCheckin): MRSScoresMap {
   const scores = {} as MRSScoresMap;
-  for (const key of MRS_SYMPTOM_KEYS) {
+  for (const key of MRS_CANONICAL_KEYS) {
     scores[key] = checkin[key as MRSSymptomKey] as typeof scores[typeof key];
   }
   return scores;
@@ -44,7 +44,7 @@ export function ChartTooltipContent(props: ChartTooltipProps) {
       </p>
       {mrs !== undefined && (
         <p className="mt-1 text-sage-700">
-          MRS Score: <strong>{mrs}</strong>/64
+          MRS Score: <strong>{mrs}</strong>/{MRS_TOTAL_MAX}
         </p>
       )}
       {wellbeing !== null && wellbeing !== undefined && (

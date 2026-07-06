@@ -5,9 +5,9 @@ import { useToast } from '../../stores/toastStore';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { MRSScoreBadge } from './MRSScoreBadge';
-import { getSymptomByKey, MRS_CORE_SYMPTOMS } from '../../data/symptoms';
+import { getSymptomByKey, MRS_CANONICAL_SYMPTOMS } from '../../data/symptoms';
 import { formatDateLong } from '../../utils/formatters';
-import { CATEGORY_LABELS } from '../../utils/checkinHelpers';
+import { CATEGORY_LABELS, SEVERITY_LABELS } from '../../utils/checkinHelpers';
 import type { MRSSymptomKey } from '../../utils/checkinHelpers';
 
 interface CheckinDetailModalProps {
@@ -86,9 +86,9 @@ export function CheckinDetailModal({
           </div>
 
           <div>
-            <h3 className="mb-3 font-medium text-sage-800">MRS Symptoms</h3>
+            <h3 className="mb-3 font-medium text-sage-800">MRS Assessment (11 items)</h3>
             <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-              {[...MRS_CORE_SYMPTOMS]
+              {[...MRS_CANONICAL_SYMPTOMS]
                 .sort((a, b) => (a.mrsIndex ?? 0) - (b.mrsIndex ?? 0))
                 .map((symptom) => {
                   const score = checkin[symptom.key as MRSSymptomKey];
@@ -109,7 +109,7 @@ export function CheckinDetailModal({
 
           {extended.length > 0 && (
             <div>
-              <h3 className="mb-3 font-medium text-sage-800">Extended Symptoms</h3>
+              <h3 className="mb-3 font-medium text-sage-800">Personal Tracker</h3>
               {extendedByCategory.map((cat) => {
                 const catSymptoms = extended.filter((e) => {
                   const def = getSymptomByKey(e.symptom_key);
@@ -125,7 +125,11 @@ export function CheckinDetailModal({
                       {catSymptoms.map((e) => (
                         <li key={e.id}>
                           {getSymptomByKey(e.symptom_key)?.label ?? e.symptom_key}
-                          {e.severity ? ` (${e.severity})` : ''}
+                          {e.severity_score != null
+                            ? ` (${e.severity_score} — ${SEVERITY_LABELS[e.severity_score]})`
+                            : e.severity
+                              ? ` (${e.severity})`
+                              : ''}
                         </li>
                       ))}
                     </ul>

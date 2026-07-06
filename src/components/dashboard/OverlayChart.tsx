@@ -46,7 +46,7 @@ function OverlayChartComponent({ data, changeMarkers }: OverlayChartProps) {
             <XAxis dataKey="dateLabel" tick={{ fontSize: 11, fill: CHART_COLORS.axisText }} />
             <YAxis
               yAxisId="mrs"
-              domain={[0, 64]}
+              domain={[0, 44]}
               tick={{ fontSize: 11, fill: CHART_COLORS.axisText }}
               width={36}
             />

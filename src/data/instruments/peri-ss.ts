@@ -1,0 +1,186 @@
+import type { InstrumentDefinition } from '../../types/instruments';
+import { buildInstrumentScore } from './scoring';
+
+export const PERI_SS_INSTRUMENT: InstrumentDefinition = {
+  id: 'peri_ss',
+  name: 'Perimenopause Symptom Scale',
+  abbreviation: 'Peri-SS',
+  version: '1.0',
+  citation:
+    'Xu Y, et al. Validation of the Perimenopause Symptom Scale (Peri-SS) for Digital Self-Assessment. medRxiv 2025. doi:10.1101/2025.07.16.25331654',
+  description:
+    'A 16-item instrument designed for digital self-assessment of perimenopause symptom burden across vasomotor, psychological, sexual, and physical domains.',
+  recallPeriod: '30_days',
+  scoringMethod: 'scaled_mean',
+  scaleRange: [0, 4],
+  totalScoreRange: [0, 100],
+  targetStages: ['-3b', '-3a', '-2', '-1'],
+  items: [
+    {
+      id: 'pss_hot_flashes',
+      label: 'Hot flashes',
+      description: 'Sudden feelings of warmth or heat',
+      subscale: 'vasomotor',
+    },
+    {
+      id: 'pss_night_sweats',
+      label: 'Night sweats',
+      description: 'Episodes of sweating during sleep',
+      subscale: 'vasomotor',
+    },
+    {
+      id: 'pss_feeling_down',
+      label: 'Feeling down',
+      description: 'Feeling sad, low, or depressed',
+      subscale: 'psychological',
+    },
+    {
+      id: 'pss_irritability',
+      label: 'Irritability',
+      description: 'Feeling easily annoyed or frustrated',
+      subscale: 'psychological',
+    },
+    {
+      id: 'pss_anxiety',
+      label: 'Anxiety',
+      description: 'Feeling worried, nervous, or on edge',
+      subscale: 'psychological',
+    },
+    {
+      id: 'pss_sleep_difficulties',
+      label: 'Sleep difficulties',
+      description: 'Trouble falling asleep, staying asleep, or waking too early',
+      subscale: 'psychological',
+    },
+    {
+      id: 'pss_physical_exhaustion',
+      label: 'Physical exhaustion',
+      description: 'Feeling physically drained or fatigued',
+      subscale: 'psychological',
+    },
+    {
+      id: 'pss_vaginal_dryness',
+      label: 'Vaginal dryness',
+      description: 'Dryness or discomfort in the vaginal area',
+      subscale: 'sexual',
+    },
+    {
+      id: 'pss_pain_during_sex',
+      label: 'Pain during sex',
+      description: 'Discomfort or pain during sexual intercourse',
+      subscale: 'sexual',
+    },
+    {
+      id: 'pss_low_sex_drive',
+      label: 'Low sex drive',
+      description: 'Decreased interest in sexual activity',
+      subscale: 'sexual',
+    },
+    {
+      id: 'pss_digestive_issues',
+      label: 'Digestive issues',
+      description: 'Bloating, gas, or changes in digestion',
+      subscale: 'physical',
+    },
+    {
+      id: 'pss_hair_changes',
+      label: 'Hair changes',
+      description: 'Thinning hair or changes in hair texture',
+      subscale: 'physical',
+    },
+    {
+      id: 'pss_skin_changes',
+      label: 'Skin changes',
+      description: 'Dryness, itching, or changes in skin texture',
+      subscale: 'physical',
+    },
+    {
+      id: 'pss_joint_discomfort',
+      label: 'Joint discomfort',
+      description: 'Aches, stiffness, or pain in joints',
+      subscale: 'physical',
+    },
+    {
+      id: 'pss_bladder_problems',
+      label: 'Bladder problems',
+      description: 'Urinary urgency, frequency, or leakage',
+      subscale: 'physical',
+    },
+    {
+      id: 'pss_weight_changes',
+      label: 'Weight changes',
+      description: 'Unexplained weight gain or changes in body composition',
+      subscale: 'physical',
+    },
+  ],
+  subscales: [
+    {
+      id: 'vasomotor',
+      label: 'Vasomotor',
+      items: ['pss_hot_flashes', 'pss_night_sweats'],
+      maxScore: 4,
+      severityBands: {
+        none: [0, 0.5],
+        mild: [0.5, 1.5],
+        moderate: [1.5, 2.5],
+        severe: [2.5, 4],
+      },
+    },
+    {
+      id: 'psychological',
+      label: 'Psychological',
+      items: [
+        'pss_feeling_down',
+        'pss_irritability',
+        'pss_anxiety',
+        'pss_sleep_difficulties',
+        'pss_physical_exhaustion',
+      ],
+      maxScore: 4,
+      severityBands: {
+        none: [0, 0.5],
+        mild: [0.5, 1.5],
+        moderate: [1.5, 2.5],
+        severe: [2.5, 4],
+      },
+    },
+    {
+      id: 'sexual',
+      label: 'Sexual health',
+      items: ['pss_vaginal_dryness', 'pss_pain_during_sex', 'pss_low_sex_drive'],
+      maxScore: 4,
+      severityBands: {
+        none: [0, 0.5],
+        mild: [0.5, 1.5],
+        moderate: [1.5, 2.5],
+        severe: [2.5, 4],
+      },
+    },
+    {
+      id: 'physical',
+      label: 'Physical / Somatic',
+      items: [
+        'pss_digestive_issues',
+        'pss_hair_changes',
+        'pss_skin_changes',
+        'pss_joint_discomfort',
+        'pss_bladder_problems',
+        'pss_weight_changes',
+      ],
+      maxScore: 4,
+      severityBands: {
+        none: [0, 0.5],
+        mild: [0.5, 1.5],
+        moderate: [1.5, 2.5],
+        severe: [2.5, 4],
+      },
+    },
+  ],
+  totalSeverityBands: {
+    none: [0, 8],
+    mild: [9, 18],
+    moderate: [19, 35],
+    severe: [36, 100],
+  },
+  scoringFunction: (responses) => buildInstrumentScore(PERI_SS_INSTRUMENT, responses),
+};

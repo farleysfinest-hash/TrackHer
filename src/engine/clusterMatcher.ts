@@ -3,36 +3,21 @@ import type { Insight } from './types';
 import { INSIGHT_DISCLAIMER } from './types';
 import type { SymptomCheckin, ExtendedSymptomLog } from '../types/database';
 import { SYMPTOM_CATALOG } from '../data/symptoms';
-import type { MRSSymptomKey } from '../utils/checkinHelpers';
+import { MRS_CANONICAL_KEYS } from '../utils/checkinHelpers';
 
 interface ClusterMatchInput {
   checkins: SymptomCheckin[];
   extendedSymptoms: ExtendedSymptomLog[];
 }
 
-const MRS_KEYS: MRSSymptomKey[] = [
-  'hot_flashes',
-  'heart_discomfort',
-  'sleep_problems',
-  'depressed_mood',
-  'irritability',
-  'anxiety',
-  'exhaustion',
-  'sexual_problems',
-  'bladder_problems',
-  'vaginal_dryness',
-  'joint_muscle_pain',
-  'dry_itchy_skin',
-  'brain_fog',
-  'irregular_periods',
-  'heavy_bleeding',
-  'misophonia',
-];
-
-function severityFromExtended(severity: ExtendedSymptomLog['severity']): number {
-  if (severity === 'mild') return 1;
-  if (severity === 'moderate') return 2;
-  return 3;
+function severityFromExtended(log: ExtendedSymptomLog): number {
+  if (log.severity_score !== null && log.severity_score !== undefined) {
+    return log.severity_score;
+  }
+  if (log.severity === 'mild') return 1;
+  if (log.severity === 'moderate') return 2;
+  if (log.severity === 'severe') return 3;
+  return 0;
 }
 
 export function analyzeSymptomClusters(input: ClusterMatchInput): Insight[] {
@@ -47,7 +32,7 @@ export function analyzeSymptomClusters(input: ClusterMatchInput): Insight[] {
 
   const severityMap = new Map<string, number>();
 
-    for (const key of MRS_KEYS) {
+    for (const key of MRS_CANONICAL_KEYS) {
       const values = recentCheckins
         .map((c) => c[key])
         .filter((v): v is NonNullable<typeof v> => v !== null)
@@ -60,7 +45,7 @@ export function analyzeSymptomClusters(input: ClusterMatchInput): Insight[] {
   const recentCheckinId = recentCheckins[0]?.id;
   if (recentCheckinId) {
     for (const ext of extendedSymptoms.filter((e) => e.checkin_id === recentCheckinId)) {
-      severityMap.set(ext.symptom_key, severityFromExtended(ext.severity));
+      severityMap.set(ext.symptom_key, severityFromExtended(ext));
     }
   }
 

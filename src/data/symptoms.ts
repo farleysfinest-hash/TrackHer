@@ -48,7 +48,7 @@ const RAW_SYMPTOM_CATALOG: RawSymptom[] = [
     category: 'body',
     isMRSCore: true,
     mrsIndex: 3,
-    mrsSubscale: 'psychological',
+    mrsSubscale: 'somatic',
     relatedHormones: ['estrogen_low', 'progesterone_low', 'cortisol_high'],
   },
   {
@@ -145,8 +145,7 @@ const RAW_SYMPTOM_CATALOG: RawSymptom[] = [
     description:
       'Skin feels dry, thin, or itchy. Loss of elasticity or moisture.',
     category: 'skin_hair',
-    isMRSCore: true,
-    mrsIndex: 12,
+    isMRSCore: false,
     relatedHormones: ['estrogen_low'],
   },
   {
@@ -155,8 +154,7 @@ const RAW_SYMPTOM_CATALOG: RawSymptom[] = [
     description:
       'Difficulty concentrating, word-finding problems, mental sluggishness, feeling \'cloudy.\'',
     category: 'mind',
-    isMRSCore: true,
-    mrsIndex: 13,
+    isMRSCore: false,
     relatedHormones: ['estrogen_low', 'thyroid_low', 'testosterone_low', 'progesterone_low'],
   },
   {
@@ -165,8 +163,7 @@ const RAW_SYMPTOM_CATALOG: RawSymptom[] = [
     description:
       'Changes in cycle length, skipping periods, unpredictable timing.',
     category: 'sexual_pelvic',
-    isMRSCore: true,
-    mrsIndex: 14,
+    isMRSCore: false,
     relatedHormones: ['estrogen_high', 'progesterone_low'],
   },
   {
@@ -175,8 +172,7 @@ const RAW_SYMPTOM_CATALOG: RawSymptom[] = [
     description:
       'Heavier flow than normal, prolonged periods, flooding, or passing clots.',
     category: 'sexual_pelvic',
-    isMRSCore: true,
-    mrsIndex: 15,
+    isMRSCore: false,
     relatedHormones: ['estrogen_high', 'progesterone_low'],
   },
   {
@@ -185,8 +181,7 @@ const RAW_SYMPTOM_CATALOG: RawSymptom[] = [
     description:
       'Increased sensitivity to sounds — chewing, tapping, breathing, or background noise feels unbearable.',
     category: 'mind',
-    isMRSCore: true,
-    mrsIndex: 16,
+    isMRSCore: false,
     relatedHormones: ['estrogen_low', 'progesterone_low'],
   },
   // ── Extended: Body ────────────────────────────────────────
@@ -1234,6 +1229,7 @@ const RAW_SYMPTOM_CATALOG: RawSymptom[] = [
 export const SYMPTOM_CATALOG: SymptomDefinition[] = RAW_SYMPTOM_CATALOG.map(enrich);
 
 export const MRS_CORE_SYMPTOMS = SYMPTOM_CATALOG.filter((s) => s.isMRSCore);
+export const MRS_CANONICAL_SYMPTOMS = MRS_CORE_SYMPTOMS;
 
 export function getExtendedByCategory(category: SymptomCategory): SymptomDefinition[] {
   return SYMPTOM_CATALOG.filter((s) => !s.isMRSCore && s.category === category);

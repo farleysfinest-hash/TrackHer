@@ -1,8 +1,11 @@
+import { useEffect } from 'react';
 import { useCheckinStore } from '../../stores/checkinStore';
+import { useAuthStore } from '../../stores/authStore';
+import { getPrimaryInstrument } from '../../data/instruments/registry';
 import { StepIndicator } from '../ui/StepIndicator';
 import { WellbeingScore } from './WellbeingScore';
-import { MRSCoreForm } from './MRSCoreForm';
-import { ExtendedSymptomsForm } from './ExtendedSymptomsForm';
+import { MRSSection } from './MRSSection';
+import { ExtendedSymptomsSection } from './ExtendedSymptomsSection';
 import { CheckinNotes } from './CheckinNotes';
 import { CheckinSummary } from './CheckinSummary';
 import { X } from 'lucide-react';
@@ -19,7 +22,13 @@ export function CheckinFlow({ onClose, onComplete }: CheckinFlowProps) {
   const prevStep = useCheckinStore((s) => s.prevStep);
   const getStepCount = useCheckinStore((s) => s.getStepCount);
   const reset = useCheckinStore((s) => s.reset);
+  const setInstrumentId = useCheckinStore((s) => s.setInstrumentId);
+  const strawStage = useAuthStore((s) => s.profile?.straw_stage ?? '-2');
   const totalSteps = getStepCount();
+
+  useEffect(() => {
+    setInstrumentId(getPrimaryInstrument(strawStage).id);
+  }, [strawStage, setInstrumentId]);
 
   const handleComplete = () => {
     reset();
@@ -37,7 +46,7 @@ export function CheckinFlow({ onClose, onComplete }: CheckinFlowProps) {
         case 1:
           return <WellbeingScore onNext={nextStep} />;
         case 2:
-          return <MRSCoreForm onNext={nextStep} onBack={prevStep} />;
+          return <MRSSection onNext={nextStep} onBack={prevStep} />;
         case 3:
           return <CheckinSummary onBack={prevStep} onSuccess={handleComplete} />;
         default:
@@ -49,10 +58,10 @@ export function CheckinFlow({ onClose, onComplete }: CheckinFlowProps) {
       case 1:
         return <WellbeingScore onNext={nextStep} />;
       case 2:
-        return <MRSCoreForm onNext={nextStep} onBack={prevStep} />;
+        return <MRSSection onNext={nextStep} onBack={prevStep} />;
       case 3:
         return (
-          <ExtendedSymptomsForm
+          <ExtendedSymptomsSection
             onNext={nextStep}
             onBack={prevStep}
             onSkip={nextStep}

@@ -35,7 +35,7 @@ function SubscaleChartComponent({ data }: SubscaleChartProps) {
             <LineChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
               <XAxis dataKey="dateLabel" tick={{ fontSize: 11, fill: CHART_COLORS.axisText }} />
-              <YAxis domain={[0, 20]} tick={{ fontSize: 11, fill: CHART_COLORS.axisText }} width={28} />
+              <YAxis domain={[0, 16]} tick={{ fontSize: 11, fill: CHART_COLORS.axisText }} width={28} />
               <Tooltip content={<ChartTooltipContent />} />
               {MRS_SUBSCALES.map((subscale) => (
                 <Line

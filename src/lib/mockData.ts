@@ -1,4 +1,4 @@
-import type { Profile, Medication, SymptomCheckin, MedicationChange, LabResult } from '../types/database';
+import type { Profile, Medication, SymptomCheckin, MedicationChange, LabResult, QuickLogEvent } from '../types/database';
 import type { MRSScore } from '../types/database';
 
 function getPastDate(daysAgo: number): string {
@@ -218,25 +218,11 @@ const WEEKLY_NARRATIVE: WeekScores[] = [
 ];
 
 function buildCheckin(week: WeekScores, index: number): SymptomCheckin {
-  const somatic =
-    week.hot_flashes + week.heart_discomfort + week.joint_muscle_pain;
+  const somatic = week.hot_flashes + week.heart_discomfort + week.sleep_problems + week.joint_muscle_pain;
   const psychological =
-    week.sleep_problems +
-    week.depressed_mood +
-    week.irritability +
-    week.anxiety +
-    week.exhaustion;
-  const urogenital =
-    week.sexual_problems + week.bladder_problems + week.vaginal_dryness;
-  const total =
-    somatic +
-    psychological +
-    urogenital +
-    week.dry_itchy_skin +
-    week.brain_fog +
-    week.irregular_periods +
-    week.heavy_bleeding +
-    week.misophonia;
+    week.depressed_mood + week.irritability + week.anxiety + week.exhaustion;
+  const urogenital = week.sexual_problems + week.bladder_problems + week.vaginal_dryness;
+  const total = somatic + psychological + urogenital;
 
   const date = getPastDate(week.daysAgo);
   return {
@@ -341,5 +327,41 @@ export const MOCK_LAB_RESULTS: LabResult[] = [
     triglycerides: 130,
     notes: 'Baseline labs before starting HRT',
     created_at: getPastDate(97) + 'T09:00:00Z',
+  },
+];
+
+export const MOCK_QUICK_LOGS: QuickLogEvent[] = [
+  {
+    id: 'ql-001',
+    user_id: MOCK_USER.id,
+    symptom_id: 'brain_fog',
+    severity: 6,
+    logged_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+    duration_minutes: 45,
+    trigger_tag: 'poor_sleep',
+    notes: null,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'ql-002',
+    user_id: MOCK_USER.id,
+    symptom_id: 'headaches',
+    severity: 4,
+    logged_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+    duration_minutes: 22,
+    trigger_tag: 'stress',
+    notes: 'After work meeting',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'ql-003',
+    user_id: MOCK_USER.id,
+    symptom_id: 'night_sweats',
+    severity: 8,
+    logged_at: new Date(Date.now() - 20 * 60 * 60 * 1000).toISOString(),
+    duration_minutes: null,
+    trigger_tag: 'heat',
+    notes: null,
+    created_at: new Date().toISOString(),
   },
 ];

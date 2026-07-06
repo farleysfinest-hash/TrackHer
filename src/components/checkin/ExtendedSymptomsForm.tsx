@@ -2,11 +2,11 @@ import { useMemo, useState } from 'react';
 import { useCheckinStore } from '../../stores/checkinStore';
 import { SYMPTOM_CATALOG, getExtendedByCategory } from '../../data/symptoms';
 import type { SymptomCategory } from '../../types/symptoms';
-import { CATEGORY_LABELS } from '../../utils/checkinHelpers';
+import type { MRSScore } from '../../types/database';
+import { CATEGORY_LABELS, SEVERITY_LABELS } from '../../utils/checkinHelpers';
 import { ExtendedSymptomCategory } from './ExtendedSymptomCategory';
 import { SymptomSearchBar } from './SymptomSearchBar';
 import { Button } from '../ui/Button';
-import type { SymptomSeverity } from '../../types/database';
 
 interface ExtendedSymptomsFormProps {
   onNext: () => void;
@@ -22,10 +22,12 @@ const CATEGORIES: SymptomCategory[] = [
   'skin_hair',
 ];
 
+const SCORES = [0, 1, 2, 3, 4] as MRSScore[];
+
 export function ExtendedSymptomsForm({ onNext, onBack, onSkip }: ExtendedSymptomsFormProps) {
   const extendedSymptoms = useCheckinStore((s) => s.extendedSymptoms);
-  const toggleExtendedSymptom = useCheckinStore((s) => s.toggleExtendedSymptom);
-  const setExtendedSeverity = useCheckinStore((s) => s.setExtendedSeverity);
+  const setExtendedScore = useCheckinStore((s) => s.setExtendedScore);
+  const removeExtendedSymptom = useCheckinStore((s) => s.removeExtendedSymptom);
   const [search, setSearch] = useState('');
 
   const filteredSymptoms = useMemo(() => {
@@ -66,20 +68,25 @@ export function ExtendedSymptomsForm({ onNext, onBack, onSkip }: ExtendedSymptom
                     <input
                       type="checkbox"
                       checked={!!entry}
-                      onChange={() => toggleExtendedSymptom(symptom.key)}
+                      onChange={() =>
+                        entry
+                          ? removeExtendedSymptom(symptom.key)
+                          : setExtendedScore(symptom.key, 0)
+                      }
                       className="rounded border-sand-300 text-sage-500"
                     />
                     <span className="text-sm text-sage-800">{symptom.label}</span>
                   </label>
                   {entry && (
-                    <div className="ml-7 mt-2 flex gap-2">
-                      {(['mild', 'moderate', 'severe'] as SymptomSeverity[]).map((sev) => (
+                    <div className="ml-7 mt-2 flex gap-1">
+                      {SCORES.map((sev) => (
                         <button
                           key={sev}
                           type="button"
-                          onClick={() => setExtendedSeverity(symptom.key, sev)}
+                          onClick={() => setExtendedScore(symptom.key, sev)}
+                          title={SEVERITY_LABELS[sev]}
                           className={[
-                            'rounded-lg px-3 py-1 text-xs capitalize',
+                            'rounded-lg px-2 py-1 text-xs',
                             entry.severity === sev
                               ? 'bg-sage-500 text-white'
                               : 'bg-sand-100 text-sage-600',

@@ -5,12 +5,14 @@ import type {
   ExtendedSymptomLog,
   LabResult,
   UserSymptomSelection,
+  QuickLogEvent,
 } from '../types/database';
 import {
   MOCK_MEDICATIONS,
   MOCK_MEDICATION_CHANGES,
   MOCK_CHECKINS,
   MOCK_LAB_RESULTS,
+  MOCK_QUICK_LOGS,
 } from './mockData';
 
 /** Shared in-memory state so all hook instances stay in sync in dev mode. */
@@ -20,6 +22,7 @@ let checkins: SymptomCheckin[] = [...MOCK_CHECKINS];
 let extendedSymptomLogs: ExtendedSymptomLog[] = [];
 let labResults: LabResult[] = [...MOCK_LAB_RESULTS];
 let symptomSelections: Omit<UserSymptomSelection, 'id' | 'selected_at'>[] = [];
+let quickLogs: QuickLogEvent[] = [...MOCK_QUICK_LOGS];
 
 export function resetDevStore(): void {
   medications = [...MOCK_MEDICATIONS];
@@ -28,6 +31,7 @@ export function resetDevStore(): void {
   extendedSymptomLogs = [];
   labResults = [...MOCK_LAB_RESULTS];
   symptomSelections = [];
+  quickLogs = [...MOCK_QUICK_LOGS];
   console.log('[DEV] Store reset to initial mock data');
 }
 
@@ -79,4 +83,12 @@ export function setDevSymptomSelections(
   selections: Omit<UserSymptomSelection, 'id' | 'selected_at'>[],
 ): void {
   symptomSelections = selections;
+}
+
+export function getDevQuickLogs(): QuickLogEvent[] {
+  return quickLogs;
+}
+
+export function setDevQuickLogs(events: QuickLogEvent[]): void {
+  quickLogs = events;
 }

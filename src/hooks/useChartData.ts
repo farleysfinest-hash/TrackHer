@@ -4,7 +4,7 @@ import { useMedications } from './useMedications';
 import { useMedicationChanges } from './useMedicationChanges';
 import { useLabResults } from './useLabResults';
 import type { SymptomCheckin, Medication, MedicationChange } from '../types/database';
-import { MRS_CORE_SYMPTOMS } from '../data/symptoms';
+import { MRS_CANONICAL_SYMPTOMS } from '../data/symptoms';
 import type { MRSSymptomKey } from '../utils/checkinHelpers';
 import { formatChartDate, filterByDateRange } from '../utils/chartHelpers';
 import { getEffectiveDailyDose } from '../utils/medicationHelpers';
@@ -148,7 +148,7 @@ export function useChartData(dateRange: DateRange) {
   }, [medications, dateRange]);
 
   const getHeatmapData = useCallback((): HeatmapRow[] => {
-    const rows = MRS_CORE_SYMPTOMS.map((symptom) => {
+    const rows = MRS_CANONICAL_SYMPTOMS.map((symptom) => {
       const key = symptom.key as MRSSymptomKey;
       const cells = filteredCheckins.map((c) => ({
         date: c.checkin_date,
@@ -187,7 +187,7 @@ export function useChartData(dateRange: DateRange) {
     (symptomKeys: string[], _medicationIds: string[]) => {
       const symptomLines = symptomKeys.map((key) => ({
         key,
-        label: MRS_CORE_SYMPTOMS.find((s) => s.key === key)?.label ?? key,
+        label: MRS_CANONICAL_SYMPTOMS.find((s) => s.key === key)?.label ?? key,
         points: filteredCheckins.map((c) => ({
           date: c.checkin_date,
           dateLabel: formatChartDate(c.checkin_date),

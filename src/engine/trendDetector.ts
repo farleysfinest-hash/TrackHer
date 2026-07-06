@@ -146,7 +146,7 @@ export function analyzeTrends(input: TrendInput): Insight[] {
       category: 'medication_note',
       priority: 'low',
       title: `${med.medication_name} has been at the same dose for ${getMonthsSince(med.start_date)} months`,
-      body: `You've been taking ${med.medication_name} (${formatMedicationDoseShort(med)}) since ${formatDateLong(med.start_date)} without a dose adjustment, and your symptom score is still at ${Math.round(recentAvg)}/64. It may be worth discussing whether a dose change could help.`,
+      body: `You've been taking ${med.medication_name} (${formatMedicationDoseShort(med)}) since ${formatDateLong(med.start_date)} without a dose adjustment, and your MRS score is still at ${Math.round(recentAvg)}/44. It may be worth discussing whether a dose change could help.`,
       supportingData: {},
       relatedMedication: med.id,
       actionSuggestion:
