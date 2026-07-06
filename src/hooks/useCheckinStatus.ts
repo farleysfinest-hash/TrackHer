@@ -79,43 +79,48 @@ export function useCheckinStatus() {
     let cancelled = false;
 
     void (async () => {
-      const todayStr = getLocalDateISO(timezone);
-      const [today, streak, lastCheckin] = await Promise.all([
-        getTodaysCheckinRef.current(),
-        getStreakRef.current(),
-        getLastCheckinRef.current(),
-      ]);
+      try {
+        const todayStr = getLocalDateISO(timezone);
+        const [today, streak, lastCheckin] = await Promise.all([
+          getTodaysCheckinRef.current(),
+          getStreakRef.current(),
+          getLastCheckinRef.current(),
+        ]);
 
-      if (cancelled) return;
+        if (cancelled) return;
 
-      const lastDate = today?.checkin_date ?? lastCheckin?.checkin_date ?? null;
-      let daysSinceLastCheckin: number | null = null;
-      if (lastDate) {
-        daysSinceLastCheckin = daysBetween(lastDate, todayStr);
+        const lastDate = today?.checkin_date ?? lastCheckin?.checkin_date ?? null;
+        let daysSinceLastCheckin: number | null = null;
+        if (lastDate) {
+          daysSinceLastCheckin = daysBetween(lastDate, todayStr);
+        }
+
+        let isDue = false;
+        if (today) {
+          isDue = false;
+        } else if (!lastCheckin) {
+          isDue = true;
+        } else if (frequency === 'daily') {
+          isDue = true;
+        } else if (frequency === 'weekly') {
+          isDue = daysBetween(lastCheckin.checkin_date, todayStr) >= 7;
+        } else {
+          isDue = !sameCalendarMonth(lastCheckin.checkin_date, todayStr);
+        }
+
+        setStatus({
+          hasCheckedInToday: !!today,
+          todaysCheckin: today,
+          streak,
+          lastCheckinDate: lastDate,
+          isDue,
+          daysSinceLastCheckin,
+        });
+      } catch (err) {
+        console.error('Failed to fetch checkin status:', err);
+      } finally {
+        if (!cancelled) setIsLoading(false);
       }
-
-      let isDue = false;
-      if (today) {
-        isDue = false;
-      } else if (!lastCheckin) {
-        isDue = true;
-      } else if (frequency === 'daily') {
-        isDue = true;
-      } else if (frequency === 'weekly') {
-        isDue = daysBetween(lastCheckin.checkin_date, todayStr) >= 7;
-      } else {
-        isDue = !sameCalendarMonth(lastCheckin.checkin_date, todayStr);
-      }
-
-      setStatus({
-        hasCheckedInToday: !!today,
-        todaysCheckin: today,
-        streak,
-        lastCheckinDate: lastDate,
-        isDue,
-        daysSinceLastCheckin,
-      });
-      setIsLoading(false);
     })();
 
     return () => {
