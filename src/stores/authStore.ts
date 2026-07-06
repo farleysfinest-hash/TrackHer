@@ -90,7 +90,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
       if (!mounted) return;
 
-      if (event === 'SIGNED_IN' && session?.user) {
+      if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && session?.user) {
         set({ user: session.user, isAuthenticated: true, isLoading: false });
         await get().fetchProfile(session.user.id);
       } else if (event === 'SIGNED_OUT') {
@@ -99,6 +99,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         set({ user: session.user, isAuthenticated: true });
       } else if (event === 'PASSWORD_RECOVERY') {
         set({ user: session?.user ?? null, isAuthenticated: !!session?.user });
+      } else if (event === 'INITIAL_SESSION' && !session) {
+        set({ user: null, profile: null, isAuthenticated: false, isLoading: false, isInitialized: true });
       }
     });
 
