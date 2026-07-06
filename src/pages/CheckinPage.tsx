@@ -15,7 +15,9 @@ import type { SymptomCheckin } from '../types/database';
 export function CheckinPage() {
   const { hasCheckedInToday, todaysCheckin, refresh, isLoading } = useCheckinStatus();
   const { fetchCheckinDetail, getTodaysCheckin } = useCheckins();
-  const { setMode, reset, loadExistingCheckin } = useCheckinStore();
+  const setMode = useCheckinStore((s) => s.setMode);
+  const reset = useCheckinStore((s) => s.reset);
+  const loadExistingCheckin = useCheckinStore((s) => s.loadExistingCheckin);
 
   const [activeFlow, setActiveFlow] = useState(false);
   const [showDuplicatePrompt, setShowDuplicatePrompt] = useState(false);

@@ -21,7 +21,9 @@ export function ExtendedSymptomCategory({
   symptoms,
   defaultExpanded = false,
 }: ExtendedSymptomCategoryProps) {
-  const { extendedSymptoms, toggleExtendedSymptom, setExtendedSeverity } = useCheckinStore();
+  const extendedSymptoms = useCheckinStore((s) => s.extendedSymptoms);
+  const toggleExtendedSymptom = useCheckinStore((s) => s.toggleExtendedSymptom);
+  const setExtendedSeverity = useCheckinStore((s) => s.setExtendedSeverity);
   const [expanded, setExpanded] = useState(defaultExpanded);
 
   if (symptoms.length === 0) return null;

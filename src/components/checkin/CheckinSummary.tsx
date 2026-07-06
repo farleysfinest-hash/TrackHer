@@ -16,20 +16,18 @@ interface CheckinSummaryProps {
 }
 
 export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
-  const {
-    wellbeingScore,
-    mrsScores,
-    extendedSymptoms,
-    notes,
-    mode,
-    isEditing,
-    editingCheckinId,
-    getTotalMRS,
-    getSomaticScore,
-    getPsychologicalScore,
-    getUrogenitalScore,
-    getTopConcerns,
-  } = useCheckinStore();
+  const wellbeingScore = useCheckinStore((s) => s.wellbeingScore);
+  const mrsScores = useCheckinStore((s) => s.mrsScores);
+  const extendedSymptoms = useCheckinStore((s) => s.extendedSymptoms);
+  const notes = useCheckinStore((s) => s.notes);
+  const mode = useCheckinStore((s) => s.mode);
+  const isEditing = useCheckinStore((s) => s.isEditing);
+  const editingCheckinId = useCheckinStore((s) => s.editingCheckinId);
+  const getTotalMRS = useCheckinStore((s) => s.getTotalMRS);
+  const getSomaticScore = useCheckinStore((s) => s.getSomaticScore);
+  const getPsychologicalScore = useCheckinStore((s) => s.getPsychologicalScore);
+  const getUrogenitalScore = useCheckinStore((s) => s.getUrogenitalScore);
+  const getTopConcerns = useCheckinStore((s) => s.getTopConcerns);
   const { createCheckin, updateCheckin } = useCheckins();
   const toast = useToast();
   const timezone = useAuthStore((s) => s.profile?.timezone);

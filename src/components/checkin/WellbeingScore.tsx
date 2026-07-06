@@ -7,7 +7,8 @@ interface WellbeingScoreProps {
 }
 
 export function WellbeingScore({ onNext }: WellbeingScoreProps) {
-  const { wellbeingScore, setWellbeingScore } = useCheckinStore();
+  const wellbeingScore = useCheckinStore((s) => s.wellbeingScore);
+  const setWellbeingScore = useCheckinStore((s) => s.setWellbeingScore);
 
   const handleSelect = (score: number) => {
     setWellbeingScore(score);

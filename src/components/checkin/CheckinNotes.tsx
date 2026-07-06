@@ -9,7 +9,8 @@ interface CheckinNotesProps {
 const MAX_NOTES = 2000;
 
 export function CheckinNotes({ onNext, onBack }: CheckinNotesProps) {
-  const { notes, setNotes } = useCheckinStore();
+  const notes = useCheckinStore((s) => s.notes);
+  const setNotes = useCheckinStore((s) => s.setNotes);
 
   return (
     <div className="space-y-6">

@@ -12,7 +12,8 @@ interface MRSCoreFormProps {
 }
 
 export function MRSCoreForm({ onNext, onBack }: MRSCoreFormProps) {
-  const { mrsScores, setMRSScore } = useCheckinStore();
+  const mrsScores = useCheckinStore((s) => s.mrsScores);
+  const setMRSScore = useCheckinStore((s) => s.setMRSScore);
   const frequency = useAuthStore((s) => s.profile?.checkin_frequency);
   const [dismissedNudge, setDismissedNudge] = useState(false);
 

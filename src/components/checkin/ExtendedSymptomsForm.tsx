@@ -23,7 +23,9 @@ const CATEGORIES: SymptomCategory[] = [
 ];
 
 export function ExtendedSymptomsForm({ onNext, onBack, onSkip }: ExtendedSymptomsFormProps) {
-  const { extendedSymptoms, toggleExtendedSymptom, setExtendedSeverity } = useCheckinStore();
+  const extendedSymptoms = useCheckinStore((s) => s.extendedSymptoms);
+  const toggleExtendedSymptom = useCheckinStore((s) => s.toggleExtendedSymptom);
+  const setExtendedSeverity = useCheckinStore((s) => s.setExtendedSeverity);
   const [search, setSearch] = useState('');
 
   const filteredSymptoms = useMemo(() => {

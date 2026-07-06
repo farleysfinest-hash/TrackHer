@@ -13,7 +13,12 @@ interface CheckinFlowProps {
 }
 
 export function CheckinFlow({ onClose, onComplete }: CheckinFlowProps) {
-  const { mode, currentStep, nextStep, prevStep, getStepCount, reset } = useCheckinStore();
+  const mode = useCheckinStore((s) => s.mode);
+  const currentStep = useCheckinStore((s) => s.currentStep);
+  const nextStep = useCheckinStore((s) => s.nextStep);
+  const prevStep = useCheckinStore((s) => s.prevStep);
+  const getStepCount = useCheckinStore((s) => s.getStepCount);
+  const reset = useCheckinStore((s) => s.reset);
   const totalSteps = getStepCount();
 
   const handleComplete = () => {

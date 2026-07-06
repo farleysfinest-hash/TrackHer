@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useMedicationEntryStore } from '../../stores/medicationEntryStore';
 import { getProductsForMethod } from '../../utils/medicationHelpers';
 import { Badge } from '../ui/Badge';
@@ -13,17 +13,20 @@ export function StepProduct({ onBack, onCustom }: StepProductProps) {
   const { selectedHormone, selectedMethod, selectedProduct, setProduct, goToStep } =
     useMedicationEntryStore();
 
-  if (!selectedHormone || !selectedMethod) return null;
-
-  const products = getProductsForMethod(selectedHormone, selectedMethod);
+  const products = useMemo(() => {
+    if (!selectedHormone || !selectedMethod) return [];
+    return getProductsForMethod(selectedHormone, selectedMethod);
+  }, [selectedHormone, selectedMethod]);
 
   useEffect(() => {
-    if (products.length === 1) {
+    if (selectedHormone && selectedMethod && products.length === 1) {
       setProduct(products[0]);
       const timer = setTimeout(() => goToStep(4), 300);
       return () => clearTimeout(timer);
     }
-  }, [products, setProduct, goToStep]);
+  }, [selectedHormone, selectedMethod, products, setProduct, goToStep]);
+
+  if (!selectedHormone || !selectedMethod) return null;
 
   const handleSelect = (key: string) => {
     const product = products.find((p) => p.key === key);
