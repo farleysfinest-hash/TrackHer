@@ -1,4 +1,4 @@
-import { Fragment } from 'react';
+import { Fragment, memo } from 'react';
 import { HEATMAP_COLORS } from '../../utils/chartHelpers';
 import type { HeatmapRow } from '../../hooks/useChartData';
 import { ChartCard } from '../ui/ChartCard';
@@ -8,7 +8,7 @@ interface SymptomHeatmapProps {
   rows: HeatmapRow[];
 }
 
-export function SymptomHeatmap({ rows }: SymptomHeatmapProps) {
+function SymptomHeatmapComponent({ rows }: SymptomHeatmapProps) {
   const isEmpty = rows.length === 0 || rows[0]?.cells.length === 0;
   const dates = rows[0]?.cells ?? [];
 
@@ -77,3 +77,5 @@ export function SymptomHeatmap({ rows }: SymptomHeatmapProps) {
     </ChartCard>
   );
 }
+
+export const SymptomHeatmap = memo(SymptomHeatmapComponent);

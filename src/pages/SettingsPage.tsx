@@ -14,7 +14,7 @@ import type { MenopauseStage, CheckinFrequency } from '../types/database';
 
 export function SettingsPage() {
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { user, signOut, updatePassword } = useAuth();
   const { profile, update, isUpdating } = useProfile();
 
   const [displayName, setDisplayName] = useState(profile?.display_name ?? '');
@@ -30,8 +30,6 @@ export function SettingsPage() {
   const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>({});
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-
-  const { updatePassword } = useAuth();
 
   useEffect(() => {
     if (profile) {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import type { Medication } from '../../types/database';
 import {
   formatApplicationSite,
@@ -23,7 +23,7 @@ interface MedicationCardProps {
   onRefresh: () => void;
 }
 
-export function MedicationCard({
+function MedicationCardComponent({
   medication,
   onEdit,
   onDiscontinue,
@@ -116,3 +116,5 @@ export function MedicationCard({
     </div>
   );
 }
+
+export const MedicationCard = memo(MedicationCardComponent);

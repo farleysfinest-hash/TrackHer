@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { SymptomCheckin } from '../../types/database';
 import { formatDateLong } from '../../utils/formatters';
 import { getTopConcerns, type MRSScoresMap, type MRSSymptomKey } from '../../utils/checkinHelpers';
@@ -19,7 +20,7 @@ function checkinToScores(checkin: SymptomCheckin): MRSScoresMap {
   return scores;
 }
 
-export function CheckinHistoryCard({ checkin, onViewDetails }: CheckinHistoryCardProps) {
+function CheckinHistoryCardComponent({ checkin, onViewDetails }: CheckinHistoryCardProps) {
   const scores = checkinToScores(checkin);
   const top = getTopConcerns(scores, 2);
 
@@ -62,3 +63,5 @@ export function CheckinHistoryCard({ checkin, onViewDetails }: CheckinHistoryCar
     </div>
   );
 }
+
+export const CheckinHistoryCard = memo(CheckinHistoryCardComponent);

@@ -17,7 +17,7 @@ interface LabValueInputProps {
   biomarker: LabBiomarker;
   value: number | null;
   previousValue: number | null;
-  onChange: (value: number | null) => void;
+  onChange: (biomarkerKey: string, value: number | null) => void;
 }
 
 function LabValueInputComponent({
@@ -41,12 +41,12 @@ function LabValueInputComponent({
   const handleBlur = () => {
     const trimmed = localText.trim();
     if (trimmed === '') {
-      onChange(null);
+      onChange(biomarker.key, null);
       return;
     }
     const num = parseFloat(trimmed);
     if (!Number.isNaN(num) && num >= 0) {
-      onChange(num);
+      onChange(biomarker.key, num);
     } else {
       setLocalText(value !== null ? String(value) : '');
     }

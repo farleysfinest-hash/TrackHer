@@ -3,16 +3,11 @@ import { HORMONE_CATEGORIES } from '../../lib/medicationConstants';
 import { getHormoneColor, getHormoneLabel } from '../../utils/medicationHelpers';
 import type { HormoneCategory } from '../../types/database';
 
-interface StepHormoneCategoryProps {
-  onSelect: (hormone: HormoneCategory) => void;
-}
-
-export function StepHormoneCategory({ onSelect }: StepHormoneCategoryProps) {
+export function StepHormoneCategory() {
   const { selectedHormone, setHormone, setCustomEntry, goToStep } = useMedicationEntryStore();
 
   const handleSelect = (value: HormoneCategory) => {
     setHormone(value);
-    onSelect(value);
 
     setTimeout(() => {
       if (value === 'other') {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   ResponsiveContainer,
   LineChart,
@@ -69,21 +69,21 @@ export function DrillDownControls({
     (m) => m.change.medication_id && selectedMeds.includes(m.change.medication_id),
   );
 
-  const toggleSymptom = (key: string) => {
+  const toggleSymptom = useCallback((key: string) => {
     setSelectedSymptoms((prev) => {
       if (prev.includes(key)) return prev.filter((k) => k !== key);
       if (prev.length >= MAX_SYMPTOMS) return prev;
       return [...prev, key];
     });
-  };
+  }, []);
 
-  const toggleMed = (id: string) => {
+  const toggleMed = useCallback((id: string) => {
     setSelectedMeds((prev) => {
       if (prev.includes(id)) return prev.filter((m) => m !== id);
       if (prev.length >= MAX_MEDS) return prev;
       return [...prev, id];
     });
-  };
+  }, []);
 
   const isEmpty = checkinDates.length < 2;
 

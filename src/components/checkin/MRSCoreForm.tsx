@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useCheckinStore } from '../../stores/checkinStore';
 import { useAuthStore } from '../../stores/authStore';
 import { MRS_CORE_SYMPTOMS } from '../../data/symptoms';
+import type { MRSScore } from '../../types/database';
 import { getTimeframeLabel, countRatedMRS, type MRSSymptomKey } from '../../utils/checkinHelpers';
 import { SeveritySlider } from './SeveritySlider';
 import { Button } from '../ui/Button';
@@ -19,6 +20,13 @@ export function MRSCoreForm({ onNext, onBack }: MRSCoreFormProps) {
 
   const ratedCount = countRatedMRS(mrsScores);
   const showNudge = ratedCount < 8 && !dismissedNudge;
+
+  const handleScoreChange = useCallback(
+    (symptomKey: string, score: MRSScore) => {
+      setMRSScore(symptomKey as MRSSymptomKey, score);
+    },
+    [setMRSScore],
+  );
 
   const orderedSymptoms = [...MRS_CORE_SYMPTOMS].sort(
     (a, b) => (a.mrsIndex ?? 0) - (b.mrsIndex ?? 0),
@@ -39,7 +47,7 @@ export function MRSCoreForm({ onNext, onBack }: MRSCoreFormProps) {
             label={symptom.label}
             description={symptom.description}
             value={mrsScores[symptom.key as MRSSymptomKey]}
-            onChange={(score) => setMRSScore(symptom.key as MRSSymptomKey, score)}
+            onChange={handleScoreChange}
           />
         ))}
       </div>

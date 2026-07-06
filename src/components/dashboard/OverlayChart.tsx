@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react';
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -19,13 +20,10 @@ interface OverlayChartProps {
   changeMarkers: ChangeMarker[];
 }
 
-export function OverlayChart({ data, changeMarkers }: OverlayChartProps) {
+function OverlayChartComponent({ data, changeMarkers }: OverlayChartProps) {
   const isEmpty = data.length < 2;
 
-  const chartData = data.map((d) => ({
-    ...d,
-    checkin: d.checkin,
-  }));
+  const chartData = useMemo(() => data.map((d) => ({ ...d, checkin: d.checkin })), [data]);
 
   return (
     <ChartCard
@@ -102,3 +100,5 @@ export function OverlayChart({ data, changeMarkers }: OverlayChartProps) {
     </ChartCard>
   );
 }
+
+export const OverlayChart = memo(OverlayChartComponent);

@@ -254,7 +254,7 @@ export function useCheckins() {
     return { data: rows, hasMore: rows.length === pageSize };
   }, []);
 
-  const fetchCheckinDetail = async (
+  const fetchCheckinDetail = useCallback(async (
     id: string,
   ): Promise<{ checkin: SymptomCheckin; extendedSymptoms: ExtendedSymptomLog[] } | null> => {
     if (IS_DEV_MODE) {
@@ -281,7 +281,7 @@ export function useCheckins() {
       checkin: checkin as SymptomCheckin,
       extendedSymptoms: (extended as ExtendedSymptomLog[]) ?? [],
     };
-  };
+  }, []);
 
   const getLastCheckin = async (): Promise<SymptomCheckin | null> => {
     if (IS_DEV_MODE) {

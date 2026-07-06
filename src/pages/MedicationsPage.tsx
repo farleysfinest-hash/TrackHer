@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Plus, ChevronDown, ChevronUp } from 'lucide-react';
 import { useMedications } from '../hooks/useMedications';
 import { ActiveMedicationsList } from '../components/medications/ActiveMedicationsList';
@@ -24,9 +24,9 @@ export function MedicationsPage() {
 
   const activeCount = medications.filter((m) => m.is_active).length;
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     void fetchMedications();
-  };
+  }, [fetchMedications]);
 
   return (
     <div className="space-y-10">

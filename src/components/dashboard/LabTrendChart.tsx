@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -20,7 +20,7 @@ interface LabTrendChartProps {
   biomarkerKey: string;
 }
 
-export function LabTrendChart({ data, biomarkerKey }: LabTrendChartProps) {
+function LabTrendChartComponent({ data, biomarkerKey }: LabTrendChartProps) {
   const biomarker = getBiomarkerByKey(biomarkerKey);
   const isEmpty = data.length < 2;
 
@@ -99,3 +99,5 @@ export function LabTrendChart({ data, biomarkerKey }: LabTrendChartProps) {
     </ChartCard>
   );
 }
+
+export const LabTrendChart = memo(LabTrendChartComponent);

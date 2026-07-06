@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import {
   ResponsiveContainer,
   LineChart,
@@ -17,7 +18,7 @@ interface SubscaleChartProps {
   data: SymptomTrendPoint[];
 }
 
-export function SubscaleChart({ data }: SubscaleChartProps) {
+function SubscaleChartComponent({ data }: SubscaleChartProps) {
   const isEmpty = data.length < 2;
 
   return (
@@ -69,3 +70,5 @@ export function SubscaleChart({ data }: SubscaleChartProps) {
     </ChartCard>
   );
 }
+
+export const SubscaleChart = memo(SubscaleChartComponent);

@@ -10,7 +10,9 @@ const PRESETS: { key: DateRangePreset; label: string }[] = [
 ];
 
 export function DateRangeSelector() {
-  const { datePreset, dateRange, setDatePreset } = useDashboardStore();
+  const datePreset = useDashboardStore((s) => s.datePreset);
+  const dateRange = useDashboardStore((s) => s.dateRange);
+  const setDatePreset = useDashboardStore((s) => s.setDatePreset);
 
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

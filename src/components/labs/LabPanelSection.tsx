@@ -49,7 +49,7 @@ export function LabPanelSection({
               biomarker={b}
               value={values[b.key] ?? null}
               previousValue={previousValues[b.key] ?? null}
-              onChange={(v) => onChange(b.key, v)}
+              onChange={onChange}
             />
           ))}
         </div>

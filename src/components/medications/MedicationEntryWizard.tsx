@@ -69,9 +69,7 @@ export function MedicationEntryWizard({ isOpen, onClose, onComplete }: Medicatio
           )}
 
           <div className="animate-fade-in" key={`${currentStep}-${isCustomEntry}`}>
-            {currentStep === 1 && (
-              <StepHormoneCategory onSelect={() => {}} />
-            )}
+            {currentStep === 1 && <StepHormoneCategory />}
 
             {currentStep === 2 && !isCustomEntry && (
               <StepDeliveryMethod onBack={prevStep} />

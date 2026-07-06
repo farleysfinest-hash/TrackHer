@@ -32,12 +32,20 @@ export function CheckinDetailModal({
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    if (checkin && isOpen) {
-      void fetchCheckinDetail(checkin.id).then((detail) => {
-        if (detail) setExtended(detail.extendedSymptoms);
-      });
+    if (!checkin || !isOpen) {
+      setExtended([]);
+      return;
     }
-  }, [checkin, isOpen, fetchCheckinDetail]);
+
+    let cancelled = false;
+    void fetchCheckinDetail(checkin.id).then((detail) => {
+      if (!cancelled && detail) setExtended(detail.extendedSymptoms);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [checkin?.id, isOpen, fetchCheckinDetail]);
 
   if (!checkin) return null;
 

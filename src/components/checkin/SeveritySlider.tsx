@@ -8,7 +8,7 @@ interface SeveritySliderProps {
   label: string;
   description?: string;
   value: MRSScore | null;
-  onChange: (value: MRSScore) => void;
+  onChange: (symptomKey: string, value: MRSScore) => void;
 }
 
 const SELECTED_STYLES: Record<MRSScore, string> = {
@@ -35,11 +35,11 @@ function SeveritySliderComponent({
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
       e.preventDefault();
       const next = scores[Math.min(idx + 1, scores.length - 1)];
-      onChange(next);
+      onChange(symptomKey, next);
     } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
       e.preventDefault();
       const next = scores[Math.max(idx - 1, 0)];
-      onChange(next);
+      onChange(symptomKey, next);
     }
   };
 
@@ -83,7 +83,7 @@ function SeveritySliderComponent({
               role="radio"
               aria-checked={isSelected}
               aria-label={`${label} severity: ${SEVERITY_LABELS[score]}`}
-              onClick={() => onChange(score)}
+              onClick={() => onChange(symptomKey, score)}
               className={[
                 'min-h-[44px] flex-1 border-r border-sand-200 text-sm font-medium transition-colors last:border-r-0',
                 isSelected

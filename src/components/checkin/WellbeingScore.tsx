@@ -12,7 +12,6 @@ export function WellbeingScore({ onNext }: WellbeingScoreProps) {
 
   const handleSelect = (score: number) => {
     setWellbeingScore(score);
-    setTimeout(onNext, 300);
   };
 
   return (

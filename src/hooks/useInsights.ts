@@ -21,13 +21,12 @@ export function useInsights() {
   const [extendedLoading, setExtendedLoading] = useState(!IS_DEV_MODE);
 
   useEffect(() => {
-    void Promise.all([
-      fetchCheckins(100),
-      fetchMedications(),
-      fetchChanges(),
-      fetchLabResults(),
-    ]);
-  }, [fetchCheckins, fetchMedications, fetchChanges, fetchLabResults]);
+    void fetchCheckins(100);
+    void fetchMedications();
+    void fetchChanges();
+    void fetchLabResults();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (IS_DEV_MODE) {

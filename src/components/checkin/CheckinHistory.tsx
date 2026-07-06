@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCheckins } from '../../hooks/useCheckins';
 import type { SymptomCheckin } from '../../types/database';
 import { CheckinHistoryCard } from './CheckinHistoryCard';
@@ -15,33 +15,38 @@ export function CheckinHistory({ onViewDetails }: CheckinHistoryProps) {
   const { fetchCheckinsPage } = useCheckins();
   const [items, setItems] = useState<SymptomCheckin[]>([]);
   const [range, setRange] = useState<DateRange>('30');
-  const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const offsetRef = useRef(0);
 
-  const filterByRange = (rows: SymptomCheckin[]) => {
-    if (range === 'all') return rows;
-    const days = Number(range);
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - days);
-    return rows.filter((r) => new Date(r.checkin_date) >= cutoff);
-  };
+  const filterByRange = useCallback(
+    (rows: SymptomCheckin[]) => {
+      if (range === 'all') return rows;
+      const days = Number(range);
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - days);
+      return rows.filter((r) => new Date(r.checkin_date) >= cutoff);
+    },
+    [range],
+  );
 
-  const load = async (reset = false) => {
-    setIsLoading(true);
-    const newOffset = reset ? 0 : offset;
-    const { data, hasMore: more } = await fetchCheckinsPage(newOffset, 10);
-    const filtered = filterByRange(data);
-    setItems((prev) => (reset ? filtered : [...prev, ...filtered]));
-    setHasMore(more);
-    setOffset(reset ? 10 : newOffset + 10);
-    setIsLoading(false);
-  };
+  const load = useCallback(
+    async (reset = false) => {
+      setIsLoading(true);
+      const newOffset = reset ? 0 : offsetRef.current;
+      const { data, hasMore: more } = await fetchCheckinsPage(newOffset, 10);
+      const filtered = filterByRange(data);
+      setItems((prev) => (reset ? filtered : [...prev, ...filtered]));
+      setHasMore(more);
+      offsetRef.current = (reset ? 0 : newOffset) + 10;
+      setIsLoading(false);
+    },
+    [fetchCheckinsPage, filterByRange],
+  );
 
   useEffect(() => {
-    setOffset(0);
     void load(true);
-  }, [range]);
+  }, [load]);
 
   return (
     <div className="space-y-4">
@@ -74,7 +79,7 @@ export function CheckinHistory({ onViewDetails }: CheckinHistoryProps) {
       )}
 
       {hasMore && (
-        <Button variant="secondary" onClick={() => load(false)} disabled={isLoading}>
+        <Button variant="secondary" onClick={() => void load(false)} disabled={isLoading}>
           Load more
         </Button>
       )}
