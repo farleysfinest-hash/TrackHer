@@ -3,10 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { useAuth } from '../../hooks/useAuth';
 import { StepProfile } from './StepProfile';
-import { StepMenopauseStage } from './StepMenopauseStage';
+import { StepStrawStaging } from './StepStrawStaging';
+import { StepSymptomSelection } from './StepSymptomSelection';
 import { StepCheckinFrequency } from './StepCheckinFrequency';
 import { OnboardingComplete } from './OnboardingComplete';
 import { MedicalDisclaimer } from '../ui/MedicalDisclaimer';
+
+const TOTAL_STEPS = 4;
 
 export function OnboardingWizard() {
   const navigate = useNavigate();
@@ -21,6 +24,7 @@ export function OnboardingWizard() {
         email: user.email ?? '',
         hasUterus: profile?.has_uterus ?? null,
         dateOfBirth: profile?.date_of_birth ?? '',
+        lastPeriodDate: profile?.last_period_date ?? '',
       });
     }
     return () => reset();
@@ -34,34 +38,40 @@ export function OnboardingWizard() {
     return <OnboardingComplete onGoToDashboard={() => navigate('/dashboard')} />;
   }
 
-  const progress = (currentStep / 3) * 100;
+  const progress = (currentStep / TOTAL_STEPS) * 100;
 
   return (
     <div className="mx-auto w-full max-w-[640px] px-6 py-8 md:py-12">
-      {!isComplete && (
-        <div className="mb-8">
-          <div className="mb-2 flex justify-between text-sm text-sage-500">
-            <span>Step {currentStep} of 3</span>
-            <span>{Math.round(progress)}% complete</span>
-          </div>
-          <div className="h-2 overflow-hidden rounded-full bg-sage-100">
-            <div
-              className="h-full rounded-full bg-sage-500 transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
+      <div className="mb-8">
+        <div className="mb-2 flex justify-between text-sm text-sage-500">
+          <span>Step {currentStep} of {TOTAL_STEPS}</span>
+          <span>{Math.round(progress)}% complete</span>
         </div>
-      )}
+        <div className="h-2 overflow-hidden rounded-full bg-sage-100">
+          <div
+            className="h-full rounded-full bg-sage-500 transition-all duration-300"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
 
       <div className="animate-fade-in" key={currentStep}>
-        {currentStep === 1 && <StepProfile onNext={() => useOnboardingStore.getState().nextStep()} />}
+        {currentStep === 1 && (
+          <StepProfile onNext={() => useOnboardingStore.getState().nextStep()} />
+        )}
         {currentStep === 2 && (
-          <StepMenopauseStage
+          <StepStrawStaging
             onNext={() => useOnboardingStore.getState().nextStep()}
             onBack={() => useOnboardingStore.getState().prevStep()}
           />
         )}
         {currentStep === 3 && (
+          <StepSymptomSelection
+            onNext={() => useOnboardingStore.getState().nextStep()}
+            onBack={() => useOnboardingStore.getState().prevStep()}
+          />
+        )}
+        {currentStep === 4 && (
           <StepCheckinFrequency
             onComplete={handleComplete}
             onBack={() => useOnboardingStore.getState().prevStep()}

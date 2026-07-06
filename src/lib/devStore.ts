@@ -4,6 +4,7 @@ import type {
   SymptomCheckin,
   ExtendedSymptomLog,
   LabResult,
+  UserSymptomSelection,
 } from '../types/database';
 import {
   MOCK_MEDICATIONS,
@@ -18,6 +19,7 @@ let medicationChanges: MedicationChange[] = [...MOCK_MEDICATION_CHANGES];
 let checkins: SymptomCheckin[] = [...MOCK_CHECKINS];
 let extendedSymptomLogs: ExtendedSymptomLog[] = [];
 let labResults: LabResult[] = [...MOCK_LAB_RESULTS];
+let symptomSelections: Omit<UserSymptomSelection, 'id' | 'selected_at'>[] = [];
 
 export function resetDevStore(): void {
   medications = [...MOCK_MEDICATIONS];
@@ -25,6 +27,7 @@ export function resetDevStore(): void {
   checkins = [...MOCK_CHECKINS];
   extendedSymptomLogs = [];
   labResults = [...MOCK_LAB_RESULTS];
+  symptomSelections = [];
   console.log('[DEV] Store reset to initial mock data');
 }
 
@@ -66,4 +69,14 @@ export function getDevLabResults(): LabResult[] {
 
 export function setDevLabResults(data: LabResult[]): void {
   labResults = data;
+}
+
+export function getDevSymptomSelections(): Omit<UserSymptomSelection, 'id' | 'selected_at'>[] {
+  return symptomSelections;
+}
+
+export function setDevSymptomSelections(
+  selections: Omit<UserSymptomSelection, 'id' | 'selected_at'>[],
+): void {
+  symptomSelections = selections;
 }

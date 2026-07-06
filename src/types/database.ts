@@ -1,3 +1,11 @@
+import type {
+  StrawStageCode,
+  PeriodsStatus,
+  PeriodChanges,
+  LastPeriodTimeframe,
+  MenopauseCause,
+} from '../lib/strawStaging';
+
 export type MenopauseStage = 'perimenopause' | 'menopause' | 'postmenopause' | 'surgical' | 'unknown';
 export type CheckinFrequency = 'daily' | 'weekly' | 'monthly';
 
@@ -79,14 +87,29 @@ export interface Profile {
   display_name: string | null;
   email: string | null;
   menopause_stage: MenopauseStage | null;
+  straw_stage: StrawStageCode | null;
+  straw_stage_label: string | null;
+  menopause_cause: MenopauseCause | null;
+  last_period_date: string | null;
+  last_period_timeframe: LastPeriodTimeframe | null;
+  periods_status: PeriodsStatus | null;
+  period_changes: PeriodChanges | null;
+  staging_completed_at: string | null;
   has_uterus: boolean;
   date_of_birth: string | null;
-  last_period_date: string | null;
   checkin_frequency: CheckinFrequency | null;
   onboarding_completed: boolean;
   timezone: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface UserSymptomSelection {
+  id: string;
+  user_id: string;
+  symptom_id: string;
+  is_watch_symptom: boolean;
+  selected_at: string;
 }
 
 export type ProfileUpdate = Partial<Omit<Profile, 'id' | 'created_at' | 'updated_at'>>;
@@ -274,6 +297,13 @@ export type Database = {
           display_name?: string | null;
           email?: string | null;
           menopause_stage?: MenopauseStage | null;
+          straw_stage?: StrawStageCode | null;
+          straw_stage_label?: string | null;
+          menopause_cause?: MenopauseCause | null;
+          last_period_timeframe?: LastPeriodTimeframe | null;
+          periods_status?: PeriodsStatus | null;
+          period_changes?: PeriodChanges | null;
+          staging_completed_at?: string | null;
           has_uterus?: boolean;
           date_of_birth?: string | null;
           last_period_date?: string | null;
@@ -350,6 +380,12 @@ export type Database = {
         Row: ReminderSchedule;
         Insert: Omit<ReminderSchedule, 'id' | 'created_at'>;
         Update: Partial<Omit<ReminderSchedule, 'id' | 'created_at'>>;
+        Relationships: [];
+      };
+      user_symptom_selections: {
+        Row: UserSymptomSelection;
+        Insert: Omit<UserSymptomSelection, 'id' | 'selected_at'>;
+        Update: Partial<Omit<UserSymptomSelection, 'id' | 'selected_at'>>;
         Relationships: [];
       };
     };

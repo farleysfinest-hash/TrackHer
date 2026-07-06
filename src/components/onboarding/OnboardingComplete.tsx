@@ -1,6 +1,6 @@
 import { CheckCircle } from 'lucide-react';
 import { useOnboardingStore } from '../../stores/onboardingStore';
-import { MENOPAUSE_STAGES, CHECKIN_FREQUENCIES } from '../../lib/constants';
+import { CHECKIN_FREQUENCIES } from '../../lib/constants';
 import { Button } from '../ui/Button';
 import { Link } from 'react-router-dom';
 
@@ -12,7 +12,8 @@ export function OnboardingComplete({ onGoToDashboard }: OnboardingCompleteProps)
   const { formData } = useOnboardingStore();
 
   const stageLabel =
-    MENOPAUSE_STAGES.find((s) => s.value === formData.menopauseStage)?.label ?? 'Not specified';
+    formData.stagingResult?.strawStageLabel ??
+    (formData.stagingResult?.strawStage ? `Stage ${formData.stagingResult.strawStage}` : 'Not specified');
   const frequencyLabel =
     CHECKIN_FREQUENCIES.find((f) => f.value === formData.checkinFrequency)?.label ??
     'Not specified';
@@ -34,8 +35,16 @@ export function OnboardingComplete({ onGoToDashboard }: OnboardingCompleteProps)
             <dd className="font-medium text-sage-800">{formData.displayName}</dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-sage-500">Menopause stage</dt>
+            <dt className="text-sage-500">STRAW+10 stage</dt>
             <dd className="font-medium text-sage-800">{stageLabel}</dd>
+          </div>
+          <div className="flex justify-between">
+            <dt className="text-sage-500">Symptoms tracked</dt>
+            <dd className="font-medium text-sage-800">{formData.selectedSymptoms.length}</dd>
+          </div>
+          <div className="flex justify-between">
+            <dt className="text-sage-500">Watch symptoms</dt>
+            <dd className="font-medium text-sage-800">{formData.watchSymptoms.length}</dd>
           </div>
           <div className="flex justify-between">
             <dt className="text-sage-500">Check-in frequency</dt>

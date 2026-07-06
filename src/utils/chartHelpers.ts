@@ -4,9 +4,10 @@ import type { MRSScore } from '../types/database';
 export const CHART_COLORS = {
   mrsTotal: '#be739a',
   wellbeing: '#a88088',
+  /** MRS subscale line ramp: light blush → mid → brand rose (all clearly distinct) */
   somatic: '#d4a0b5',
-  psychological: '#b88496',
-  urogenital: '#6e4f62',
+  psychological: '#be739a',
+  urogenital: '#c989a7',
   optimalBand: '#5a8a4a',
   conventionalBand: '#c4946c',
   outOfRange: '#b54f4f',

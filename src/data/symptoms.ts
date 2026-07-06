@@ -1,6 +1,22 @@
 import type { SymptomDefinition, SymptomCategory } from '../types/symptoms';
+import {
+  resolveBodySystem,
+  resolvePhasePeak,
+  resolveTier,
+} from './symptomEnrichment';
 
-export const SYMPTOM_CATALOG: SymptomDefinition[] = [
+type RawSymptom = Omit<SymptomDefinition, 'bodySystem' | 'phasePeak' | 'tier'>;
+
+function enrich(symptom: RawSymptom): SymptomDefinition {
+  return {
+    ...symptom,
+    bodySystem: resolveBodySystem(symptom.key, symptom.category),
+    phasePeak: resolvePhasePeak(symptom.key, symptom.category, symptom.isMRSCore),
+    tier: resolveTier(symptom.isMRSCore),
+  };
+}
+
+const RAW_SYMPTOM_CATALOG: RawSymptom[] = [
   // ── MRS Core (16 symptoms) ──────────────────────────────────
   {
     key: 'hot_flashes',
@@ -1214,6 +1230,8 @@ export const SYMPTOM_CATALOG: SymptomDefinition[] = [
     relatedHormones: ['estrogen_high', 'estrogen_low'],
   },
 ];
+
+export const SYMPTOM_CATALOG: SymptomDefinition[] = RAW_SYMPTOM_CATALOG.map(enrich);
 
 export const MRS_CORE_SYMPTOMS = SYMPTOM_CATALOG.filter((s) => s.isMRSCore);
 
