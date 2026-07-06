@@ -210,10 +210,10 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
       straw_stage: result.strawStage,
       straw_stage_label: result.strawStageLabel,
       menopause_cause: result.menopauseCause,
-      periods_status: formData.staging.periodsStatus ?? undefined,
-      period_changes: formData.staging.periodChanges ?? undefined,
-      last_period_timeframe: formData.staging.lastPeriodTimeframe ?? undefined,
-      last_period_date: formData.lastPeriodDate || undefined,
+      periods_status: formData.staging.periodsStatus ?? null,
+      period_changes: formData.staging.periodChanges ?? null,
+      last_period_timeframe: formData.staging.lastPeriodTimeframe ?? null,
+      last_period_date: formData.lastPeriodDate || null,
       staging_completed_at: new Date().toISOString(),
     };
 

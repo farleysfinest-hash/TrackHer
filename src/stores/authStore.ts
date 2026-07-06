@@ -225,7 +225,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return;
     }
 
-    const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
+    const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
 
     if (error) {
       console.error('Failed to fetch profile:', error.message);
@@ -258,10 +258,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       .update(updates)
       .eq('id', user.id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       return { success: false, error: error.message };
+    }
+    if (!data && !error) {
+      const { data: upsertData, error: upsertError } = await supabase
+        .from('profiles')
+        .upsert({ id: user.id, ...updates })
+        .select()
+        .maybeSingle();
+      if (upsertError) {
+        return { success: false, error: upsertError.message };
+      }
+      set({ profile: upsertData as Profile });
+      return { success: true };
     }
     set({ profile: data as Profile });
     return { success: true };
