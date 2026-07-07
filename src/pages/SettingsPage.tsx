@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
@@ -205,13 +205,13 @@ export function SettingsPage() {
         <div className="mt-4 space-y-3 text-sm text-sage-600">
           <p>Version {APP_VERSION}</p>
           <p>
-            <a href="#" className="text-sage-600 underline hover:text-sage-800">
+            <Link to="/privacy" className="text-sage-600 underline hover:text-sage-800">
               Privacy Policy
-            </a>
+            </Link>
             {' · '}
-            <a href="#" className="text-sage-600 underline hover:text-sage-800">
+            <Link to="/terms" className="text-sage-600 underline hover:text-sage-800">
               Terms of Service
-            </a>
+            </Link>
           </p>
           <MedicalDisclaimer variant="inline" />
         </div>

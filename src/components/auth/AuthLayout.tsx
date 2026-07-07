@@ -15,11 +15,11 @@ export function AuthLayout({ children }: { children?: React.ReactNode }) {
       <div className="mt-8 max-w-[480px] text-center">
         <MedicalDisclaimer variant="inline" />
         <p className="mt-4 text-xs text-sage-400">
-          <Link to="/login" className="underline hover:text-sage-600">
+          <Link to="/privacy" className="underline hover:text-sage-600">
             Privacy Policy
           </Link>
           {' · '}
-          <Link to="/login" className="underline hover:text-sage-600">
+          <Link to="/terms" className="underline hover:text-sage-600">
             Terms of Service
           </Link>
         </p>

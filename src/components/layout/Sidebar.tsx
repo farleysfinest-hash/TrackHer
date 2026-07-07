@@ -46,7 +46,9 @@ export function Sidebar() {
 
       <div className="border-t border-sand-200 px-6 py-4">
         <a
-          href="mailto:support@trackher.app"
+          href="https://forms.gle/PLACEHOLDER"
+          target="_blank"
+          rel="noopener noreferrer"
           className="text-sm text-sage-500 hover:text-sage-700"
         >
           Need Help?

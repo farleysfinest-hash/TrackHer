@@ -14,6 +14,8 @@ import { CheckinPage } from './pages/CheckinPage';
 import { LabsPage } from './pages/LabsPage';
 import { InsightsPage } from './pages/InsightsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
+import { TermsOfServicePage } from './pages/TermsOfServicePage';
 
 export function App() {
   return (
@@ -24,6 +26,8 @@ export function App() {
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/privacy" element={<PrivacyPolicyPage />} />
+        <Route path="/terms" element={<TermsOfServicePage />} />
 
         <Route
           path="/onboarding"

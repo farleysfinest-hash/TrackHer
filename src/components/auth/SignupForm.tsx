@@ -120,7 +120,10 @@ export function SignupForm() {
           className="mt-1 rounded border-sand-300 text-sage-500 focus:ring-sage-500"
         />
         <span className="text-sm text-sage-600">
-          By creating an account, you agree to our Terms of Service and Privacy Policy
+          By creating an account, you agree to our{' '}
+          <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-sage-700 underline hover:text-sage-800">Terms of Service</a>
+          {' '}and{' '}
+          <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-sage-700 underline hover:text-sage-800">Privacy Policy</a>
         </span>
       </label>
       {errors.terms && <p className="text-sm text-danger">{errors.terms}</p>}
