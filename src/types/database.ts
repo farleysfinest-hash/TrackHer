@@ -95,6 +95,7 @@ export interface Profile {
   periods_status: PeriodsStatus | null;
   period_changes: PeriodChanges | null;
   staging_completed_at: string | null;
+  welcome_seen: boolean | null;
   has_uterus: boolean;
   date_of_birth: string | null;
   checkin_frequency: CheckinFrequency | null;

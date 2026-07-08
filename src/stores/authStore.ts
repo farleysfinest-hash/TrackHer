@@ -182,6 +182,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         await supabase.from('lab_results').delete().eq('user_id', uid);
         await supabase.from('profiles').update({
           onboarding_completed: false,
+          welcome_seen: false,
           straw_stage: null,
           straw_stage_label: null,
           menopause_cause: null,
@@ -220,8 +221,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     set({ isLoading: true });
-    await supabase.auth.signOut();
-    set({ user: null, profile: null, isAuthenticated: false, isLoading: false });
+    try {
+      await supabase.auth.signOut();
+    } finally {
+      // Always clear local auth state, even if network/signOut fails.
+      set({
+        user: null,
+        profile: null,
+        isAuthenticated: false,
+        isLoading: false,
+        isInitialized: true,
+      });
+    }
   },
 
   resetPassword: async (email) => {

@@ -29,6 +29,7 @@ export const MOCK_PROFILE: Profile = {
   periods_status: 'changing',
   period_changes: 'variable',
   staging_completed_at: new Date().toISOString(),
+  welcome_seen: true,
   has_uterus: true,
   date_of_birth: '1980-06-15',
   last_period_date: '2026-05-20',

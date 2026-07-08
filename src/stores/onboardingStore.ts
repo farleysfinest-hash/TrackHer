@@ -21,7 +21,7 @@ import { setDevSymptomSelections } from '../lib/devStore';
 import { SYMPTOM_CATALOG } from '../data/symptoms';
 import type { StrawStageCode } from '../lib/strawStaging';
 
-export type OnboardingStep = 1 | 2 | 3 | 4;
+export type OnboardingStep = 0 | 1 | 2 | 3 | 4;
 
 export interface OnboardingFormData {
   displayName: string;
@@ -85,7 +85,7 @@ function getCommonSymptomsForStage(stage: StrawStageCode): string[] {
 }
 
 export const useOnboardingStore = create<OnboardingState>((set, get) => ({
-  currentStep: 1,
+  currentStep: 0,
   stagingSubStep: 'q1',
   formData: initialFormData,
   isSubmitting: false,
@@ -100,7 +100,7 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
 
   prevStep: () => {
     const { currentStep, formData } = get();
-    if (currentStep > 1) {
+    if (currentStep > 0) {
       if (currentStep === 3) {
         set({ stagingSubStep: formData.stagingResult ? 'result' : 'q1' });
       }

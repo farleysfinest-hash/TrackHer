@@ -8,7 +8,6 @@ import { IS_DEV_MODE } from '../../lib/devMode';
 import { getDevExtendedSymptomLogs } from '../../lib/devStore';
 import type { ExtendedSymptomLog } from '../../types/database';
 import { DateRangeSelector } from './DateRangeSelector';
-import { WelcomeMessage } from './WelcomeMessage';
 import { ScoreSummaryCards } from './ScoreSummaryCards';
 import { CheckinPromptWidget } from '../checkin/CheckinPromptWidget';
 import { OverlayChart } from './OverlayChart';
@@ -101,8 +100,6 @@ export function DashboardLayout() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="font-display text-3xl text-sage-800">Dashboard</h1>
       </div>
-
-      <WelcomeMessage />
 
       <DateRangeSelector />
 

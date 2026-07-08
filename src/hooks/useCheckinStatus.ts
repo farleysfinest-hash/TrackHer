@@ -16,6 +16,7 @@ function sameCalendarMonth(a: string, b: string): boolean {
 
 export function useCheckinStatus() {
   const { getTodaysCheckin, getLastCheckin, getStreak } = useCheckins();
+  const userId = useAuthStore((s) => s.user?.id);
   const timezone = useAuthStore((s) => s.profile?.timezone ?? 'America/Los_Angeles');
   const frequency = useAuthStore((s) => s.profile?.checkin_frequency ?? 'daily');
 
@@ -80,6 +81,7 @@ export function useCheckinStatus() {
 
     void (async () => {
       try {
+        if (!userId) return;
         const todayStr = getLocalDateISO(timezone);
         const [today, streak, lastCheckin] = await Promise.all([
           getTodaysCheckinRef.current(),
@@ -126,7 +128,7 @@ export function useCheckinStatus() {
     return () => {
       cancelled = true;
     };
-  }, [timezone, frequency]);
+  }, [userId, timezone, frequency]);
 
   return { ...status, isLoading, refresh };
 }
