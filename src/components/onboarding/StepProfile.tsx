@@ -1,6 +1,7 @@
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { DateOfBirthInput } from '../ui/DateOfBirthInput';
 
 interface StepProfileProps {
   onNext: () => void;
@@ -25,13 +26,10 @@ export function StepProfile({ onNext }: StepProfileProps) {
 
       <Input label="Email" type="email" value={formData.email} readOnly className="bg-sage-50" />
 
-      <Input
+      <DateOfBirthInput
         label="Date of Birth (optional)"
-        type="date"
         value={formData.dateOfBirth}
-        onChange={(e) => updateFormData({ dateOfBirth: e.target.value })}
-        min="1920-01-01"
-        max={new Date().toISOString().split('T')[0]}
+        onChange={(dateOfBirth) => updateFormData({ dateOfBirth })}
         helperText="Helps us provide age-appropriate context for your data"
       />
 

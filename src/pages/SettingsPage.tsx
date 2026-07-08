@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { DateOfBirthInput } from '../components/ui/DateOfBirthInput';
 import { Select } from '../components/ui/Select';
 import { Card } from '../components/ui/Card';
 import { MedicalDisclaimer } from '../components/ui/MedicalDisclaimer';
@@ -112,13 +113,10 @@ export function SettingsPage() {
             placeholder="Select frequency"
             options={CHECKIN_FREQUENCIES.map((f) => ({ value: f.value, label: f.label }))}
           />
-          <Input
+          <DateOfBirthInput
             label="Date of Birth"
-            type="date"
             value={dateOfBirth}
-            onChange={(e) => setDateOfBirth(e.target.value)}
-            min="1920-01-01"
-            max={new Date().toISOString().split('T')[0]}
+            onChange={setDateOfBirth}
           />
           <div>
             <p className="mb-2 text-sm font-medium text-sage-700">Has uterus</p>
