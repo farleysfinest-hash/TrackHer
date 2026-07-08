@@ -30,6 +30,8 @@ export function StepProfile({ onNext }: StepProfileProps) {
         type="date"
         value={formData.dateOfBirth}
         onChange={(e) => updateFormData({ dateOfBirth: e.target.value })}
+        min="1920-01-01"
+        max={new Date().toISOString().split('T')[0]}
         helperText="Helps us provide age-appropriate context for your data"
       />
 

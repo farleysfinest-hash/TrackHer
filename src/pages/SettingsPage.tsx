@@ -117,6 +117,8 @@ export function SettingsPage() {
             type="date"
             value={dateOfBirth}
             onChange={(e) => setDateOfBirth(e.target.value)}
+            min="1920-01-01"
+            max={new Date().toISOString().split('T')[0]}
           />
           <div>
             <p className="mb-2 text-sm font-medium text-sage-700">Has uterus</p>

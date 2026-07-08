@@ -17,7 +17,7 @@ function enrich(symptom: RawSymptom): SymptomDefinition {
 }
 
 const RAW_SYMPTOM_CATALOG: RawSymptom[] = [
-  // ── MRS Core (16 symptoms) ──────────────────────────────────
+  // ── MRS Core (11 canonical items) ──────────────────────────────────
   {
     key: 'hot_flashes',
     label: 'Hot flashes / night sweats',

@@ -45,14 +45,12 @@ export function Sidebar() {
       </nav>
 
       <div className="border-t border-sand-200 px-6 py-4">
-        <a
-          href="https://forms.gle/PLACEHOLDER"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm text-sage-500 hover:text-sage-700"
+        <span
+          className="text-sm text-sage-400 cursor-default"
+          title="Support email coming soon"
         >
           Need Help?
-        </a>
+        </span>
         <p className="mt-1 text-xs text-sage-400">v{APP_VERSION}</p>
       </div>
     </aside>

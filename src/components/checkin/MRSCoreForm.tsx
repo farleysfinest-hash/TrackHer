@@ -19,7 +19,7 @@ export function MRSCoreForm({ onNext, onBack }: MRSCoreFormProps) {
   const [dismissedNudge, setDismissedNudge] = useState(false);
 
   const ratedCount = countRatedMRS(mrsScores);
-  const showNudge = ratedCount < 8 && !dismissedNudge;
+  const showNudge = ratedCount < 6 && !dismissedNudge;
 
   const handleScoreChange = useCallback(
     (symptomKey: string, score: MRSScore) => {
@@ -54,7 +54,7 @@ export function MRSCoreForm({ onNext, onBack }: MRSCoreFormProps) {
 
       {showNudge && (
         <div className="rounded-lg bg-sage-50 p-4 text-sm text-sage-600">
-          You&apos;ve rated {ratedCount} of 16 symptoms. The more you rate, the better we can
+          You&apos;ve rated {ratedCount} of 11 symptoms. The more you rate, the better we can
           track patterns.{' '}
           <button
             type="button"

@@ -280,9 +280,9 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
 
     const updates = {
       display_name: formData.displayName,
-      date_of_birth: formData.dateOfBirth || undefined,
+      date_of_birth: formData.dateOfBirth || null,
       has_uterus: formData.hasUterus ?? true,
-      checkin_frequency: formData.checkinFrequency ?? undefined,
+      checkin_frequency: formData.checkinFrequency ?? null,
       onboarding_completed: true,
     };
 
