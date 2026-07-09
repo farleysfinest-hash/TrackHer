@@ -163,35 +163,44 @@ export function useMedications() {
       return newMed;
     }
 
-    const { data: inserted, error: insertError } = await supabase
-      .from('medications')
-      .insert({ ...data, user_id: userId, is_active: data.is_active ?? true })
-      .select()
-      .single();
+    setError(null);
+    try {
+      const { data: inserted, error: insertError } = await supabase
+        .from('medications')
+        .insert({ ...data, user_id: userId, is_active: data.is_active ?? true })
+        .select()
+        .single();
 
-    if (insertError) {
-      setError(insertError.message);
+      if (insertError) {
+        setError(insertError.message);
+        return null;
+      }
+
+      const medication = inserted as Medication;
+
+      const { error: changeError } = await supabase.from('medication_changes').insert({
+        user_id: userId,
+        medication_id: medication.id,
+        change_type: 'started',
+        new_dose: medication.dose_amount,
+        change_date: medication.start_date,
+        notes: null,
+      });
+
+      if (changeError) {
+        console.error('Failed to insert started medication change:', changeError.message);
+        setError(`Medication saved, but change event failed: ${changeError.message}`);
+        await fetchMedications();
+        return medication;
+      }
+
+      await fetchMedications();
+      return medication;
+    } catch (e) {
+      console.error('addMedication threw:', e);
+      setError('Failed to add medication');
       return null;
     }
-
-    const medication = inserted as Medication;
-
-    const { error: changeError } = await supabase.from('medication_changes').insert({
-      user_id: userId,
-      medication_id: medication.id,
-      change_type: 'started',
-      new_dose: medication.dose_amount,
-      change_date: medication.start_date,
-      notes: null,
-    });
-
-    if (changeError) {
-      setError(changeError.message);
-      return null;
-    }
-
-    await fetchMedications();
-    return medication;
   };
 
   const updateMedication = async (

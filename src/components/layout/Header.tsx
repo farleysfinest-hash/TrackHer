@@ -7,7 +7,7 @@ import { getInitials } from '../../utils/formatters';
 
 export function Header() {
   const navigate = useNavigate();
-  const { profile, signOut } = useAuth();
+  const { profile, user, signOut } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -26,6 +26,12 @@ export function Header() {
     navigate('/login');
   };
 
+  const emailInitial =
+    user?.email?.trim()?.charAt(0)?.toUpperCase() ?? '?';
+  const avatarText = profile?.display_name
+    ? getInitials(profile.display_name)
+    : emailInitial;
+
   return (
     <header className="sticky top-0 z-20 flex items-center justify-between border-b border-sand-200 bg-white/95 px-6 py-4 backdrop-blur-sm md:px-8">
       <div className="md:hidden">
@@ -40,10 +46,10 @@ export function Header() {
           className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-sage-50"
         >
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sage-500 text-sm font-medium text-white">
-            {getInitials(profile?.display_name)}
+            {avatarText}
           </div>
           <span className="hidden text-sm font-medium text-sage-700 sm:inline">
-            {profile?.display_name ?? 'User'}
+            {profile?.display_name ?? user?.email ?? 'User'}
           </span>
           <ChevronDown className="h-4 w-4 text-sage-400" />
         </button>

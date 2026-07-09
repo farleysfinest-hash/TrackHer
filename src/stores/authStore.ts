@@ -13,6 +13,7 @@ import { getAuthErrorMessage } from '../lib/constants';
 import type { Profile, ProfileUpdate } from '../types/database';
 
 const DEV_ONBOARDING_KEY = 'dev_onboarding_completed';
+let profileFetchInFlight: string | null = null;
 
 function getDevOnboardingCompleted(): boolean {
   const stored = localStorage.getItem(DEV_ONBOARDING_KEY);
@@ -70,35 +71,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     let mounted = true;
 
-    const initSession = async () => {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        if (!mounted) return;
-
-        if (session?.user) {
-          set({ user: session.user, isAuthenticated: true });
-          await get().fetchProfile(session.user.id);
-        }
-      } finally {
-        if (mounted) {
-          set({ isLoading: false, isInitialized: true });
-        }
-      }
-    };
-
-    void initSession();
-
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
+    } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
+      // NOTE: Supabase-js holds an internal auth lock while dispatching this callback.
+      // Keep it synchronous; defer any Supabase work with setTimeout(..., 0).
       if (!mounted) return;
 
       if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && session?.user) {
         set({ user: session.user, isAuthenticated: true, isLoading: false, isInitialized: true });
-        await get().fetchProfile(session.user.id);
+        const userId = session.user.id;
+        setTimeout(() => {
+          if (mounted) void get().fetchProfile(userId);
+        }, 0);
       } else if (event === 'SIGNED_OUT') {
         set({ user: null, profile: null, isAuthenticated: false, isLoading: false });
       } else if (event === 'TOKEN_REFRESHED' && session?.user) {
@@ -188,7 +173,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     set({ isLoading: true });
     try {
-      await supabase.auth.signOut();
+      await Promise.race([
+        supabase.auth.signOut({ scope: 'local' }),
+        new Promise((resolve) => setTimeout(resolve, 3500)),
+      ]);
+    } catch (e) {
+      console.error('signOut error (state cleared anyway):', e);
     } finally {
       // Always clear local auth state, even if network/signOut fails.
       set({
@@ -243,13 +233,45 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return;
     }
 
-    const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
+    if (profileFetchInFlight === userId) return;
+    profileFetchInFlight = userId;
 
-    if (error) {
-      console.error('Failed to fetch profile:', error.message);
-      return;
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Failed to fetch profile:', error.message);
+        return;
+      }
+
+      if (!data) {
+        const user = get().user;
+        const email = user?.email ?? '';
+        const displayName = (email || 'there').split('@')[0];
+
+        const { data: upserted, error: healError } = await supabase
+          .from('profiles')
+          .upsert({ id: userId, email, display_name: displayName })
+          .select()
+          .maybeSingle();
+
+        if (healError) {
+          console.error('Failed to recreate missing profile:', healError.message);
+          return;
+        }
+        console.warn('Missing profile row recreated for user:', userId);
+        set({ profile: upserted as Profile });
+        return;
+      }
+
+      set({ profile: data as Profile });
+    } finally {
+      if (profileFetchInFlight === userId) profileFetchInFlight = null;
     }
-    set({ profile: data as Profile });
   },
 
   updateProfile: async (updates: ProfileUpdate) => {
