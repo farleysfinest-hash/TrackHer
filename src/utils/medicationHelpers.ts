@@ -7,6 +7,7 @@ import type {
   MedicationFrequency,
   MedicationChange,
   MedicationChangeType,
+  MedicationAdministration,
 } from '../types/database';
 import { APPLICATION_SITE_LABELS } from '../lib/medicationConstants';
 
@@ -258,6 +259,58 @@ export function getDoseCycleDays(med: Pick<Medication, 'frequency'>): number | n
     default:
       return null;
   }
+}
+
+function daysBetweenDates(from: string, to: string): number {
+  const a = new Date(from + 'T12:00:00');
+  const b = new Date(to + 'T12:00:00');
+  return Math.floor((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+const DAILY_DOSE_FREQUENCIES: MedicationFrequency[] = [
+  'daily',
+  'twice_daily',
+  'three_times_daily',
+  'every_other_day',
+];
+
+export function showDoseChip(med: Medication): boolean {
+  if (!med.is_active) return false;
+  if (med.delivery_method === 'pellet') return false;
+  if (DAILY_DOSE_FREQUENCIES.includes(med.frequency)) return true;
+  return getDoseCycleDays(med) !== null;
+}
+
+export function isDoseLoggedForMed(
+  med: Medication,
+  administrations: MedicationAdministration[],
+  today: string,
+): boolean {
+  const medAdmins = administrations
+    .filter((a) => a.medication_id === med.id)
+    .sort((a, b) => b.taken_at.localeCompare(a.taken_at));
+
+  if (medAdmins.length === 0) return false;
+
+  if (DAILY_DOSE_FREQUENCIES.includes(med.frequency)) {
+    return medAdmins.some((a) => a.taken_at.slice(0, 10) === today);
+  }
+
+  const cycleDays = getDoseCycleDays(med);
+  if (cycleDays) {
+    const latestDate = medAdmins[0].taken_at.slice(0, 10);
+    return daysBetweenDates(latestDate, today) < cycleDays;
+  }
+
+  return false;
+}
+
+export function addDaysISO(dateStr: string, delta: number): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dt = new Date(y, m - 1, d + delta);
+  const month = String(dt.getMonth() + 1).padStart(2, '0');
+  const day = String(dt.getDate()).padStart(2, '0');
+  return `${dt.getFullYear()}-${month}-${day}`;
 }
 
 export function getChangeTimelineColor(type: MedicationChangeType): string {

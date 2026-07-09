@@ -21,6 +21,8 @@ import { AppointmentCountdownCard } from './AppointmentCountdownCard';
 import { ProviderReportButton } from './ProviderReportButton';
 import { DashboardInsightsPanel } from '../insights/DashboardInsightsPanel';
 import { QuickLogWidget } from './QuickLogWidget';
+import { DoseTapWidget } from './DoseTapWidget';
+import { ExperimentWindowCard } from './ExperimentWindowCard';
 import { PersonalSymptomTrends } from './PersonalSymptomTrends';
 import { StrawStageCard } from './StrawStageCard';
 import { UnlockProgress } from './UnlockProgress';
@@ -106,9 +108,16 @@ export function DashboardLayout() {
 
           <StrawStageCard />
 
+          <DoseTapWidget />
+
           <QuickLogWidget />
 
           <CheckinPromptWidget {...checkinStatus} />
+
+          <ExperimentWindowCard
+            insights={insights}
+            hasCheckedInToday={checkinStatus.hasCheckedInToday}
+          />
 
           <AppointmentCountdownCard checkins={allCheckins} />
 
@@ -150,9 +159,16 @@ export function DashboardLayout() {
 
           <CheckinPromptWidget {...checkinStatus} />
 
+          <ExperimentWindowCard
+            insights={insights}
+            hasCheckedInToday={checkinStatus.hasCheckedInToday}
+          />
+
           <AppointmentCountdownCard checkins={allCheckins} />
 
           <StrawStageCard />
+
+          <DoseTapWidget />
 
           <QuickLogWidget />
 

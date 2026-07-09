@@ -39,7 +39,21 @@ export function ToastContainer() {
             role="alert"
           >
             <Icon className={`mt-0.5 h-5 w-5 shrink-0 ${iconColors[toast.variant]}`} />
-            <p className="flex-1 text-sm">{toast.message}</p>
+            <div className="flex flex-1 flex-col gap-2">
+              <p className="text-sm">{toast.message}</p>
+              {toast.action && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    toast.action?.onClick();
+                    dismiss(toast.id);
+                  }}
+                  className="self-start text-sm font-medium text-sage-700 underline hover:text-sage-900"
+                >
+                  {toast.action.label}
+                </button>
+              )}
+            </div>
             <button
               type="button"
               onClick={() => dismiss(toast.id)}

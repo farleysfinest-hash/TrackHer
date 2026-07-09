@@ -11,14 +11,16 @@ import {
   getDevExtendedSymptomLogs,
   getDevDismissedInsights,
   addDevDismissedInsight,
+  getDevMedicationAdministrations,
 } from '../lib/devStore';
 import { supabase } from '../lib/supabase';
-import type { ExtendedSymptomLog } from '../types/database';
+import type { ExtendedSymptomLog, MedicationAdministration } from '../types/database';
 import type { DismissalRecord } from '../utils/insightHelpers';
 import { filterDismissedInsights } from '../utils/insightHelpers';
 
 const EXTENDED_LOGS_DAYS = 120;
 const EXTENDED_LOGS_LIMIT = 500;
+const ADMINISTRATIONS_DAYS = 90;
 
 export function useInsights() {
   const profile = useAuthStore((s) => s.profile);
@@ -28,7 +30,9 @@ export function useInsights() {
   const { changes, fetchChanges, isLoading: changesLoading } = useMedicationChanges();
   const { labResults, fetchLabResults, isLoading: labsLoading } = useLabResults();
   const [extendedSymptoms, setExtendedSymptoms] = useState<ExtendedSymptomLog[]>([]);
+  const [administrations, setAdministrations] = useState<MedicationAdministration[]>([]);
   const [extendedLoading, setExtendedLoading] = useState(!IS_DEV_MODE);
+  const [administrationsLoading, setAdministrationsLoading] = useState(!IS_DEV_MODE);
   const [dismissals, setDismissals] = useState<DismissalRecord[]>(() =>
     IS_DEV_MODE ? getDevDismissedInsights() : [],
   );
@@ -82,6 +86,43 @@ export function useInsights() {
 
   useEffect(() => {
     if (IS_DEV_MODE) {
+      setAdministrations(getDevMedicationAdministrations());
+      setAdministrationsLoading(false);
+      return;
+    }
+
+    if (!userId) {
+      setAdministrations([]);
+      setAdministrationsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setAdministrationsLoading(true);
+
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - ADMINISTRATIONS_DAYS);
+    const cutoffISO = cutoff.toISOString();
+
+    void supabase
+      .from('medication_administrations')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('taken_at', cutoffISO)
+      .order('taken_at', { ascending: false })
+      .then(({ data }) => {
+        if (cancelled) return;
+        setAdministrations((data as MedicationAdministration[]) ?? []);
+        setAdministrationsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  useEffect(() => {
+    if (IS_DEV_MODE) {
       setDismissals(getDevDismissedInsights());
       setDismissalsLoading(false);
       return;
@@ -126,10 +167,11 @@ export function useInsights() {
       extendedSymptoms,
       medications,
       medicationChanges,
+      administrations,
       labResults,
       profile,
     });
-  }, [checkins, extendedSymptoms, medications, medicationChanges, labResults, profile]);
+  }, [checkins, extendedSymptoms, medications, medicationChanges, administrations, labResults, profile]);
 
   const insights = useMemo(
     () => filterDismissedInsights(engineInsights, dismissals),
@@ -180,6 +222,7 @@ export function useInsights() {
     changesLoading ||
     labsLoading ||
     extendedLoading ||
+    administrationsLoading ||
     dismissalsLoading;
 
   return { insights, highPriority, positive, isLoading, dismissInsight, extendedSymptoms };

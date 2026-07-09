@@ -186,6 +186,19 @@ export interface DoseLog {
   created_at: string;
 }
 
+export interface MedicationAdministration {
+  id: string;
+  user_id: string;
+  medication_id: string;
+  taken_at: string;
+  created_at: string;
+}
+
+export interface MedicationAdministrationInsert {
+  medication_id: string;
+  taken_at?: string;
+}
+
 export interface SymptomCheckin {
   id: string;
   user_id: string;
@@ -378,6 +391,12 @@ export type Database = {
         Row: DoseLog;
         Insert: Omit<DoseLog, 'id' | 'created_at'>;
         Update: Partial<Omit<DoseLog, 'id' | 'created_at'>>;
+        Relationships: [];
+      };
+      medication_administrations: {
+        Row: MedicationAdministration;
+        Insert: MedicationAdministrationInsert & { user_id: string };
+        Update: Partial<MedicationAdministrationInsert>;
         Relationships: [];
       };
       symptom_checkins: {

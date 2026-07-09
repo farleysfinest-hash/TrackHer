@@ -10,6 +10,7 @@ import type {
   ExtendedSymptomLog,
   Medication,
   MedicationChange,
+  MedicationAdministration,
   LabResult,
   Profile,
 } from '../types/database';
@@ -19,6 +20,7 @@ export interface EngineInput {
   extendedSymptoms: ExtendedSymptomLog[];
   medications: Medication[];
   medicationChanges: MedicationChange[];
+  administrations: MedicationAdministration[];
   labResults: LabResult[];
   profile: Profile | null;
 }
@@ -73,6 +75,7 @@ export function runPatternEngine(input: EngineInput): Insight[] {
     checkins: input.checkins,
     medicationChanges: input.medicationChanges,
     medications: input.medications,
+    administrations: input.administrations,
   });
 
   const observationInsights = analyzeEarlyObservations({

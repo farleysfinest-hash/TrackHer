@@ -1,6 +1,7 @@
 import type {
   Medication,
   MedicationChange,
+  MedicationAdministration,
   SymptomCheckin,
   ExtendedSymptomLog,
   LabResult,
@@ -23,6 +24,7 @@ let extendedSymptomLogs: ExtendedSymptomLog[] = [];
 let labResults: LabResult[] = [...MOCK_LAB_RESULTS];
 let symptomSelections: Omit<UserSymptomSelection, 'id' | 'selected_at'>[] = [];
 let quickLogs: QuickLogEvent[] = [...MOCK_QUICK_LOGS];
+let medicationAdministrations: MedicationAdministration[] = [];
 let dismissedInsights: { insight_id: string; dismissed_at: string }[] = [];
 
 export function resetDevStore(): void {
@@ -33,6 +35,7 @@ export function resetDevStore(): void {
   labResults = [...MOCK_LAB_RESULTS];
   symptomSelections = [];
   quickLogs = [...MOCK_QUICK_LOGS];
+  medicationAdministrations = [];
   dismissedInsights = [];
   console.log('[DEV] Store reset to initial mock data');
 }
@@ -93,6 +96,14 @@ export function getDevQuickLogs(): QuickLogEvent[] {
 
 export function setDevQuickLogs(events: QuickLogEvent[]): void {
   quickLogs = events;
+}
+
+export function getDevMedicationAdministrations(): MedicationAdministration[] {
+  return medicationAdministrations;
+}
+
+export function setDevMedicationAdministrations(admins: MedicationAdministration[]): void {
+  medicationAdministrations = admins;
 }
 
 export function getDevDismissedInsights(): { insight_id: string; dismissed_at: string }[] {

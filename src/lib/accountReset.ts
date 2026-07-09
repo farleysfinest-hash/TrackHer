@@ -39,6 +39,7 @@ export async function deleteUserAppData(userId: string): Promise<{ success: bool
   await supabase.from('symptom_checkins').delete().eq('user_id', userId);
   await supabase.from('user_symptom_selections').delete().eq('user_id', userId);
   await supabase.from('dose_logs').delete().eq('user_id', userId);
+  await supabase.from('medication_administrations').delete().eq('user_id', userId);
   await supabase.from('medication_changes').delete().eq('user_id', userId);
   await supabase.from('medications').delete().eq('user_id', userId);
   await supabase.from('lab_results').delete().eq('user_id', userId);
