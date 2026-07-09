@@ -76,7 +76,7 @@ export const SPECIAL_STAGES: StrawTimelineStage[] = [
   },
 ];
 
-const STAGE_DETAILS: Record<
+export const STAGE_DETAILS: Record<
   StrawStageCode,
   { label: string; description: string }
 > = {

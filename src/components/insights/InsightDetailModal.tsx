@@ -1,4 +1,5 @@
 import type { Insight } from '../../engine/types';
+import type { StageProfile } from '../../engine/stageProfile';
 import { Modal } from '../ui/Modal';
 import { Badge } from '../ui/Badge';
 import { formatDateLong } from '../../utils/formatters';
@@ -8,9 +9,17 @@ interface InsightDetailModalProps {
   insight: Insight;
   isOpen: boolean;
   onClose: () => void;
+  /** Stage context for future insight copy — plumbing only in this slice. */
+  stageProfile?: StageProfile | null;
 }
 
-export function InsightDetailModal({ insight, isOpen, onClose }: InsightDetailModalProps) {
+export function InsightDetailModal({
+  insight,
+  isOpen,
+  onClose,
+  stageProfile,
+}: InsightDetailModalProps) {
+  void stageProfile;
   const { supportingData } = insight;
 
   return (

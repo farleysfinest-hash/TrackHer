@@ -3,6 +3,8 @@ import { useDashboardStore } from '../../stores/dashboardStore';
 import { useChartData } from '../../hooks/useChartData';
 import { useCheckinStatus } from '../../hooks/useCheckinStatus';
 import { useInsights } from '../../hooks/useInsights';
+import { useStageProfile } from '../../hooks/useStageProfile';
+import { getStageTrackingPhrase } from '../../engine/stageProfile';
 import { hasMRSData, getLocalDateISO, getResolvedTimezone } from '../../utils/checkinHelpers';
 import { useAuthStore } from '../../stores/authStore';
 import { DateRangeSelector } from './DateRangeSelector';
@@ -79,6 +81,8 @@ export function DashboardLayout() {
   const isFullDashboard = mrsCheckinCount >= FULL_DASHBOARD_CHECKINS;
 
   const timezone = getResolvedTimezone(useAuthStore((s) => s.profile?.timezone));
+  const stageProfile = useStageProfile();
+  const stageTrackingPhrase = getStageTrackingPhrase(stageProfile);
   const today = getLocalDateISO(timezone);
   const appointmentDate = useAuthStore((s) => s.profile?.next_appointment_date);
   const daysUntilAppointment =
@@ -95,7 +99,14 @@ export function DashboardLayout() {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="font-display text-3xl text-sage-800">Dashboard</h1>
+        <div>
+          <h1 className="font-display text-3xl text-sage-800">Dashboard</h1>
+          <p className="mt-1 text-sage-500">
+            {stageTrackingPhrase
+              ? `You're tracking through ${stageTrackingPhrase}.`
+              : 'Track your symptoms, doses, and patterns over time.'}
+          </p>
+        </div>
       </div>
 
       {isFullDashboard ? (

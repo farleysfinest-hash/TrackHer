@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useInsights } from '../hooks/useInsights';
+import { useStageProfile } from '../hooks/useStageProfile';
 import { MedicalDisclaimer } from '../components/ui/MedicalDisclaimer';
 import { InsightCategoryFilter } from '../components/insights/InsightCategoryFilter';
 import { InsightsList } from '../components/insights/InsightsList';
@@ -11,6 +12,7 @@ import {
 
 export function InsightsPage() {
   const { insights, isLoading, dismissInsight } = useInsights();
+  const stageProfile = useStageProfile();
   const [activeFilter, setActiveFilter] = useState<InsightFilterGroup>('all');
 
   const filtered = useMemo(
@@ -48,6 +50,7 @@ export function InsightsPage() {
         insights={filtered}
         isLoading={isLoading}
         onDismiss={dismissInsight}
+        stageProfile={stageProfile}
       />
     </div>
   );

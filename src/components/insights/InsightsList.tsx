@@ -1,4 +1,5 @@
 import type { Insight } from '../../engine/types';
+import type { StageProfile } from '../../engine/stageProfile';
 import { Lightbulb } from 'lucide-react';
 import { InsightCard } from './InsightCard';
 import { EmptyState } from '../ui/EmptyState';
@@ -9,6 +10,7 @@ interface InsightsListProps {
   isLoading?: boolean;
   compact?: boolean;
   onDismiss?: (insightId: string) => void;
+  stageProfile?: StageProfile | null;
 }
 
 export function InsightsList({
@@ -16,6 +18,7 @@ export function InsightsList({
   isLoading = false,
   compact = false,
   onDismiss,
+  stageProfile,
 }: InsightsListProps) {
   if (isLoading) {
     return (
@@ -43,6 +46,7 @@ export function InsightsList({
           insight={insight}
           compact={compact}
           onDismiss={onDismiss}
+          stageProfile={stageProfile}
         />
       ))}
     </div>

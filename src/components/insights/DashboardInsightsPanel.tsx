@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Lightbulb, ArrowRight } from 'lucide-react';
+import { useStageProfile } from '../../hooks/useStageProfile';
 import type { Insight } from '../../engine/types';
 import { Card } from '../ui/Card';
 import { InsightCard } from './InsightCard';
@@ -10,6 +11,7 @@ interface DashboardInsightsPanelProps {
 }
 
 export function DashboardInsightsPanel({ insights, onDismiss }: DashboardInsightsPanelProps) {
+  const stageProfile = useStageProfile();
   const topInsights = insights.slice(0, 3);
 
   return (
@@ -44,6 +46,7 @@ export function DashboardInsightsPanel({ insights, onDismiss }: DashboardInsight
               insight={insight}
               compact
               onDismiss={onDismiss}
+              stageProfile={stageProfile}
             />
           ))}
         </div>

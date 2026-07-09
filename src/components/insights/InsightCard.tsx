@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Sparkles, X } from 'lucide-react';
 import type { Insight } from '../../engine/types';
+import type { StageProfile } from '../../engine/stageProfile';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
@@ -16,9 +17,11 @@ interface InsightCardProps {
   insight: Insight;
   compact?: boolean;
   onDismiss?: (insightId: string) => void;
+  /** Stage context for future insight copy — plumbing only in this slice. */
+  stageProfile?: StageProfile | null;
 }
 
-export function InsightCard({ insight, compact = false, onDismiss }: InsightCardProps) {
+export function InsightCard({ insight, compact = false, onDismiss, stageProfile }: InsightCardProps) {
   const [showDetail, setShowDetail] = useState(false);
 
   return (
@@ -88,6 +91,7 @@ export function InsightCard({ insight, compact = false, onDismiss }: InsightCard
         insight={insight}
         isOpen={showDetail}
         onClose={() => setShowDetail(false)}
+        stageProfile={stageProfile}
       />
     </>
   );
