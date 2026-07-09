@@ -68,7 +68,8 @@ export function StepStrawStaging({ onNext, onBack }: StepStrawStagingProps) {
           Are you still having menstrual periods?
         </h1>
         <p className="mt-3 text-sage-500">
-          Your cycle pattern helps us determine where you are on the STRAW+10 staging scale.
+          Your cycle pattern tells us where you are in the menopause transition — we use STRAW+10,
+          the research standard, so your stage means something to your provider too.
         </p>
       </div>
       <div className="grid gap-3">
@@ -258,7 +259,8 @@ export function StepStrawStaging({ onNext, onBack }: StepStrawStagingProps) {
         <div>
           <h1 className="font-display text-3xl text-sage-800">Here&apos;s where you are</h1>
           <p className="mt-3 text-sage-500">
-            Based on your answers, this is your current STRAW+10 stage.
+            Here&apos;s where you are in the menopause transition. This is your current stage on
+            the STRAW+10 scale — the research standard providers recognize.
           </p>
         </div>
         <StrawTimeline

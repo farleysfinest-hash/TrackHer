@@ -10,6 +10,9 @@ interface WellbeingSignalInput {
   administrations: MedicationAdministration[];
 }
 
+// sleep_quality is collected from slice 12 onward; sleep-lag analysis
+// (night sweats -> sleep -> next-day wellbeing) is queued for the AI layer / a future analyzer.
+
 const WINDOW_DAYS = 21;
 const WELLBEING_DOSE_MIN_POINTS = 5;
 const VOLATILITY_LOOKBACK_DAYS = 21;

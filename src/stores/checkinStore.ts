@@ -33,6 +33,7 @@ interface CheckinState {
   targetDate: string;
   instrumentId: string;
   wellbeingScore: number | null;
+  sleepQuality: number | null;
   mrsScores: MRSScoresMap;
   extendedSymptoms: ExtendedSymptomEntry[];
   notes: string;
@@ -40,6 +41,8 @@ interface CheckinState {
   setMode: (mode: 'full' | 'quick') => void;
   setTargetDate: (date: string) => void;
   setWellbeingScore: (score: number) => void;
+  setSleepQuality: (score: number) => void;
+  skipSleepQuality: () => void;
   setMRSScore: (symptom: MRSSymptomKey, score: MRSScore) => void;
   setExtendedScore: (symptomKey: string, severity: MRSScore) => void;
   removeExtendedSymptom: (symptomKey: string) => void;
@@ -87,6 +90,7 @@ const initialState = {
   targetDate: getDefaultTargetDate(),
   instrumentId: getPrimaryInstrument('-2').id,
   wellbeingScore: null as number | null,
+  sleepQuality: null as number | null,
   mrsScores: { ...INITIAL_MRS_SCORES },
   extendedSymptoms: [] as ExtendedSymptomEntry[],
   notes: '',
@@ -102,6 +106,10 @@ export const useCheckinStore = create<CheckinState>((set, get) => ({
   setInstrumentId: (id) => set({ instrumentId: id }),
 
   setWellbeingScore: (score) => set({ wellbeingScore: score }),
+
+  setSleepQuality: (score) => set({ sleepQuality: score }),
+
+  skipSleepQuality: () => set({ sleepQuality: null }),
 
   setMRSScore: (symptom, score) =>
     set((state) => ({
@@ -178,6 +186,7 @@ export const useCheckinStore = create<CheckinState>((set, get) => ({
       isEditing: true,
       editingCheckinId: checkin.id,
       wellbeingScore: checkin.overall_wellbeing,
+      sleepQuality: checkin.sleep_quality ?? null,
       mrsScores,
       extendedSymptoms: extended,
       notes: checkin.notes ?? '',

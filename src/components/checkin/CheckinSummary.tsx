@@ -26,6 +26,7 @@ interface CheckinSummaryProps {
 
 export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
   const wellbeingScore = useCheckinStore((s) => s.wellbeingScore);
+  const sleepQuality = useCheckinStore((s) => s.sleepQuality);
   const extendedSymptoms = useCheckinStore((s) => s.extendedSymptoms);
   const notes = useCheckinStore((s) => s.notes);
   const mode = useCheckinStore((s) => s.mode);
@@ -61,6 +62,7 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
     setIsSaving(true);
     const payload = {
       wellbeingScore,
+      sleepQuality,
       mrsScores: isPulse ? { ...INITIAL_MRS_SCORES } : mrsScores,
       extendedSymptoms: isPulse ? [] : extendedSymptoms,
       notes: isPulse ? '' : notes,
@@ -142,6 +144,13 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
         <Card>
           <p className="text-sm text-sage-500">Overall wellbeing</p>
           <p className="text-lg font-medium text-sage-800">{wellbeingScore}/10</p>
+        </Card>
+      )}
+
+      {sleepQuality !== null && (
+        <Card>
+          <p className="text-sm text-sage-500">Sleep</p>
+          <p className="text-lg font-medium text-sage-800">{sleepQuality}/5</p>
         </Card>
       )}
 

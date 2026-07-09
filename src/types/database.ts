@@ -225,6 +225,7 @@ export interface SymptomCheckin {
   psychological_score: number;
   urogenital_score: number;
   overall_wellbeing: number | null;
+  sleep_quality: number | null;
   notes: string | null;
   is_backdated: boolean;
   created_at: string;

@@ -15,7 +15,7 @@ export function useQuickLog() {
 
   const getUserId = () => useAuthStore.getState().user?.id;
 
-  const fetchEvents = useCallback(async (limit = 20) => {
+  const fetchEvents = useCallback(async (limit = 50) => {
     if (IS_DEV_MODE) {
       const sorted = [...getDevQuickLogs()].sort((a, b) =>
         b.logged_at.localeCompare(a.logged_at),

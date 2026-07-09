@@ -12,6 +12,7 @@ import { getItemStorageKey } from '../../data/instruments/scoring';
 import { SeveritySlider } from './SeveritySlider';
 import { InstrumentScoreBadge } from './InstrumentScoreBadge';
 import { Button } from '../ui/Button';
+import { UROGENITAL_NORMALIZATION_COPY } from '../../utils/echoHelpers';
 
 const INSTRUMENT_TOOLTIP_KEY = 'predicther_instrument_tooltip_dismissed';
 const FIRST_CHECKIN_DONE_KEY = 'trackher_first_checkin_done';
@@ -102,9 +103,15 @@ export function InstrumentSection({ instrument, onNext, onBack }: InstrumentSect
           if (!subscale || items.length === 0) return null;
           return (
             <div key={subscaleId} className="border-b border-sand-200/80 py-4 last:border-b-0">
-              <h3 className="mb-3 text-sm font-semibold text-sage-600">
+              <h3 className="mb-1 text-sm font-semibold text-sage-600">
                 {SUBSCALE_DISPLAY_LABELS[subscaleId] ?? subscale.label}
               </h3>
+              {subscaleId === 'urogenital' && (
+                <p className="mb-3 text-xs leading-relaxed text-sage-400">
+                  {UROGENITAL_NORMALIZATION_COPY}
+                </p>
+              )}
+              {subscaleId !== 'urogenital' && <div className="mb-3" />}
               {items.map((item) => {
                 const storageKey = getItemStorageKey(item);
                 return (

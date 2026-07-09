@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 import { useQuickLogStore } from '../../stores/quickLogStore';
 import { useQuickLog } from '../../hooks/useQuickLog';
 import { useToast } from '../../stores/toastStore';
+import { buildQuickLogEcho } from '../../utils/echoHelpers';
 import { getSymptomByKey } from '../../data/symptoms';
 import type { QuickLogTriggerTag } from '../../types/database';
 import { Button } from '../ui/Button';
@@ -62,7 +63,7 @@ export function QuickLogSheet() {
   const isOpen = useQuickLogStore((s) => s.isSheetOpen);
   const selectedSymptomId = useQuickLogStore((s) => s.selectedSymptomId);
   const closeSheet = useQuickLogStore((s) => s.closeSheet);
-  const { createEvent } = useQuickLog();
+  const { createEvent, events } = useQuickLog();
   const toast = useToast();
 
   const [severity, setSeverity] = useState(5);
@@ -103,7 +104,7 @@ export function QuickLogSheet() {
     });
     setIsSaving(false);
     if (result) {
-      toast.success('Symptom logged');
+      toast.success(buildQuickLogEcho(result, events));
       handleClose();
     } else {
       toast.error('Failed to log symptom');

@@ -83,6 +83,11 @@ export function CheckinDetailModal({
                   Wellbeing: {checkin.overall_wellbeing}/10
                 </p>
               )}
+              {checkin.sleep_quality !== null && (
+                <p className="mt-1 text-lg font-medium text-sage-800">
+                  Sleep: {checkin.sleep_quality}/5
+                </p>
+              )}
             </div>
             {hasMRSData(checkin) ? (
               <MRSScoreBadge

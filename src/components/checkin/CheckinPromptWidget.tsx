@@ -41,6 +41,9 @@ export function CheckinPromptWidget({
               {todaysCheckin.overall_wellbeing !== null && (
                 <span>Wellbeing: {todaysCheckin.overall_wellbeing}/10</span>
               )}
+              {todaysCheckin.sleep_quality !== null && (
+                <span>Sleep: {todaysCheckin.sleep_quality}/5</span>
+              )}
               {hasMRSData(todaysCheckin) && (
                 <MRSScoreBadge total={todaysCheckin.total_score} compact showDot />
               )}

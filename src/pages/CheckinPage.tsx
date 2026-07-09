@@ -155,6 +155,11 @@ export function CheckinPage() {
                       Wellbeing: {todaysCheckin.overall_wellbeing}/10
                     </span>
                   )}
+                  {todaysCheckin.sleep_quality !== null && (
+                    <span className="text-sage-600">
+                      Sleep: {todaysCheckin.sleep_quality}/5
+                    </span>
+                  )}
                   {hasMRSData(todaysCheckin) && (
                     <MRSScoreBadge total={todaysCheckin.total_score} compact showDot />
                   )}

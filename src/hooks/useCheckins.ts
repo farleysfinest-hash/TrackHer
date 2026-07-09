@@ -28,6 +28,7 @@ import { buildAssessmentScore, saveAssessmentResult } from './assessmentPersiste
 
 export interface CheckinInput {
   wellbeingScore: number | null;
+  sleepQuality?: number | null;
   mrsScores: Record<string, MRSScore | null>;
   extendedSymptoms: Array<{ symptom_key: string; severity: MRSScore }>;
   notes: string;
@@ -46,6 +47,7 @@ function buildCheckinPayload(data: CheckinInput, userId: string, timezone: strin
     user_id: userId,
     checkin_date: checkinDate,
     overall_wellbeing: data.wellbeingScore,
+    sleep_quality: data.sleepQuality ?? null,
     notes: isPulse ? null : data.notes || null,
     checkin_type: checkinType,
     is_backdated: checkinDate !== today,
@@ -118,6 +120,7 @@ function buildDevCheckin(
     psychological_score: mrs.psychological,
     urogenital_score: mrs.urogenital,
     overall_wellbeing: data.wellbeingScore,
+    sleep_quality: data.sleepQuality ?? null,
     notes: isPulse ? null : data.notes || null,
     is_backdated: checkinDate !== today,
     created_at: new Date().toISOString(),

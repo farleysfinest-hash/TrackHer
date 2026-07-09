@@ -43,12 +43,20 @@ function CheckinHistoryCardComponent({ checkin, onViewDetails }: CheckinHistoryC
             )}
           </div>
         </div>
-        {checkin.overall_wellbeing !== null && (
-          <div className="text-center">
-            <ProgressRing value={checkin.overall_wellbeing} max={10} size={48} />
-            <p className="mt-1 text-xs text-sage-400">Wellbeing</p>
-          </div>
-        )}
+        <div className="flex shrink-0 gap-3">
+          {checkin.overall_wellbeing !== null && (
+            <div className="text-center">
+              <ProgressRing value={checkin.overall_wellbeing} max={10} size={48} />
+              <p className="mt-1 text-xs text-sage-400">Wellbeing</p>
+            </div>
+          )}
+          {checkin.sleep_quality !== null && (
+            <div className="text-center">
+              <ProgressRing value={checkin.sleep_quality} max={5} size={48} />
+              <p className="mt-1 text-xs text-sage-400">Sleep</p>
+            </div>
+          )}
+        </div>
       </div>
 
       {top.length > 0 && (

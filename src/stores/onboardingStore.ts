@@ -51,6 +51,7 @@ interface OnboardingState {
   updateFormData: (data: Partial<OnboardingFormData>) => void;
   toggleSymptom: (symptomId: string) => void;
   toggleWatchSymptom: (symptomId: string) => void;
+  initWatchSymptomsFromSelection: () => void;
   initSymptomsForStage: (stage: StrawStageCode) => void;
   submitStaging: () => Promise<{ success: boolean; error?: string }>;
   submitSymptomSelections: () => Promise<{ success: boolean; error?: string }>;
@@ -153,17 +154,31 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
       formData: {
         ...state.formData,
         selectedSymptoms: selected,
-        watchSymptoms: selected.slice(0, 5),
+        watchSymptoms: selected.length <= 5 ? [...selected] : [],
       },
     }));
+  },
+
+  initWatchSymptomsFromSelection: () => {
+    set((state) => {
+      const { selectedSymptoms } = state.formData;
+      return {
+        formData: {
+          ...state.formData,
+          watchSymptoms: selectedSymptoms.length <= 5 ? [...selectedSymptoms] : [],
+        },
+      };
+    });
   },
 
   toggleSymptom: (symptomId) => {
     set((state) => {
       const isSelected = state.formData.selectedSymptoms.includes(symptomId);
       let selected: string[];
+      let watchSymptoms = state.formData.watchSymptoms;
       if (isSelected) {
         selected = state.formData.selectedSymptoms.filter((id) => id !== symptomId);
+        watchSymptoms = watchSymptoms.filter((id) => id !== symptomId);
       } else {
         if (state.formData.selectedSymptoms.length >= 8) return state;
         selected = [...state.formData.selectedSymptoms, symptomId];
@@ -172,7 +187,7 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
         formData: {
           ...state.formData,
           selectedSymptoms: selected,
-          watchSymptoms: selected.slice(0, 5),
+          watchSymptoms,
         },
       };
     });
