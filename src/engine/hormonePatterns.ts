@@ -41,9 +41,9 @@ export const HORMONE_PATTERNS: HormonePattern[] = [
   },
   {
     key: 'estrogen_high',
-    label: 'Estrogen Dominance Pattern',
+    label: 'High Estrogen-to-Progesterone Symptom Cluster',
     description:
-      'Your symptoms include several that are commonly associated with estrogen levels being too high relative to progesterone — breast tenderness, bloating, headaches, and mood instability can indicate estrogen excess or an imbalanced estrogen-to-progesterone ratio.',
+      'Your symptoms include several that are commonly associated with estrogen levels that are high relative to progesterone — breast tenderness, bloating, headaches, and mood instability can indicate estrogen excess or an imbalanced estrogen-to-progesterone ratio.',
     primarySymptoms: ['breast_tenderness', 'heavy_bleeding', 'irregular_periods', 'headaches'],
     secondarySymptoms: [
       'bloating',
@@ -64,7 +64,7 @@ export const HORMONE_PATTERNS: HormonePattern[] = [
       'Could my estrogen dose be too high?',
       'Would adding or increasing progesterone help balance things?',
       'Should we check my estradiol-to-progesterone ratio?',
-      'If I am on oral estrogen, would switching to transdermal reduce estrogen dominance symptoms?',
+      'If I am on oral estrogen, would switching to transdermal reduce symptoms from estrogen levels being high relative to progesterone?',
     ],
   },
   {

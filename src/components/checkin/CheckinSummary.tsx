@@ -64,6 +64,7 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
 
     setIsSaving(false);
     if (ok) {
+      localStorage.setItem('trackher_first_checkin_done', 'true');
       toast.success(isEditing ? 'Check-in updated' : 'Check-in saved');
       onSuccess();
     } else {

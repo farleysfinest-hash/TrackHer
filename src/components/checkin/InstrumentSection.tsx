@@ -14,6 +14,13 @@ import { InstrumentScoreBadge } from './InstrumentScoreBadge';
 import { Button } from '../ui/Button';
 
 const INSTRUMENT_TOOLTIP_KEY = 'predicther_instrument_tooltip_dismissed';
+const FIRST_CHECKIN_DONE_KEY = 'trackher_first_checkin_done';
+
+const SUBSCALE_DISPLAY_LABELS: Record<string, string> = {
+  psychological: 'Mood & mind',
+  somatic: 'Body',
+  urogenital: 'Urinary & vaginal',
+};
 
 interface InstrumentSectionProps {
   instrument: InstrumentDefinition;
@@ -32,7 +39,11 @@ export function InstrumentSection({ instrument, onNext, onBack }: InstrumentSect
   const [dismissedNudge, setDismissedNudge] = useState(false);
 
   const ratedCount = countRatedInstrumentItems(mrsScores, instrument);
-  const showNudge = ratedCount < Math.ceil(instrument.items.length * 0.7) && !dismissedNudge;
+  const isReturningCheckinUser = localStorage.getItem(FIRST_CHECKIN_DONE_KEY) === 'true';
+  const showNudge =
+    isReturningCheckinUser &&
+    ratedCount < Math.ceil(instrument.items.length * 0.7) &&
+    !dismissedNudge;
   const score = getInstrumentScore(instrument);
 
   const subscaleOrder = instrument.subscales.map((s) => s.id);
@@ -59,9 +70,7 @@ export function InstrumentSection({ instrument, onNext, onBack }: InstrumentSect
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-display text-2xl text-sage-800">
-          Standardized assessment ({instrument.abbreviation})
-        </h2>
+        <h2 className="font-display text-2xl text-sage-800">How have these symptoms felt?</h2>
         <p className="mt-2 text-sage-500">{getTimeframeLabel(frequency)}</p>
       </div>
 
@@ -69,8 +78,10 @@ export function InstrumentSection({ instrument, onNext, onBack }: InstrumentSect
         <div className="rounded-lg border border-sage-200 bg-sage-50 p-4 text-sm text-sage-700">
           <div className="flex items-start justify-between gap-3">
             <p>
-              This is a clinically validated scale used worldwide. Your score can be shared with
-              your healthcare provider and compared to published research.
+              Your ratings use the {instrument.abbreviation}, a clinically validated scale used
+              worldwide. Your scores can be shared with your provider and compared to published
+              research. Rate only the symptoms you experience — it&apos;s fine to leave others at
+              &ldquo;none.&rdquo;
             </p>
             <button
               type="button"
@@ -91,8 +102,8 @@ export function InstrumentSection({ instrument, onNext, onBack }: InstrumentSect
           if (!subscale || items.length === 0) return null;
           return (
             <div key={subscaleId} className="border-b border-sand-200/80 py-4 last:border-b-0">
-              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-sage-600">
-                {subscale.label}
+              <h3 className="mb-3 text-sm font-semibold text-sage-600">
+                {SUBSCALE_DISPLAY_LABELS[subscaleId] ?? subscale.label}
               </h3>
               {items.map((item) => {
                 const storageKey = getItemStorageKey(item);
@@ -122,6 +133,10 @@ export function InstrumentSection({ instrument, onNext, onBack }: InstrumentSect
               · {sub.label} {score.subscales[sub.id]?.score ?? 0}/{sub.maxScore}
             </span>
           ))}
+        </p>
+        <p className="mt-2 text-xs text-sage-400">
+          Scored with the {instrument.name} ({instrument.abbreviation}) — a validated scale your
+          provider will recognize.
         </p>
       </div>
 

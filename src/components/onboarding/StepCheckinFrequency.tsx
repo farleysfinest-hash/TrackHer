@@ -69,10 +69,6 @@ export function StepCheckinFrequency({ onComplete, onBack }: StepCheckinFrequenc
         })}
       </div>
 
-      <p className="text-sm text-sage-400">
-        We&apos;ll send you a friendly email reminder based on your schedule.
-      </p>
-
       {error && (
         <div className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">{error}</div>
       )}

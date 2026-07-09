@@ -252,7 +252,7 @@ const RAW_SYMPTOM_CATALOG: RawSymptom[] = [
     key: 'breast_tenderness',
     label: 'Breast Tenderness',
     description:
-      'Soreness, swelling, or sensitivity in one or both breasts. Often linked to estrogen dominance relative to progesterone in perimenopause.',
+      'Soreness, swelling, or sensitivity in one or both breasts. Often linked to estrogen levels that are high relative to progesterone in perimenopause.',
     category: 'body',
     isMRSCore: false,
     relatedHormones: ['estrogen_high', 'progesterone_low', 'estrogen_fluctuating'],
