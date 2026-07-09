@@ -29,7 +29,12 @@ export function InsightCard({ insight, compact = false, onDismiss }: InsightCard
             type="button"
             onClick={() => onDismiss(insight.id)}
             className="absolute right-3 top-3 rounded-full p-1 text-sage-400 transition-colors hover:bg-sage-100 hover:text-sage-600"
-            aria-label="Dismiss this insight"
+            aria-label={
+              insight.category === 'trend_alert' ? 'Hide for 30 days' : 'Dismiss this insight'
+            }
+            title={
+              insight.category === 'trend_alert' ? 'Hide for 30 days' : 'Dismiss this insight'
+            }
           >
             <X className="h-4 w-4" />
           </button>

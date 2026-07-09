@@ -1,4 +1,5 @@
 import type { InstrumentDefinition } from '../../types/instruments';
+import { MRS_TOTAL_SEVERITY_BANDS } from '../../utils/mrsTotalSeverity';
 import { buildInstrumentScore } from './scoring';
 
 export const MRS_INSTRUMENT: InstrumentDefinition = {
@@ -140,11 +141,6 @@ export const MRS_INSTRUMENT: InstrumentDefinition = {
       },
     },
   ],
-  totalSeverityBands: {
-    none: [0, 4],
-    mild: [5, 16],
-    moderate: [17, 24],
-    severe: [25, 44],
-  },
+  totalSeverityBands: MRS_TOTAL_SEVERITY_BANDS,
   scoringFunction: (responses) => buildInstrumentScore(MRS_INSTRUMENT, responses),
 };

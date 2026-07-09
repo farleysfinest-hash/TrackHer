@@ -88,7 +88,7 @@ function deltaObservation(previous: SymptomCheckin, latest: SymptomCheckin): Ins
 
   if (absDelta < 2) {
     return {
-      id: `obs-delta-${latest.checkin_date}`,
+      id: `obs-steady-${latest.checkin_date}`,
       category: 'observation',
       priority: 'low',
       title: 'Holding steady',

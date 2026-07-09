@@ -36,16 +36,19 @@ export interface CheckinInput {
   checkinType?: CheckinType;
 }
 
-function buildCheckinPayload(data: CheckinInput, userId: string) {
+function buildCheckinPayload(data: CheckinInput, userId: string, timezone: string) {
   const checkinType = data.checkinType ?? 'full';
   const isPulse = checkinType === 'pulse';
+  const checkinDate = data.checkinDate ?? getLocalDateISO(timezone);
+  const today = getLocalDateISO(timezone);
 
   const payload: Record<string, unknown> = {
     user_id: userId,
-    checkin_date: data.checkinDate ?? getLocalDateISO(),
+    checkin_date: checkinDate,
     overall_wellbeing: data.wellbeingScore,
     notes: isPulse ? null : data.notes || null,
     checkin_type: checkinType,
+    is_backdated: checkinDate !== today,
   };
 
   for (const key of MRS_CANONICAL_KEYS) {
@@ -74,11 +77,17 @@ function scoresFromInput(mrsScores: Record<string, MRSScore | null>): MRSScoresM
   return map;
 }
 
-function buildDevCheckin(data: CheckinInput, id: string, userId: string): SymptomCheckin {
+function buildDevCheckin(
+  data: CheckinInput,
+  id: string,
+  userId: string,
+  timezone: string,
+): SymptomCheckin {
   const checkinType = data.checkinType ?? 'full';
   const isPulse = checkinType === 'pulse';
   const mrsMap = isPulse ? { ...INITIAL_MRS_SCORES } : scoresFromInput(data.mrsScores);
-  const checkinDate = data.checkinDate ?? getLocalDateISO();
+  const checkinDate = data.checkinDate ?? getLocalDateISO(timezone);
+  const today = getLocalDateISO(timezone);
   const mrs = isPulse
     ? { total: 0, somatic: 0, psychological: 0, urogenital: 0 }
     : calculateMRS(mrsMap);
@@ -110,6 +119,7 @@ function buildDevCheckin(data: CheckinInput, id: string, userId: string): Sympto
     urogenital_score: mrs.urogenital,
     overall_wellbeing: data.wellbeingScore,
     notes: isPulse ? null : data.notes || null,
+    is_backdated: checkinDate !== today,
     created_at: new Date().toISOString(),
   };
 }
@@ -383,7 +393,7 @@ export function useCheckins() {
     if (IS_DEV_MODE) {
       const checkinDate = data.checkinDate ?? getLocalDateISO(getTimezone());
       const id = `checkin-dev-${Date.now()}`;
-      const newCheckin = buildDevCheckin({ ...data, checkinDate }, id, MOCK_USER.id);
+      const newCheckin = buildDevCheckin({ ...data, checkinDate }, id, MOCK_USER.id, getTimezone());
 
       const filtered = getDevCheckins().filter((c) => c.checkin_date !== checkinDate);
       setDevCheckins([newCheckin, ...filtered]);
@@ -417,6 +427,7 @@ export function useCheckins() {
     const payload = buildCheckinPayload(
       { ...data, checkinDate: data.checkinDate ?? getLocalDateISO(getTimezone()) },
       userId,
+      getTimezone(),
     );
 
     const { data: inserted, error: insertError } = await supabase
@@ -472,7 +483,7 @@ export function useCheckins() {
       const existing = getDevCheckins().find((c) => c.id === id);
       if (!existing) return false;
 
-      const updated = buildDevCheckin(data, id, MOCK_USER.id);
+      const updated = buildDevCheckin(data, id, MOCK_USER.id, getTimezone());
       updated.checkin_date = existing.checkin_date;
       updated.created_at = existing.created_at;
 
@@ -501,7 +512,7 @@ export function useCheckins() {
       return true;
     }
 
-    const payload = buildCheckinPayload(data, userId);
+    const payload = buildCheckinPayload(data, userId, getTimezone());
     delete payload.user_id;
     delete payload.checkin_date;
 

@@ -70,7 +70,14 @@ export function CheckinDetailModal({
         <div className="space-y-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="text-sage-500">{formatDateLong(checkin.checkin_date)}</p>
+              <p className="text-sage-500">
+                {formatDateLong(checkin.checkin_date)}
+                {checkin.is_backdated && (
+                  <span className="ml-2 rounded bg-sand-100 px-1.5 py-0.5 text-xs font-normal text-sage-400">
+                    logged later
+                  </span>
+                )}
+              </p>
               {checkin.overall_wellbeing !== null && (
                 <p className="mt-1 text-lg font-medium text-sage-800">
                   Wellbeing: {checkin.overall_wellbeing}/10

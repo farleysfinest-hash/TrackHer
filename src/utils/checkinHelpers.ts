@@ -7,6 +7,7 @@ import {
   getItemStorageKey,
   getSeverityLabel,
 } from '../data/instruments/scoring';
+import { getMrsTotalSeverityLevel } from './mrsTotalSeverity';
 
 /** Canonical 11-item Menopause Rating Scale — only these count toward MRS total (max 44). */
 export const MRS_ITEMS = {
@@ -88,13 +89,6 @@ function subscaleSeverity(
   return 'severe';
 }
 
-function totalSeverity(score: number): MRSSeverityLevel {
-  if (score <= 4) return 'none';
-  if (score <= 16) return 'mild';
-  if (score <= 24) return 'moderate';
-  return 'severe';
-}
-
 export function calculateMRS(responses: Record<string, number | null | undefined>): MRSScoreResult {
   const instrumentScore = scoreInstrument(responses, MRS_INSTRUMENT);
   return {
@@ -147,10 +141,9 @@ export function computeUrogenitalScore(scores: MRSScoresMap): number {
 export type MRSSeverityTier = MRSSeverityLevel;
 
 export function getMRSSeverityTier(total: number): MRSSeverityLevel {
-  return totalSeverity(total);
+  return getMrsTotalSeverityLevel(total);
 }
 
-/** Published MRS total-score severity bands (Heinemann et al.): 0–4 none, 5–8 mild, 9–16 moderate, 17+ severe. */
 export interface MRSSeverityBandInfo {
   level: MRSSeverityLevel;
   bandLabel: string;
@@ -159,38 +152,40 @@ export interface MRSSeverityBandInfo {
 }
 
 export function getMRSSeverityBand(total: number): MRSSeverityBandInfo {
-  if (total <= 4) {
-    return {
-      level: 'none',
-      bandLabel: 'no/minimal',
-      rangePhrase: 'in the no/minimal range on this scale',
-      meaning: 'Few or no symptoms were reported on the MRS scale.',
-    };
+  const level = getMrsTotalSeverityLevel(total);
+
+  switch (level) {
+    case 'none':
+      return {
+        level,
+        bandLabel: 'no/minimal',
+        rangePhrase: 'in the no/minimal range on this scale',
+        meaning: 'Few or no symptoms were reported on the MRS scale.',
+      };
+    case 'mild':
+      return {
+        level,
+        bandLabel: 'mild',
+        rangePhrase: 'in the mild range on this scale',
+        meaning: 'A mild symptom burden on this scale — worth tracking as you check in over time.',
+      };
+    case 'moderate':
+      return {
+        level,
+        bandLabel: 'moderate',
+        rangePhrase: 'in the moderate range on this scale',
+        meaning:
+          'Moderate symptoms on this scale — often clinically relevant to discuss with a provider.',
+      };
+    case 'severe':
+      return {
+        level,
+        bandLabel: 'severe',
+        rangePhrase: 'in the severe range on this scale',
+        meaning:
+          'A higher symptom burden on this scale — worth sharing with your provider if you have not already. Higher scores are common among women seeking care, and they are exactly what treatment adjustments aim to move.',
+      };
   }
-  if (total <= 8) {
-    return {
-      level: 'mild',
-      bandLabel: 'mild',
-      rangePhrase: 'in the mild range on this scale',
-      meaning: 'A mild symptom burden on this scale — worth tracking as you check in over time.',
-    };
-  }
-  if (total <= 16) {
-    return {
-      level: 'moderate',
-      bandLabel: 'moderate',
-      rangePhrase: 'in the moderate range on this scale',
-      meaning:
-        'Moderate symptoms on this scale — often clinically relevant to discuss with a provider.',
-    };
-  }
-  return {
-    level: 'severe',
-    bandLabel: 'severe',
-    rangePhrase: 'in the severe range on this scale',
-    meaning:
-      'A higher symptom burden on this scale — worth sharing with your provider if you have not already.',
-  };
 }
 
 export const MRS_SUBSCALE_FRIENDLY_LABELS: Record<string, string> = {

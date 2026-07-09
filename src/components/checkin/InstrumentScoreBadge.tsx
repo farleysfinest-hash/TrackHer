@@ -3,6 +3,7 @@ import { getSeverityLabel } from '../../data/instruments/scoring';
 import {
   getMRSSeverityColor,
   getMRSSeverityDot,
+  getMRSSeverityTier,
   type MRSSeverityLevel,
 } from '../../utils/checkinHelpers';
 
@@ -89,7 +90,7 @@ export function MRSScoreBadge({
   compact?: boolean;
   showDot?: boolean;
 }) {
-  const tier = totalSeverity ?? 'none';
+  const tier = totalSeverity ?? getMRSSeverityTier(total);
   const colorClass = getMRSSeverityColor(tier);
 
   if (compact) {

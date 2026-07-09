@@ -254,6 +254,7 @@ function buildCheckin(week: WeekScores, index: number): SymptomCheckin {
     urogenital_score: urogenital,
     overall_wellbeing: week.wellbeing,
     notes: week.notes ?? null,
+    is_backdated: false,
     created_at: date + 'T10:00:00Z',
   };
 }

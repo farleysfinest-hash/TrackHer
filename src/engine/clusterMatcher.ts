@@ -132,7 +132,8 @@ export function analyzeSymptomClusters(input: ClusterMatchInput): Insight[] {
 
   const today = new Date().toISOString().split('T')[0];
   const windowStart = addDaysISO(today, -WINDOW_DAYS);
-  const windowCheckins = mrsCheckins.filter((c) => c.checkin_date >= windowStart);
+  const eligibleCheckins = mrsCheckins.filter((c) => !c.is_backdated);
+  const windowCheckins = eligibleCheckins.filter((c) => c.checkin_date >= windowStart);
 
   if (windowCheckins.length < MIN_WINDOW_CHECKINS) return [];
 

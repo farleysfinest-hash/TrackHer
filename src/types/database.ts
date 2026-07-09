@@ -207,6 +207,7 @@ export interface SymptomCheckin {
   urogenital_score: number;
   overall_wellbeing: number | null;
   notes: string | null;
+  is_backdated: boolean;
   created_at: string;
 }
 

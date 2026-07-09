@@ -1,0 +1,2 @@
+ALTER TABLE symptom_checkins
+  ADD COLUMN IF NOT EXISTS is_backdated BOOLEAN NOT NULL DEFAULT false;

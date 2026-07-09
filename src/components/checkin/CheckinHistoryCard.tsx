@@ -27,7 +27,14 @@ function CheckinHistoryCardComponent({ checkin, onViewDetails }: CheckinHistoryC
     <div className="rounded-xl border border-sand-200 bg-white p-5 shadow-sm">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="font-medium text-sage-800">{formatDateLong(checkin.checkin_date)}</p>
+          <p className="font-medium text-sage-800">
+            {formatDateLong(checkin.checkin_date)}
+            {checkin.is_backdated && (
+              <span className="ml-2 rounded bg-sand-100 px-1.5 py-0.5 text-xs font-normal text-sage-400">
+                logged later
+              </span>
+            )}
+          </p>
           <div className="mt-2">
             {hasMRSData(checkin) ? (
               <MRSScoreBadge total={checkin.total_score} compact showDot />

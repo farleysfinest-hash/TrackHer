@@ -9,9 +9,10 @@ import { PDF_COLORS, drawSectionHeader, trendArrow } from '../pdfTheme';
 import { drawLineChart, type ChartMarker } from '../chartDrawing';
 import { formatChartDateLong } from '../../chartHelpers';
 import { hasMRSData } from '../../checkinHelpers';
+import { getMrsTotalSeverityLevel, MRS_SEVERITY_REFERENCE } from '../../mrsTotalSeverity';
 
 const MRS_REFERENCE =
-  'The Menopause Rating Scale (MRS) is a validated, internationally standardized instrument for assessing menopausal symptom severity. Heinemann et al., Health Qual Life Outcomes, 2004. Scoring: 0-4 none/minimal, 5-16 mild, 17-24 moderate, 25-44 severe.';
+  `The Menopause Rating Scale (MRS) is a validated, internationally standardized instrument for assessing menopausal symptom severity. ${MRS_SEVERITY_REFERENCE}`;
 
 export function renderMrsAssessmentPage(
   ctx: PdfPageContext,
@@ -57,7 +58,7 @@ export function renderMrsAssessmentPage(
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   const scoreLines = [
-    `Total: ${latestScore.total}/44 (${getSeverityLabel(latestScore.totalSeverity)})`,
+    `Total: ${latestScore.total}/44 (${getSeverityLabel(getMrsTotalSeverityLevel(latestScore.total))})`,
     `Psychological subscale: ${latestScore.subscales.psychological?.score ?? 0}/16 (${getSeverityLabel(latestScore.subscales.psychological?.severity ?? 'none')})`,
     `Somatic subscale: ${latestScore.subscales.somatic?.score ?? 0}/16 (${getSeverityLabel(latestScore.subscales.somatic?.severity ?? 'none')})`,
     `Urogenital subscale: ${latestScore.subscales.urogenital?.score ?? 0}/12 (${getSeverityLabel(latestScore.subscales.urogenital?.severity ?? 'none')})`,

@@ -14,6 +14,7 @@ import {
 } from '../lib/devStore';
 import { supabase } from '../lib/supabase';
 import type { ExtendedSymptomLog } from '../types/database';
+import type { DismissalRecord } from '../utils/insightHelpers';
 import { filterDismissedInsights } from '../utils/insightHelpers';
 
 const EXTENDED_LOGS_DAYS = 120;
@@ -28,8 +29,8 @@ export function useInsights() {
   const { labResults, fetchLabResults, isLoading: labsLoading } = useLabResults();
   const [extendedSymptoms, setExtendedSymptoms] = useState<ExtendedSymptomLog[]>([]);
   const [extendedLoading, setExtendedLoading] = useState(!IS_DEV_MODE);
-  const [dismissedIds, setDismissedIds] = useState<Set<string>>(() =>
-    IS_DEV_MODE ? new Set(getDevDismissedInsights()) : new Set(),
+  const [dismissals, setDismissals] = useState<DismissalRecord[]>(() =>
+    IS_DEV_MODE ? getDevDismissedInsights() : [],
   );
   const [dismissalsLoading, setDismissalsLoading] = useState(!IS_DEV_MODE);
 
@@ -81,13 +82,13 @@ export function useInsights() {
 
   useEffect(() => {
     if (IS_DEV_MODE) {
-      setDismissedIds(new Set(getDevDismissedInsights()));
+      setDismissals(getDevDismissedInsights());
       setDismissalsLoading(false);
       return;
     }
 
     if (!userId) {
-      setDismissedIds(new Set());
+      setDismissals([]);
       setDismissalsLoading(false);
       return;
     }
@@ -97,12 +98,13 @@ export function useInsights() {
 
     void supabase
       .from('dismissed_insights')
-      .select('insight_id')
+      .select('insight_id, dismissed_at')
       .eq('user_id', userId)
       .then(({ data }) => {
         if (cancelled) return;
-        const ids = (data as { insight_id: string }[] | null)?.map((row) => row.insight_id) ?? [];
-        setDismissedIds(new Set(ids));
+        const rows =
+          (data as { insight_id: string; dismissed_at: string }[] | null) ?? [];
+        setDismissals(rows);
         setDismissalsLoading(false);
       });
 
@@ -130,33 +132,33 @@ export function useInsights() {
   }, [checkins, extendedSymptoms, medications, medicationChanges, labResults, profile]);
 
   const insights = useMemo(
-    () => filterDismissedInsights(engineInsights, dismissedIds),
-    [engineInsights, dismissedIds],
+    () => filterDismissedInsights(engineInsights, dismissals),
+    [engineInsights, dismissals],
   );
 
   const dismissInsight = useCallback(
     async (insightId: string) => {
-      setDismissedIds((prev) => new Set([...prev, insightId]));
+      const dismissedAt = new Date().toISOString();
+      setDismissals((prev) => [
+        ...prev.filter((d) => d.insight_id !== insightId),
+        { insight_id: insightId, dismissed_at: dismissedAt },
+      ]);
 
       if (IS_DEV_MODE) {
-        addDevDismissedInsight(insightId);
+        addDevDismissedInsight(insightId, dismissedAt);
         return;
       }
 
       if (!userId) return;
 
       const { error } = await supabase.from('dismissed_insights').upsert(
-        { user_id: userId, insight_id: insightId },
+        { user_id: userId, insight_id: insightId, dismissed_at: dismissedAt },
         { onConflict: 'user_id,insight_id' },
       );
 
       if (error) {
         console.error('Failed to dismiss insight:', error.message);
-        setDismissedIds((prev) => {
-          const next = new Set(prev);
-          next.delete(insightId);
-          return next;
-        });
+        setDismissals((prev) => prev.filter((d) => d.insight_id !== insightId));
       }
     },
     [userId],

@@ -23,7 +23,7 @@ let extendedSymptomLogs: ExtendedSymptomLog[] = [];
 let labResults: LabResult[] = [...MOCK_LAB_RESULTS];
 let symptomSelections: Omit<UserSymptomSelection, 'id' | 'selected_at'>[] = [];
 let quickLogs: QuickLogEvent[] = [...MOCK_QUICK_LOGS];
-let dismissedInsightIds: string[] = [];
+let dismissedInsights: { insight_id: string; dismissed_at: string }[] = [];
 
 export function resetDevStore(): void {
   medications = [...MOCK_MEDICATIONS];
@@ -33,7 +33,7 @@ export function resetDevStore(): void {
   labResults = [...MOCK_LAB_RESULTS];
   symptomSelections = [];
   quickLogs = [...MOCK_QUICK_LOGS];
-  dismissedInsightIds = [];
+  dismissedInsights = [];
   console.log('[DEV] Store reset to initial mock data');
 }
 
@@ -95,16 +95,17 @@ export function setDevQuickLogs(events: QuickLogEvent[]): void {
   quickLogs = events;
 }
 
-export function getDevDismissedInsights(): string[] {
-  return dismissedInsightIds;
+export function getDevDismissedInsights(): { insight_id: string; dismissed_at: string }[] {
+  return dismissedInsights;
 }
 
-export function addDevDismissedInsight(insightId: string): void {
-  if (!dismissedInsightIds.includes(insightId)) {
-    dismissedInsightIds = [...dismissedInsightIds, insightId];
-  }
+export function addDevDismissedInsight(insightId: string, dismissedAt: string): void {
+  dismissedInsights = [
+    ...dismissedInsights.filter((d) => d.insight_id !== insightId),
+    { insight_id: insightId, dismissed_at: dismissedAt },
+  ];
 }
 
 export function resetDevDismissedInsights(): void {
-  dismissedInsightIds = [];
+  dismissedInsights = [];
 }
