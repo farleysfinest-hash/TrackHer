@@ -23,7 +23,7 @@ export function SymptomTrendChart({ data }: SymptomTrendChartProps) {
   return (
     <ChartCard
       title="Symptom Trends"
-      description="MRS total score and wellbeing over time"
+      description="MRS total score and daily energy over time"
       isEmpty={isEmpty}
       emptyState={{ message: 'Check in at least twice to see symptom trends.' }}
       minHeight="280px"
@@ -37,7 +37,7 @@ export function SymptomTrendChart({ data }: SymptomTrendChartProps) {
             <YAxis
               yAxisId="wb"
               orientation="right"
-              domain={[1, 10]}
+              domain={[1, 5]}
               tick={{ fontSize: 11, fill: CHART_COLORS.axisText }}
               width={28}
             />
@@ -56,7 +56,7 @@ export function SymptomTrendChart({ data }: SymptomTrendChartProps) {
               yAxisId="wb"
               type="monotone"
               dataKey="wellbeing"
-              name="Wellbeing"
+              name="Energy"
               stroke={CHART_COLORS.wellbeing}
               strokeWidth={2}
               strokeDasharray="6 3"

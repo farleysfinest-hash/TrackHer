@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { StatCard } from '../ui/StatCard';
-import { getMRSSeverityTier, hasMRSData } from '../../utils/checkinHelpers';
+import { getMRSSeverityTier, hasMRSData, getDailySignal } from '../../utils/checkinHelpers';
 import { MRS_SEVERITY_HEX, getWellbeingHex } from '../../utils/chartHelpers';
 import type { SymptomCheckin } from '../../types/database';
 
@@ -48,8 +48,18 @@ export function ScoreSummaryCards({ checkins }: ScoreSummaryCardsProps) {
     ? MRS_SEVERITY_HEX[getMRSSeverityTier(latestMrs.total_score)]
     : undefined;
 
-  const wellbeingColor =
-    latest?.overall_wellbeing != null ? getWellbeingHex(latest.overall_wellbeing) : undefined;
+  const energySignal = latest ? getDailySignal(latest) : null;
+  const energyColor =
+    energySignal != null ? getWellbeingHex(energySignal * 2) : undefined;
+
+  const channelSubtext = latest
+    ? [
+        latest.mood_level != null ? `Mood ${latest.mood_level}` : null,
+        latest.sleep_quality != null ? `Sleep ${latest.sleep_quality}/5` : null,
+      ]
+        .filter(Boolean)
+        .join(' · ') || undefined
+    : undefined;
 
   const todayStr = new Date().toISOString().split('T')[0];
   const monthKey = todayStr.slice(0, 7);
@@ -67,10 +77,10 @@ export function ScoreSummaryCards({ checkins }: ScoreSummaryCardsProps) {
         color={mrsColor}
       />
       <StatCard
-        label="Wellbeing"
-        value={latest?.overall_wellbeing ?? '—'}
-        subtext="/10"
-        color={wellbeingColor}
+        label="Energy"
+        value={energySignal ?? '—'}
+        subtext={channelSubtext ?? '/5'}
+        color={energyColor}
       />
       <StatCard
         label="30-Day Change"

@@ -12,7 +12,7 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
-import { hasMRSData, getLocalDateISO, getResolvedTimezone } from '../utils/checkinHelpers';
+import { hasMRSData, getLocalDateISO, getResolvedTimezone, formatDailyChannels } from '../utils/checkinHelpers';
 import { formatLoggingDate } from '../utils/formatters';
 import type { SymptomCheckin } from '../types/database';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -137,7 +137,7 @@ export function CheckinPage() {
     <div className="space-y-10">
       <div>
         <h1 className="font-display text-3xl text-sage-800">Check In</h1>
-        <p className="mt-1 text-sage-500">Track your symptoms and wellbeing over time.</p>
+        <p className="mt-1 text-sage-500">Track your symptoms and daily pulse over time.</p>
       </div>
 
       {!isLoading && hasCheckedInToday && todaysCheckin && !loggingForPastDay ? (
@@ -150,16 +150,7 @@ export function CheckinPage() {
                   {todaysIsPulse ? 'Pulse logged today' : "You've already checked in today"}
                 </h2>
                 <div className="mt-2 flex flex-wrap gap-4 text-sm">
-                  {todaysCheckin.overall_wellbeing !== null && (
-                    <span className="text-sage-600">
-                      Wellbeing: {todaysCheckin.overall_wellbeing}/10
-                    </span>
-                  )}
-                  {todaysCheckin.sleep_quality !== null && (
-                    <span className="text-sage-600">
-                      Sleep: {todaysCheckin.sleep_quality}/5
-                    </span>
-                  )}
+                  <span className="text-sage-600">{formatDailyChannels(todaysCheckin)}</span>
                   {hasMRSData(todaysCheckin) && (
                     <MRSScoreBadge total={todaysCheckin.total_score} compact showDot />
                   )}

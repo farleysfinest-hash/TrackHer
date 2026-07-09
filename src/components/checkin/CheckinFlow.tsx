@@ -5,7 +5,7 @@ import { getPrimaryInstrument } from '../../data/instruments/registry';
 import { getLocalDateISO, getResolvedTimezone } from '../../utils/checkinHelpers';
 import { formatLoggingDate } from '../../utils/formatters';
 import { StepIndicator } from '../ui/StepIndicator';
-import { WellbeingScore } from './WellbeingScore';
+import { DailyChannels } from './DailyChannels';
 import { MRSSection } from './MRSSection';
 import { ExtendedSymptomsSection } from './ExtendedSymptomsSection';
 import { CheckinNotes } from './CheckinNotes';
@@ -50,7 +50,7 @@ export function CheckinFlow({ onClose, onComplete }: CheckinFlowProps) {
     if (mode === 'quick') {
       switch (currentStep) {
         case 1:
-          return <WellbeingScore onNext={nextStep} />;
+          return <DailyChannels onNext={nextStep} />;
         case 2:
           return <CheckinSummary onBack={prevStep} onSuccess={handleComplete} />;
         default:
@@ -60,7 +60,7 @@ export function CheckinFlow({ onClose, onComplete }: CheckinFlowProps) {
 
     switch (currentStep) {
       case 1:
-        return <WellbeingScore onNext={nextStep} />;
+        return <DailyChannels onNext={nextStep} />;
       case 2:
         return <MRSSection onNext={nextStep} onBack={prevStep} />;
       case 3:

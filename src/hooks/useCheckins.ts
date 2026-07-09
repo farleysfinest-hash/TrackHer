@@ -27,8 +27,9 @@ import type { MRSSymptomKey, MRSScoresMap } from '../utils/checkinHelpers';
 import { buildAssessmentScore, saveAssessmentResult } from './assessmentPersistence';
 
 export interface CheckinInput {
-  wellbeingScore: number | null;
-  sleepQuality?: number | null;
+  energyLevel: number | null;
+  moodLevel: number | null;
+  sleepQuality: number | null;
   mrsScores: Record<string, MRSScore | null>;
   extendedSymptoms: Array<{ symptom_key: string; severity: MRSScore }>;
   notes: string;
@@ -46,7 +47,8 @@ function buildCheckinPayload(data: CheckinInput, userId: string, timezone: strin
   const payload: Record<string, unknown> = {
     user_id: userId,
     checkin_date: checkinDate,
-    overall_wellbeing: data.wellbeingScore,
+    energy_level: data.energyLevel,
+    mood_level: data.moodLevel,
     sleep_quality: data.sleepQuality ?? null,
     notes: isPulse ? null : data.notes || null,
     checkin_type: checkinType,
@@ -119,7 +121,9 @@ function buildDevCheckin(
     somatic_score: mrs.somatic,
     psychological_score: mrs.psychological,
     urogenital_score: mrs.urogenital,
-    overall_wellbeing: data.wellbeingScore,
+    overall_wellbeing: null,
+    energy_level: data.energyLevel,
+    mood_level: data.moodLevel,
     sleep_quality: data.sleepQuality ?? null,
     notes: isPulse ? null : data.notes || null,
     is_backdated: checkinDate !== today,

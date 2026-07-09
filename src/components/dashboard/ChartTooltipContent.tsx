@@ -1,4 +1,4 @@
-import { getTopConcerns, MRS_CANONICAL_KEYS, MRS_TOTAL_MAX, type MRSScoresMap, type MRSSymptomKey } from '../../utils/checkinHelpers';
+import { getTopConcerns, MRS_CANONICAL_KEYS, MRS_TOTAL_MAX, getDailySignal, type MRSScoresMap, type MRSSymptomKey } from '../../utils/checkinHelpers';
 import type { SymptomCheckin } from '../../types/database';
 import { formatChartDateLong, severityLabel } from '../../utils/chartHelpers';
 
@@ -30,7 +30,7 @@ export function ChartTooltipContent(props: ChartTooltipProps) {
   const checkin = point?.checkin ?? point;
   const dateStr = point?.date ?? (typeof label === 'string' ? label : '');
   const mrs = point?.mrsTotal ?? checkin?.total_score;
-  const wellbeing = point?.wellbeing ?? checkin?.overall_wellbeing;
+  const energy = point?.wellbeing ?? (checkin ? getDailySignal(checkin) : null);
 
   if (!checkin?.hot_flashes && mrs === undefined) return null;
 
@@ -47,9 +47,9 @@ export function ChartTooltipContent(props: ChartTooltipProps) {
           MRS Score: <strong>{mrs}</strong>/{MRS_TOTAL_MAX}
         </p>
       )}
-      {wellbeing !== null && wellbeing !== undefined && (
+      {energy !== null && energy !== undefined && (
         <p className="text-sage-700">
-          Wellbeing: <strong>{wellbeing}</strong>/10
+          Energy: <strong>{energy}</strong>/5
         </p>
       )}
       {concerns.length > 0 && (

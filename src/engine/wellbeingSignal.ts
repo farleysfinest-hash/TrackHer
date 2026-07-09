@@ -2,6 +2,7 @@ import type { Insight } from './types';
 import { INSIGHT_DISCLAIMER } from './types';
 import type { Medication, MedicationChange, SymptomCheckin, MedicationAdministration } from '../types/database';
 import { getDoseCycleDays, getMedicationChangeLabel } from '../utils/medicationHelpers';
+import { getDailySignal } from '../utils/checkinHelpers';
 
 interface WellbeingSignalInput {
   checkins: SymptomCheckin[];
@@ -10,18 +11,19 @@ interface WellbeingSignalInput {
   administrations: MedicationAdministration[];
 }
 
-// sleep_quality is collected from slice 12 onward; sleep-lag analysis
-// (night sweats -> sleep -> next-day wellbeing) is queued for the AI layer / a future analyzer.
+// sleep_quality collected from slice 12 onward; mood_level from slice 15 onward.
+// Sleep-lag analysis (night sweats -> sleep -> next-day energy) is queued for the AI layer / a future analyzer.
 
 const WINDOW_DAYS = 21;
 const WELLBEING_DOSE_MIN_POINTS = 5;
 const VOLATILITY_LOOKBACK_DAYS = 21;
 const VOLATILITY_MIN_POINTS = 10;
-const VOLATILITY_THRESHOLD = 2.5;
+const VOLATILITY_THRESHOLD = 1.25;
+const MOOD_VOLATILITY_THRESHOLD = 1.5;
 const TROUGH_LOOKBACK_DAYS = 60;
 const TROUGH_MIN_CYCLES = 3;
 const TROUGH_MIN_AVG_POINTS_PER_POSITION = 2;
-const TROUGH_MIN_GAP = 1.5;
+const TROUGH_MIN_GAP = 1;
 const TROUGH_MIN_ADMINISTRATIONS = 3;
 
 function addDaysISO(dateStr: string, delta: number): string {
@@ -41,10 +43,20 @@ function round1(n: number): number {
   return Math.round(n * 10) / 10;
 }
 
-function wellbeingSeries(checkins: SymptomCheckin[]) {
+function dailySignalSeries(checkins: SymptomCheckin[]) {
   return [...checkins]
-    .filter((c) => c.overall_wellbeing !== null && c.overall_wellbeing !== undefined)
-    .map((c) => ({ date: c.checkin_date, value: Number(c.overall_wellbeing) }))
+    .map((c) => {
+      const value = getDailySignal(c);
+      return value !== null ? { date: c.checkin_date, value } : null;
+    })
+    .filter((p): p is { date: string; value: number } => p !== null)
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function moodSeries(checkins: SymptomCheckin[]) {
+  return [...checkins]
+    .filter((c) => c.mood_level !== null && c.mood_level !== undefined)
+    .map((c) => ({ date: c.checkin_date, value: Number(c.mood_level) }))
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
@@ -63,7 +75,7 @@ function hasPostChangeWindowOpen(medicationChanges: MedicationChange[], today: s
 
 function doseChangeWellbeingInsights(input: WellbeingSignalInput): Insight[] {
   const { checkins, medicationChanges, medications } = input;
-  const points = wellbeingSeries(checkins);
+  const points = dailySignalSeries(checkins);
   if (points.length < 2) return [];
 
   const insights: Insight[] = [];
@@ -92,16 +104,16 @@ function doseChangeWellbeingInsights(input: WellbeingSignalInput): Insight[] {
     const improved = diff > 0;
     const changeLabel = getMedicationChangeLabel(change, medication);
     const title = improved
-      ? `Your daily wellbeing rose after ${changeLabel}`
-      : `Your daily wellbeing fell after ${changeLabel}`;
+      ? `Your daily energy rose after ${changeLabel}`
+      : `Your daily energy fell after ${changeLabel}`;
 
     const body = improved
-      ? `In the ${WINDOW_DAYS} days before your change on ${change.change_date}, your average daily wellbeing was ${round1(
+      ? `In the ${WINDOW_DAYS} days before your change on ${change.change_date}, your average daily energy was ${round1(
           avgBefore,
         ).toFixed(1)} across ${before.length} daily readings. In the ${WINDOW_DAYS} days after, it averaged ${round1(
           avgAfter,
         ).toFixed(1)} across ${after.length} readings.`
-      : `In the ${WINDOW_DAYS} days before your change on ${change.change_date}, your average daily wellbeing was ${round1(
+      : `In the ${WINDOW_DAYS} days before your change on ${change.change_date}, your average daily energy was ${round1(
           avgBefore,
         ).toFixed(1)} across ${before.length} daily readings. In the ${WINDOW_DAYS} days after, it averaged ${round1(
           avgAfter,
@@ -128,7 +140,7 @@ function doseChangeWellbeingInsights(input: WellbeingSignalInput): Insight[] {
 
 function volatilityInsight(input: WellbeingSignalInput, suppress: boolean): Insight[] {
   if (suppress) return [];
-  const points = wellbeingSeries(input.checkins);
+  const points = dailySignalSeries(input.checkins);
   if (points.length < VOLATILITY_MIN_POINTS) return [];
 
   const today = points[points.length - 1].date;
@@ -158,13 +170,58 @@ function volatilityInsight(input: WellbeingSignalInput, suppress: boolean): Insi
       id: 'wb-volatility',
       category: 'wellbeing_signal',
       priority: 'low',
-      title: 'Your day-to-day wellbeing swings widely',
-      body: `Over the past three weeks your daily wellbeing has moved an average of ${Math.round(
+      title: 'Your day-to-day energy swings widely',
+      body: `Over the past three weeks your daily energy has moved an average of ${round1(
         avgSwing,
-      )} points between days, ranging from ${min} to ${max}. Big day-to-day swings — rather than steadily low days — are a pattern many women notice during hormonal fluctuation.`,
+      ).toFixed(1)} points between days, ranging from ${min} to ${max}. Big day-to-day swings — rather than steadily low days — are a pattern many women notice during hormonal fluctuation.`,
       supportingData: {},
       actionSuggestion:
         'Fluctuation patterns are worth showing your provider — they can point toward different adjustments than consistently low days do.',
+      disclaimer: INSIGHT_DISCLAIMER,
+      generatedAt: new Date().toISOString(),
+    },
+  ];
+}
+
+function moodVolatilityInsight(input: WellbeingSignalInput, suppress: boolean): Insight[] {
+  if (suppress) return [];
+  const points = moodSeries(input.checkins);
+  if (points.length < VOLATILITY_MIN_POINTS) return [];
+
+  const today = points[points.length - 1].date;
+  const start = addDaysISO(today, -VOLATILITY_LOOKBACK_DAYS);
+  const recent = points.filter((p) => p.date >= start);
+  if (recent.length < VOLATILITY_MIN_POINTS) return [];
+
+  const swings: number[] = [];
+  for (let i = 1; i < recent.length; i++) {
+    const prev = recent[i - 1];
+    const cur = recent[i];
+    const gap = daysBetween(prev.date, cur.date);
+    if (gap > 2) continue;
+    swings.push(Math.abs(cur.value - prev.value));
+  }
+  if (swings.length < Math.max(6, Math.floor(VOLATILITY_MIN_POINTS / 2))) return [];
+
+  const avgSwing = mean(swings);
+  if (avgSwing === null || avgSwing < MOOD_VOLATILITY_THRESHOLD) return [];
+
+  const values = recent.map((p) => p.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+
+  return [
+    {
+      id: 'wb-mood-volatility',
+      category: 'wellbeing_signal',
+      priority: 'low',
+      title: 'Your mood swings widely day to day',
+      body: `Over the past three weeks your mood has moved an average of ${round1(
+        avgSwing,
+      ).toFixed(1)} points between days, ranging from ${min} to ${max} on the 1–5 scale.`,
+      supportingData: {},
+      actionSuggestion:
+        'Mood fluctuation patterns are worth showing your provider — fluctuation (not just low mood) is characteristic of hormonal transition.',
       disclaimer: INSIGHT_DISCLAIMER,
       generatedAt: new Date().toISOString(),
     },
@@ -202,8 +259,8 @@ function buildTroughInsight(
     id: `wb-trough-${med.id}`,
     category: 'wellbeing_signal',
     priority: 'medium',
-    title: `Your wellbeing dips at the end of your ${med.medication_name} cycle`,
-    body: `Across your recent pulses, your average wellbeing on the last day of your ${med.medication_name} cycle was ${round1(
+    title: `Your energy dips at the end of your ${med.medication_name} cycle`,
+    body: `Across your recent pulses, your average daily energy on the last day of your ${med.medication_name} cycle was ${round1(
       endMean,
     ).toFixed(1)}, compared with a best-day average of ${round1(bestMean).toFixed(
       1,
@@ -327,7 +384,7 @@ function todayISO(): string {
 }
 
 function troughInsights(input: WellbeingSignalInput): Insight[] {
-  const points = wellbeingSeries(input.checkins);
+  const points = dailySignalSeries(input.checkins);
   if (points.length < 20) return [];
 
   const today = points[points.length - 1].date;
@@ -346,7 +403,7 @@ function troughInsights(input: WellbeingSignalInput): Insight[] {
 
 function dipTripwire(input: WellbeingSignalInput, suppress: boolean): Insight[] {
   if (suppress) return [];
-  const points = wellbeingSeries(input.checkins);
+  const points = dailySignalSeries(input.checkins);
   if (points.length < 8) return [];
 
   const today = points[points.length - 1].date;
@@ -372,7 +429,7 @@ function dipTripwire(input: WellbeingSignalInput, suppress: boolean): Insight[] 
   if (recent4.length < 4) return [];
   recent4.reverse();
 
-  const allLow = recent4.every((p) => p.value <= avg30 - 2);
+  const allLow = recent4.every((p) => p.value <= avg30 - 1);
   if (!allLow) return [];
 
   const latestDate = recent4[recent4.length - 1].date;
@@ -396,15 +453,17 @@ export function analyzeWellbeingSignal(input: WellbeingSignalInput): Insight[] {
   const doseInsights = doseChangeWellbeingInsights(input);
 
   const today =
-    wellbeingSeries(input.checkins).slice(-1)[0]?.date ?? new Date().toISOString().split('T')[0];
+    dailySignalSeries(input.checkins).slice(-1)[0]?.date ?? new Date().toISOString().split('T')[0];
 
   const suppressForDoseWindow =
     hasPostChangeWindowOpen(input.medicationChanges, today) || doseInsights.length > 0;
 
-  const volatility = volatilityInsight(input, suppressForDoseWindow);
+  const moodVolatility = moodVolatilityInsight(input, suppressForDoseWindow);
+  const energyVolatility = volatilityInsight(input, suppressForDoseWindow);
+  const volatility = moodVolatility.length > 0 ? moodVolatility : energyVolatility;
+
   const trough = troughInsights(input);
   const dip = dipTripwire(input, suppressForDoseWindow);
 
   return [...doseInsights, ...volatility, ...trough, ...dip];
 }
-

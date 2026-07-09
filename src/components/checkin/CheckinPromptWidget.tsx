@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Leaf, CheckCircle2 } from 'lucide-react';
 import type { SymptomCheckin } from '../../types/database';
-import { hasMRSData } from '../../utils/checkinHelpers';
+import { hasMRSData, formatDailyChannels } from '../../utils/checkinHelpers';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { MRSScoreBadge } from './MRSScoreBadge';
@@ -38,12 +38,7 @@ export function CheckinPromptWidget({
           <div className="flex-1">
             <h2 className="font-display text-lg text-sage-800">Checked in today</h2>
             <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-sage-600">
-              {todaysCheckin.overall_wellbeing !== null && (
-                <span>Wellbeing: {todaysCheckin.overall_wellbeing}/10</span>
-              )}
-              {todaysCheckin.sleep_quality !== null && (
-                <span>Sleep: {todaysCheckin.sleep_quality}/5</span>
-              )}
+              <span>{formatDailyChannels(todaysCheckin)}</span>
               {hasMRSData(todaysCheckin) && (
                 <MRSScoreBadge total={todaysCheckin.total_score} compact showDot />
               )}

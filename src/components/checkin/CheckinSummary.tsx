@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useCheckinStore } from '../../stores/checkinStore';
 import { useCheckins } from '../../hooks/useCheckins';
+import { useQuickLog } from '../../hooks/useQuickLog';
 import { useToast } from '../../stores/toastStore';
 import {
   getLocalDateISO,
@@ -9,7 +10,9 @@ import {
   INITIAL_MRS_SCORES,
   getMRSSeverityBand,
   MRS_TOTAL_MAX,
+  formatDailyChannels,
 } from '../../utils/checkinHelpers';
+import type { SymptomCheckin } from '../../types/database';
 import { useAuthStore } from '../../stores/authStore';
 import { formatDateLong, formatLoggingDate } from '../../utils/formatters';
 import { getSymptomByKey } from '../../data/symptoms';
@@ -24,9 +27,17 @@ interface CheckinSummaryProps {
   onSuccess: () => void;
 }
 
+function formatChannelValue(value: number | null, max?: number): string {
+  if (value === null) return 'Skipped';
+  return max ? `${value}/${max}` : String(value);
+}
+
 export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
-  const wellbeingScore = useCheckinStore((s) => s.wellbeingScore);
+  const energyLevel = useCheckinStore((s) => s.energyLevel);
+  const moodLevel = useCheckinStore((s) => s.moodLevel);
   const sleepQuality = useCheckinStore((s) => s.sleepQuality);
+  const flareSelected = useCheckinStore((s) => s.flareSelected);
+  const flarePreLogged = useCheckinStore((s) => s.flarePreLogged);
   const extendedSymptoms = useCheckinStore((s) => s.extendedSymptoms);
   const notes = useCheckinStore((s) => s.notes);
   const mode = useCheckinStore((s) => s.mode);
@@ -40,6 +51,7 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
   const strawStage = useAuthStore((s) => s.profile?.straw_stage ?? '-2');
   const instrument = getPrimaryInstrument(strawStage);
   const { createCheckin, updateCheckin } = useCheckins();
+  const { createEvent } = useQuickLog();
   const toast = useToast();
   const timezone = getResolvedTimezone(useAuthStore((s) => s.profile?.timezone));
   const todayStr = getLocalDateISO(timezone);
@@ -61,7 +73,8 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
   const handleSave = async () => {
     setIsSaving(true);
     const payload = {
-      wellbeingScore,
+      energyLevel,
+      moodLevel,
       sleepQuality,
       mrsScores: isPulse ? { ...INITIAL_MRS_SCORES } : mrsScores,
       extendedSymptoms: isPulse ? [] : extendedSymptoms,
@@ -77,6 +90,13 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
     } else {
       const result = await createCheckin(payload);
       ok = !!result;
+    }
+
+    if (ok) {
+      const newFlares = flareSelected.filter((id) => !flarePreLogged.includes(id));
+      for (const symptomId of newFlares) {
+        await createEvent({ symptom_id: symptomId, severity: 0 });
+      }
     }
 
     setIsSaving(false);
@@ -96,6 +116,13 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
   const dateLabel = isBackdated ? formatLoggingDate(targetDate) : formatDateLong(targetDate);
 
   const ratedExtended = extendedSymptoms.filter((s) => s.severity !== null);
+
+  const previewCheckin = {
+    energy_level: energyLevel,
+    mood_level: moodLevel,
+    sleep_quality: sleepQuality,
+    overall_wellbeing: null,
+  } as Pick<SymptomCheckin, 'energy_level' | 'mood_level' | 'sleep_quality' | 'overall_wellbeing'>;
 
   if (saveComplete && !isPulse) {
     return (
@@ -140,19 +167,17 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
         </p>
       </div>
 
-      {wellbeingScore !== null && (
-        <Card>
-          <p className="text-sm text-sage-500">Overall wellbeing</p>
-          <p className="text-lg font-medium text-sage-800">{wellbeingScore}/10</p>
-        </Card>
-      )}
-
-      {sleepQuality !== null && (
-        <Card>
-          <p className="text-sm text-sage-500">Sleep</p>
-          <p className="text-lg font-medium text-sage-800">{sleepQuality}/5</p>
-        </Card>
-      )}
+      <Card>
+        <p className="text-sm text-sage-500">Daily pulse</p>
+        <p className="mt-1 text-lg font-medium text-sage-800">
+          {formatDailyChannels(previewCheckin as SymptomCheckin)}
+        </p>
+        <div className="mt-2 space-y-1 text-sm text-sage-600">
+          <p>Energy: {formatChannelValue(energyLevel)}</p>
+          <p>Mood: {formatChannelValue(moodLevel)}</p>
+          <p>Sleep: {formatChannelValue(sleepQuality, 5)}</p>
+        </div>
+      </Card>
 
       {!isPulse && (
         <Card className="border-l-4 border-l-sage-500">

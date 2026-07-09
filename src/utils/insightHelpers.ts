@@ -49,7 +49,7 @@ function shouldSuppressInsight(insight: Insight, dismissals: DismissalRecord[], 
 export const INSIGHT_FILTER_OPTIONS: Array<{ key: InsightFilterGroup; label: string }> = [
   { key: 'all', label: 'All' },
   { key: 'correlations', label: 'Correlations' },
-  { key: 'wellbeing', label: 'Daily wellbeing' },
+  { key: 'wellbeing', label: 'Daily energy' },
   { key: 'patterns', label: 'Patterns' },
   { key: 'trends', label: 'Trends' },
   { key: 'labs', label: 'Lab' },
@@ -108,7 +108,7 @@ export function getCategoryLabel(category: InsightCategory): string {
     case 'dose_correlation':
       return 'Dose Correlation';
     case 'wellbeing_signal':
-      return 'Daily wellbeing';
+      return 'Daily energy';
     case 'symptom_cluster':
       return 'Symptom Pattern';
     case 'lab_discordance':

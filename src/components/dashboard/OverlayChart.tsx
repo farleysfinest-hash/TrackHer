@@ -28,7 +28,7 @@ function OverlayChartComponent({ data, changeMarkers }: OverlayChartProps) {
   return (
     <ChartCard
       title="Symptom & Medication Overview"
-      description="MRS score and wellbeing over time, with medication changes marked"
+      description="MRS score and daily energy over time, with medication changes marked"
       isEmpty={isEmpty}
       emptyState={{
         message: 'Check in at least twice to see your symptom trends here.',
@@ -53,7 +53,7 @@ function OverlayChartComponent({ data, changeMarkers }: OverlayChartProps) {
             <YAxis
               yAxisId="wellbeing"
               orientation="right"
-              domain={[1, 10]}
+              domain={[1, 5]}
               tick={{ fontSize: 11, fill: CHART_COLORS.axisText }}
               width={28}
             />

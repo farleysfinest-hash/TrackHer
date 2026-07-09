@@ -32,17 +32,28 @@ interface CheckinState {
   editingCheckinId: string | null;
   targetDate: string;
   instrumentId: string;
-  wellbeingScore: number | null;
+  energyLevel: number | null;
+  moodLevel: number | null;
   sleepQuality: number | null;
+  energyComplete: boolean;
+  moodComplete: boolean;
+  sleepComplete: boolean;
+  flareSelected: string[];
+  flarePreLogged: string[];
   mrsScores: MRSScoresMap;
   extendedSymptoms: ExtendedSymptomEntry[];
   notes: string;
 
   setMode: (mode: 'full' | 'quick') => void;
   setTargetDate: (date: string) => void;
-  setWellbeingScore: (score: number) => void;
+  setEnergyLevel: (score: number) => void;
+  skipEnergy: () => void;
+  setMoodLevel: (score: number) => void;
+  skipMood: () => void;
   setSleepQuality: (score: number) => void;
   skipSleepQuality: () => void;
+  initFlareFromPreLogged: (ids: string[]) => void;
+  toggleFlareSymptom: (id: string) => void;
   setMRSScore: (symptom: MRSSymptomKey, score: MRSScore) => void;
   setExtendedScore: (symptomKey: string, severity: MRSScore) => void;
   removeExtendedSymptom: (symptomKey: string) => void;
@@ -65,6 +76,7 @@ interface CheckinState {
   getTopConcerns: () => Array<{ key: string; label: string; score: MRSScore }>;
   getStepCount: () => number;
   setInstrumentId: (id: string) => void;
+  allChannelsComplete: () => boolean;
 }
 
 function extendedSeverityFromLog(log: ExtendedSymptomLog): MRSScore {
@@ -89,8 +101,14 @@ const initialState = {
   editingCheckinId: null as string | null,
   targetDate: getDefaultTargetDate(),
   instrumentId: getPrimaryInstrument('-2').id,
-  wellbeingScore: null as number | null,
+  energyLevel: null as number | null,
+  moodLevel: null as number | null,
   sleepQuality: null as number | null,
+  energyComplete: false,
+  moodComplete: false,
+  sleepComplete: false,
+  flareSelected: [] as string[],
+  flarePreLogged: [] as string[],
   mrsScores: { ...INITIAL_MRS_SCORES },
   extendedSymptoms: [] as ExtendedSymptomEntry[],
   notes: '',
@@ -105,11 +123,28 @@ export const useCheckinStore = create<CheckinState>((set, get) => ({
 
   setInstrumentId: (id) => set({ instrumentId: id }),
 
-  setWellbeingScore: (score) => set({ wellbeingScore: score }),
+  setEnergyLevel: (score) => set({ energyLevel: score, energyComplete: true }),
 
-  setSleepQuality: (score) => set({ sleepQuality: score }),
+  skipEnergy: () => set({ energyLevel: null, energyComplete: true }),
 
-  skipSleepQuality: () => set({ sleepQuality: null }),
+  setMoodLevel: (score) => set({ moodLevel: score, moodComplete: true }),
+
+  skipMood: () => set({ moodLevel: null, moodComplete: true }),
+
+  setSleepQuality: (score) => set({ sleepQuality: score, sleepComplete: true }),
+
+  skipSleepQuality: () => set({ sleepQuality: null, sleepComplete: true }),
+
+  initFlareFromPreLogged: (ids) =>
+    set({ flarePreLogged: ids, flareSelected: [...ids] }),
+
+  toggleFlareSymptom: (id) =>
+    set((state) => {
+      const selected = state.flareSelected.includes(id)
+        ? state.flareSelected.filter((s) => s !== id)
+        : [...state.flareSelected, id];
+      return { flareSelected: selected };
+    }),
 
   setMRSScore: (symptom, score) =>
     set((state) => ({
@@ -185,8 +220,14 @@ export const useCheckinStore = create<CheckinState>((set, get) => ({
     set({
       isEditing: true,
       editingCheckinId: checkin.id,
-      wellbeingScore: checkin.overall_wellbeing,
+      energyLevel: checkin.energy_level ?? null,
+      moodLevel: checkin.mood_level ?? null,
       sleepQuality: checkin.sleep_quality ?? null,
+      energyComplete: true,
+      moodComplete: true,
+      sleepComplete: true,
+      flareSelected: [],
+      flarePreLogged: [],
       mrsScores,
       extendedSymptoms: extended,
       notes: checkin.notes ?? '',
@@ -200,6 +241,11 @@ export const useCheckinStore = create<CheckinState>((set, get) => ({
       targetDate: getDefaultTargetDate(),
       mrsScores: { ...INITIAL_MRS_SCORES },
     }),
+
+  allChannelsComplete: () => {
+    const { energyComplete, moodComplete, sleepComplete } = get();
+    return energyComplete && moodComplete && sleepComplete;
+  },
 
   getTotalMRS: () => computeTotalMRS(get().mrsScores),
   getSomaticScore: () => computeSomaticScore(get().mrsScores),

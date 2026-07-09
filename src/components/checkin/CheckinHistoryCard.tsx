@@ -1,9 +1,8 @@
 import { memo } from 'react';
 import type { SymptomCheckin } from '../../types/database';
 import { formatDateLong } from '../../utils/formatters';
-import { getTopConcerns, hasMRSData, MRS_CANONICAL_KEYS, type MRSScoresMap, type MRSSymptomKey } from '../../utils/checkinHelpers';
+import { getTopConcerns, hasMRSData, MRS_CANONICAL_KEYS, formatDailyChannels, type MRSScoresMap, type MRSSymptomKey } from '../../utils/checkinHelpers';
 import { MRSScoreBadge } from './MRSScoreBadge';
-import { ProgressRing } from '../ui/ProgressRing';
 import { Button } from '../ui/Button';
 
 interface CheckinHistoryCardProps {
@@ -43,19 +42,8 @@ function CheckinHistoryCardComponent({ checkin, onViewDetails }: CheckinHistoryC
             )}
           </div>
         </div>
-        <div className="flex shrink-0 gap-3">
-          {checkin.overall_wellbeing !== null && (
-            <div className="text-center">
-              <ProgressRing value={checkin.overall_wellbeing} max={10} size={48} />
-              <p className="mt-1 text-xs text-sage-400">Wellbeing</p>
-            </div>
-          )}
-          {checkin.sleep_quality !== null && (
-            <div className="text-center">
-              <ProgressRing value={checkin.sleep_quality} max={5} size={48} />
-              <p className="mt-1 text-xs text-sage-400">Sleep</p>
-            </div>
-          )}
+        <div className="flex shrink-0 flex-col items-end text-right">
+          <p className="text-xs text-sage-500">{formatDailyChannels(checkin)}</p>
         </div>
       </div>
 

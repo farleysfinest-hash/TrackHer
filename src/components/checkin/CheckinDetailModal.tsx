@@ -7,7 +7,7 @@ import { Button } from '../ui/Button';
 import { MRSScoreBadge } from './MRSScoreBadge';
 import { getSymptomByKey, MRS_CANONICAL_SYMPTOMS } from '../../data/symptoms';
 import { formatDateLong } from '../../utils/formatters';
-import { CATEGORY_LABELS, SEVERITY_LABELS, hasMRSData } from '../../utils/checkinHelpers';
+import { CATEGORY_LABELS, SEVERITY_LABELS, hasMRSData, formatDailyChannels } from '../../utils/checkinHelpers';
 import type { MRSSymptomKey } from '../../utils/checkinHelpers';
 
 interface CheckinDetailModalProps {
@@ -78,16 +78,9 @@ export function CheckinDetailModal({
                   </span>
                 )}
               </p>
-              {checkin.overall_wellbeing !== null && (
-                <p className="mt-1 text-lg font-medium text-sage-800">
-                  Wellbeing: {checkin.overall_wellbeing}/10
-                </p>
-              )}
-              {checkin.sleep_quality !== null && (
-                <p className="mt-1 text-lg font-medium text-sage-800">
-                  Sleep: {checkin.sleep_quality}/5
-                </p>
-              )}
+              <p className="mt-1 text-lg font-medium text-sage-800">
+                {formatDailyChannels(checkin)}
+              </p>
             </div>
             {hasMRSData(checkin) ? (
               <MRSScoreBadge
@@ -97,7 +90,7 @@ export function CheckinDetailModal({
                 urogenital={checkin.urogenital_score}
               />
             ) : (
-              <span className="text-sm text-sage-500">Wellbeing pulse</span>
+              <span className="text-sm text-sage-500">Daily pulse</span>
             )}
           </div>
 

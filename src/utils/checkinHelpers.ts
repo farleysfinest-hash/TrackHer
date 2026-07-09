@@ -263,6 +263,37 @@ export function getWellbeingLabel(score: number): string {
   return 'Feeling great';
 }
 
+/** Daily pulse signal: energy_level when present, else legacy overall_wellbeing normalized to 1–5. */
+export function getDailySignal(checkin: SymptomCheckin): number | null {
+  if (checkin.energy_level !== null && checkin.energy_level !== undefined) {
+    return checkin.energy_level;
+  }
+  if (checkin.overall_wellbeing !== null && checkin.overall_wellbeing !== undefined) {
+    return Math.min(5, Math.max(1, Math.round(checkin.overall_wellbeing / 2)));
+  }
+  return null;
+}
+
+function hasNewDailyChannels(checkin: SymptomCheckin): boolean {
+  return (
+    checkin.energy_level !== null ||
+    checkin.mood_level !== null ||
+    checkin.sleep_quality !== null
+  );
+}
+
+/** Compact display: `Energy 4 · Mood 3 · Sleep 2/5`, or legacy `Wellbeing 7/10`. */
+export function formatDailyChannels(checkin: SymptomCheckin): string {
+  if (!hasNewDailyChannels(checkin) && checkin.overall_wellbeing !== null) {
+    return `Wellbeing ${checkin.overall_wellbeing}/10`;
+  }
+  const energy = checkin.energy_level !== null ? String(checkin.energy_level) : '—';
+  const mood = checkin.mood_level !== null ? String(checkin.mood_level) : '—';
+  const sleep =
+    checkin.sleep_quality !== null ? `${checkin.sleep_quality}/5` : '—';
+  return `Energy ${energy} · Mood ${mood} · Sleep ${sleep}`;
+}
+
 export function getTimeframeLabel(frequency: string | null | undefined): string {
   // TrackHer’s MRS cadence is weekly. Keep this tolerant of legacy values.
   void frequency;

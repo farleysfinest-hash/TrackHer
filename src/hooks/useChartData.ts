@@ -6,7 +6,7 @@ import { useLabResults } from './useLabResults';
 import type { SymptomCheckin, Medication, MedicationChange } from '../types/database';
 import { MRS_CANONICAL_SYMPTOMS } from '../data/symptoms';
 import type { MRSSymptomKey } from '../utils/checkinHelpers';
-import { hasMRSData } from '../utils/checkinHelpers';
+import { hasMRSData, getDailySignal } from '../utils/checkinHelpers';
 import { formatChartDate, filterByDateRange } from '../utils/chartHelpers';
 import { getEffectiveDailyDose } from '../utils/medicationHelpers';
 import { getBiomarkerValue } from '../utils/labHelpers';
@@ -16,7 +16,7 @@ export interface SymptomTrendPoint {
   date: string;
   dateLabel: string;
   mrsTotal: number | null;
-  wellbeing: number | null;
+  wellbeing: number | null; // daily energy signal (1–5), legacy-normalized
   somatic: number | null;
   psychological: number | null;
   urogenital: number | null;
@@ -120,7 +120,7 @@ export function useChartData(dateRange: DateRange) {
         date: c.checkin_date,
         dateLabel: formatChartDate(c.checkin_date),
         mrsTotal: includeMrs ? c.total_score : null,
-        wellbeing: c.overall_wellbeing,
+        wellbeing: getDailySignal(c),
         somatic: includeMrs ? c.somatic_score : null,
         psychological: includeMrs ? c.psychological_score : null,
         urogenital: includeMrs ? c.urogenital_score : null,

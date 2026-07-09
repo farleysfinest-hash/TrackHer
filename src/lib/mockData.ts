@@ -254,6 +254,8 @@ function buildCheckin(week: WeekScores, index: number): SymptomCheckin {
     psychological_score: psychological,
     urogenital_score: urogenital,
     overall_wellbeing: week.wellbeing,
+    energy_level: null,
+    mood_level: null,
     sleep_quality: null,
     notes: week.notes ?? null,
     is_backdated: false,
