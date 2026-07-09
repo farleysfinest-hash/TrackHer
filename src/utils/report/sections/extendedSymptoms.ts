@@ -72,8 +72,11 @@ function buildQuickLogSummaries(
 
     if (symptomEvents.length < 3) continue;
 
+    const withSeverity = symptomEvents.filter((e) => e.severity !== null);
     const avgSeverity =
-      symptomEvents.reduce((sum, e) => sum + e.severity, 0) / symptomEvents.length;
+      withSeverity.length > 0
+        ? withSeverity.reduce((sum, e) => sum + (e.severity as number), 0) / withSeverity.length
+        : null;
 
     const triggerCounts = new Map<string, number>();
     for (const e of symptomEvents) {
@@ -108,7 +111,8 @@ function buildQuickLogSummaries(
       );
 
     summaries.push(
-      `${def?.label ?? symptomId}: ${symptomEvents.length} logged over ${days} days, average severity ${avgSeverity.toFixed(1)}/10` +
+      `${def?.label ?? symptomId}: ${symptomEvents.length} logged over ${days} days` +
+        (avgSeverity !== null ? `, average severity ${avgSeverity.toFixed(1)}/10` : '') +
         (topTrigger ? `, most common trigger: ${topTrigger[0].replace(/_/g, ' ')} (${triggerPct}%)` : '') +
         `, most common time: ${topTime}`,
     );

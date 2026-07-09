@@ -73,6 +73,10 @@ export function InstrumentSection({ instrument, onNext, onBack }: InstrumentSect
       <div>
         <h2 className="font-display text-2xl text-sage-800">How have these symptoms felt?</h2>
         <p className="mt-2 text-sage-500">{getTimeframeLabel(frequency)}</p>
+        <p className="mt-1 text-xs text-sage-400">
+          If a symptom doesn&apos;t apply to you, &ldquo;none&rdquo; is the accurate answer — it keeps
+          your score complete and comparable for your provider.
+        </p>
       </div>
 
       {showTooltip && (

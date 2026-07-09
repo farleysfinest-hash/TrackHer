@@ -1,4 +1,5 @@
 import type { SymptomDefinition, SymptomCategory } from '../types/symptoms';
+import { SYMPTOM_BODY_SYSTEM_LABELS } from '../types/symptoms';
 import {
   resolveBodySystem,
   resolvePhasePeak,
@@ -1237,4 +1238,13 @@ export function getExtendedByCategory(category: SymptomCategory): SymptomDefinit
 
 export function getSymptomByKey(key: string): SymptomDefinition | undefined {
   return SYMPTOM_CATALOG.find((s) => s.key === key);
+}
+
+export function searchSymptomCatalog(query: string, limit = 20): SymptomDefinition[] {
+  const q = query.toLowerCase().trim();
+  if (!q) return [];
+  return SYMPTOM_CATALOG.filter((s) => {
+    const bodyLabel = SYMPTOM_BODY_SYSTEM_LABELS[s.bodySystem];
+    return `${s.label} ${bodyLabel}`.toLowerCase().includes(q);
+  }).slice(0, limit);
 }

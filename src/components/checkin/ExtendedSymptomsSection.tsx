@@ -59,26 +59,25 @@ export function ExtendedSymptomsSection({ onNext, onBack, onSkip }: ExtendedSymp
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
-        <div>
+        <div className="flex-1">
           <h2 className="font-display text-2xl text-sage-800">Your personal tracker</h2>
           <p className="mt-2 text-sage-500">
             Rate the symptoms you chose to track. These are separate from your MRS score and help
             you spot personal patterns over time.
           </p>
+          <button
+            type="button"
+            onClick={() => setManageOpen(true)}
+            className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-sage-600 hover:text-sage-800"
+          >
+            <Settings2 className="h-4 w-4" />
+            Manage symptoms
+          </button>
         </div>
         <Button variant="ghost" size="sm" onClick={onSkip}>
           Skip
         </Button>
       </div>
-
-      <button
-        type="button"
-        onClick={() => setManageOpen(true)}
-        className="inline-flex items-center gap-2 text-sm font-medium text-sage-600 hover:text-sage-800"
-      >
-        <Settings2 className="h-4 w-4" />
-        Manage symptoms
-      </button>
 
       {isLoading ? (
         <p className="text-sm text-sage-400">Loading your symptoms...</p>

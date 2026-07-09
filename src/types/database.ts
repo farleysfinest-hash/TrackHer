@@ -260,7 +260,7 @@ export interface QuickLogEvent {
   id: string;
   user_id: string;
   symptom_id: string;
-  severity: number;
+  severity: number | null;
   logged_at: string;
   duration_minutes: number | null;
   trigger_tag: QuickLogTriggerTag | null;
@@ -270,7 +270,7 @@ export interface QuickLogEvent {
 
 export interface QuickLogEventInsert {
   symptom_id: string;
-  severity: number;
+  severity?: number | null;
   logged_at?: string;
   duration_minutes?: number | null;
   trigger_tag?: QuickLogTriggerTag | null;

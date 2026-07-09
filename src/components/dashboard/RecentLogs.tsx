@@ -40,10 +40,12 @@ export function RecentLogs() {
                 onClick={() => setExpandedId(isExpanded ? null : event.id)}
                 className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sm hover:bg-sand-50"
               >
-                <span
-                  className={`h-2.5 w-2.5 shrink-0 rounded-full ${severityColor(event.severity)}`}
-                  aria-hidden
-                />
+                {event.severity !== null && (
+                  <span
+                    className={`h-2.5 w-2.5 shrink-0 rounded-full ${severityColor(event.severity)}`}
+                    aria-hidden
+                  />
+                )}
                 <span className="flex-1 truncate text-sage-800">
                   {def?.label ?? event.symptom_id}
                 </span>
@@ -63,7 +65,7 @@ export function RecentLogs() {
               </button>
               {isExpanded && (
                 <div className="ml-7 mr-2 mb-2 rounded-lg bg-sand-50 px-3 py-2 text-xs text-sage-600">
-                  <p>Severity: {event.severity}/10</p>
+                  {event.severity !== null && <p>Severity: {event.severity}/10</p>}
                   {event.duration_minutes != null && (
                     <p>
                       Duration:{' '}

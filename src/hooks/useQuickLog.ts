@@ -60,7 +60,7 @@ export function useQuickLog() {
           id: `ql-dev-${Date.now()}`,
           user_id: MOCK_USER.id,
           symptom_id: input.symptom_id,
-          severity: input.severity,
+          severity: input.severity ?? null,
           logged_at: input.logged_at ?? new Date().toISOString(),
           duration_minutes: input.duration_minutes ?? null,
           trigger_tag: input.trigger_tag ?? null,
