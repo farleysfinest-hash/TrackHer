@@ -24,7 +24,7 @@ export function InsightsList({ insights, isLoading = false, compact = false }: I
       <EmptyState
         icon={Lightbulb}
         title="No insights yet"
-        description="Keep logging check-ins, medications, and labs. The pattern engine needs enough data to detect meaningful trends."
+        description="Your first check-in unlocks your baseline reading."
       />
     );
   }

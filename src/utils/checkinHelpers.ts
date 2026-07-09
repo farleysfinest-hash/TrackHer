@@ -150,6 +150,55 @@ export function getMRSSeverityTier(total: number): MRSSeverityLevel {
   return totalSeverity(total);
 }
 
+/** Published MRS total-score severity bands (Heinemann et al.): 0–4 none, 5–8 mild, 9–16 moderate, 17+ severe. */
+export interface MRSSeverityBandInfo {
+  level: MRSSeverityLevel;
+  bandLabel: string;
+  rangePhrase: string;
+  meaning: string;
+}
+
+export function getMRSSeverityBand(total: number): MRSSeverityBandInfo {
+  if (total <= 4) {
+    return {
+      level: 'none',
+      bandLabel: 'no/minimal',
+      rangePhrase: 'in the no/minimal range on this scale',
+      meaning: 'Few or no symptoms were reported on the MRS scale.',
+    };
+  }
+  if (total <= 8) {
+    return {
+      level: 'mild',
+      bandLabel: 'mild',
+      rangePhrase: 'in the mild range on this scale',
+      meaning: 'A mild symptom burden on this scale — worth tracking as you check in over time.',
+    };
+  }
+  if (total <= 16) {
+    return {
+      level: 'moderate',
+      bandLabel: 'moderate',
+      rangePhrase: 'in the moderate range on this scale',
+      meaning:
+        'Moderate symptoms on this scale — often clinically relevant to discuss with a provider.',
+    };
+  }
+  return {
+    level: 'severe',
+    bandLabel: 'severe',
+    rangePhrase: 'in the severe range on this scale',
+    meaning:
+      'A higher symptom burden on this scale — worth sharing with your provider if you have not already.',
+  };
+}
+
+export const MRS_SUBSCALE_FRIENDLY_LABELS: Record<string, string> = {
+  psychological: 'Mood & mind',
+  somatic: 'Body',
+  urogenital: 'Urinary & vaginal',
+};
+
 export function getSubscaleSeverityTier(
   score: number,
   subscale: 'psychological' | 'somatic' | 'urogenital',

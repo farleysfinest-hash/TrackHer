@@ -32,7 +32,7 @@ export function DashboardInsightsPanel({ insights }: DashboardInsightsPanelProps
       {topInsights.length === 0 ? (
         <Card variant="outlined" padding="md">
           <p className="text-sm text-sage-500">
-            Not enough data for insights yet. Keep tracking check-ins, medications, and labs.
+            Your first check-in unlocks your baseline reading.
           </p>
         </Card>
       ) : (

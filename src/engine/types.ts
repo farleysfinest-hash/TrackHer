@@ -6,7 +6,8 @@ export type InsightCategory =
   | 'positive_trend'
   | 'new_symptom'
   | 'medication_note'
-  | 'lab_due';
+  | 'lab_due'
+  | 'observation';
 
 export type InsightPriority = 'high' | 'medium' | 'low' | 'positive';
 

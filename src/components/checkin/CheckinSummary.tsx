@@ -2,7 +2,13 @@ import { useState } from 'react';
 import { useCheckinStore } from '../../stores/checkinStore';
 import { useCheckins } from '../../hooks/useCheckins';
 import { useToast } from '../../stores/toastStore';
-import { getLocalDateISO, SEVERITY_LABELS, INITIAL_MRS_SCORES } from '../../utils/checkinHelpers';
+import {
+  getLocalDateISO,
+  SEVERITY_LABELS,
+  INITIAL_MRS_SCORES,
+  getMRSSeverityBand,
+  MRS_TOTAL_MAX,
+} from '../../utils/checkinHelpers';
 import { useAuthStore } from '../../stores/authStore';
 import { formatDateLong } from '../../utils/formatters';
 import { getSymptomByKey } from '../../data/symptoms';
@@ -34,9 +40,11 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
   const toast = useToast();
   const timezone = useAuthStore((s) => s.profile?.timezone);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveComplete, setSaveComplete] = useState(false);
 
   const score = getInstrumentScore(instrument);
   const topConcerns = getTopConcerns();
+  const severityBand = getMRSSeverityBand(score.total);
 
   const topConcernLabels = topConcerns.map((c) => {
     const item = instrument.items.find((i) => getItemStorageKey(i) === c.key);
@@ -69,7 +77,11 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
     if (ok) {
       localStorage.setItem('trackher_first_checkin_done', 'true');
       toast.success(isEditing ? 'Check-in updated' : isPulse ? 'Pulse saved' : 'Check-in saved');
-      onSuccess();
+      if (isPulse) {
+        onSuccess();
+      } else {
+        setSaveComplete(true);
+      }
     } else {
       toast.error('Failed to save check-in');
     }
@@ -78,6 +90,38 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
   const today = formatDateLong(getLocalDateISO(timezone ?? undefined));
 
   const ratedExtended = extendedSymptoms.filter((s) => s.severity !== null);
+
+  if (saveComplete && !isPulse) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="font-display text-2xl text-sage-800">Check-in saved</h2>
+          <p className="mt-1 text-sage-500">{today}</p>
+        </div>
+
+        <Card className="border-l-4 border-l-sage-500">
+          <p className="text-sm text-sage-500">Your MRS score</p>
+          <p className="mt-1 font-display text-3xl text-sage-800">
+            {score.total}
+            <span className="text-lg text-sage-400">/{MRS_TOTAL_MAX}</span>
+          </p>
+          <p className="mt-2 text-sm font-medium text-sage-700">
+            {severityBand.bandLabel.charAt(0).toUpperCase() + severityBand.bandLabel.slice(1)}{' '}
+            symptom severity
+          </p>
+          <p className="mt-2 text-sm text-sage-600">{severityBand.meaning}</p>
+          <p className="mt-3 text-xs text-sage-400">
+            This is your baseline on the Menopause Rating Scale — future check-ins measure change
+            against it.
+          </p>
+        </Card>
+
+        <Button onClick={onSuccess} className="w-full">
+          Continue
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

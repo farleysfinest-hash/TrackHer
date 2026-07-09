@@ -8,6 +8,7 @@ import {
   Sparkles,
   CalendarClock,
   Activity,
+  Eye,
 } from 'lucide-react';
 import type { InsightCategory } from '../../engine/types';
 
@@ -34,6 +35,8 @@ export function InsightIcon({ category, className = 'h-5 w-5' }: InsightIconProp
       return <Pill className={className} />;
     case 'lab_due':
       return <CalendarClock className={className} />;
+    case 'observation':
+      return <Eye className={className} />;
     default:
       return <Lightbulb className={className} />;
   }

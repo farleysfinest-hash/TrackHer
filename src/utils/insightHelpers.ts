@@ -75,6 +75,8 @@ export function getCategoryLabel(category: InsightCategory): string {
       return 'Medication Note';
     case 'lab_due':
       return 'Lab Reminder';
+    case 'observation':
+      return 'Observation';
   }
 }
 

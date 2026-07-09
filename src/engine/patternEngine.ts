@@ -2,6 +2,7 @@ import { analyzeDoseCorrelations } from './doseCorrelation';
 import { analyzeSymptomClusters } from './clusterMatcher';
 import { analyzeLabDiscordance } from './labDiscordance';
 import { analyzeTrends } from './trendDetector';
+import { analyzeEarlyObservations } from './earlyObservations';
 import type { Insight, InsightPriority } from './types';
 import type {
   SymptomCheckin,
@@ -27,6 +28,17 @@ const PRIORITY_ORDER: Record<InsightPriority, number> = {
   positive: 2,
   low: 3,
 };
+
+function capObservations(insights: Insight[]): Insight[] {
+  const hasHigherPriority = insights.some(
+    (i) => i.priority === 'high' || i.priority === 'medium' || i.priority === 'positive',
+  );
+  if (!hasHigherPriority) return insights;
+
+  const observations = insights.filter((i) => i.category === 'observation');
+  const others = insights.filter((i) => i.category !== 'observation');
+  return [...others, ...observations.slice(0, 1)];
+}
 
 export function runPatternEngine(input: EngineInput): Insight[] {
   if (!input.profile || input.checkins.length === 0) {
@@ -55,12 +67,17 @@ export function runPatternEngine(input: EngineInput): Insight[] {
     labResults: input.labResults,
   });
 
+  const observationInsights = analyzeEarlyObservations({
+    checkins: input.checkins,
+  });
+
   const seen = new Set<string>();
   const allInsights = [
     ...doseInsights,
     ...clusterInsights,
     ...labInsights,
     ...trendInsights,
+    ...observationInsights,
   ].filter((insight) => {
     if (seen.has(insight.id)) return false;
     seen.add(insight.id);
@@ -73,5 +90,5 @@ export function runPatternEngine(input: EngineInput): Insight[] {
     return b.generatedAt.localeCompare(a.generatedAt);
   });
 
-  return allInsights;
+  return capObservations(allInsights);
 }
