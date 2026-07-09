@@ -14,8 +14,10 @@ function sameCalendarMonth(a: string, b: string): boolean {
   return a.slice(0, 7) === b.slice(0, 7);
 }
 
+export type CheckinCoverage = { covered: number; window: number };
+
 export function useCheckinStatus() {
-  const { getTodaysCheckin, getLastCheckin, getStreak } = useCheckins();
+  const { getTodaysCheckin, getLastCheckin, getCoverage } = useCheckins();
   const userId = useAuthStore((s) => s.user?.id);
   const timezone = getResolvedTimezone(useAuthStore((s) => s.profile?.timezone));
   const frequency = useAuthStore((s) => s.profile?.checkin_frequency ?? 'daily');
@@ -24,57 +26,69 @@ export function useCheckinStatus() {
   getTodaysCheckinRef.current = getTodaysCheckin;
   const getLastCheckinRef = useRef(getLastCheckin);
   getLastCheckinRef.current = getLastCheckin;
-  const getStreakRef = useRef(getStreak);
-  getStreakRef.current = getStreak;
+  const getCoverageRef = useRef(getCoverage);
+  getCoverageRef.current = getCoverage;
 
   const [status, setStatus] = useState({
     hasCheckedInToday: false,
     todaysCheckin: null as SymptomCheckin | null,
-    streak: 0,
+    coverage: null as CheckinCoverage | null,
     lastCheckinDate: null as string | null,
     isDue: true,
     daysSinceLastCheckin: null as number | null,
   });
   const [isLoading, setIsLoading] = useState(true);
 
+  const computeStatus = useCallback(
+    async (
+      today: SymptomCheckin | null,
+      coverage: CheckinCoverage | null,
+      lastCheckin: SymptomCheckin | null,
+      todayStr: string,
+    ) => {
+      const lastDate = lastCheckin?.checkin_date ?? null;
+      let daysSinceLastCheckin: number | null = null;
+      if (lastDate) {
+        daysSinceLastCheckin = daysBetween(lastDate, todayStr);
+      }
+
+      let isDue = false;
+      if (today) {
+        isDue = false;
+      } else if (!lastCheckin) {
+        isDue = true;
+      } else if (frequency === 'daily') {
+        isDue = true;
+      } else if (frequency === 'weekly') {
+        isDue = daysBetween(lastCheckin.checkin_date, todayStr) >= 7;
+      } else {
+        isDue = !sameCalendarMonth(lastCheckin.checkin_date, todayStr);
+      }
+
+      return {
+        hasCheckedInToday: !!today,
+        todaysCheckin: today,
+        coverage,
+        lastCheckinDate: lastDate,
+        isDue,
+        daysSinceLastCheckin,
+      };
+    },
+    [frequency],
+  );
+
   const refresh = useCallback(async () => {
     const todayStr = getLocalDateISO(timezone);
 
-    const [today, streak, lastCheckin] = await Promise.all([
+    const [today, coverage, lastCheckin] = await Promise.all([
       getTodaysCheckinRef.current(),
-      getStreakRef.current(),
+      getCoverageRef.current(),
       getLastCheckinRef.current(),
     ]);
 
-    const lastDate = today?.checkin_date ?? lastCheckin?.checkin_date ?? null;
-    let daysSinceLastCheckin: number | null = null;
-    if (lastDate) {
-      daysSinceLastCheckin = daysBetween(lastDate, todayStr);
-    }
-
-    let isDue = false;
-    if (today) {
-      isDue = false;
-    } else if (!lastCheckin) {
-      isDue = true;
-    } else if (frequency === 'daily') {
-      isDue = true;
-    } else if (frequency === 'weekly') {
-      isDue = daysBetween(lastCheckin.checkin_date, todayStr) >= 7;
-    } else {
-      isDue = !sameCalendarMonth(lastCheckin.checkin_date, todayStr);
-    }
-
-    setStatus({
-      hasCheckedInToday: !!today,
-      todaysCheckin: today,
-      streak,
-      lastCheckinDate: lastDate,
-      isDue,
-      daysSinceLastCheckin,
-    });
+    setStatus(await computeStatus(today, coverage, lastCheckin, todayStr));
     setIsLoading(false);
-  }, [timezone, frequency]);
+  }, [timezone, computeStatus]);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,41 +97,15 @@ export function useCheckinStatus() {
       try {
         if (!userId) return;
         const todayStr = getLocalDateISO(timezone);
-        const [today, streak, lastCheckin] = await Promise.all([
+        const [today, coverage, lastCheckin] = await Promise.all([
           getTodaysCheckinRef.current(),
-          getStreakRef.current(),
+          getCoverageRef.current(),
           getLastCheckinRef.current(),
         ]);
 
         if (cancelled) return;
 
-        const lastDate = today?.checkin_date ?? lastCheckin?.checkin_date ?? null;
-        let daysSinceLastCheckin: number | null = null;
-        if (lastDate) {
-          daysSinceLastCheckin = daysBetween(lastDate, todayStr);
-        }
-
-        let isDue = false;
-        if (today) {
-          isDue = false;
-        } else if (!lastCheckin) {
-          isDue = true;
-        } else if (frequency === 'daily') {
-          isDue = true;
-        } else if (frequency === 'weekly') {
-          isDue = daysBetween(lastCheckin.checkin_date, todayStr) >= 7;
-        } else {
-          isDue = !sameCalendarMonth(lastCheckin.checkin_date, todayStr);
-        }
-
-        setStatus({
-          hasCheckedInToday: !!today,
-          todaysCheckin: today,
-          streak,
-          lastCheckinDate: lastDate,
-          isDue,
-          daysSinceLastCheckin,
-        });
+        setStatus(await computeStatus(today, coverage, lastCheckin, todayStr));
       } catch (err) {
         console.error('Failed to fetch checkin status:', err);
       } finally {
@@ -128,7 +116,7 @@ export function useCheckinStatus() {
     return () => {
       cancelled = true;
     };
-  }, [userId, timezone, frequency]);
+  }, [userId, timezone, frequency, computeStatus]);
 
   return { ...status, isLoading, refresh };
 }

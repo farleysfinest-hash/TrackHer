@@ -4,13 +4,14 @@ import { useCheckins } from '../../hooks/useCheckins';
 import { useToast } from '../../stores/toastStore';
 import {
   getLocalDateISO,
+  getResolvedTimezone,
   SEVERITY_LABELS,
   INITIAL_MRS_SCORES,
   getMRSSeverityBand,
   MRS_TOTAL_MAX,
 } from '../../utils/checkinHelpers';
 import { useAuthStore } from '../../stores/authStore';
-import { formatDateLong } from '../../utils/formatters';
+import { formatDateLong, formatLoggingDate } from '../../utils/formatters';
 import { getSymptomByKey } from '../../data/symptoms';
 import { getPrimaryInstrument } from '../../data/instruments/registry';
 import { getItemStorageKey } from '../../data/instruments/scoring';
@@ -32,13 +33,16 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
   const editingCheckinId = useCheckinStore((s) => s.editingCheckinId);
   const mrsScores = useCheckinStore((s) => s.mrsScores);
   const instrumentId = useCheckinStore((s) => s.instrumentId);
+  const targetDate = useCheckinStore((s) => s.targetDate);
   const getInstrumentScore = useCheckinStore((s) => s.getInstrumentScore);
   const getTopConcerns = useCheckinStore((s) => s.getTopConcerns);
   const strawStage = useAuthStore((s) => s.profile?.straw_stage ?? '-2');
   const instrument = getPrimaryInstrument(strawStage);
   const { createCheckin, updateCheckin } = useCheckins();
   const toast = useToast();
-  const timezone = useAuthStore((s) => s.profile?.timezone);
+  const timezone = getResolvedTimezone(useAuthStore((s) => s.profile?.timezone));
+  const todayStr = getLocalDateISO(timezone);
+  const isBackdated = targetDate !== todayStr;
   const [isSaving, setIsSaving] = useState(false);
   const [saveComplete, setSaveComplete] = useState(false);
 
@@ -60,7 +64,7 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
       mrsScores: isPulse ? { ...INITIAL_MRS_SCORES } : mrsScores,
       extendedSymptoms: isPulse ? [] : extendedSymptoms,
       notes: isPulse ? '' : notes,
-      checkinDate: getLocalDateISO(timezone ?? undefined),
+      checkinDate: targetDate,
       instrumentId,
       checkinType: isPulse ? ('pulse' as const) : ('full' as const),
     };
@@ -87,7 +91,7 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
     }
   };
 
-  const today = formatDateLong(getLocalDateISO(timezone ?? undefined));
+  const dateLabel = isBackdated ? formatLoggingDate(targetDate) : formatDateLong(targetDate);
 
   const ratedExtended = extendedSymptoms.filter((s) => s.severity !== null);
 
@@ -96,7 +100,9 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
       <div className="space-y-6">
         <div>
           <h2 className="font-display text-2xl text-sage-800">Check-in saved</h2>
-          <p className="mt-1 text-sage-500">{today}</p>
+          <p className="mt-1 text-sage-500">
+            {isBackdated ? `Logged for ${dateLabel}` : dateLabel}
+          </p>
         </div>
 
         <Card className="border-l-4 border-l-sage-500">
@@ -127,7 +133,9 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
     <div className="space-y-6">
       <div>
         <h2 className="font-display text-2xl text-sage-800">Check-in summary</h2>
-        <p className="mt-1 text-sage-500">{today}</p>
+        <p className="mt-1 text-sage-500">
+          {isBackdated ? `Logging for ${dateLabel}` : dateLabel}
+        </p>
       </div>
 
       {wellbeingScore !== null && (

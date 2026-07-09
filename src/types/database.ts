@@ -100,6 +100,7 @@ export interface Profile {
   has_uterus: boolean;
   date_of_birth: string | null;
   checkin_frequency: CheckinFrequency | null;
+  next_appointment_date: string | null;
   onboarding_completed: boolean;
   timezone: string;
   created_at: string;

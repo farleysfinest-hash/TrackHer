@@ -4,9 +4,29 @@ import { useProviderReport } from '../../hooks/useProviderReport';
 import { useDashboardStore } from '../../stores/dashboardStore';
 import { Card } from '../ui/Card';
 
-export function ProviderReportButton() {
+interface ProviderReportButtonProps {
+  compact?: boolean;
+}
+
+export function ProviderReportButton({ compact = false }: ProviderReportButtonProps) {
   const { generateReport, isGenerating, error } = useProviderReport();
   const dateRange = useDashboardStore((s) => s.dateRange);
+
+  if (compact) {
+    return (
+      <div>
+        {error && <p className="mb-2 text-sm text-danger">{error}</p>}
+        <Button
+          variant="primary"
+          onClick={() => void generateReport(dateRange)}
+          disabled={isGenerating}
+        >
+          <FileText className="mr-2 h-4 w-4" />
+          {isGenerating ? 'Generating…' : 'Generate Provider Report'}
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <Card variant="outlined" padding="lg">

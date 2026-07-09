@@ -2,6 +2,8 @@ import { useEffect } from 'react';
 import { useCheckinStore } from '../../stores/checkinStore';
 import { useAuthStore } from '../../stores/authStore';
 import { getPrimaryInstrument } from '../../data/instruments/registry';
+import { getLocalDateISO, getResolvedTimezone } from '../../utils/checkinHelpers';
+import { formatLoggingDate } from '../../utils/formatters';
 import { StepIndicator } from '../ui/StepIndicator';
 import { WellbeingScore } from './WellbeingScore';
 import { MRSSection } from './MRSSection';
@@ -18,12 +20,16 @@ interface CheckinFlowProps {
 export function CheckinFlow({ onClose, onComplete }: CheckinFlowProps) {
   const mode = useCheckinStore((s) => s.mode);
   const currentStep = useCheckinStore((s) => s.currentStep);
+  const targetDate = useCheckinStore((s) => s.targetDate);
   const nextStep = useCheckinStore((s) => s.nextStep);
   const prevStep = useCheckinStore((s) => s.prevStep);
   const getStepCount = useCheckinStore((s) => s.getStepCount);
   const reset = useCheckinStore((s) => s.reset);
   const setInstrumentId = useCheckinStore((s) => s.setInstrumentId);
   const strawStage = useAuthStore((s) => s.profile?.straw_stage ?? '-2');
+  const timezone = getResolvedTimezone(useAuthStore((s) => s.profile?.timezone));
+  const todayStr = getLocalDateISO(timezone);
+  const isBackdated = targetDate !== todayStr;
   const totalSteps = getStepCount();
 
   useEffect(() => {
@@ -77,9 +83,16 @@ export function CheckinFlow({ onClose, onComplete }: CheckinFlowProps) {
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-sand-50">
       <header className="flex items-center justify-between border-b border-sand-200 bg-white px-6 py-4">
-        <h1 className="font-display text-xl text-sage-800">
-          {mode === 'quick' ? 'Quick pulse' : 'Full Check-in'}
-        </h1>
+        <div>
+          <h1 className="font-display text-xl text-sage-800">
+            {mode === 'quick' ? 'Quick pulse' : 'Full Check-in'}
+          </h1>
+          {isBackdated && (
+            <p className="mt-0.5 text-sm text-sage-500">
+              Logging for {formatLoggingDate(targetDate)}
+            </p>
+          )}
+        </div>
         <button
           type="button"
           onClick={handleClose}

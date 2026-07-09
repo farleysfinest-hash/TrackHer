@@ -322,23 +322,58 @@ export function useCheckins() {
   };
 
   const getTodaysCheckin = async (): Promise<SymptomCheckin | null> => {
+    const today = getLocalDateISO(getTimezone());
+    return getCheckinForDate(today);
+  };
+
+  const getCheckinForDate = async (date: string): Promise<SymptomCheckin | null> => {
     if (IS_DEV_MODE) {
-      const today = getLocalDateISO(getTimezone());
-      return getDevCheckins().find((c) => c.checkin_date === today) ?? null;
+      return getDevCheckins().find((c) => c.checkin_date === date) ?? null;
     }
 
     const userId = getUserId();
     if (!userId) return null;
 
-    const today = getLocalDateISO(getTimezone());
     const { data } = await supabase
       .from('symptom_checkins')
       .select('*')
       .eq('user_id', userId)
-      .eq('checkin_date', today)
+      .eq('checkin_date', date)
       .maybeSingle();
 
     return data ? (data as SymptomCheckin) : null;
+  };
+
+  const getCoverage = async (): Promise<{ covered: number; window: number } | null> => {
+    const frequency = useAuthStore.getState().profile?.checkin_frequency ?? 'daily';
+    if (frequency !== 'daily') return null;
+
+    const window = 14;
+    const timezone = getTimezone();
+    const today = getLocalDateISO(timezone);
+    const since = addDaysISO(today, -(window - 1));
+
+    if (IS_DEV_MODE) {
+      const dates = new Set(
+        getDevCheckins()
+          .filter((c) => c.checkin_date >= since && c.checkin_date <= today)
+          .map((c) => c.checkin_date),
+      );
+      return { covered: dates.size, window };
+    }
+
+    const userId = getUserId();
+    if (!userId) return null;
+
+    const { data } = await supabase
+      .from('symptom_checkins')
+      .select('checkin_date')
+      .eq('user_id', userId)
+      .gte('checkin_date', since)
+      .lte('checkin_date', today);
+
+    const dates = new Set((data ?? []).map((d) => d.checkin_date as string));
+    return { covered: dates.size, window };
   };
 
   const createCheckin = async (data: CheckinInput): Promise<SymptomCheckin | null> => {
@@ -620,10 +655,12 @@ export function useCheckins() {
     fetchCheckinsPage,
     fetchCheckinDetail,
     getTodaysCheckin,
+    getCheckinForDate,
     getLastCheckin,
     createCheckin,
     updateCheckin,
     deleteCheckin,
     getStreak,
+    getCoverage,
   };
 }

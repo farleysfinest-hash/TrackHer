@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 import { StatCard } from '../ui/StatCard';
-import { useAuthStore } from '../../stores/authStore';
 import { getMRSSeverityTier, hasMRSData } from '../../utils/checkinHelpers';
 import { MRS_SEVERITY_HEX, getWellbeingHex } from '../../utils/chartHelpers';
 import type { SymptomCheckin } from '../../types/database';
+import type { CheckinCoverage } from '../../hooks/useCheckinStatus';
 
 function addDaysISO(dateStr: string, delta: number): string {
   const [y, m, d] = dateStr.split('-').map(Number);
@@ -13,12 +13,10 @@ function addDaysISO(dateStr: string, delta: number): string {
 
 interface ScoreSummaryCardsProps {
   checkins: SymptomCheckin[];
-  streak: number;
+  coverage: CheckinCoverage | null;
 }
 
-export function ScoreSummaryCards({ checkins, streak }: ScoreSummaryCardsProps) {
-  const frequency = useAuthStore((s) => s.profile?.checkin_frequency ?? 'daily');
-
+export function ScoreSummaryCards({ checkins, coverage }: ScoreSummaryCardsProps) {
   const sorted = useMemo(
     () => [...checkins].sort((a, b) => b.checkin_date.localeCompare(a.checkin_date)),
     [checkins],
@@ -55,8 +53,10 @@ export function ScoreSummaryCards({ checkins, streak }: ScoreSummaryCardsProps) 
   const wellbeingColor =
     latest?.overall_wellbeing != null ? getWellbeingHex(latest.overall_wellbeing) : undefined;
 
-  const streakUnit =
-    frequency === 'weekly' ? 'weeks' : frequency === 'monthly' ? 'months' : 'days';
+  const coverageValue =
+    coverage && coverage.covered >= 2 ? `${coverage.covered}/${coverage.window}` : '—';
+  const coverageSubtext =
+    coverage && coverage.covered >= 2 ? 'of last days logged' : undefined;
 
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -85,7 +85,7 @@ export function ScoreSummaryCards({ checkins, streak }: ScoreSummaryCardsProps) 
             : undefined
         }
       />
-      <StatCard label="Streak" value={streak || '—'} subtext={streakUnit} />
+      <StatCard label="Coverage" value={coverageValue} subtext={coverageSubtext} />
     </div>
   );
 }

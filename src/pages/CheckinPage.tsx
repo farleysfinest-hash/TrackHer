@@ -3,6 +3,7 @@ import { CheckCircle2 } from 'lucide-react';
 import { useCheckinStatus } from '../hooks/useCheckinStatus';
 import { useCheckins } from '../hooks/useCheckins';
 import { useCheckinStore } from '../stores/checkinStore';
+import { useAuthStore } from '../stores/authStore';
 import { CheckinFlow } from '../components/checkin/CheckinFlow';
 import { CheckinHistory } from '../components/checkin/CheckinHistory';
 import { CheckinDetailModal } from '../components/checkin/CheckinDetailModal';
@@ -10,25 +11,45 @@ import { MRSScoreBadge } from '../components/checkin/MRSScoreBadge';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
-import { hasMRSData } from '../utils/checkinHelpers';
+import { Input } from '../components/ui/Input';
+import { hasMRSData, getLocalDateISO, getResolvedTimezone } from '../utils/checkinHelpers';
+import { formatLoggingDate } from '../utils/formatters';
 import type { SymptomCheckin } from '../types/database';
+
+function addDaysISO(dateStr: string, delta: number): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dt = new Date(y, m - 1, d + delta);
+  const month = String(dt.getMonth() + 1).padStart(2, '0');
+  const day = String(dt.getDate()).padStart(2, '0');
+  return `${dt.getFullYear()}-${month}-${day}`;
+}
 
 export function CheckinPage() {
   const { hasCheckedInToday, todaysCheckin, refresh, isLoading } = useCheckinStatus();
-  const { fetchCheckinDetail, getTodaysCheckin } = useCheckins();
+  const { fetchCheckinDetail, getCheckinForDate } = useCheckins();
   const setMode = useCheckinStore((s) => s.setMode);
+  const setTargetDate = useCheckinStore((s) => s.setTargetDate);
   const reset = useCheckinStore((s) => s.reset);
   const loadExistingCheckin = useCheckinStore((s) => s.loadExistingCheckin);
+  const timezone = getResolvedTimezone(useAuthStore((s) => s.profile?.timezone));
+  const todayStr = getLocalDateISO(timezone);
+  const minBackdate = addDaysISO(todayStr, -14);
 
   const [activeFlow, setActiveFlow] = useState(false);
   const [showDuplicatePrompt, setShowDuplicatePrompt] = useState(false);
   const [pendingMode, setPendingMode] = useState<'full' | 'quick'>('full');
+  const [duplicateDate, setDuplicateDate] = useState(todayStr);
   const [detailCheckin, setDetailCheckin] = useState<SymptomCheckin | null>(null);
+  const [showBackdate, setShowBackdate] = useState(false);
+  const [backdateValue, setBackdateValue] = useState('');
 
-  const startFullFromPulse = async (today: SymptomCheckin) => {
-    const detail = await fetchCheckinDetail(today.id);
+  const resolveTargetDate = () => (backdateValue && backdateValue <= todayStr ? backdateValue : todayStr);
+
+  const startFullFromPulse = async (existing: SymptomCheckin) => {
+    const detail = await fetchCheckinDetail(existing.id);
     if (detail) {
       reset();
+      setTargetDate(existing.checkin_date);
       setMode('full');
       loadExistingCheckin(detail.checkin, detail.extendedSymptoms);
       setActiveFlow(true);
@@ -36,27 +57,34 @@ export function CheckinPage() {
   };
 
   const startCheckin = async (mode: 'full' | 'quick') => {
-    const today = await getTodaysCheckin();
-    if (today) {
-      if (today.checkin_type === 'pulse' && mode === 'full') {
-        await startFullFromPulse(today);
+    const targetDate = resolveTargetDate();
+    const existing = await getCheckinForDate(targetDate);
+
+    if (existing) {
+      if (existing.checkin_type === 'pulse' && mode === 'full' && targetDate === todayStr) {
+        await startFullFromPulse(existing);
         return;
       }
       setPendingMode(mode);
+      setDuplicateDate(targetDate);
       setShowDuplicatePrompt(true);
       return;
     }
+
     reset();
+    setTargetDate(targetDate);
     setMode(mode);
     setActiveFlow(true);
   };
 
-  const handleUpdateExisting = async () => {
-    const today = todaysCheckin ?? (await getTodaysCheckin());
-    if (!today) return;
-    const detail = await fetchCheckinDetail(today.id);
+  const handleUpdateExisting = async (date?: string) => {
+    const targetDate = date ?? duplicateDate;
+    const existing = await getCheckinForDate(targetDate);
+    if (!existing) return;
+    const detail = await fetchCheckinDetail(existing.id);
     if (detail) {
       reset();
+      setTargetDate(targetDate);
       setMode(pendingMode);
       loadExistingCheckin(detail.checkin, detail.extendedSymptoms);
       setShowDuplicatePrompt(false);
@@ -69,6 +97,7 @@ export function CheckinPage() {
     if (detail) {
       setDetailCheckin(null);
       reset();
+      setTargetDate(checkin.checkin_date);
       setMode('full');
       loadExistingCheckin(detail.checkin, detail.extendedSymptoms);
       setActiveFlow(true);
@@ -77,6 +106,8 @@ export function CheckinPage() {
 
   const handleFlowComplete = () => {
     setActiveFlow(false);
+    setShowBackdate(false);
+    setBackdateValue('');
     void refresh();
   };
 
@@ -85,6 +116,7 @@ export function CheckinPage() {
   }
 
   const todaysIsPulse = todaysCheckin?.checkin_type === 'pulse';
+  const loggingForPastDay = backdateValue && backdateValue < todayStr;
 
   return (
     <div className="space-y-10">
@@ -93,7 +125,7 @@ export function CheckinPage() {
         <p className="mt-1 text-sage-500">Track your symptoms and wellbeing over time.</p>
       </div>
 
-      {!isLoading && hasCheckedInToday && todaysCheckin ? (
+      {!isLoading && hasCheckedInToday && todaysCheckin && !loggingForPastDay ? (
         <Card variant="elevated">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
@@ -121,7 +153,7 @@ export function CheckinPage() {
                   void startFullFromPulse(todaysCheckin);
                 } else {
                   setPendingMode('full');
-                  void handleUpdateExisting();
+                  void handleUpdateExisting(todayStr);
                 }
               }}
             >
@@ -133,6 +165,11 @@ export function CheckinPage() {
         !isLoading && (
           <Card variant="elevated" padding="lg">
             <h2 className="font-display text-xl text-sage-800">How are you feeling?</h2>
+            {loggingForPastDay && (
+              <p className="mt-2 text-sm text-sage-600">
+                Logging for {formatLoggingDate(backdateValue)}
+              </p>
+            )}
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               <button
                 type="button"
@@ -153,6 +190,38 @@ export function CheckinPage() {
                 <p className="mt-1 text-sm text-sage-500">Just log how you feel overall today</p>
               </button>
             </div>
+            <div className="mt-4">
+              {!showBackdate ? (
+                <button
+                  type="button"
+                  onClick={() => setShowBackdate(true)}
+                  className="text-sm text-sage-500 underline hover:text-sage-700"
+                >
+                  Logging for a past day?
+                </button>
+              ) : (
+                <div className="max-w-xs">
+                  <Input
+                    label="Check-in date"
+                    type="date"
+                    value={backdateValue}
+                    min={minBackdate}
+                    max={todayStr}
+                    onChange={(e) => setBackdateValue(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowBackdate(false);
+                      setBackdateValue('');
+                    }}
+                    className="mt-2 text-sm text-sage-500 underline hover:text-sage-700"
+                  >
+                    Back to today
+                  </button>
+                </div>
+              )}
+            </div>
           </Card>
         )
       )}
@@ -170,14 +239,22 @@ export function CheckinPage() {
       <Modal
         isOpen={showDuplicatePrompt}
         onClose={() => setShowDuplicatePrompt(false)}
-        title="Already checked in today"
+        title={
+          duplicateDate === todayStr
+            ? 'Already checked in today'
+            : `Already checked in on ${formatLoggingDate(duplicateDate)}`
+        }
         size="sm"
       >
         <p className="text-sm text-sage-600">
-          You&apos;ve already checked in today. Would you like to update your existing check-in?
+          {duplicateDate === todayStr
+            ? "You've already checked in today. Would you like to update your existing check-in?"
+            : `You already have a check-in for ${formatLoggingDate(duplicateDate)}. Would you like to update it?`}
         </p>
         <div className="mt-4 flex gap-3">
-          <Button onClick={() => void handleUpdateExisting()}>Update Today&apos;s Check-in</Button>
+          <Button onClick={() => void handleUpdateExisting()}>
+            {duplicateDate === todayStr ? "Update Today's Check-in" : 'Update Check-in'}
+          </Button>
           <Button variant="secondary" onClick={() => setShowDuplicatePrompt(false)}>
             Cancel
           </Button>

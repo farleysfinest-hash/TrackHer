@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom';
-import { Leaf, Flame, CheckCircle2 } from 'lucide-react';
+import { Leaf, CheckCircle2 } from 'lucide-react';
 import type { SymptomCheckin } from '../../types/database';
 import { hasMRSData } from '../../utils/checkinHelpers';
+import type { CheckinCoverage } from '../../hooks/useCheckinStatus';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { MRSScoreBadge } from './MRSScoreBadge';
@@ -10,16 +11,25 @@ import { LoadingSpinner } from '../ui/LoadingSpinner';
 export interface CheckinPromptWidgetProps {
   hasCheckedInToday: boolean;
   todaysCheckin: SymptomCheckin | null;
-  streak: number;
+  coverage: CheckinCoverage | null;
   isDue: boolean;
   daysSinceLastCheckin: number | null;
   isLoading: boolean;
 }
 
+function CoverageLine({ coverage }: { coverage: CheckinCoverage }) {
+  if (coverage.covered < 2) return null;
+  return (
+    <p className="mt-3 text-sm text-sage-500">
+      {coverage.covered} of the last {coverage.window} days logged
+    </p>
+  );
+}
+
 export function CheckinPromptWidget({
   hasCheckedInToday,
   todaysCheckin,
-  streak,
+  coverage,
   isDue,
   daysSinceLastCheckin,
   isLoading,
@@ -47,17 +57,20 @@ export function CheckinPromptWidget({
                 <MRSScoreBadge total={todaysCheckin.total_score} compact showDot />
               )}
             </div>
-            {streak >= 2 && (
-              <p className="mt-3 flex items-center gap-1.5 text-sm text-clay-500">
-                <Flame className="h-4 w-4" />
-                {streak}-day streak
-              </p>
-            )}
+            {coverage && <CoverageLine coverage={coverage} />}
           </div>
         </div>
       </Card>
     );
   }
+
+  const isComeback = daysSinceLastCheckin !== null && daysSinceLastCheckin >= 7;
+
+  const bodyCopy = isComeback
+    ? 'Life happens. One check-in covering the past week catches your record right up — and you can backfill a missed day if you want.'
+    : daysSinceLastCheckin !== null && daysSinceLastCheckin > 0
+      ? `Your last check-in was ${daysSinceLastCheckin} day${daysSinceLastCheckin !== 1 ? 's' : ''} ago.`
+      : 'Take a moment to log how you feel today.';
 
   return (
     <Card variant="elevated">
@@ -65,22 +78,13 @@ export function CheckinPromptWidget({
         <Leaf className="h-6 w-6 shrink-0 text-sage-500" />
         <div className="flex-1">
           <h2 className="font-display text-lg text-sage-800">
-            {isDue ? 'Time to check in' : 'How are you feeling?'}
+            {isComeback ? 'Welcome back' : isDue ? 'Time to check in' : 'How are you feeling?'}
           </h2>
-          <p className="mt-1 text-sm text-sage-500">
-            {daysSinceLastCheckin !== null && daysSinceLastCheckin > 0
-              ? `Your last check-in was ${daysSinceLastCheckin} day${daysSinceLastCheckin !== 1 ? 's' : ''} ago.`
-              : 'Take a moment to log how you feel today.'}
-          </p>
+          <p className="mt-1 text-sm text-sage-500">{bodyCopy}</p>
           <Link to="/checkin" className="mt-4 inline-block">
             <Button>Check In Now</Button>
           </Link>
-          {streak >= 2 && (
-            <p className="mt-3 flex items-center gap-1.5 text-sm text-clay-500">
-              <Flame className="h-4 w-4" />
-              {streak}-day streak
-            </p>
-          )}
+          {coverage && <CoverageLine coverage={coverage} />}
         </div>
       </div>
     </Card>

@@ -34,6 +34,7 @@ export const MOCK_PROFILE: Profile = {
   date_of_birth: '1980-06-15',
   last_period_date: '2026-05-20',
   checkin_frequency: 'daily',
+  next_appointment_date: null,
   onboarding_completed: true,
   timezone: 'America/Los_Angeles',
   created_at: new Date().toISOString(),

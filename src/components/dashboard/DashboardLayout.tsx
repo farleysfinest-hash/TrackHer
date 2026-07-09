@@ -3,7 +3,8 @@ import { useDashboardStore } from '../../stores/dashboardStore';
 import { useChartData } from '../../hooks/useChartData';
 import { useCheckinStatus } from '../../hooks/useCheckinStatus';
 import { useInsights } from '../../hooks/useInsights';
-import { hasMRSData } from '../../utils/checkinHelpers';
+import { hasMRSData, getLocalDateISO, getResolvedTimezone } from '../../utils/checkinHelpers';
+import { useAuthStore } from '../../stores/authStore';
 import { DateRangeSelector } from './DateRangeSelector';
 import { ScoreSummaryCards } from './ScoreSummaryCards';
 import { WelcomeMessage } from './WelcomeMessage';
@@ -16,6 +17,7 @@ import { getDefaultBiomarkerKey } from './LabTrendSelector';
 import { DrillDownControls } from './DrillDownControls';
 import { ActiveMedicationsSummary } from './ActiveMedicationsSummary';
 import { LabSummaryWidget } from './LabSummaryWidget';
+import { AppointmentCountdownCard } from './AppointmentCountdownCard';
 import { ProviderReportButton } from './ProviderReportButton';
 import { DashboardInsightsPanel } from '../insights/DashboardInsightsPanel';
 import { QuickLogWidget } from './QuickLogWidget';
@@ -74,6 +76,20 @@ export function DashboardLayout() {
   );
   const isFullDashboard = mrsCheckinCount >= FULL_DASHBOARD_CHECKINS;
 
+  const timezone = getResolvedTimezone(useAuthStore((s) => s.profile?.timezone));
+  const today = getLocalDateISO(timezone);
+  const appointmentDate = useAuthStore((s) => s.profile?.next_appointment_date);
+  const daysUntilAppointment =
+    appointmentDate && appointmentDate >= today
+      ? Math.floor(
+          (new Date(appointmentDate + 'T12:00:00').getTime() -
+            new Date(today + 'T12:00:00').getTime()) /
+            (1000 * 60 * 60 * 24),
+        )
+      : null;
+  const showStandaloneReport =
+    isFullDashboard && (daysUntilAppointment === null || daysUntilAppointment > 7);
+
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -86,13 +102,15 @@ export function DashboardLayout() {
 
           <DateRangeSelector />
 
-          <ScoreSummaryCards checkins={allCheckins} streak={checkinStatus.streak} />
+          <ScoreSummaryCards checkins={allCheckins} coverage={checkinStatus.coverage} />
 
           <StrawStageCard />
 
           <QuickLogWidget />
 
           <CheckinPromptWidget {...checkinStatus} />
+
+          <AppointmentCountdownCard checkins={allCheckins} />
 
           <DashboardInsightsPanel insights={insights} onDismiss={dismissInsight} />
 
@@ -124,13 +142,15 @@ export function DashboardLayout() {
             changeMarkers={changeMarkers}
           />
 
-          <ProviderReportButton />
+          {showStandaloneReport && <ProviderReportButton />}
         </>
       ) : (
         <>
           <WelcomeMessage />
 
           <CheckinPromptWidget {...checkinStatus} />
+
+          <AppointmentCountdownCard checkins={allCheckins} />
 
           <StrawStageCard />
 

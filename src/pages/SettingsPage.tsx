@@ -12,6 +12,7 @@ import { useProfile } from '../hooks/useProfile';
 import { MENOPAUSE_STAGES, CHECKIN_FREQUENCIES, APP_VERSION } from '../lib/constants';
 import { PASSWORD_MIN_LENGTH } from '../lib/constants';
 import { validators, validateFields } from '../utils/validation';
+import { getLocalDateISO, getResolvedTimezone } from '../utils/checkinHelpers';
 import type { MenopauseStage, CheckinFrequency } from '../types/database';
 
 export function SettingsPage() {
@@ -24,6 +25,9 @@ export function SettingsPage() {
   const [hasUterus, setHasUterus] = useState(profile?.has_uterus ?? true);
   const [dateOfBirth, setDateOfBirth] = useState(profile?.date_of_birth ?? '');
   const [checkinFrequency, setCheckinFrequency] = useState(profile?.checkin_frequency ?? '');
+  const [nextAppointmentDate, setNextAppointmentDate] = useState(
+    profile?.next_appointment_date ?? '',
+  );
   const [profileSaved, setProfileSaved] = useState(false);
 
   const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -34,6 +38,11 @@ export function SettingsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
 
+  const timezone = getResolvedTimezone(profile?.timezone);
+  const todayStr = getLocalDateISO(timezone);
+  const appointmentIsPast =
+    !!nextAppointmentDate && nextAppointmentDate < todayStr;
+
   useEffect(() => {
     if (profile) {
       setDisplayName(profile.display_name ?? '');
@@ -41,6 +50,7 @@ export function SettingsPage() {
       setHasUterus(profile.has_uterus ?? true);
       setDateOfBirth(profile.date_of_birth ?? '');
       setCheckinFrequency(profile.checkin_frequency ?? '');
+      setNextAppointmentDate(profile.next_appointment_date ?? '');
     }
   }, [profile]);
 
@@ -52,6 +62,7 @@ export function SettingsPage() {
       has_uterus: hasUterus,
       date_of_birth: dateOfBirth || undefined,
       checkin_frequency: (checkinFrequency || undefined) as CheckinFrequency | undefined,
+      next_appointment_date: nextAppointmentDate || null,
     });
     if (result.success) {
       setProfileSaved(true);
@@ -120,6 +131,23 @@ export function SettingsPage() {
             value={dateOfBirth}
             onChange={setDateOfBirth}
           />
+          <div>
+            <Input
+              label="Next provider appointment"
+              type="date"
+              value={nextAppointmentDate}
+              min={appointmentIsPast ? undefined : todayStr}
+              onChange={(e) => setNextAppointmentDate(e.target.value)}
+            />
+            <p className="mt-1 text-xs text-sage-500">
+              We&apos;ll count down to it and make sure your provider report is ready.
+            </p>
+            {appointmentIsPast && (
+              <p className="mt-2 text-sm text-amber-700">
+                This date has passed. Update it when you schedule your next visit.
+              </p>
+            )}
+          </div>
           <div>
             <p className="mb-2 text-sm font-medium text-sage-700">Has uterus</p>
             <div className="flex gap-3">

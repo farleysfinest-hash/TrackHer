@@ -15,7 +15,10 @@ import {
   getTopConcerns,
   calculateMRS,
   calculateInstrumentScore,
+  getLocalDateISO,
+  getResolvedTimezone,
 } from '../utils/checkinHelpers';
+import { useAuthStore } from '../stores/authStore';
 
 export interface ExtendedSymptomEntry {
   symptom_key: string;
@@ -27,6 +30,7 @@ interface CheckinState {
   currentStep: number;
   isEditing: boolean;
   editingCheckinId: string | null;
+  targetDate: string;
   instrumentId: string;
   wellbeingScore: number | null;
   mrsScores: MRSScoresMap;
@@ -34,6 +38,7 @@ interface CheckinState {
   notes: string;
 
   setMode: (mode: 'full' | 'quick') => void;
+  setTargetDate: (date: string) => void;
   setWellbeingScore: (score: number) => void;
   setMRSScore: (symptom: MRSSymptomKey, score: MRSScore) => void;
   setExtendedScore: (symptomKey: string, severity: MRSScore) => void;
@@ -69,11 +74,17 @@ function extendedSeverityFromLog(log: ExtendedSymptomLog): MRSScore {
   return 2;
 }
 
+function getDefaultTargetDate(): string {
+  const timezone = getResolvedTimezone(useAuthStore.getState().profile?.timezone);
+  return getLocalDateISO(timezone);
+}
+
 const initialState = {
   mode: 'full' as const,
   currentStep: 1,
   isEditing: false,
   editingCheckinId: null as string | null,
+  targetDate: getDefaultTargetDate(),
   instrumentId: getPrimaryInstrument('-2').id,
   wellbeingScore: null as number | null,
   mrsScores: { ...INITIAL_MRS_SCORES },
@@ -85,6 +96,8 @@ export const useCheckinStore = create<CheckinState>((set, get) => ({
   ...initialState,
 
   setMode: (mode) => set({ mode }),
+
+  setTargetDate: (date) => set({ targetDate: date }),
 
   setInstrumentId: (id) => set({ instrumentId: id }),
 
@@ -172,7 +185,12 @@ export const useCheckinStore = create<CheckinState>((set, get) => ({
     });
   },
 
-  reset: () => set({ ...initialState, mrsScores: { ...INITIAL_MRS_SCORES } }),
+  reset: () =>
+    set({
+      ...initialState,
+      targetDate: getDefaultTargetDate(),
+      mrsScores: { ...INITIAL_MRS_SCORES },
+    }),
 
   getTotalMRS: () => computeTotalMRS(get().mrsScores),
   getSomaticScore: () => computeSomaticScore(get().mrsScores),

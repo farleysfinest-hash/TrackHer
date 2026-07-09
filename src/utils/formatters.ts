@@ -12,6 +12,15 @@ export function formatDateLong(date: string | Date): string {
   return formatDate(date, { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
+export function formatLoggingDate(date: string): string {
+  const d = new Date(date + 'T12:00:00');
+  return d.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+
 export function formatNumber(value: number, decimals = 1): string {
   return value.toFixed(decimals);
 }
