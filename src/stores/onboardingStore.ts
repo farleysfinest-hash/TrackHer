@@ -21,7 +21,7 @@ import { setDevSymptomSelections } from '../lib/devStore';
 import { SYMPTOM_CATALOG } from '../data/symptoms';
 import type { StrawStageCode } from '../lib/strawStaging';
 
-export type OnboardingStep = 0 | 1 | 2 | 3 | 4;
+export type OnboardingStep = 0 | 1 | 2 | 3 | 4 | 5;
 
 export interface OnboardingFormData {
   displayName: string;
@@ -71,7 +71,7 @@ const initialFormData: OnboardingFormData = {
   dateOfBirth: '',
   hasUterus: null,
   lastPeriodDate: '',
-  checkinFrequency: null,
+  checkinFrequency: 'weekly',
   staging: initialStaging,
   stagingResult: null,
   selectedSymptoms: [],
@@ -93,7 +93,7 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
 
   nextStep: () => {
     const { currentStep } = get();
-    if (currentStep < 4) {
+    if (currentStep < 5) {
       set({ currentStep: (currentStep + 1) as OnboardingStep });
     }
   },
@@ -148,28 +148,31 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
 
   initSymptomsForStage: (stage) => {
     const common = getCommonSymptomsForStage(stage);
+    const selected = common.slice(0, 8);
     set((state) => ({
       formData: {
         ...state.formData,
-        selectedSymptoms: common,
-        watchSymptoms: common.slice(0, 3),
+        selectedSymptoms: selected,
+        watchSymptoms: selected.slice(0, 5),
       },
     }));
   },
 
   toggleSymptom: (symptomId) => {
     set((state) => {
-      const selected = state.formData.selectedSymptoms.includes(symptomId)
-        ? state.formData.selectedSymptoms.filter((id) => id !== symptomId)
-        : [...state.formData.selectedSymptoms, symptomId];
-      const watchSymptoms = state.formData.watchSymptoms.filter((id) =>
-        selected.includes(id),
-      );
+      const isSelected = state.formData.selectedSymptoms.includes(symptomId);
+      let selected: string[];
+      if (isSelected) {
+        selected = state.formData.selectedSymptoms.filter((id) => id !== symptomId);
+      } else {
+        if (state.formData.selectedSymptoms.length >= 8) return state;
+        selected = [...state.formData.selectedSymptoms, symptomId];
+      }
       return {
         formData: {
           ...state.formData,
           selectedSymptoms: selected,
-          watchSymptoms,
+          watchSymptoms: selected.slice(0, 5),
         },
       };
     });

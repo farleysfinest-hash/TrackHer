@@ -1,14 +1,15 @@
 import { CheckCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { CHECKIN_FREQUENCIES } from '../../lib/constants';
 import { Button } from '../ui/Button';
-import { Link } from 'react-router-dom';
 
 interface OnboardingCompleteProps {
   onGoToDashboard: () => void;
 }
 
 export function OnboardingComplete({ onGoToDashboard }: OnboardingCompleteProps) {
+  const navigate = useNavigate();
   const { formData } = useOnboardingStore();
 
   const stageLabel =
@@ -59,11 +60,15 @@ export function OnboardingComplete({ onGoToDashboard }: OnboardingCompleteProps)
         </dl>
       </div>
 
+      <p className="text-sm text-sage-500">
+        Your first check-in takes about two minutes and gives you your baseline score.
+      </p>
+
       <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-        <Button onClick={onGoToDashboard}>Go to Dashboard</Button>
-        <Link to="/medications">
-          <Button variant="secondary">Add Your First Medication</Button>
-        </Link>
+        <Button onClick={() => navigate('/checkin')}>Do your first check-in</Button>
+        <Button variant="secondary" onClick={onGoToDashboard}>
+          Explore the dashboard first
+        </Button>
       </div>
     </div>
   );

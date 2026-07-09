@@ -6,11 +6,12 @@ import { StepWelcome } from './StepWelcome';
 import { StepProfile } from './StepProfile';
 import { StepStrawStaging } from './StepStrawStaging';
 import { StepSymptomSelection } from './StepSymptomSelection';
+import { StepCheckinIntro } from './StepCheckinIntro';
 import { StepCheckinFrequency } from './StepCheckinFrequency';
 import { OnboardingComplete } from './OnboardingComplete';
 import { MedicalDisclaimer } from '../ui/MedicalDisclaimer';
 
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 5;
 
 export function OnboardingWizard() {
   const navigate = useNavigate();
@@ -79,6 +80,12 @@ export function OnboardingWizard() {
           />
         )}
         {currentStep === 4 && (
+          <StepCheckinIntro
+            onNext={() => useOnboardingStore.getState().nextStep()}
+            onBack={() => useOnboardingStore.getState().prevStep()}
+          />
+        )}
+        {currentStep === 5 && (
           <StepCheckinFrequency
             onComplete={handleComplete}
             onBack={() => useOnboardingStore.getState().prevStep()}

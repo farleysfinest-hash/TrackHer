@@ -4,6 +4,7 @@ import { CHECKIN_FREQUENCIES } from '../../lib/constants';
 import type { CheckinFrequency } from '../../types/database';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
+import { Badge } from '../ui/Badge';
 
 interface StepCheckinFrequencyProps {
   onComplete: () => void;
@@ -59,9 +60,22 @@ export function StepCheckinFrequency({ onComplete, onBack }: StepCheckinFrequenc
                 >
                   <Icon className="h-6 w-6" />
                 </div>
-                <div>
-                  <h3 className="font-display text-lg text-sage-800">{freq.label}</h3>
+                <div className="flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="font-display text-lg text-sage-800">{freq.label}</h3>
+                    {freq.value === 'weekly' && (
+                      <Badge variant="success" size="sm">
+                        Recommended
+                      </Badge>
+                    )}
+                  </div>
                   <p className="mt-1 text-sm text-sage-500">{freq.description}</p>
+                  {freq.value === 'monthly' && (
+                    <p className="mt-2 text-sm text-sage-400">
+                      Heads up: monthly check-ins usually aren&apos;t frequent enough for pattern
+                      detection. You&apos;ll build a record, but insights may be limited.
+                    </p>
+                  )}
                 </div>
               </div>
             </Card>

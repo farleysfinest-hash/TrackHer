@@ -15,6 +15,8 @@ interface StepSymptomSelectionProps {
   onBack: () => void;
 }
 
+const MAX_SYMPTOMS = 8;
+
 const BODY_SYSTEM_ORDER: SymptomBodySystem[] = [
   'vasomotor',
   'mood',
@@ -52,14 +54,8 @@ function groupSymptomsByBodySystem(stage: StrawStageCode | null) {
 }
 
 export function StepSymptomSelection({ onNext, onBack }: StepSymptomSelectionProps) {
-  const {
-    formData,
-    toggleSymptom,
-    toggleWatchSymptom,
-    submitSymptomSelections,
-    isSubmitting,
-    error,
-  } = useOnboardingStore();
+  const { formData, toggleSymptom, submitSymptomSelections, isSubmitting, error } =
+    useOnboardingStore();
 
   const stage = formData.stagingResult?.strawStage ?? null;
   const groups = groupSymptomsByBodySystem(stage);
@@ -68,12 +64,9 @@ export function StepSymptomSelection({ onNext, onBack }: StepSymptomSelectionPro
   );
 
   const selectedSymptoms = formData.selectedSymptoms;
-  const watchSymptoms = formData.watchSymptoms;
-  const watchCount = watchSymptoms.length;
-  const canContinue =
-    selectedSymptoms.length > 0 && watchCount >= 1 && watchCount <= 5;
-
-  const selectedDefs = SYMPTOM_CATALOG.filter((s) => selectedSymptoms.includes(s.key));
+  const selectedCount = selectedSymptoms.length;
+  const atMax = selectedCount >= MAX_SYMPTOMS;
+  const canContinue = selectedCount >= 1;
 
   const handleContinue = async () => {
     const result = await submitSymptomSelections();
@@ -87,10 +80,13 @@ export function StepSymptomSelection({ onNext, onBack }: StepSymptomSelectionPro
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-3xl text-sage-800">Your symptoms</h1>
+        <h1 className="font-display text-3xl text-sage-800">Which symptoms bother you most?</h1>
         <p className="mt-3 text-sage-500">
-          Choose the symptoms you&apos;d like to track beyond the core check-in. We&apos;ve
-          highlighted ones common for your stage.
+          Pick up to 8. You&apos;ll rate these in your check-ins, and your top picks become
+          one-tap quick logs.
+        </p>
+        <p className="mt-2 text-sm font-medium text-sage-600">
+          {selectedCount} of {MAX_SYMPTOMS} selected
         </p>
       </div>
 
@@ -111,14 +107,18 @@ export function StepSymptomSelection({ onNext, onBack }: StepSymptomSelectionPro
                     Common for your stage
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    {common.map((s) => (
-                      <SymptomChip
-                        key={s.key}
-                        label={s.label}
-                        checked={selectedSymptoms.includes(s.key)}
-                        onToggle={() => toggleSymptom(s.key)}
-                      />
-                    ))}
+                    {common.map((s) => {
+                      const isSelected = selectedSymptoms.includes(s.key);
+                      return (
+                        <SymptomChip
+                          key={s.key}
+                          label={s.label}
+                          checked={isSelected}
+                          disabled={atMax && !isSelected}
+                          onToggle={() => toggleSymptom(s.key)}
+                        />
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -130,7 +130,7 @@ export function StepSymptomSelection({ onNext, onBack }: StepSymptomSelectionPro
                     onClick={() => toggleOtherSection(system)}
                     className="flex w-full items-center justify-between text-xs font-medium text-sage-500"
                   >
-                    <span>Other symptoms ({other.length})</span>
+                    <span>Show more ({other.length})</span>
                     {collapsedOther[system] ? (
                       <ChevronDown className="h-4 w-4" />
                     ) : (
@@ -139,14 +139,18 @@ export function StepSymptomSelection({ onNext, onBack }: StepSymptomSelectionPro
                   </button>
                   {!collapsedOther[system] && (
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {other.map((s) => (
-                        <SymptomChip
-                          key={s.key}
-                          label={s.label}
-                          checked={selectedSymptoms.includes(s.key)}
-                          onToggle={() => toggleSymptom(s.key)}
-                        />
-                      ))}
+                      {other.map((s) => {
+                        const isSelected = selectedSymptoms.includes(s.key);
+                        return (
+                          <SymptomChip
+                            key={s.key}
+                            label={s.label}
+                            checked={isSelected}
+                            disabled={atMax && !isSelected}
+                            onToggle={() => toggleSymptom(s.key)}
+                          />
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -156,40 +160,10 @@ export function StepSymptomSelection({ onNext, onBack }: StepSymptomSelectionPro
         })}
       </div>
 
-      <div className="rounded-xl border border-sand-200 bg-sage-50/50 p-5">
-        <h3 className="font-display text-lg text-sage-800">Your watch symptoms</h3>
-        <p className="mt-2 text-sm text-sage-500">
-          Which symptoms bother you the most? Pick 3–5 that you&apos;d like to quick-log
-          anytime during the day.
-        </p>
-        <p className="mt-2 text-sm font-medium text-sage-600">
-          {watchCount} of 5 selected
-        </p>
-
-        {selectedDefs.length === 0 ? (
-          <p className="mt-3 text-sm text-sage-400">
-            Select symptoms above to choose your watch list.
-          </p>
-        ) : (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {selectedDefs.map((s) => {
-              const isWatch = watchSymptoms.includes(s.key);
-              const atMax = watchCount >= 5 && !isWatch;
-              return (
-                <SymptomChip
-                  key={s.key}
-                  label={s.label}
-                  checked={isWatch}
-                  watchSelected={isWatch}
-                  variant="watch"
-                  disabled={atMax}
-                  onToggle={() => toggleWatchSymptom(s.key)}
-                />
-              );
-            })}
-          </div>
-        )}
-      </div>
+      <p className="text-sm text-sage-400">
+        Your first 5 picks will appear as quick-log buttons on your dashboard. You can change
+        all of this later in check-in settings.
+      </p>
 
       {error && (
         <div className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">{error}</div>
