@@ -27,7 +27,7 @@ export function StepReview({ onBack, onSuccess, onAddAnother }: StepReviewProps)
     isCustomEntry,
     formData,
   } = useMedicationEntryStore();
-  const { addMedication } = useMedications();
+  const { addMedication, error: medicationError } = useMedications();
   const toast = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -85,7 +85,7 @@ export function StepReview({ onBack, onSuccess, onAddAnother }: StepReviewProps)
       toast.success('Medication added successfully');
       setSaved(true);
     } else {
-      toast.error('Failed to add medication');
+      toast.error(medicationError ?? 'Failed to add medication');
     }
   };
 
