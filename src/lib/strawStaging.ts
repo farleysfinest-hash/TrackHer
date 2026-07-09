@@ -137,6 +137,39 @@ const STAGE_DETAILS: Record<
   },
 };
 
+/** Plain-language dashboard copy per STRAW+10 stage — factual, normalizing, no individual predictions. */
+export const STAGE_DASHBOARD_DESCRIPTIONS: Record<StrawStageCode, string> = {
+  '-3b':
+    'You are in late reproductive life with regular cycles. Subtle cycle changes are common at this stage, and many women notice shifts in sleep, mood, or energy before anything is officially considered perimenopause.',
+  '-3a':
+    'You are in late reproductive life with cycles that are starting to change. Shorter or less predictable periods are common here, and hormone levels may begin shifting even before cycles look obviously irregular.',
+  '-2':
+    'You are in early perimenopause — the menopausal transition. Cycles are becoming irregular, and fluctuating hormones (not just low ones) drive many symptoms at this stage, including hot flashes, sleep changes, and mood shifts.',
+  '-1':
+    'You are in late perimenopause. Longer gaps between periods are typical now, and vasomotor symptoms such as hot flashes and night sweats commonly peak in this window as your body moves toward the final menstrual period.',
+  '+1a':
+    'You are in early postmenopause — the first years after your final period. Symptoms often remain active as your body adjusts to a new hormonal baseline, even though menstruation has stopped.',
+  '+1b':
+    'You are in early postmenopause. Your hormone levels are settling at a lower baseline, but many women still experience active symptoms during these first postmenopausal years.',
+  '+1c':
+    'You are in early postmenopause and several years past your last period. Symptoms may begin to ease as hormones stabilize, though individual experience varies widely.',
+  '+2':
+    'You are in late postmenopause. Hormone levels have largely stabilized at a lower baseline; genitourinary symptoms such as vaginal dryness and bladder changes tend to persist more than vasomotor ones for many women.',
+  surgical:
+    'Your menopause was caused by surgical removal of the ovaries. Symptoms can begin suddenly and intensely because hormone production drops abruptly rather than gradually over years.',
+  iatrogenic:
+    'Your menopause was brought on by medical treatment such as chemotherapy or radiation. Hormone changes can be abrupt, and symptoms may overlap with effects of the underlying treatment.',
+  hysterectomy_ovaries_intact:
+    'Your uterus was removed but your ovaries remain. You may still have ovarian hormone production and perimenopausal changes, though tracking periods is no longer possible.',
+};
+
+export function getStageDashboardDescription(
+  code: StrawStageCode | null | undefined,
+): string | null {
+  if (!code) return null;
+  return STAGE_DASHBOARD_DESCRIPTIONS[code] ?? null;
+}
+
 function timeframeToStage(timeframe: LastPeriodTimeframe): StrawStageCode {
   switch (timeframe) {
     case 'less_than_12mo':

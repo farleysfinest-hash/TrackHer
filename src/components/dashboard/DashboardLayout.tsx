@@ -7,8 +7,10 @@ import { runPatternEngine } from '../../engine/patternEngine';
 import { IS_DEV_MODE } from '../../lib/devMode';
 import { getDevExtendedSymptomLogs } from '../../lib/devStore';
 import type { ExtendedSymptomLog } from '../../types/database';
+import { hasMRSData } from '../../utils/checkinHelpers';
 import { DateRangeSelector } from './DateRangeSelector';
 import { ScoreSummaryCards } from './ScoreSummaryCards';
+import { WelcomeMessage } from './WelcomeMessage';
 import { CheckinPromptWidget } from '../checkin/CheckinPromptWidget';
 import { OverlayChart } from './OverlayChart';
 import { SubscaleChart } from './SubscaleChart';
@@ -22,6 +24,11 @@ import { ProviderReportButton } from './ProviderReportButton';
 import { DashboardInsightsPanel } from '../insights/DashboardInsightsPanel';
 import { QuickLogWidget } from './QuickLogWidget';
 import { PersonalSymptomTrends } from './PersonalSymptomTrends';
+import { StrawStageCard } from './StrawStageCard';
+import { UnlockProgress } from './UnlockProgress';
+import { FullDashboardUnlockCard } from './FullDashboardUnlockCard';
+
+const FULL_DASHBOARD_CHECKINS = 7;
 
 export function DashboardLayout() {
   const dateRange = useDashboardStore((s) => s.dateRange);
@@ -95,51 +102,81 @@ export function DashboardLayout() {
     [checkins],
   );
 
+  const mrsCheckinCount = useMemo(
+    () => allCheckins.filter(hasMRSData).length,
+    [allCheckins],
+  );
+  const isFullDashboard = mrsCheckinCount >= FULL_DASHBOARD_CHECKINS;
+
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="font-display text-3xl text-sage-800">Dashboard</h1>
       </div>
 
-      <DateRangeSelector />
+      {isFullDashboard ? (
+        <>
+          <FullDashboardUnlockCard />
 
-      <ScoreSummaryCards checkins={allCheckins} streak={checkinStatus.streak} />
+          <DateRangeSelector />
 
-      <QuickLogWidget />
+          <ScoreSummaryCards checkins={allCheckins} streak={checkinStatus.streak} />
 
-      <CheckinPromptWidget {...checkinStatus} />
+          <StrawStageCard />
 
-      <DashboardInsightsPanel insights={insights} />
+          <QuickLogWidget />
 
-      <OverlayChart data={symptomTrend} changeMarkers={changeMarkers} />
+          <CheckinPromptWidget {...checkinStatus} />
 
-      <PersonalSymptomTrends checkins={checkins} extendedLogs={extendedSymptoms} />
+          <DashboardInsightsPanel insights={insights} />
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <SubscaleChart data={symptomTrend} />
-        <SymptomHeatmap rows={heatmapRows} />
-      </div>
+          <OverlayChart data={symptomTrend} changeMarkers={changeMarkers} />
 
-      <LabTrendChart
-        data={labTrend}
-        biomarkerKey={biomarkerKey}
-        labResults={labResults}
-        onBiomarkerChange={setBiomarkerKey}
-      />
+          <PersonalSymptomTrends checkins={checkins} extendedLogs={extendedSymptoms} />
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <ActiveMedicationsSummary medications={medications} />
-        <LabSummaryWidget labResults={allLabResults} />
-      </div>
+          <div className="grid gap-6 lg:grid-cols-2">
+            <SubscaleChart data={symptomTrend} />
+            <SymptomHeatmap rows={heatmapRows} />
+          </div>
 
-      <DrillDownControls
-        checkinDates={checkinDates}
-        getDrillDownData={getDrillDownData}
-        medications={medications}
-        changeMarkers={changeMarkers}
-      />
+          <LabTrendChart
+            data={labTrend}
+            biomarkerKey={biomarkerKey}
+            labResults={labResults}
+            onBiomarkerChange={setBiomarkerKey}
+          />
 
-      <ProviderReportButton />
+          <div className="grid gap-6 lg:grid-cols-2">
+            <ActiveMedicationsSummary medications={medications} />
+            <LabSummaryWidget labResults={allLabResults} />
+          </div>
+
+          <DrillDownControls
+            checkinDates={checkinDates}
+            getDrillDownData={getDrillDownData}
+            medications={medications}
+            changeMarkers={changeMarkers}
+          />
+
+          <ProviderReportButton />
+        </>
+      ) : (
+        <>
+          <WelcomeMessage />
+
+          <CheckinPromptWidget {...checkinStatus} />
+
+          <StrawStageCard />
+
+          <QuickLogWidget />
+
+          <UnlockProgress checkinCount={mrsCheckinCount} />
+
+          {insights.length > 0 && <DashboardInsightsPanel insights={insights} />}
+
+          <ActiveMedicationsSummary medications={medications} />
+        </>
+      )}
     </div>
   );
 }
