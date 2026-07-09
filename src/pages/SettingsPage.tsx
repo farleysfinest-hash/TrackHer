@@ -6,6 +6,7 @@ import { DateOfBirthInput } from '../components/ui/DateOfBirthInput';
 import { Select } from '../components/ui/Select';
 import { Card } from '../components/ui/Card';
 import { MedicalDisclaimer } from '../components/ui/MedicalDisclaimer';
+import { ResetAccountModal } from '../components/settings/ResetAccountModal';
 import { useAuth } from '../hooks/useAuth';
 import { useProfile } from '../hooks/useProfile';
 import { MENOPAUSE_STAGES, CHECKIN_FREQUENCIES, APP_VERSION } from '../lib/constants';
@@ -15,7 +16,7 @@ import type { MenopauseStage, CheckinFrequency } from '../types/database';
 
 export function SettingsPage() {
   const navigate = useNavigate();
-  const { user, signOut, updatePassword } = useAuth();
+  const { user, signOut, updatePassword, resetAccount } = useAuth();
   const { profile, update, isUpdating } = useProfile();
 
   const [displayName, setDisplayName] = useState(profile?.display_name ?? '');
@@ -31,6 +32,7 @@ export function SettingsPage() {
   const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>({});
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -189,11 +191,26 @@ export function SettingsPage() {
 
       <Card>
         <h2 className="font-display text-xl text-sage-800">Data</h2>
-        <div className="mt-4 space-y-3">
+        <div className="mt-4 space-y-4">
           <Button variant="secondary" disabled title="Coming soon">
             Export My Data
           </Button>
           <p className="text-xs text-sage-400">Data export coming in a future update.</p>
+
+          <div className="rounded-lg border border-sand-200 bg-sand-50 p-4">
+            <h3 className="text-sm font-medium text-sage-700">Reset account</h3>
+            <p className="mt-1 text-sm text-sage-500">
+              Erase all your health data and start over. Your login and email stay the same.
+            </p>
+            <Button
+              variant="danger"
+              className="mt-3"
+              onClick={() => setShowResetModal(true)}
+            >
+              Reset Account
+            </Button>
+          </div>
+
           <Button variant="danger" onClick={() => setShowDeleteModal(true)}>
             Delete My Account
           </Button>
@@ -220,6 +237,12 @@ export function SettingsPage() {
       <Button variant="ghost" onClick={handleSignOut}>
         Sign Out
       </Button>
+
+      <ResetAccountModal
+        isOpen={showResetModal}
+        onClose={() => setShowResetModal(false)}
+        onReset={resetAccount}
+      />
 
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6">

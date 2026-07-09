@@ -3,12 +3,14 @@ import type { User, Session, AuthChangeEvent } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { IS_DEV_MODE } from '../lib/devMode';
 import { MOCK_USER, MOCK_PROFILE } from '../lib/mockData';
-import { resetDevStore } from '../lib/devStore';
+import { resetDevStore, resetDevDismissedInsights } from '../lib/devStore';
+import {
+  clearTrackHerLocalStorage,
+  deleteUserAppData,
+  PROFILE_RESET_FIELDS,
+} from '../lib/accountReset';
 import { getAuthErrorMessage } from '../lib/constants';
 import type { Profile, ProfileUpdate } from '../types/database';
-
-/** Auto-reset test account — DELETE BEFORE LAUNCH */
-const AUTO_RESET_EMAIL = 'reset@test.com';
 
 const DEV_ONBOARDING_KEY = 'dev_onboarding_completed';
 
@@ -48,6 +50,7 @@ interface AuthState {
   updatePassword: (password: string) => Promise<{ success: boolean; error?: string }>;
   fetchProfile: (userId: string) => Promise<void>;
   updateProfile: (updates: ProfileUpdate) => Promise<{ success: boolean; error?: string }>;
+  resetAccount: () => Promise<{ success: boolean; error?: string }>;
   clearError: () => void;
 }
 
@@ -163,43 +166,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
     if (data.user) {
       set({ user: data.user, isAuthenticated: true });
-
-      // ── AUTO-RESET TEST ACCOUNT — DELETE BEFORE LAUNCH ──
-      if (email.toLowerCase() === AUTO_RESET_EMAIL) {
-        console.warn('🧪 Resetting test account:', email);
-        const uid = data.user.id;
-        await supabase.from('quick_log_events').delete().eq('user_id', uid);
-        await supabase.from('extended_symptom_logs').delete().eq('user_id', uid);
-        await supabase.from('assessment_results').delete().eq('user_id', uid);
-        await supabase.from('symptom_checkins').delete().eq('user_id', uid);
-        await supabase.from('user_symptom_selections').delete().eq('user_id', uid);
-        const { data: meds } = await supabase.from('medications').select('id').eq('user_id', uid);
-        if (meds && meds.length > 0) {
-          const medIds = meds.map((m) => m.id);
-          await supabase.from('medication_changes').delete().in('medication_id', medIds);
-        }
-        await supabase.from('medications').delete().eq('user_id', uid);
-        await supabase.from('lab_results').delete().eq('user_id', uid);
-        await supabase.from('profiles').update({
-          onboarding_completed: false,
-          welcome_seen: false,
-          straw_stage: null,
-          straw_stage_label: null,
-          menopause_cause: null,
-          periods_status: null,
-          period_changes: null,
-          last_period_timeframe: null,
-          last_period_date: null,
-          staging_completed_at: null,
-          date_of_birth: null,
-          has_uterus: null,
-          checkin_frequency: null,
-          menopause_stage: null,
-        }).eq('id', uid);
-        localStorage.removeItem('trackher_welcome_dismissed');
-      }
-      // ── END AUTO-RESET ──
-
       await get().fetchProfile(data.user.id);
     }
     return { success: true };
@@ -328,6 +294,38 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return { success: true };
     }
     set({ profile: data as Profile });
+    return { success: true };
+  },
+
+  resetAccount: async () => {
+    if (IS_DEV_MODE) {
+      resetDevStore();
+      resetDevDismissedInsights();
+      localStorage.setItem(DEV_ONBOARDING_KEY, 'false');
+      clearTrackHerLocalStorage();
+      const current = get().profile ?? MOCK_PROFILE;
+      set({
+        profile: {
+          ...current,
+          ...PROFILE_RESET_FIELDS,
+          updated_at: new Date().toISOString(),
+        } as Profile,
+      });
+      console.log('[DEV] Account reset');
+      return { success: true };
+    }
+
+    const { user } = get();
+    if (!user) return { success: false, error: 'Not authenticated' };
+
+    set({ isLoading: true, error: null });
+    const result = await deleteUserAppData(user.id);
+    if (!result.success) {
+      set({ isLoading: false, error: result.error ?? 'Reset failed' });
+      return result;
+    }
+    await get().fetchProfile(user.id);
+    set({ isLoading: false });
     return { success: true };
   },
 
