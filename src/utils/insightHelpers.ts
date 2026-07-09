@@ -1,6 +1,13 @@
 import type { Insight, InsightCategory, InsightPriority } from '../engine/types';
 
-export type InsightFilterGroup = 'all' | 'correlations' | 'patterns' | 'trends' | 'labs' | 'positive';
+export type InsightFilterGroup =
+  | 'all'
+  | 'correlations'
+  | 'patterns'
+  | 'trends'
+  | 'labs'
+  | 'positive'
+  | 'wellbeing';
 
 export interface DismissalRecord {
   insight_id: string;
@@ -42,6 +49,7 @@ function shouldSuppressInsight(insight: Insight, dismissals: DismissalRecord[], 
 export const INSIGHT_FILTER_OPTIONS: Array<{ key: InsightFilterGroup; label: string }> = [
   { key: 'all', label: 'All' },
   { key: 'correlations', label: 'Correlations' },
+  { key: 'wellbeing', label: 'Daily wellbeing' },
   { key: 'patterns', label: 'Patterns' },
   { key: 'trends', label: 'Trends' },
   { key: 'labs', label: 'Lab' },
@@ -51,6 +59,7 @@ export const INSIGHT_FILTER_OPTIONS: Array<{ key: InsightFilterGroup; label: str
 const FILTER_GROUPS: Record<InsightFilterGroup, InsightCategory[] | null> = {
   all: null,
   correlations: ['dose_correlation'],
+  wellbeing: ['wellbeing_signal'],
   patterns: ['symptom_cluster'],
   trends: ['trend_alert', 'new_symptom', 'medication_note'],
   labs: ['lab_discordance', 'lab_due'],
@@ -98,6 +107,8 @@ export function getCategoryLabel(category: InsightCategory): string {
   switch (category) {
     case 'dose_correlation':
       return 'Dose Correlation';
+    case 'wellbeing_signal':
+      return 'Daily wellbeing';
     case 'symptom_cluster':
       return 'Symptom Pattern';
     case 'lab_discordance':

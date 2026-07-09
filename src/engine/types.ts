@@ -1,5 +1,6 @@
 export type InsightCategory =
   | 'dose_correlation'
+  | 'wellbeing_signal'
   | 'symptom_cluster'
   | 'lab_discordance'
   | 'trend_alert'

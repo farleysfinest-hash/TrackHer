@@ -5,6 +5,7 @@ import type {
   DeliveryMethod,
   Medication,
   MedicationFrequency,
+  MedicationChange,
   MedicationChangeType,
 } from '../types/database';
 import { APPLICATION_SITE_LABELS } from '../lib/medicationConstants';
@@ -220,6 +221,43 @@ export function formatChangeTypeLabel(type: MedicationChangeType): string {
     switched: 'Switched',
   };
   return labels[type] ?? type;
+}
+
+export function getMedicationChangeLabel(change: MedicationChange, med: Medication): string {
+  switch (change.change_type) {
+    case 'started':
+      return `starting ${med.medication_name} ${change.new_dose} ${med.dose_unit}`;
+    case 'stopped':
+      return `stopping ${med.medication_name}`;
+    case 'dose_increased':
+      return `increasing ${med.medication_name} from ${change.previous_dose} to ${change.new_dose} ${med.dose_unit}`;
+    case 'dose_decreased':
+      return `decreasing ${med.medication_name} from ${change.previous_dose} to ${change.new_dose} ${med.dose_unit}`;
+    case 'method_changed':
+      return `changing ${med.medication_name} delivery method`;
+    case 'frequency_changed':
+      return `changing ${med.medication_name} frequency`;
+    case 'switched':
+      return `switching ${med.medication_name}`;
+    default:
+      return `changing ${med.medication_name}`;
+  }
+}
+
+export function getDoseCycleDays(med: Pick<Medication, 'frequency'>): number | null {
+  // Conservative: only handle clean integer-day cycles.
+  switch (med.frequency) {
+    case 'weekly':
+      return 7;
+    case 'every_two_weeks':
+      return 14;
+    case 'every_three_weeks':
+      return 21;
+    case 'every_four_weeks':
+      return 28;
+    default:
+      return null;
+  }
 }
 
 export function getChangeTimelineColor(type: MedicationChangeType): string {

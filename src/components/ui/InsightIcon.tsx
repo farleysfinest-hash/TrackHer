@@ -21,6 +21,8 @@ export function InsightIcon({ category, className = 'h-5 w-5' }: InsightIconProp
   switch (category) {
     case 'dose_correlation':
       return <Pill className={className} />;
+    case 'wellbeing_signal':
+      return <Activity className={className} />;
     case 'symptom_cluster':
       return <Activity className={className} />;
     case 'lab_discordance':

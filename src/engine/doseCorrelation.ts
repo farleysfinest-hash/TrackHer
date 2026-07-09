@@ -4,6 +4,7 @@ import type { SymptomCheckin, MedicationChange, Medication } from '../types/data
 import { MRS_CORE_SYMPTOMS } from '../data/symptoms';
 import type { MRSSymptomKey } from '../utils/checkinHelpers';
 import { hasMRSData } from '../utils/checkinHelpers';
+import { getMedicationChangeLabel } from '../utils/medicationHelpers';
 
 interface DoseCorrelationInput {
   checkins: SymptomCheckin[];
@@ -13,27 +14,6 @@ interface DoseCorrelationInput {
 
 const WINDOW_DAYS = 21;
 const MIN_CHECKINS_PER_WINDOW = 2;
-
-function getChangeLabel(change: MedicationChange, med: Medication): string {
-  switch (change.change_type) {
-    case 'started':
-      return `starting ${med.medication_name} ${change.new_dose} ${med.dose_unit}`;
-    case 'stopped':
-      return `stopping ${med.medication_name}`;
-    case 'dose_increased':
-      return `increasing ${med.medication_name} from ${change.previous_dose} to ${change.new_dose} ${med.dose_unit}`;
-    case 'dose_decreased':
-      return `decreasing ${med.medication_name} from ${change.previous_dose} to ${change.new_dose} ${med.dose_unit}`;
-    case 'method_changed':
-      return `changing ${med.medication_name} delivery method`;
-    case 'frequency_changed':
-      return `changing ${med.medication_name} frequency`;
-    case 'switched':
-      return `switching ${med.medication_name}`;
-    default:
-      return `changing ${med.medication_name}`;
-  }
-}
 
 function addDays(dateStr: string, delta: number): string {
   const [y, m, d] = dateStr.split('-').map(Number);
@@ -106,7 +86,7 @@ export function analyzeDoseCorrelations(input: DoseCorrelationInput): Insight[] 
     symptomDeltas.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
 
     const improved = totalDelta < 0;
-    const changeLabel = getChangeLabel(change, medication);
+    const changeLabel = getMedicationChangeLabel(change, medication);
     const topChanges = symptomDeltas.slice(0, 3);
     const changesText = topChanges
       .map((s) => {

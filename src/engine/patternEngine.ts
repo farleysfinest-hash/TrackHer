@@ -3,6 +3,7 @@ import { analyzeSymptomClusters } from './clusterMatcher';
 import { analyzeLabDiscordance } from './labDiscordance';
 import { analyzeTrends } from './trendDetector';
 import { analyzeEarlyObservations } from './earlyObservations';
+import { analyzeWellbeingSignal } from './wellbeingSignal';
 import type { Insight, InsightPriority } from './types';
 import type {
   SymptomCheckin,
@@ -35,6 +36,7 @@ function capObservations(insights: Insight[]): Insight[] {
   );
   if (!hasHigherPriority) return insights;
 
+  // Observation cap should not suppress wellbeing_signal insights.
   const observations = insights.filter((i) => i.category === 'observation');
   const others = insights.filter((i) => i.category !== 'observation');
   return [...others, ...observations.slice(0, 1)];
@@ -67,6 +69,12 @@ export function runPatternEngine(input: EngineInput): Insight[] {
     labResults: input.labResults,
   });
 
+  const wellbeingInsights = analyzeWellbeingSignal({
+    checkins: input.checkins,
+    medicationChanges: input.medicationChanges,
+    medications: input.medications,
+  });
+
   const observationInsights = analyzeEarlyObservations({
     checkins: input.checkins,
   });
@@ -74,6 +82,7 @@ export function runPatternEngine(input: EngineInput): Insight[] {
   const seen = new Set<string>();
   const allInsights = [
     ...doseInsights,
+    ...wellbeingInsights,
     ...clusterInsights,
     ...labInsights,
     ...trendInsights,
