@@ -181,6 +181,13 @@ export function getStageTrackingPhrase(profile: StageProfile | null | undefined)
   return TRACKING_PHRASES[profile.stage] ?? null;
 }
 
+/** Population context for MRS readout — pairs two typical clusters when stage is known. */
+export function getStageMrsFraming(stageProfile: StageProfile | null | undefined): string | null {
+  if (!stageProfile?.stage || stageProfile.typicalSymptomClusters.length < 2) return null;
+  const [first, second] = stageProfile.typicalSymptomClusters;
+  return `At your stage, ${first} and ${second} commonly move together.`;
+}
+
 /** Self-check helper — validates resolution for representative answer sets. */
 export function _selfCheckStageProfile(): boolean {
   const latePeri = getStageProfile({

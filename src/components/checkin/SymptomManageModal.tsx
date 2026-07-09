@@ -87,7 +87,9 @@ export function SymptomManageModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Manage tracked symptoms" size="lg">
       <p className="mb-4 text-sm text-sage-500">
-        Choose which symptoms appear in your personal tracker during check-ins.
+        Select every symptom you experience — even ones that only show up sometimes. Occasional
+        symptoms are often the most revealing; the more you track, the more connections the engine
+        can find for you.
       </p>
 
       <div className="max-h-[50vh] space-y-4 overflow-y-auto pr-1">

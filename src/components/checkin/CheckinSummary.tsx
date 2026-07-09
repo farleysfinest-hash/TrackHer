@@ -9,7 +9,6 @@ import {
   SEVERITY_LABELS,
   INITIAL_MRS_SCORES,
   getMRSSeverityBand,
-  MRS_TOTAL_MAX,
   formatDailyChannels,
 } from '../../utils/checkinHelpers';
 import type { SymptomCheckin } from '../../types/database';
@@ -19,8 +18,10 @@ import { getSymptomByKey } from '../../data/symptoms';
 import { getPrimaryInstrument } from '../../data/instruments/registry';
 import { getItemStorageKey } from '../../data/instruments/scoring';
 import { InstrumentScoreBadge } from './InstrumentScoreBadge';
+import { CheckinReadout } from './CheckinReadout';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
+import type { MRSScore } from '../../types/database';
 
 interface CheckinSummaryProps {
   onBack: () => void;
@@ -77,7 +78,11 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
       moodLevel,
       sleepQuality,
       mrsScores: isPulse ? { ...INITIAL_MRS_SCORES } : mrsScores,
-      extendedSymptoms: isPulse ? [] : extendedSymptoms,
+      extendedSymptoms: isPulse
+        ? []
+        : extendedSymptoms.filter(
+            (s): s is { symptom_key: string; severity: MRSScore } => s.severity !== null,
+          ),
       notes: isPulse ? '' : notes,
       checkinDate: targetDate,
       instrumentId,
@@ -115,7 +120,9 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
 
   const dateLabel = isBackdated ? formatLoggingDate(targetDate) : formatDateLong(targetDate);
 
-  const ratedExtended = extendedSymptoms.filter((s) => s.severity !== null);
+  const ratedExtended = extendedSymptoms.filter(
+    (s): s is { symptom_key: string; severity: MRSScore } => s.severity !== null,
+  );
 
   const previewCheckin = {
     energy_level: energyLevel,
@@ -126,35 +133,19 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
 
   if (saveComplete && !isPulse) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h2 className="font-display text-2xl text-sage-800">Check-in saved</h2>
-          <p className="mt-1 text-sage-500">
-            {isBackdated ? `Logged for ${dateLabel}` : dateLabel}
-          </p>
-        </div>
-
-        <Card className="border-l-4 border-l-sage-500">
-          <p className="text-sm text-sage-500">Your MRS score</p>
-          <p className="mt-1 font-display text-3xl text-sage-800">
-            {score.total}
-            <span className="text-lg text-sage-400">/{MRS_TOTAL_MAX}</span>
-          </p>
-          <p className="mt-2 text-sm font-medium text-sage-700">
-            {severityBand.bandLabel.charAt(0).toUpperCase() + severityBand.bandLabel.slice(1)}{' '}
-            symptom severity
-          </p>
-          <p className="mt-2 text-sm text-sage-600">{severityBand.meaning}</p>
-          <p className="mt-3 text-xs text-sage-400">
-            This is your baseline on the Menopause Rating Scale — future check-ins measure change
-            against it.
-          </p>
-        </Card>
-
-        <Button onClick={onSuccess} className="w-full">
-          Continue
-        </Button>
-      </div>
+      <CheckinReadout
+        scoreTotal={score.total}
+        severityBand={severityBand}
+        isBackdated={isBackdated}
+        targetDate={targetDate}
+        dateLabel={dateLabel}
+        instrument={instrument}
+        instrumentScore={score}
+        previewCheckin={previewCheckin}
+        ratedExtended={ratedExtended}
+        notes={notes}
+        onDone={onSuccess}
+      />
     );
   }
 

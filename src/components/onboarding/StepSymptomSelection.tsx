@@ -164,9 +164,13 @@ export function StepSymptomSelection({ onNext, onBack }: StepSymptomSelectionPro
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-3xl text-sage-800">Which symptoms bother you most?</h1>
+        <h1 className="font-display text-3xl text-sage-800">
+          Select every symptom you experience — even ones that only show up sometimes.
+        </h1>
         <p className="mt-3 text-sage-500">
-          Pick up to 8. You&apos;ll rate these in your check-ins.
+          Occasional symptoms are often the most revealing. The ones that come and go are exactly
+          where patterns hide, so the more you select, the more connections the engine can find for
+          you.
         </p>
         <p className="mt-2 text-sm font-medium text-sage-600">
           {selectedCount} of {MAX_SYMPTOMS} selected

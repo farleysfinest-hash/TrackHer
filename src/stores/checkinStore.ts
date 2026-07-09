@@ -22,7 +22,7 @@ import { useAuthStore } from '../stores/authStore';
 
 export interface ExtendedSymptomEntry {
   symptom_key: string;
-  severity: MRSScore;
+  severity: MRSScore | null;
 }
 
 interface CheckinState {
@@ -42,6 +42,7 @@ interface CheckinState {
   flarePreLogged: string[];
   mrsScores: MRSScoresMap;
   extendedSymptoms: ExtendedSymptomEntry[];
+  pendingKeepWatch: string[];
   notes: string;
 
   setMode: (mode: 'full' | 'quick') => void;
@@ -56,7 +57,10 @@ interface CheckinState {
   toggleFlareSymptom: (id: string) => void;
   setMRSScore: (symptom: MRSSymptomKey, score: MRSScore) => void;
   setExtendedScore: (symptomKey: string, severity: MRSScore) => void;
+  addAdHocSymptom: (symptomKey: string) => void;
+  dismissKeepWatch: (symptomKey: string) => void;
   removeExtendedSymptom: (symptomKey: string) => void;
+  initWatchSymptomsForCheckin: (symptomKeys: string[]) => void;
   setTrackedSymptoms: (symptomKeys: string[]) => void;
   setNotes: (notes: string) => void;
   nextStep: () => void;
@@ -111,6 +115,7 @@ const initialState = {
   flarePreLogged: [] as string[],
   mrsScores: { ...INITIAL_MRS_SCORES },
   extendedSymptoms: [] as ExtendedSymptomEntry[],
+  pendingKeepWatch: [] as string[],
   notes: '',
 };
 
@@ -166,9 +171,34 @@ export const useCheckinStore = create<CheckinState>((set, get) => ({
       };
     }),
 
+  addAdHocSymptom: (symptomKey) =>
+    set((state) => {
+      const exists = state.extendedSymptoms.some((s) => s.symptom_key === symptomKey);
+      const extendedSymptoms = exists
+        ? state.extendedSymptoms
+        : [...state.extendedSymptoms, { symptom_key: symptomKey, severity: null }];
+      const pendingKeepWatch =
+        state.pendingKeepWatch.includes(symptomKey)
+          ? state.pendingKeepWatch
+          : [...state.pendingKeepWatch, symptomKey];
+      return { extendedSymptoms, pendingKeepWatch };
+    }),
+
+  dismissKeepWatch: (symptomKey) =>
+    set((state) => ({
+      pendingKeepWatch: state.pendingKeepWatch.filter((k) => k !== symptomKey),
+    })),
+
+  initWatchSymptomsForCheckin: (symptomKeys) =>
+    set({
+      extendedSymptoms: symptomKeys.map((key) => ({ symptom_key: key, severity: null })),
+      pendingKeepWatch: [],
+    }),
+
   removeExtendedSymptom: (symptomKey) =>
     set((state) => ({
       extendedSymptoms: state.extendedSymptoms.filter((s) => s.symptom_key !== symptomKey),
+      pendingKeepWatch: state.pendingKeepWatch.filter((k) => k !== symptomKey),
     })),
 
   setTrackedSymptoms: (symptomKeys) =>
@@ -230,6 +260,7 @@ export const useCheckinStore = create<CheckinState>((set, get) => ({
       flarePreLogged: [],
       mrsScores,
       extendedSymptoms: extended,
+      pendingKeepWatch: [],
       notes: checkin.notes ?? '',
       currentStep: 1,
     });
