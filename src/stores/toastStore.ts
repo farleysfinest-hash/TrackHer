@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type ToastVariant = 'success' | 'error' | 'info';
+export type ToastVariant = 'success' | 'error' | 'info' | 'warning';
 
 export interface Toast {
   id: string;
@@ -38,6 +38,7 @@ export function useToast() {
     toast: show,
     success: (message: string) => show(message, 'success'),
     error: (message: string) => show(message, 'error'),
+    warning: (message: string) => show(message, 'warning'),
     info: (message: string) => show(message, 'info'),
   };
 }

@@ -27,7 +27,7 @@ export function StepReview({ onBack, onSuccess, onAddAnother }: StepReviewProps)
     isCustomEntry,
     formData,
   } = useMedicationEntryStore();
-  const { addMedication, error } = useMedications();
+  const { addMedication } = useMedications();
   const toast = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -81,11 +81,18 @@ export function StepReview({ onBack, onSuccess, onAddAnother }: StepReviewProps)
     const result = await addMedication(insert);
     setIsSaving(false);
 
-    if (result) {
-      toast.success('Medication added successfully');
+    if (result.medication) {
+      if (result.changeEventFailed) {
+        toast.success('Medication added');
+        toast.warning(
+          'Its start event could not be logged — pattern detection for this medication may be limited. You can re-save it from the medication list.',
+        );
+      } else {
+        toast.success('Medication added successfully');
+      }
       setSaved(true);
     } else {
-      toast.error(error ?? 'Failed to add medication');
+      toast.error(result.error ?? 'Failed to add medication');
     }
   };
 

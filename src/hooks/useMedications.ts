@@ -24,6 +24,18 @@ export interface MedicationDoseUpdate {
   frequency_details?: Record<string, unknown> | null;
 }
 
+export interface AddMedicationResult {
+  medication: Medication | null;
+  error?: string;
+  changeEventFailed?: boolean;
+}
+
+export interface MedicationMutationResult {
+  ok: boolean;
+  error?: string;
+  changeEventFailed?: boolean;
+}
+
 async function fetchMedicationById(id: string): Promise<Medication | null> {
   const { data, error } = await supabase.from('medications').select('*').eq('id', id).single();
   if (error || !data) return null;
@@ -117,11 +129,12 @@ export function useMedications() {
     setMedications((data as Medication[]) ?? []);
   }, []);
 
-  const addMedication = async (data: MedicationInsert): Promise<Medication | null> => {
+  const addMedication = async (data: MedicationInsert): Promise<AddMedicationResult> => {
     const userId = getUserId();
     if (!userId) {
-      setError('Not authenticated');
-      return null;
+      const message = 'Not authenticated';
+      setError(message);
+      return { medication: null, error: message };
     }
 
     if (IS_DEV_MODE) {
@@ -160,11 +173,13 @@ export function useMedications() {
       });
       syncDevMedications();
       console.log('[DEV] Medication added:', newMed);
-      return newMed;
+      return { medication: newMed };
     }
 
     setError(null);
     try {
+      // Two-step save: medication row, then its 'started' change event. Partial failure must
+      // never report total failure — the retry would duplicate the medication.
       const { data: inserted, error: insertError } = await supabase
         .from('medications')
         .insert({ ...data, user_id: userId, is_active: data.is_active ?? true })
@@ -173,7 +188,7 @@ export function useMedications() {
 
       if (insertError) {
         setError(insertError.message);
-        return null;
+        return { medication: null, error: insertError.message };
       }
 
       const medication = inserted as Medication;
@@ -189,17 +204,17 @@ export function useMedications() {
 
       if (changeError) {
         console.error('Failed to insert started medication change:', changeError.message);
-        setError(`Medication saved, but change event failed: ${changeError.message}`);
         await fetchMedications();
-        return medication;
+        return { medication, changeEventFailed: true };
       }
 
       await fetchMedications();
-      return medication;
+      return { medication };
     } catch (e) {
+      const message = e instanceof Error ? e.message : 'Failed to add medication';
       console.error('addMedication threw:', e);
-      setError('Failed to add medication');
-      return null;
+      setError(message);
+      return { medication: null, error: message };
     }
   };
 
@@ -234,15 +249,20 @@ export function useMedications() {
     update: MedicationDoseUpdate,
     effectiveDate?: string,
     notes?: string,
-  ): Promise<boolean> => {
+  ): Promise<MedicationMutationResult> => {
     const userId = getUserId();
-    if (!userId) return false;
+    if (!userId) {
+      const message = 'Not authenticated';
+      setError(message);
+      return { ok: false, error: message };
+    }
 
     if (IS_DEV_MODE) {
       const currentMed = devMedicationById(id);
       if (!currentMed) {
-        setError('Medication not found');
-        return false;
+        const message = 'Medication not found';
+        setError(message);
+        return { ok: false, error: message };
       }
 
       const changeDate = effectiveDate ?? new Date().toISOString().split('T')[0];
@@ -288,13 +308,14 @@ export function useMedications() {
       });
       syncDevMedications();
       console.log(`[DEV] Dose changed for ${id}:`, update);
-      return true;
+      return { ok: true };
     }
 
     const currentMed = await fetchMedicationById(id);
     if (!currentMed) {
-      setError('Medication not found');
-      return false;
+      const message = 'Medication not found';
+      setError(message);
+      return { ok: false, error: message };
     }
 
     const changeDate = effectiveDate ?? new Date().toISOString().split('T')[0];
@@ -328,7 +349,7 @@ export function useMedications() {
 
     if (updateError) {
       setError(updateError.message);
-      return false;
+      return { ok: false, error: updateError.message };
     }
 
     const { error: changeError } = await supabase.from('medication_changes').insert({
@@ -343,11 +364,11 @@ export function useMedications() {
 
     if (changeError) {
       setError(changeError.message);
-      return false;
+      return { ok: false, error: changeError.message };
     }
 
     await fetchMedications();
-    return true;
+    return { ok: true };
   };
 
   const changeFrequency = async (
@@ -356,9 +377,13 @@ export function useMedications() {
     frequencyDetails?: Record<string, unknown>,
     effectiveDate?: string,
     notes?: string,
-  ): Promise<boolean> => {
+  ): Promise<MedicationMutationResult> => {
     const userId = getUserId();
-    if (!userId) return false;
+    if (!userId) {
+      const message = 'Not authenticated';
+      setError(message);
+      return { ok: false, error: message };
+    }
 
     if (IS_DEV_MODE) {
       const changeDate = effectiveDate ?? new Date().toISOString().split('T')[0];
@@ -387,7 +412,7 @@ export function useMedications() {
       });
       syncDevMedications();
       console.log(`[DEV] Frequency changed for ${id}: ${newFrequency}`);
-      return true;
+      return { ok: true };
     }
 
     const changeDate = effectiveDate ?? new Date().toISOString().split('T')[0];
@@ -402,7 +427,7 @@ export function useMedications() {
 
     if (updateError) {
       setError(updateError.message);
-      return false;
+      return { ok: false, error: updateError.message };
     }
 
     const { error: changeError } = await supabase.from('medication_changes').insert({
@@ -415,20 +440,24 @@ export function useMedications() {
 
     if (changeError) {
       setError(changeError.message);
-      return false;
+      return { ok: false, error: changeError.message };
     }
 
     await fetchMedications();
-    return true;
+    return { ok: true };
   };
 
   const discontinueMedication = async (
     id: string,
     endDate: string,
     reason?: string,
-  ): Promise<boolean> => {
+  ): Promise<MedicationMutationResult> => {
     const userId = getUserId();
-    if (!userId) return false;
+    if (!userId) {
+      const message = 'Not authenticated';
+      setError(message);
+      return { ok: false, error: message };
+    }
 
     if (IS_DEV_MODE) {
       setDevMedications(
@@ -451,7 +480,7 @@ export function useMedications() {
       });
       syncDevMedications();
       console.log(`[DEV] Medication discontinued: ${id}, reason: ${reason}`);
-      return true;
+      return { ok: true };
     }
 
     const { error: updateError } = await supabase
@@ -461,7 +490,7 @@ export function useMedications() {
 
     if (updateError) {
       setError(updateError.message);
-      return false;
+      return { ok: false, error: updateError.message };
     }
 
     const { error: changeError } = await supabase.from('medication_changes').insert({
@@ -474,11 +503,11 @@ export function useMedications() {
 
     if (changeError) {
       setError(changeError.message);
-      return false;
+      return { ok: false, error: changeError.message };
     }
 
     await fetchMedications();
-    return true;
+    return { ok: true };
   };
 
   const reactivateMedication = async (id: string): Promise<boolean> => {

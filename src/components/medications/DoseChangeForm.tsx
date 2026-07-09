@@ -58,13 +58,14 @@ export function DoseChangeForm({
     setIsSaving(true);
 
     let success = true;
+    let lastError: string | undefined;
 
     if (mode === 'dose' || mode === 'both') {
       if (schedule.dose_amount === null) {
         setIsSaving(false);
         return;
       }
-      const ok = await changeDose(
+      const result = await changeDose(
         medication.id,
         {
           dose_amount: schedule.dose_amount,
@@ -75,19 +76,25 @@ export function DoseChangeForm({
         effectiveDate,
         reason || undefined,
       );
-      if (!ok) success = false;
+      if (!result.ok) {
+        success = false;
+        lastError = result.error;
+      }
     }
 
     if (mode === 'frequency' || mode === 'both') {
       const frequencyToApply = mode === 'both' ? schedule.frequency! : newFrequency;
-      const ok = await changeFrequency(
+      const result = await changeFrequency(
         medication.id,
         frequencyToApply,
         schedule.frequency_details ?? undefined,
         effectiveDate,
         reason || undefined,
       );
-      if (!ok) success = false;
+      if (!result.ok) {
+        success = false;
+        lastError = result.error;
+      }
     }
 
     setIsSaving(false);
@@ -96,7 +103,7 @@ export function DoseChangeForm({
       toast.success('Medication updated successfully');
       onSuccess();
     } else {
-      toast.error('Failed to update medication');
+      toast.error(lastError ?? 'Failed to update medication');
     }
   };
 

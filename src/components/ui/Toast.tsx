@@ -1,4 +1,4 @@
-import { CheckCircle, AlertCircle, Info, X } from 'lucide-react';
+import { CheckCircle, AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
 import { useToastStore, type ToastVariant } from '../../stores/toastStore';
 
 const variantStyles: Record<
@@ -7,12 +7,14 @@ const variantStyles: Record<
 > = {
   success: { bg: 'bg-success/10 border-success/20 text-sage-800', icon: CheckCircle },
   error: { bg: 'bg-danger/10 border-danger/20 text-sage-800', icon: AlertCircle },
+  warning: { bg: 'bg-amber-50 border-amber-200 text-sage-800', icon: AlertTriangle },
   info: { bg: 'bg-info/10 border-info/20 text-sage-800', icon: Info },
 };
 
 const iconColors: Record<ToastVariant, string> = {
   success: 'text-success',
   error: 'text-danger',
+  warning: 'text-amber-600',
   info: 'text-info',
 };
 

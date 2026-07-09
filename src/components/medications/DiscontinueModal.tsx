@@ -40,15 +40,15 @@ export function DiscontinueModal({
 
   const handleDiscontinue = async () => {
     setIsSaving(true);
-    const ok = await discontinueMedication(medication.id, endDate, fullReason || undefined);
+    const result = await discontinueMedication(medication.id, endDate, fullReason || undefined);
     setIsSaving(false);
 
-    if (ok) {
+    if (result.ok) {
       toast.success('Medication discontinued');
       onSuccess();
       onClose();
     } else {
-      toast.error('Failed to discontinue medication');
+      toast.error(result.error ?? 'Failed to discontinue medication');
     }
   };
 
