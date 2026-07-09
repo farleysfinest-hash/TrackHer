@@ -303,6 +303,13 @@ export interface MedicationChange {
   created_at: string;
 }
 
+export interface DismissedInsight {
+  id: string;
+  user_id: string;
+  insight_id: string;
+  dismissed_at: string;
+}
+
 export interface AiInsight {
   id: string;
   user_id: string;
@@ -430,6 +437,14 @@ export type Database = {
         Row: QuickLogEvent;
         Insert: QuickLogEventInsert & { user_id: string };
         Update: Partial<QuickLogEventInsert>;
+        Relationships: [];
+      };
+      dismissed_insights: {
+        Row: DismissedInsight;
+        Insert: Omit<DismissedInsight, 'id' | 'dismissed_at'> & {
+          dismissed_at?: string;
+        };
+        Update: Partial<Omit<DismissedInsight, 'id'>>;
         Relationships: [];
       };
     };

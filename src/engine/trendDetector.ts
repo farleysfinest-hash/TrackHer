@@ -16,7 +16,11 @@ interface TrendInput {
 function getMonthsSince(dateStr: string): number {
   const then = new Date(dateStr + 'T12:00:00');
   const now = new Date();
-  return Math.floor((now.getTime() - then.getTime()) / (1000 * 60 * 60 * 24 * 30));
+  let months = (now.getFullYear() - then.getFullYear()) * 12 + (now.getMonth() - then.getMonth());
+  if (now.getDate() < then.getDate()) {
+    months -= 1;
+  }
+  return Math.max(0, months);
 }
 
 function daysBetween(from: string, to: string): number {

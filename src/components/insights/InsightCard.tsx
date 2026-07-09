@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, X } from 'lucide-react';
 import type { Insight } from '../../engine/types';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
@@ -15,15 +15,27 @@ import { InsightDetailModal } from './InsightDetailModal';
 interface InsightCardProps {
   insight: Insight;
   compact?: boolean;
+  onDismiss?: (insightId: string) => void;
 }
 
-export function InsightCard({ insight, compact = false }: InsightCardProps) {
+export function InsightCard({ insight, compact = false, onDismiss }: InsightCardProps) {
   const [showDetail, setShowDetail] = useState(false);
 
   return (
     <>
-      <Card variant="elevated" padding={compact ? 'sm' : 'md'}>
-        <div className="flex items-start gap-3">
+      <Card variant="elevated" padding={compact ? 'sm' : 'md'} className="relative">
+        {onDismiss && (
+          <button
+            type="button"
+            onClick={() => onDismiss(insight.id)}
+            className="absolute right-3 top-3 rounded-full p-1 text-sage-400 transition-colors hover:bg-sage-100 hover:text-sage-600"
+            aria-label="Dismiss this insight"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+
+        <div className={`flex items-start gap-3 ${onDismiss ? 'pr-8' : ''}`}>
           <div className="mt-0.5 rounded-lg bg-sage-50 p-2 text-sage-600">
             <InsightIcon category={insight.category} />
           </div>

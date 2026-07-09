@@ -248,6 +248,18 @@ export function getLocalDateISO(timezone = 'America/Los_Angeles'): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date());
 }
 
+/** Browser timezone when profile timezone is unset; LA as last resort. */
+export function getResolvedTimezone(profileTimezone?: string | null): string {
+  if (profileTimezone) return profileTimezone;
+  try {
+    const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (browserTz) return browserTz;
+  } catch {
+    // fall through
+  }
+  return 'America/Los_Angeles';
+}
+
 export function getWellbeingLabel(score: number): string {
   if (score <= 2) return 'Really struggling';
   if (score <= 4) return 'Having a tough time';

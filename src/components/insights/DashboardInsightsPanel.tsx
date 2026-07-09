@@ -6,9 +6,10 @@ import { InsightCard } from './InsightCard';
 
 interface DashboardInsightsPanelProps {
   insights: Insight[];
+  onDismiss?: (insightId: string) => void;
 }
 
-export function DashboardInsightsPanel({ insights }: DashboardInsightsPanelProps) {
+export function DashboardInsightsPanel({ insights, onDismiss }: DashboardInsightsPanelProps) {
   const topInsights = insights.slice(0, 3);
 
   return (
@@ -38,7 +39,12 @@ export function DashboardInsightsPanel({ insights }: DashboardInsightsPanelProps
       ) : (
         <div className="space-y-3">
           {topInsights.map((insight) => (
-            <InsightCard key={insight.id} insight={insight} compact />
+            <InsightCard
+              key={insight.id}
+              insight={insight}
+              compact
+              onDismiss={onDismiss}
+            />
           ))}
         </div>
       )}

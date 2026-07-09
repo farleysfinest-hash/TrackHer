@@ -17,6 +17,7 @@ import type {
 } from '../types/database';
 import {
   getLocalDateISO,
+  getResolvedTimezone,
   calculateMRS,
   INITIAL_MRS_SCORES,
   MRS_CANONICAL_KEYS,
@@ -200,7 +201,7 @@ export function useCheckins() {
 
   const getUserId = () => useAuthStore.getState().user?.id;
   const getTimezone = () =>
-    useAuthStore.getState().profile?.timezone ?? 'America/Los_Angeles';
+    getResolvedTimezone(useAuthStore.getState().profile?.timezone);
 
   const syncDevCheckins = useCallback(() => {
     const sorted = [...getDevCheckins()].sort((a, b) =>

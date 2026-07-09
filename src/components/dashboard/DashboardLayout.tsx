@@ -2,11 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useDashboardStore } from '../../stores/dashboardStore';
 import { useChartData } from '../../hooks/useChartData';
 import { useCheckinStatus } from '../../hooks/useCheckinStatus';
-import { useAuthStore } from '../../stores/authStore';
-import { runPatternEngine } from '../../engine/patternEngine';
-import { IS_DEV_MODE } from '../../lib/devMode';
-import { getDevExtendedSymptomLogs } from '../../lib/devStore';
-import type { ExtendedSymptomLog } from '../../types/database';
+import { useInsights } from '../../hooks/useInsights';
 import { hasMRSData } from '../../utils/checkinHelpers';
 import { DateRangeSelector } from './DateRangeSelector';
 import { ScoreSummaryCards } from './ScoreSummaryCards';
@@ -32,8 +28,8 @@ const FULL_DASHBOARD_CHECKINS = 7;
 
 export function DashboardLayout() {
   const dateRange = useDashboardStore((s) => s.dateRange);
-  const profile = useAuthStore((s) => s.profile);
   const checkinStatus = useCheckinStatus();
+  const { insights, dismissInsight, extendedSymptoms } = useInsights();
   const {
     getSymptomTrendData,
     getMedicationChangeMarkers,
@@ -43,40 +39,10 @@ export function DashboardLayout() {
     checkins,
     allCheckins,
     medications,
-    allMedicationChanges,
     labResults,
     allLabResults,
     refreshAll,
   } = useChartData(dateRange);
-
-  const [extendedSymptoms, setExtendedSymptoms] = useState<ExtendedSymptomLog[]>(() =>
-    IS_DEV_MODE ? getDevExtendedSymptomLogs() : [],
-  );
-
-  useEffect(() => {
-    if (IS_DEV_MODE) {
-      setExtendedSymptoms(getDevExtendedSymptomLogs());
-    }
-  }, [allCheckins]);
-
-  const insights = useMemo(() => {
-    if (!profile || allCheckins.length === 0) return [];
-    return runPatternEngine({
-      checkins: allCheckins,
-      extendedSymptoms,
-      medications,
-      medicationChanges: allMedicationChanges,
-      labResults: allLabResults,
-      profile,
-    });
-  }, [
-    profile,
-    allCheckins,
-    extendedSymptoms,
-    medications,
-    allMedicationChanges,
-    allLabResults,
-  ]);
 
   const [biomarkerKey, setBiomarkerKey] = useState('estradiol');
 
@@ -128,7 +94,7 @@ export function DashboardLayout() {
 
           <CheckinPromptWidget {...checkinStatus} />
 
-          <DashboardInsightsPanel insights={insights} />
+          <DashboardInsightsPanel insights={insights} onDismiss={dismissInsight} />
 
           <OverlayChart data={symptomTrend} changeMarkers={changeMarkers} />
 
@@ -172,7 +138,9 @@ export function DashboardLayout() {
 
           <UnlockProgress checkinCount={mrsCheckinCount} />
 
-          {insights.length > 0 && <DashboardInsightsPanel insights={insights} />}
+          {insights.length > 0 && (
+            <DashboardInsightsPanel insights={insights} onDismiss={dismissInsight} />
+          )}
 
           <ActiveMedicationsSummary medications={medications} />
         </>

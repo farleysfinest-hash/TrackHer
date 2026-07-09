@@ -8,9 +8,15 @@ interface InsightsListProps {
   insights: Insight[];
   isLoading?: boolean;
   compact?: boolean;
+  onDismiss?: (insightId: string) => void;
 }
 
-export function InsightsList({ insights, isLoading = false, compact = false }: InsightsListProps) {
+export function InsightsList({
+  insights,
+  isLoading = false,
+  compact = false,
+  onDismiss,
+}: InsightsListProps) {
   if (isLoading) {
     return (
       <div className="flex justify-center py-12">
@@ -32,7 +38,12 @@ export function InsightsList({ insights, isLoading = false, compact = false }: I
   return (
     <div className={`space-y-4 ${compact ? '' : 'max-w-3xl'}`}>
       {insights.map((insight) => (
-        <InsightCard key={insight.id} insight={insight} compact={compact} />
+        <InsightCard
+          key={insight.id}
+          insight={insight}
+          compact={compact}
+          onDismiss={onDismiss}
+        />
       ))}
     </div>
   );

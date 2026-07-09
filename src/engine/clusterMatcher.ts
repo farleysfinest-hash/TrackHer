@@ -1,4 +1,4 @@
-import { HORMONE_PATTERNS } from './hormonePatterns';
+import { HORMONE_PATTERNS, type HormonePattern } from './hormonePatterns';
 import type { Insight } from './types';
 import { INSIGHT_DISCLAIMER } from './types';
 import type { SymptomCheckin, ExtendedSymptomLog } from '../types/database';
@@ -8,6 +8,18 @@ import { MRS_CANONICAL_KEYS, hasMRSData } from '../utils/checkinHelpers';
 interface ClusterMatchInput {
   checkins: SymptomCheckin[];
   extendedSymptoms: ExtendedSymptomLog[];
+}
+
+const MIN_TOTAL_MRS_CHECKINS = 10;
+const MIN_SPAN_DAYS = 21;
+const WINDOW_DAYS = 30;
+const MIN_WINDOW_CHECKINS = 4;
+
+interface PatternMatchResult {
+  pattern: HormonePattern;
+  primaryMatches: Array<{ key: string; label: string; severity: number }>;
+  secondaryMatches: Array<{ key: string; label: string; severity: number }>;
+  confidence: number;
 }
 
 function severityFromExtended(log: ExtendedSymptomLog): number {
@@ -20,70 +32,130 @@ function severityFromExtended(log: ExtendedSymptomLog): number {
   return 0;
 }
 
-export function analyzeSymptomClusters(input: ClusterMatchInput): Insight[] {
-  const insights: Insight[] = [];
-  const { checkins, extendedSymptoms } = input;
+function addDaysISO(dateStr: string, delta: number): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dt = new Date(y, m - 1, d + delta);
+  const month = String(dt.getMonth() + 1).padStart(2, '0');
+  const day = String(dt.getDate()).padStart(2, '0');
+  return `${dt.getFullYear()}-${month}-${day}`;
+}
 
-  if (checkins.length === 0) return [];
+function daysBetween(from: string, to: string): number {
+  const a = new Date(from + 'T12:00:00');
+  const b = new Date(to + 'T12:00:00');
+  return Math.floor((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24));
+}
 
-  const recentCheckins = [...checkins]
-    .filter(hasMRSData)
-    .sort((a, b) => b.checkin_date.localeCompare(a.checkin_date))
-    .slice(0, 3);
-
+function buildSeverityMap(
+  windowCheckins: SymptomCheckin[],
+  extendedSymptoms: ExtendedSymptomLog[],
+): Map<string, number> {
   const severityMap = new Map<string, number>();
 
-    for (const key of MRS_CANONICAL_KEYS) {
-      const values = recentCheckins
-        .map((c) => c[key])
-        .filter((v): v is NonNullable<typeof v> => v !== null)
-        .map((v) => Number(v));
-      if (values.length > 0) {
-        severityMap.set(key, values.reduce((a, b) => a + b, 0) / values.length);
-      }
-    }
-
-  const recentCheckinId = recentCheckins[0]?.id;
-  if (recentCheckinId) {
-    for (const ext of extendedSymptoms.filter((e) => e.checkin_id === recentCheckinId)) {
-      severityMap.set(ext.symptom_key, severityFromExtended(ext));
+  for (const key of MRS_CANONICAL_KEYS) {
+    const values = windowCheckins
+      .map((c) => c[key])
+      .filter((v): v is NonNullable<typeof v> => v !== null)
+      .map((v) => Number(v));
+    if (values.length > 0) {
+      severityMap.set(key, values.reduce((a, b) => a + b, 0) / values.length);
     }
   }
 
+  const checkinIds = new Set(windowCheckins.map((c) => c.id));
+  const extBySymptom = new Map<string, number[]>();
+  for (const ext of extendedSymptoms.filter((e) => checkinIds.has(e.checkin_id))) {
+    const values = extBySymptom.get(ext.symptom_key) ?? [];
+    values.push(severityFromExtended(ext));
+    extBySymptom.set(ext.symptom_key, values);
+  }
+  for (const [key, values] of extBySymptom) {
+    severityMap.set(key, values.reduce((a, b) => a + b, 0) / values.length);
+  }
+
+  return severityMap;
+}
+
+function matchPattern(
+  severityMap: Map<string, number>,
+  pattern: HormonePattern,
+): PatternMatchResult | null {
+  const primaryMatches: PatternMatchResult['primaryMatches'] = [];
+  const secondaryMatches: PatternMatchResult['secondaryMatches'] = [];
+
+  for (const symptomKey of pattern.primarySymptoms) {
+    const severity = severityMap.get(symptomKey);
+    if (severity !== undefined && severity >= 2) {
+      const symptomDef = SYMPTOM_CATALOG.find((s) => s.key === symptomKey);
+      primaryMatches.push({
+        key: symptomKey,
+        label: symptomDef?.label ?? symptomKey,
+        severity: Math.round(severity * 10) / 10,
+      });
+    }
+  }
+
+  for (const symptomKey of pattern.secondarySymptoms) {
+    const severity = severityMap.get(symptomKey);
+    if (severity !== undefined && severity >= 1) {
+      const symptomDef = SYMPTOM_CATALOG.find((s) => s.key === symptomKey);
+      secondaryMatches.push({
+        key: symptomKey,
+        label: symptomDef?.label ?? symptomKey,
+        severity: Math.round(severity * 10) / 10,
+      });
+    }
+  }
+
+  if (primaryMatches.length < 3) return null;
+
+  const primaryRatio = primaryMatches.length / pattern.primarySymptoms.length;
+  const secondaryBoost = Math.min(secondaryMatches.length * 0.05, 0.2);
+  const confidence = Math.min(primaryRatio + secondaryBoost, 1.0);
+
+  return { pattern, primaryMatches, secondaryMatches, confidence };
+}
+
+export function analyzeSymptomClusters(input: ClusterMatchInput): Insight[] {
+  const { checkins, extendedSymptoms } = input;
+  const mrsCheckins = [...checkins]
+    .filter(hasMRSData)
+    .sort((a, b) => a.checkin_date.localeCompare(b.checkin_date));
+
+  if (mrsCheckins.length < MIN_TOTAL_MRS_CHECKINS) return [];
+
+  const spanDays = daysBetween(
+    mrsCheckins[0].checkin_date,
+    mrsCheckins[mrsCheckins.length - 1].checkin_date,
+  );
+  if (spanDays < MIN_SPAN_DAYS) return [];
+
+  const today = new Date().toISOString().split('T')[0];
+  const windowStart = addDaysISO(today, -WINDOW_DAYS);
+  const windowCheckins = mrsCheckins.filter((c) => c.checkin_date >= windowStart);
+
+  if (windowCheckins.length < MIN_WINDOW_CHECKINS) return [];
+
+  const fullSeverityMap = buildSeverityMap(windowCheckins, extendedSymptoms);
+
+  const midpoint = Math.ceil(windowCheckins.length / 2);
+  const earlierHalf = windowCheckins.slice(0, midpoint);
+  const laterHalf = windowCheckins.slice(midpoint);
+
+  const insights: Insight[] = [];
+
   for (const pattern of HORMONE_PATTERNS) {
-    const primaryMatches: Array<{ key: string; label: string; severity: number }> = [];
-    const secondaryMatches: Array<{ key: string; label: string; severity: number }> = [];
+    const earlierMatch = matchPattern(
+      buildSeverityMap(earlierHalf, extendedSymptoms),
+      pattern,
+    );
+    const laterMatch = matchPattern(buildSeverityMap(laterHalf, extendedSymptoms), pattern);
+    if (!earlierMatch || !laterMatch) continue;
 
-    for (const symptomKey of pattern.primarySymptoms) {
-      const severity = severityMap.get(symptomKey);
-      if (severity !== undefined && severity >= 2) {
-        const symptomDef = SYMPTOM_CATALOG.find((s) => s.key === symptomKey);
-        primaryMatches.push({
-          key: symptomKey,
-          label: symptomDef?.label ?? symptomKey,
-          severity: Math.round(severity * 10) / 10,
-        });
-      }
-    }
+    const fullMatch = matchPattern(fullSeverityMap, pattern);
+    if (!fullMatch) continue;
 
-    for (const symptomKey of pattern.secondarySymptoms) {
-      const severity = severityMap.get(symptomKey);
-      if (severity !== undefined && severity >= 1) {
-        const symptomDef = SYMPTOM_CATALOG.find((s) => s.key === symptomKey);
-        secondaryMatches.push({
-          key: symptomKey,
-          label: symptomDef?.label ?? symptomKey,
-          severity: Math.round(severity * 10) / 10,
-        });
-      }
-    }
-
-    if (primaryMatches.length < 3) continue;
-
-    const primaryRatio = primaryMatches.length / pattern.primarySymptoms.length;
-    const secondaryBoost = Math.min(secondaryMatches.length * 0.05, 0.2);
-    const confidence = Math.min(primaryRatio + secondaryBoost, 1.0);
-
+    const { primaryMatches, secondaryMatches, confidence } = fullMatch;
     const allMatches = [...primaryMatches, ...secondaryMatches];
     const matchedLabels = primaryMatches.map((m) => m.label);
 
@@ -92,7 +164,7 @@ export function analyzeSymptomClusters(input: ClusterMatchInput): Insight[] {
       category: 'symptom_cluster',
       priority: confidence >= 0.7 ? 'high' : 'medium',
       title: `Your symptoms suggest a ${pattern.label.toLowerCase()}`,
-      body: `${pattern.description} You are currently experiencing ${matchedLabels.join(', ')} at moderate or higher severity — ${primaryMatches.length} of ${pattern.primarySymptoms.length} hallmark symptoms of this pattern.`,
+      body: `Over the past month, your symptom profile has consistently matched a ${pattern.label.toLowerCase()}. ${pattern.description} You are experiencing ${matchedLabels.join(', ')} at moderate or higher severity on average — ${primaryMatches.length} of ${pattern.primarySymptoms.length} hallmark symptoms of this pattern.`,
       supportingData: {
         matchedPattern: pattern.key,
         matchedSymptoms: allMatches,

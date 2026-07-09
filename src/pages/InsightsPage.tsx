@@ -10,7 +10,7 @@ import {
 } from '../utils/insightHelpers';
 
 export function InsightsPage() {
-  const { insights, isLoading } = useInsights();
+  const { insights, isLoading, dismissInsight } = useInsights();
   const [activeFilter, setActiveFilter] = useState<InsightFilterGroup>('all');
 
   const filtered = useMemo(
@@ -44,7 +44,11 @@ export function InsightsPage() {
         counts={counts}
       />
 
-      <InsightsList insights={filtered} isLoading={isLoading} />
+      <InsightsList
+        insights={filtered}
+        isLoading={isLoading}
+        onDismiss={dismissInsight}
+      />
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useCheckins } from './useCheckins';
 import { useAuthStore } from '../stores/authStore';
 import type { SymptomCheckin } from '../types/database';
-import { getLocalDateISO } from '../utils/checkinHelpers';
+import { getLocalDateISO, getResolvedTimezone } from '../utils/checkinHelpers';
 
 function daysBetween(from: string, to: string): number {
   const a = new Date(from + 'T12:00:00');
@@ -17,7 +17,7 @@ function sameCalendarMonth(a: string, b: string): boolean {
 export function useCheckinStatus() {
   const { getTodaysCheckin, getLastCheckin, getStreak } = useCheckins();
   const userId = useAuthStore((s) => s.user?.id);
-  const timezone = useAuthStore((s) => s.profile?.timezone ?? 'America/Los_Angeles');
+  const timezone = getResolvedTimezone(useAuthStore((s) => s.profile?.timezone));
   const frequency = useAuthStore((s) => s.profile?.checkin_frequency ?? 'daily');
 
   const getTodaysCheckinRef = useRef(getTodaysCheckin);

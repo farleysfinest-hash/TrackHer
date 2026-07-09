@@ -89,3 +89,12 @@ export function sortInsightsByPriority(insights: Insight[]): Insight[] {
   };
   return [...insights].sort((a, b) => order[a.priority] - order[b.priority]);
 }
+
+/** Remove insights the user has dismissed. Static ids (e.g. trend-overall-improving) stay hidden until regeneration-on-material-change is implemented in a future AI layer. */
+export function filterDismissedInsights(
+  insights: Insight[],
+  dismissedIds: ReadonlySet<string> | string[],
+): Insight[] {
+  const dismissed = dismissedIds instanceof Set ? dismissedIds : new Set(dismissedIds);
+  return insights.filter((insight) => !dismissed.has(insight.id));
+}
