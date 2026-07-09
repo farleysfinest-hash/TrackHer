@@ -129,7 +129,7 @@ export const useCheckinStore = create<CheckinState>((set, get) => ({
 
   nextStep: () => {
     const { currentStep, mode } = get();
-    const max = mode === 'quick' ? 3 : 5;
+    const max = mode === 'quick' ? 2 : 5;
     if (currentStep < max) set({ currentStep: currentStep + 1 });
   },
 
@@ -181,5 +181,5 @@ export const useCheckinStore = create<CheckinState>((set, get) => ({
   getMRSScore: () => calculateMRS(get().mrsScores),
   getInstrumentScore: (instrument) => calculateInstrumentScore(get().mrsScores, instrument),
   getTopConcerns: () => getTopConcerns(get().mrsScores),
-  getStepCount: () => (get().mode === 'quick' ? 3 : 5),
+  getStepCount: () => (get().mode === 'quick' ? 2 : 5),
 }));

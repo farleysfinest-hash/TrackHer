@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useCheckinStore } from '../../stores/checkinStore';
 import { useCheckins } from '../../hooks/useCheckins';
 import { useToast } from '../../stores/toastStore';
-import { getLocalDateISO, SEVERITY_LABELS } from '../../utils/checkinHelpers';
+import { getLocalDateISO, SEVERITY_LABELS, INITIAL_MRS_SCORES } from '../../utils/checkinHelpers';
 import { useAuthStore } from '../../stores/authStore';
 import { formatDateLong } from '../../utils/formatters';
 import { getSymptomByKey } from '../../data/symptoms';
@@ -43,15 +43,18 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
     return { ...c, label: item?.label ?? c.label };
   });
 
+  const isPulse = mode === 'quick';
+
   const handleSave = async () => {
     setIsSaving(true);
     const payload = {
       wellbeingScore,
-      mrsScores,
-      extendedSymptoms,
-      notes,
+      mrsScores: isPulse ? { ...INITIAL_MRS_SCORES } : mrsScores,
+      extendedSymptoms: isPulse ? [] : extendedSymptoms,
+      notes: isPulse ? '' : notes,
       checkinDate: getLocalDateISO(timezone ?? undefined),
       instrumentId,
+      checkinType: isPulse ? ('pulse' as const) : ('full' as const),
     };
 
     let ok: boolean | null = false;
@@ -65,7 +68,7 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
     setIsSaving(false);
     if (ok) {
       localStorage.setItem('trackher_first_checkin_done', 'true');
-      toast.success(isEditing ? 'Check-in updated' : 'Check-in saved');
+      toast.success(isEditing ? 'Check-in updated' : isPulse ? 'Pulse saved' : 'Check-in saved');
       onSuccess();
     } else {
       toast.error('Failed to save check-in');
@@ -90,27 +93,29 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
         </Card>
       )}
 
-      <Card className="border-l-4 border-l-sage-500">
-        <h3 className="mb-3 font-display text-lg text-sage-800">
-          {instrument.name} ({instrument.abbreviation})
-        </h3>
-        <InstrumentScoreBadge instrument={instrument} score={score} />
-        {topConcernLabels.length > 0 && (
-          <div className="mt-4 border-t border-sand-100 pt-4">
-            <p className="mb-2 text-sm text-sage-500">Top {instrument.abbreviation} concerns</p>
-            <ul className="space-y-1 text-sm text-sage-700">
-              {topConcernLabels.map((c) => (
-                <li key={c.key}>
-                  {c.label}{' '}
-                  <span className="text-sage-500">
-                    ({c.score} — {SEVERITY_LABELS[c.score]})
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </Card>
+      {!isPulse && (
+        <Card className="border-l-4 border-l-sage-500">
+          <h3 className="mb-3 font-display text-lg text-sage-800">
+            {instrument.name} ({instrument.abbreviation})
+          </h3>
+          <InstrumentScoreBadge instrument={instrument} score={score} />
+          {topConcernLabels.length > 0 && (
+            <div className="mt-4 border-t border-sand-100 pt-4">
+              <p className="mb-2 text-sm text-sage-500">Top {instrument.abbreviation} concerns</p>
+              <ul className="space-y-1 text-sm text-sage-700">
+                {topConcernLabels.map((c) => (
+                  <li key={c.key}>
+                    {c.label}{' '}
+                    <span className="text-sage-500">
+                      ({c.score} — {SEVERITY_LABELS[c.score]})
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </Card>
+      )}
 
       {mode === 'full' && ratedExtended.length > 0 && (
         <Card className="border-l-4 border-l-amber-400 bg-gradient-to-br from-white to-sand-50/50">

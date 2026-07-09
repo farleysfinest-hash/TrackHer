@@ -62,6 +62,7 @@ export type MedicationFrequency =
 export type DoseStatus = 'taken' | 'missed' | 'late' | 'skipped';
 export type SymptomSeverity = 'mild' | 'moderate' | 'severe';
 export type MRSScore = 0 | 1 | 2 | 3 | 4;
+export type CheckinType = 'full' | 'quick' | 'pulse';
 
 export type MedicationChangeType =
   | 'started'
@@ -198,6 +199,7 @@ export interface SymptomCheckin {
   irregular_periods: MRSScore | null;
   heavy_bleeding: MRSScore | null;
   misophonia: MRSScore | null;
+  checkin_type: CheckinType;
   total_score: number;
   somatic_score: number;
   psychological_score: number;

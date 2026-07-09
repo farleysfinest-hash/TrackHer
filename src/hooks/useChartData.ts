@@ -6,6 +6,7 @@ import { useLabResults } from './useLabResults';
 import type { SymptomCheckin, Medication, MedicationChange } from '../types/database';
 import { MRS_CANONICAL_SYMPTOMS } from '../data/symptoms';
 import type { MRSSymptomKey } from '../utils/checkinHelpers';
+import { hasMRSData } from '../utils/checkinHelpers';
 import { formatChartDate, filterByDateRange } from '../utils/chartHelpers';
 import { getEffectiveDailyDose } from '../utils/medicationHelpers';
 import { getBiomarkerValue } from '../utils/labHelpers';
@@ -14,11 +15,11 @@ import type { DateRange } from '../stores/dashboardStore';
 export interface SymptomTrendPoint {
   date: string;
   dateLabel: string;
-  mrsTotal: number;
+  mrsTotal: number | null;
   wellbeing: number | null;
-  somatic: number;
-  psychological: number;
-  urogenital: number;
+  somatic: number | null;
+  psychological: number | null;
+  urogenital: number | null;
   checkin: SymptomCheckin;
 }
 
@@ -107,17 +108,25 @@ export function useChartData(dateRange: DateRange) {
     [changes],
   );
 
+  const mrsCheckins = useMemo(
+    () => filteredCheckins.filter(hasMRSData),
+    [filteredCheckins],
+  );
+
   const getSymptomTrendData = useCallback((): SymptomTrendPoint[] => {
-    return filteredCheckins.map((c) => ({
-      date: c.checkin_date,
-      dateLabel: formatChartDate(c.checkin_date),
-      mrsTotal: c.total_score,
-      wellbeing: c.overall_wellbeing,
-      somatic: c.somatic_score,
-      psychological: c.psychological_score,
-      urogenital: c.urogenital_score,
-      checkin: c,
-    }));
+    return filteredCheckins.map((c) => {
+      const includeMrs = hasMRSData(c);
+      return {
+        date: c.checkin_date,
+        dateLabel: formatChartDate(c.checkin_date),
+        mrsTotal: includeMrs ? c.total_score : null,
+        wellbeing: c.overall_wellbeing,
+        somatic: includeMrs ? c.somatic_score : null,
+        psychological: includeMrs ? c.psychological_score : null,
+        urogenital: includeMrs ? c.urogenital_score : null,
+        checkin: c,
+      };
+    });
   }, [filteredCheckins]);
 
   const getMedicationChangeMarkers = useCallback((): ChangeMarker[] => {
@@ -150,7 +159,7 @@ export function useChartData(dateRange: DateRange) {
   const getHeatmapData = useCallback((): HeatmapRow[] => {
     const rows = MRS_CANONICAL_SYMPTOMS.map((symptom) => {
       const key = symptom.key as MRSSymptomKey;
-      const cells = filteredCheckins.map((c) => ({
+      const cells = mrsCheckins.map((c) => ({
         date: c.checkin_date,
         dateLabel: formatChartDate(c.checkin_date),
         score: c[key] as number | null,
@@ -164,7 +173,7 @@ export function useChartData(dateRange: DateRange) {
     });
 
     return rows.sort((a, b) => b.avgSeverity - a.avgSeverity);
-  }, [filteredCheckins]);
+  }, [mrsCheckins]);
 
   const getLabTrendData = useCallback(
     (biomarkerKey: string): LabTrendPoint[] => {
@@ -188,15 +197,15 @@ export function useChartData(dateRange: DateRange) {
       const symptomLines = symptomKeys.map((key) => ({
         key,
         label: MRS_CANONICAL_SYMPTOMS.find((s) => s.key === key)?.label ?? key,
-        points: filteredCheckins.map((c) => ({
+        points: mrsCheckins.map((c) => ({
           date: c.checkin_date,
           dateLabel: formatChartDate(c.checkin_date),
           value: (c[key as MRSSymptomKey] as number | null) ?? null,
         })),
       }));
-      return { symptomLines, checkins: filteredCheckins };
+      return { symptomLines, checkins: mrsCheckins };
     },
-    [filteredCheckins],
+    [mrsCheckins],
   );
 
   const refreshAll = useCallback(async () => {

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { StatCard } from '../ui/StatCard';
 import { useAuthStore } from '../../stores/authStore';
-import { getMRSSeverityTier } from '../../utils/checkinHelpers';
+import { getMRSSeverityTier, hasMRSData } from '../../utils/checkinHelpers';
 import { MRS_SEVERITY_HEX, getWellbeingHex } from '../../utils/chartHelpers';
 import type { SymptomCheckin } from '../../types/database';
 
@@ -24,17 +24,19 @@ export function ScoreSummaryCards({ checkins, streak }: ScoreSummaryCardsProps) 
     [checkins],
   );
 
+  const mrsCheckins = useMemo(() => sorted.filter(hasMRSData), [sorted]);
+  const latestMrs = mrsCheckins[0];
   const latest = sorted[0];
   const today = new Date().toISOString().split('T')[0];
   const thirtyDaysAgo = addDaysISO(today, -30);
 
   const mrsTrend = useMemo(() => {
-    if (!latest) return null;
-    const older = [...sorted]
+    if (!latestMrs) return null;
+    const older = [...mrsCheckins]
       .filter((c) => c.checkin_date <= thirtyDaysAgo)
       .sort((a, b) => b.checkin_date.localeCompare(a.checkin_date))[0];
     if (!older) return null;
-    const diff = latest.total_score - older.total_score;
+    const diff = latestMrs.total_score - older.total_score;
     if (diff === 0) {
       return { direction: 'flat' as const, label: '→ No change', isPositive: true };
     }
@@ -44,10 +46,10 @@ export function ScoreSummaryCards({ checkins, streak }: ScoreSummaryCardsProps) 
       label: `${improving ? '↓' : '↑'} ${Math.abs(diff)} pts`,
       isPositive: improving,
     };
-  }, [latest, sorted, thirtyDaysAgo]);
+  }, [latestMrs, mrsCheckins, thirtyDaysAgo]);
 
-  const mrsColor = latest
-    ? MRS_SEVERITY_HEX[getMRSSeverityTier(latest.total_score)]
+  const mrsColor = latestMrs
+    ? MRS_SEVERITY_HEX[getMRSSeverityTier(latestMrs.total_score)]
     : undefined;
 
   const wellbeingColor =
@@ -60,8 +62,8 @@ export function ScoreSummaryCards({ checkins, streak }: ScoreSummaryCardsProps) 
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <StatCard
         label="MRS Score"
-        value={latest?.total_score ?? '—'}
-        subtext={`/44 · Psych ${latest?.psychological_score ?? '—'} · Som ${latest?.somatic_score ?? '—'} · Uro ${latest?.urogenital_score ?? '—'}`}
+        value={latestMrs?.total_score ?? '—'}
+        subtext={`/44 · Psych ${latestMrs?.psychological_score ?? '—'} · Som ${latestMrs?.somatic_score ?? '—'} · Uro ${latestMrs?.urogenital_score ?? '—'}`}
         color={mrsColor}
       />
       <StatCard

@@ -10,6 +10,7 @@ import { MRSScoreBadge } from '../components/checkin/MRSScoreBadge';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
+import { hasMRSData } from '../utils/checkinHelpers';
 import type { SymptomCheckin } from '../types/database';
 
 export function CheckinPage() {
@@ -24,9 +25,23 @@ export function CheckinPage() {
   const [pendingMode, setPendingMode] = useState<'full' | 'quick'>('full');
   const [detailCheckin, setDetailCheckin] = useState<SymptomCheckin | null>(null);
 
+  const startFullFromPulse = async (today: SymptomCheckin) => {
+    const detail = await fetchCheckinDetail(today.id);
+    if (detail) {
+      reset();
+      setMode('full');
+      loadExistingCheckin(detail.checkin, detail.extendedSymptoms);
+      setActiveFlow(true);
+    }
+  };
+
   const startCheckin = async (mode: 'full' | 'quick') => {
     const today = await getTodaysCheckin();
     if (today) {
+      if (today.checkin_type === 'pulse' && mode === 'full') {
+        await startFullFromPulse(today);
+        return;
+      }
       setPendingMode(mode);
       setShowDuplicatePrompt(true);
       return;
@@ -69,6 +84,8 @@ export function CheckinPage() {
     return <CheckinFlow onClose={() => setActiveFlow(false)} onComplete={handleFlowComplete} />;
   }
 
+  const todaysIsPulse = todaysCheckin?.checkin_type === 'pulse';
+
   return (
     <div className="space-y-10">
       <div>
@@ -83,7 +100,7 @@ export function CheckinPage() {
               <CheckCircle2 className="h-6 w-6 shrink-0 text-success" />
               <div>
                 <h2 className="font-display text-lg text-sage-800">
-                  You&apos;ve already checked in today
+                  {todaysIsPulse ? 'Pulse logged today' : "You've already checked in today"}
                 </h2>
                 <div className="mt-2 flex flex-wrap gap-4 text-sm">
                   {todaysCheckin.overall_wellbeing !== null && (
@@ -91,18 +108,24 @@ export function CheckinPage() {
                       Wellbeing: {todaysCheckin.overall_wellbeing}/10
                     </span>
                   )}
-                  <MRSScoreBadge total={todaysCheckin.total_score} compact showDot />
+                  {hasMRSData(todaysCheckin) && (
+                    <MRSScoreBadge total={todaysCheckin.total_score} compact showDot />
+                  )}
                 </div>
               </div>
             </div>
             <Button
               variant="secondary"
               onClick={() => {
-                setPendingMode('full');
-                void handleUpdateExisting();
+                if (todaysIsPulse) {
+                  void startFullFromPulse(todaysCheckin);
+                } else {
+                  setPendingMode('full');
+                  void handleUpdateExisting();
+                }
               }}
             >
-              Edit
+              {todaysIsPulse ? 'Complete full check-in' : 'Edit'}
             </Button>
           </div>
         </Card>
@@ -110,14 +133,25 @@ export function CheckinPage() {
         !isLoading && (
           <Card variant="elevated" padding="lg">
             <h2 className="font-display text-xl text-sage-800">How are you feeling?</h2>
-            <p className="mt-2 text-sage-500">
-              Take a moment to log your symptoms. It only takes about 90 seconds.
-            </p>
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <Button onClick={() => void startCheckin('full')}>Full Check-in</Button>
-              <Button variant="secondary" onClick={() => void startCheckin('quick')}>
-                Quick Check-in
-              </Button>
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => void startCheckin('full')}
+                className="rounded-xl border border-sand-200 bg-white p-4 text-left transition hover:border-sage-300 hover:bg-sage-50/50"
+              >
+                <p className="font-display text-lg text-sage-800">Full check-in (~2 min)</p>
+                <p className="mt-1 text-sm text-sage-500">
+                  Rate your symptoms on the clinical scale
+                </p>
+              </button>
+              <button
+                type="button"
+                onClick={() => void startCheckin('quick')}
+                className="rounded-xl border border-sand-200 bg-white p-4 text-left transition hover:border-sage-300 hover:bg-sage-50/50"
+              >
+                <p className="font-display text-lg text-sage-800">Quick pulse (~10 sec)</p>
+                <p className="mt-1 text-sm text-sage-500">Just log how you feel overall today</p>
+              </button>
             </div>
           </Card>
         )

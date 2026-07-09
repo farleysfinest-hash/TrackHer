@@ -4,6 +4,7 @@ import type { Insight } from './types';
 import { INSIGHT_DISCLAIMER } from './types';
 import type { SymptomCheckin, LabResult } from '../types/database';
 import type { MRSSymptomKey } from '../utils/checkinHelpers';
+import { hasMRSData } from '../utils/checkinHelpers';
 import { getBiomarkerValue } from '../utils/labHelpers';
 
 interface LabDiscordanceInput {
@@ -27,6 +28,7 @@ export function analyzeLabDiscordance(input: LabDiscordanceInput): Insight[] {
 
   const recentLab = [...labResults].sort((a, b) => b.draw_date.localeCompare(a.draw_date))[0];
   const recentCheckins = [...checkins]
+    .filter(hasMRSData)
     .sort((a, b) => b.checkin_date.localeCompare(a.checkin_date))
     .slice(0, 3);
 

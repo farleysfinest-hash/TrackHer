@@ -3,6 +3,7 @@ import { INSIGHT_DISCLAIMER } from './types';
 import type { SymptomCheckin, Medication, LabResult } from '../types/database';
 import { MRS_CORE_SYMPTOMS } from '../data/symptoms';
 import type { MRSSymptomKey } from '../utils/checkinHelpers';
+import { hasMRSData } from '../utils/checkinHelpers';
 import { formatDateLong } from '../utils/formatters';
 import { formatMedicationDoseShort } from '../utils/medicationHelpers';
 
@@ -28,7 +29,7 @@ export function analyzeTrends(input: TrendInput): Insight[] {
   const insights: Insight[] = [];
   const { checkins, medications, labResults } = input;
 
-  const sorted = [...checkins].sort((a, b) => a.checkin_date.localeCompare(b.checkin_date));
+  const sorted = [...checkins].filter(hasMRSData).sort((a, b) => a.checkin_date.localeCompare(b.checkin_date));
   if (sorted.length < 3) return insights;
 
   const thirdLen = Math.max(2, Math.floor(sorted.length / 3));

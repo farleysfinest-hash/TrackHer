@@ -3,7 +3,7 @@ import type { Insight } from './types';
 import { INSIGHT_DISCLAIMER } from './types';
 import type { SymptomCheckin, ExtendedSymptomLog } from '../types/database';
 import { SYMPTOM_CATALOG } from '../data/symptoms';
-import { MRS_CANONICAL_KEYS } from '../utils/checkinHelpers';
+import { MRS_CANONICAL_KEYS, hasMRSData } from '../utils/checkinHelpers';
 
 interface ClusterMatchInput {
   checkins: SymptomCheckin[];
@@ -27,6 +27,7 @@ export function analyzeSymptomClusters(input: ClusterMatchInput): Insight[] {
   if (checkins.length === 0) return [];
 
   const recentCheckins = [...checkins]
+    .filter(hasMRSData)
     .sort((a, b) => b.checkin_date.localeCompare(a.checkin_date))
     .slice(0, 3);
 

@@ -1,4 +1,4 @@
-import type { MRSScore } from '../types/database';
+import type { MRSScore, SymptomCheckin } from '../types/database';
 import type { InstrumentDefinition } from '../types/instruments';
 import { MRS_CANONICAL_SYMPTOMS } from '../data/symptoms';
 import { MRS_INSTRUMENT } from '../data/instruments/mrs';
@@ -239,6 +239,10 @@ export function countRatedMRS(scores: MRSScoresMap): number {
 
 export function isMRSCanonicalKey(key: string): key is MRSSymptomKey {
   return (MRS_CANONICAL_KEYS as readonly string[]).includes(key);
+}
+
+export function hasMRSData(checkin: SymptomCheckin): boolean {
+  return checkin.checkin_type !== 'pulse';
 }
 
 export const SEVERITY_LABELS = ['None', 'Mild', 'Moderate', 'Severe', 'Very Severe'] as const;

@@ -8,6 +8,7 @@ import type { PdfPageContext } from '../pdfTheme';
 import { PDF_COLORS, drawSectionHeader, trendArrow } from '../pdfTheme';
 import { drawLineChart, type ChartMarker } from '../chartDrawing';
 import { formatChartDateLong } from '../../chartHelpers';
+import { hasMRSData } from '../../checkinHelpers';
 
 const MRS_REFERENCE =
   'The Menopause Rating Scale (MRS) is a validated, internationally standardized instrument for assessing menopausal symptom severity. Heinemann et al., Health Qual Life Outcomes, 2004. Scoring: 0-4 none/minimal, 5-16 mild, 17-24 moderate, 25-44 severe.';
@@ -21,6 +22,7 @@ export function renderMrsAssessmentPage(
 ): void {
   const { doc } = ctx;
   const sorted = [...checkins]
+    .filter(hasMRSData)
     .filter((c) => c.checkin_date >= dateRange.start && c.checkin_date <= dateRange.end)
     .sort((a, b) => a.checkin_date.localeCompare(b.checkin_date));
 

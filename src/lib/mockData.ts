@@ -246,6 +246,7 @@ function buildCheckin(week: WeekScores, index: number): SymptomCheckin {
     irregular_periods: week.irregular_periods,
     heavy_bleeding: week.heavy_bleeding,
     misophonia: week.misophonia,
+    checkin_type: 'full',
     total_score: total,
     somatic_score: somatic,
     psychological_score: psychological,

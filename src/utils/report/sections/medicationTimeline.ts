@@ -3,6 +3,7 @@ import type { DateRange } from '../../../stores/dashboardStore';
 import type { PdfPageContext } from '../pdfTheme';
 import { PDF_COLORS, drawSectionHeader } from '../pdfTheme';
 import { formatChartDateLong } from '../../chartHelpers';
+import { hasMRSData } from '../../checkinHelpers';
 import { formatMedicationDoseShort } from '../../medicationHelpers';
 
 function dateToX(
@@ -101,6 +102,7 @@ export function renderMedicationTimelinePage(
   }
 
   const sortedCheckins = [...checkins]
+    .filter(hasMRSData)
     .filter((c) => c.checkin_date >= dateRange.start && c.checkin_date <= dateRange.end)
     .sort((a, b) => a.checkin_date.localeCompare(b.checkin_date));
 

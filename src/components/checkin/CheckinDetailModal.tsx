@@ -7,7 +7,7 @@ import { Button } from '../ui/Button';
 import { MRSScoreBadge } from './MRSScoreBadge';
 import { getSymptomByKey, MRS_CANONICAL_SYMPTOMS } from '../../data/symptoms';
 import { formatDateLong } from '../../utils/formatters';
-import { CATEGORY_LABELS, SEVERITY_LABELS } from '../../utils/checkinHelpers';
+import { CATEGORY_LABELS, SEVERITY_LABELS, hasMRSData } from '../../utils/checkinHelpers';
 import type { MRSSymptomKey } from '../../utils/checkinHelpers';
 
 interface CheckinDetailModalProps {
@@ -77,14 +77,19 @@ export function CheckinDetailModal({
                 </p>
               )}
             </div>
-            <MRSScoreBadge
-              total={checkin.total_score}
-              somatic={checkin.somatic_score}
-              psychological={checkin.psychological_score}
-              urogenital={checkin.urogenital_score}
-            />
+            {hasMRSData(checkin) ? (
+              <MRSScoreBadge
+                total={checkin.total_score}
+                somatic={checkin.somatic_score}
+                psychological={checkin.psychological_score}
+                urogenital={checkin.urogenital_score}
+              />
+            ) : (
+              <span className="text-sm text-sage-500">Wellbeing pulse</span>
+            )}
           </div>
 
+          {hasMRSData(checkin) && (
           <div>
             <h3 className="mb-3 font-medium text-sage-800">MRS Assessment (11 items)</h3>
             <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
@@ -106,6 +111,7 @@ export function CheckinDetailModal({
                 })}
             </div>
           </div>
+          )}
 
           {extended.length > 0 && (
             <div>

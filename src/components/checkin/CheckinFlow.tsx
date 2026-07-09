@@ -46,8 +46,6 @@ export function CheckinFlow({ onClose, onComplete }: CheckinFlowProps) {
         case 1:
           return <WellbeingScore onNext={nextStep} />;
         case 2:
-          return <MRSSection onNext={nextStep} onBack={prevStep} />;
-        case 3:
           return <CheckinSummary onBack={prevStep} onSuccess={handleComplete} />;
         default:
           return null;
@@ -80,7 +78,7 @@ export function CheckinFlow({ onClose, onComplete }: CheckinFlowProps) {
     <div className="fixed inset-0 z-50 flex flex-col bg-sand-50">
       <header className="flex items-center justify-between border-b border-sand-200 bg-white px-6 py-4">
         <h1 className="font-display text-xl text-sage-800">
-          {mode === 'quick' ? 'Quick Check-in' : 'Full Check-in'}
+          {mode === 'quick' ? 'Quick pulse' : 'Full Check-in'}
         </h1>
         <button
           type="button"

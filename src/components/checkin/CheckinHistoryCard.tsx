@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import type { SymptomCheckin } from '../../types/database';
 import { formatDateLong } from '../../utils/formatters';
-import { getTopConcerns, MRS_CANONICAL_KEYS, type MRSScoresMap, type MRSSymptomKey } from '../../utils/checkinHelpers';
+import { getTopConcerns, hasMRSData, MRS_CANONICAL_KEYS, type MRSScoresMap, type MRSSymptomKey } from '../../utils/checkinHelpers';
 import { MRSScoreBadge } from './MRSScoreBadge';
 import { ProgressRing } from '../ui/ProgressRing';
 import { Button } from '../ui/Button';
@@ -29,7 +29,11 @@ function CheckinHistoryCardComponent({ checkin, onViewDetails }: CheckinHistoryC
         <div>
           <p className="font-medium text-sage-800">{formatDateLong(checkin.checkin_date)}</p>
           <div className="mt-2">
-            <MRSScoreBadge total={checkin.total_score} compact showDot />
+            {hasMRSData(checkin) ? (
+              <MRSScoreBadge total={checkin.total_score} compact showDot />
+            ) : (
+              <span className="text-sm text-sage-500">Pulse</span>
+            )}
           </div>
         </div>
         {checkin.overall_wellbeing !== null && (

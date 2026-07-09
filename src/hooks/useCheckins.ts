@@ -13,6 +13,7 @@ import type {
   SymptomCheckin,
   ExtendedSymptomLog,
   MRSScore,
+  CheckinType,
 } from '../types/database';
 import {
   getLocalDateISO,
@@ -31,18 +32,23 @@ export interface CheckinInput {
   notes: string;
   checkinDate?: string;
   instrumentId?: string;
+  checkinType?: CheckinType;
 }
 
 function buildCheckinPayload(data: CheckinInput, userId: string) {
+  const checkinType = data.checkinType ?? 'full';
+  const isPulse = checkinType === 'pulse';
+
   const payload: Record<string, unknown> = {
     user_id: userId,
     checkin_date: data.checkinDate ?? getLocalDateISO(),
     overall_wellbeing: data.wellbeingScore,
-    notes: data.notes || null,
+    notes: isPulse ? null : data.notes || null,
+    checkin_type: checkinType,
   };
 
   for (const key of MRS_CANONICAL_KEYS) {
-    payload[key] = data.mrsScores[key as MRSSymptomKey] ?? null;
+    payload[key] = isPulse ? null : (data.mrsScores[key as MRSSymptomKey] ?? null);
   }
   for (const key of LEGACY_MRS_EXTRA_KEYS) {
     payload[key] = null;
@@ -68,9 +74,13 @@ function scoresFromInput(mrsScores: Record<string, MRSScore | null>): MRSScoresM
 }
 
 function buildDevCheckin(data: CheckinInput, id: string, userId: string): SymptomCheckin {
-  const mrsMap = scoresFromInput(data.mrsScores);
+  const checkinType = data.checkinType ?? 'full';
+  const isPulse = checkinType === 'pulse';
+  const mrsMap = isPulse ? { ...INITIAL_MRS_SCORES } : scoresFromInput(data.mrsScores);
   const checkinDate = data.checkinDate ?? getLocalDateISO();
-  const mrs = calculateMRS(mrsMap);
+  const mrs = isPulse
+    ? { total: 0, somatic: 0, psychological: 0, urogenital: 0 }
+    : calculateMRS(mrsMap);
 
   return {
     id,
@@ -92,12 +102,13 @@ function buildDevCheckin(data: CheckinInput, id: string, userId: string): Sympto
     irregular_periods: null,
     heavy_bleeding: null,
     misophonia: null,
+    checkin_type: checkinType,
     total_score: mrs.total,
     somatic_score: mrs.somatic,
     psychological_score: mrs.psychological,
     urogenital_score: mrs.urogenital,
     overall_wellbeing: data.wellbeingScore,
-    notes: data.notes || null,
+    notes: isPulse ? null : data.notes || null,
     created_at: new Date().toISOString(),
   };
 }
@@ -345,19 +356,21 @@ export function useCheckins() {
         saveDevExtendedSymptoms(id, MOCK_USER.id, data.extendedSymptoms);
       }
 
-      const instrumentId = data.instrumentId ?? 'mrs';
-      const assessmentScore = buildAssessmentScore(
-        data.mrsScores,
-        instrumentId,
-        checkinDate,
-      );
-      if (assessmentScore) {
-        await saveAssessmentResult(
-          MOCK_USER.id,
-          assessmentScore,
-          id,
-          `${checkinDate}T12:00:00.000Z`,
+      if (data.checkinType !== 'pulse') {
+        const instrumentId = data.instrumentId ?? 'mrs';
+        const assessmentScore = buildAssessmentScore(
+          data.mrsScores,
+          instrumentId,
+          checkinDate,
         );
+        if (assessmentScore) {
+          await saveAssessmentResult(
+            MOCK_USER.id,
+            assessmentScore,
+            id,
+            `${checkinDate}T12:00:00.000Z`,
+          );
+        }
       }
 
       syncDevCheckins();
@@ -398,15 +411,17 @@ export function useCheckins() {
       }
     }
 
-    const instrumentId = data.instrumentId ?? 'mrs';
-    const assessmentScore = buildAssessmentScore(data.mrsScores, instrumentId, checkin.checkin_date);
-    if (assessmentScore) {
-      await saveAssessmentResult(
-        userId,
-        assessmentScore,
-        checkin.id,
-        `${checkin.checkin_date}T12:00:00.000Z`,
-      );
+    if (data.checkinType !== 'pulse') {
+      const instrumentId = data.instrumentId ?? 'mrs';
+      const assessmentScore = buildAssessmentScore(data.mrsScores, instrumentId, checkin.checkin_date);
+      if (assessmentScore) {
+        await saveAssessmentResult(
+          userId,
+          assessmentScore,
+          checkin.id,
+          `${checkin.checkin_date}T12:00:00.000Z`,
+        );
+      }
     }
 
     await fetchCheckins();
@@ -429,18 +444,20 @@ export function useCheckins() {
       saveDevExtendedSymptoms(id, MOCK_USER.id, data.extendedSymptoms);
 
       const instrumentId = data.instrumentId ?? 'mrs';
-      const assessmentScore = buildAssessmentScore(
-        data.mrsScores,
-        instrumentId,
-        existing.checkin_date,
-      );
-      if (assessmentScore) {
-        await saveAssessmentResult(
-          MOCK_USER.id,
-          assessmentScore,
-          id,
-          `${existing.checkin_date}T12:00:00.000Z`,
+      if (data.checkinType !== 'pulse') {
+        const assessmentScore = buildAssessmentScore(
+          data.mrsScores,
+          instrumentId,
+          existing.checkin_date,
         );
+        if (assessmentScore) {
+          await saveAssessmentResult(
+            MOCK_USER.id,
+            assessmentScore,
+            id,
+            `${existing.checkin_date}T12:00:00.000Z`,
+          );
+        }
       }
 
       syncDevCheckins();
@@ -484,14 +501,16 @@ export function useCheckins() {
       existingCheckin?.checkin_date ?? data.checkinDate ?? getLocalDateISO(getTimezone());
 
     const instrumentId = data.instrumentId ?? 'mrs';
-    const assessmentScore = buildAssessmentScore(data.mrsScores, instrumentId, checkinDate);
-    if (assessmentScore) {
-      await saveAssessmentResult(
-        userId,
-        assessmentScore,
-        id,
-        `${checkinDate}T12:00:00.000Z`,
-      );
+    if (data.checkinType !== 'pulse') {
+      const assessmentScore = buildAssessmentScore(data.mrsScores, instrumentId, checkinDate);
+      if (assessmentScore) {
+        await saveAssessmentResult(
+          userId,
+          assessmentScore,
+          id,
+          `${checkinDate}T12:00:00.000Z`,
+        );
+      }
     }
 
     await fetchCheckins();

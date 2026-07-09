@@ -3,6 +3,7 @@ import { INSIGHT_DISCLAIMER } from './types';
 import type { SymptomCheckin, MedicationChange, Medication } from '../types/database';
 import { MRS_CORE_SYMPTOMS } from '../data/symptoms';
 import type { MRSSymptomKey } from '../utils/checkinHelpers';
+import { hasMRSData } from '../utils/checkinHelpers';
 
 interface DoseCorrelationInput {
   checkins: SymptomCheckin[];
@@ -45,8 +46,9 @@ function addDays(dateStr: string, delta: number): string {
 export function analyzeDoseCorrelations(input: DoseCorrelationInput): Insight[] {
   const insights: Insight[] = [];
   const { checkins, medicationChanges, medications } = input;
+  const mrsCheckins = checkins.filter(hasMRSData);
 
-  if (checkins.length < 2) return [];
+  if (mrsCheckins.length < 2) return [];
 
   for (const change of medicationChanges) {
     const medication = medications.find((m) => m.id === change.medication_id);
@@ -55,10 +57,10 @@ export function analyzeDoseCorrelations(input: DoseCorrelationInput): Insight[] 
     const beforeStart = addDays(change.change_date, -WINDOW_DAYS);
     const afterEnd = addDays(change.change_date, WINDOW_DAYS);
 
-    const beforeCheckins = checkins.filter(
+    const beforeCheckins = mrsCheckins.filter(
       (c) => c.checkin_date >= beforeStart && c.checkin_date < change.change_date,
     );
-    const afterCheckins = checkins.filter(
+    const afterCheckins = mrsCheckins.filter(
       (c) => c.checkin_date > change.change_date && c.checkin_date <= afterEnd,
     );
 
