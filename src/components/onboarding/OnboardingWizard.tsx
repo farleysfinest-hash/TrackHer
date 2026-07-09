@@ -7,7 +7,7 @@ import { StepProfile } from './StepProfile';
 import { StepStrawStaging } from './StepStrawStaging';
 import { StepSymptomSelection } from './StepSymptomSelection';
 import { StepCheckinIntro } from './StepCheckinIntro';
-import { StepCheckinFrequency } from './StepCheckinFrequency';
+import { StepCheckinDay } from './StepCheckinDay';
 import { OnboardingComplete } from './OnboardingComplete';
 import { MedicalDisclaimer } from '../ui/MedicalDisclaimer';
 
@@ -86,7 +86,7 @@ export function OnboardingWizard() {
           />
         )}
         {currentStep === 5 && (
-          <StepCheckinFrequency
+          <StepCheckinDay
             onComplete={handleComplete}
             onBack={() => useOnboardingStore.getState().prevStep()}
           />

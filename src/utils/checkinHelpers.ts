@@ -264,14 +264,9 @@ export function getWellbeingLabel(score: number): string {
 }
 
 export function getTimeframeLabel(frequency: string | null | undefined): string {
-  switch (frequency) {
-    case 'weekly':
-      return 'Rate your symptoms over the past week';
-    case 'monthly':
-      return 'Rate your symptoms over the past month';
-    default:
-      return 'Rate your symptoms over the past 24 hours';
-  }
+  // TrackHer’s MRS cadence is weekly. Keep this tolerant of legacy values.
+  void frequency;
+  return 'Rate your symptoms over the past week';
 }
 
 export function getTopConcerns(scores: MRSScoresMap, limit = 3) {

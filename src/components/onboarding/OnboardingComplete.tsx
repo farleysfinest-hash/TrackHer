@@ -1,7 +1,6 @@
 import { CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useOnboardingStore } from '../../stores/onboardingStore';
-import { CHECKIN_FREQUENCIES } from '../../lib/constants';
 import { Button } from '../ui/Button';
 
 interface OnboardingCompleteProps {
@@ -15,9 +14,21 @@ export function OnboardingComplete({ onGoToDashboard }: OnboardingCompleteProps)
   const stageLabel =
     formData.stagingResult?.strawStageLabel ??
     (formData.stagingResult?.strawStage ? `Stage ${formData.stagingResult.strawStage}` : 'Not specified');
-  const frequencyLabel =
-    CHECKIN_FREQUENCIES.find((f) => f.value === formData.checkinFrequency)?.label ??
-    'Not specified';
+
+  const checkinDayLabel = (() => {
+    // Convention: 0 = Sunday ... 6 = Saturday (matches JS Date#getDay()).
+    const labels: Record<number, string> = {
+      0: 'Sunday',
+      1: 'Monday',
+      2: 'Tuesday',
+      3: 'Wednesday',
+      4: 'Thursday',
+      5: 'Friday',
+      6: 'Saturday',
+    };
+    if (formData.checkinDay === null) return 'Any day';
+    return labels[formData.checkinDay] ?? 'Any day';
+  })();
 
   return (
     <div className="animate-fade-in space-y-6 text-center">
@@ -48,8 +59,8 @@ export function OnboardingComplete({ onGoToDashboard }: OnboardingCompleteProps)
             <dd className="font-medium text-sage-800">{formData.watchSymptoms.length}</dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-sage-500">Check-in frequency</dt>
-            <dd className="font-medium text-sage-800">{frequencyLabel}</dd>
+            <dt className="text-sage-500">Weekly check-in day</dt>
+            <dd className="font-medium text-sage-800">{checkinDayLabel}</dd>
           </div>
           {formData.hasUterus !== null && (
             <div className="flex justify-between">

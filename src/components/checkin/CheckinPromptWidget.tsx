@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom';
 import { Leaf, CheckCircle2 } from 'lucide-react';
 import type { SymptomCheckin } from '../../types/database';
 import { hasMRSData } from '../../utils/checkinHelpers';
-import type { CheckinCoverage } from '../../hooks/useCheckinStatus';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { MRSScoreBadge } from './MRSScoreBadge';
@@ -11,25 +10,14 @@ import { LoadingSpinner } from '../ui/LoadingSpinner';
 export interface CheckinPromptWidgetProps {
   hasCheckedInToday: boolean;
   todaysCheckin: SymptomCheckin | null;
-  coverage: CheckinCoverage | null;
   isDue: boolean;
   daysSinceLastCheckin: number | null;
   isLoading: boolean;
 }
 
-function CoverageLine({ coverage }: { coverage: CheckinCoverage }) {
-  if (coverage.covered < 2) return null;
-  return (
-    <p className="mt-3 text-sm text-sage-500">
-      {coverage.covered} of the last {coverage.window} days logged
-    </p>
-  );
-}
-
 export function CheckinPromptWidget({
   hasCheckedInToday,
   todaysCheckin,
-  coverage,
   isDue,
   daysSinceLastCheckin,
   isLoading,
@@ -57,7 +45,11 @@ export function CheckinPromptWidget({
                 <MRSScoreBadge total={todaysCheckin.total_score} compact showDot />
               )}
             </div>
-            {coverage && <CoverageLine coverage={coverage} />}
+            {isDue && (
+              <p className="mt-3 text-sm text-sage-500">
+                Your weekly check-in is ready whenever you are.
+              </p>
+            )}
           </div>
         </div>
       </Card>
@@ -66,25 +58,74 @@ export function CheckinPromptWidget({
 
   const isComeback = daysSinceLastCheckin !== null && daysSinceLastCheckin >= 7;
 
-  const bodyCopy = isComeback
-    ? 'Life happens. One check-in covering the past week catches your record right up — and you can backfill a missed day if you want.'
-    : daysSinceLastCheckin !== null && daysSinceLastCheckin > 0
-      ? `Your last check-in was ${daysSinceLastCheckin} day${daysSinceLastCheckin !== 1 ? 's' : ''} ago.`
-      : 'Take a moment to log how you feel today.';
-
   return (
     <Card variant="elevated">
       <div className="flex items-start gap-3">
         <Leaf className="h-6 w-6 shrink-0 text-sage-500" />
         <div className="flex-1">
           <h2 className="font-display text-lg text-sage-800">
-            {isComeback ? 'Welcome back' : isDue ? 'Time to check in' : 'How are you feeling?'}
+            {isComeback
+              ? 'Welcome back'
+              : isDue
+                ? 'Time for your weekly check-in'
+                : 'How are you feeling today?'}
           </h2>
-          <p className="mt-1 text-sm text-sage-500">{bodyCopy}</p>
-          <Link to="/checkin" className="mt-4 inline-block">
-            <Button>Check In Now</Button>
-          </Link>
-          {coverage && <CoverageLine coverage={coverage} />}
+
+          {isComeback ? (
+            <>
+              <p className="mt-1 text-sm text-sage-500">
+                Pick up right where you are — a 10-second pulse restarts your record today, and your
+                weekly check-in covers the past week whenever you're ready.
+              </p>
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <Link to="/checkin?mode=quick">
+                  <Button>Quick pulse (~10 sec)</Button>
+                </Link>
+                <Link
+                  to="/checkin?mode=full"
+                  className="text-sm text-sage-500 underline hover:text-sage-700"
+                >
+                  Do a full check-in instead
+                </Link>
+              </div>
+            </>
+          ) : isDue ? (
+            <>
+              <p className="mt-1 text-sm text-sage-500">
+                Your full check-in takes about two minutes and covers the past week.
+              </p>
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <Link to="/checkin?mode=full">
+                  <Button>Weekly check-in (~2 min)</Button>
+                </Link>
+                <Link
+                  to="/checkin?mode=quick"
+                  className="text-sm text-sage-500 underline hover:text-sage-700"
+                >
+                  Just a quick pulse today
+                </Link>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="mt-1 text-sm text-sage-500">
+                A 10-second pulse keeps your record alive today.
+              </p>
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <Link to="/checkin?mode=quick">
+                  <Button>Quick pulse (~10 sec)</Button>
+                </Link>
+                <Link
+                  to="/checkin?mode=full"
+                  className="text-sm text-sage-500 underline hover:text-sage-700"
+                >
+                  Do a full check-in instead
+                </Link>
+              </div>
+            </>
+          )}
+
+          {/* Presence is celebrated in summary cards; this widget only invites. */}
         </div>
       </div>
     </Card>

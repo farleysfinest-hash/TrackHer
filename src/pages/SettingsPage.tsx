@@ -9,11 +9,21 @@ import { MedicalDisclaimer } from '../components/ui/MedicalDisclaimer';
 import { ResetAccountModal } from '../components/settings/ResetAccountModal';
 import { useAuth } from '../hooks/useAuth';
 import { useProfile } from '../hooks/useProfile';
-import { MENOPAUSE_STAGES, CHECKIN_FREQUENCIES, APP_VERSION } from '../lib/constants';
+import { MENOPAUSE_STAGES, APP_VERSION } from '../lib/constants';
 import { PASSWORD_MIN_LENGTH } from '../lib/constants';
 import { validators, validateFields } from '../utils/validation';
 import { getLocalDateISO, getResolvedTimezone } from '../utils/checkinHelpers';
-import type { MenopauseStage, CheckinFrequency } from '../types/database';
+import type { MenopauseStage } from '../types/database';
+
+const DAY_OPTIONS: Array<{ label: string; value: number }> = [
+  { label: 'Mon', value: 1 },
+  { label: 'Tue', value: 2 },
+  { label: 'Wed', value: 3 },
+  { label: 'Thu', value: 4 },
+  { label: 'Fri', value: 5 },
+  { label: 'Sat', value: 6 },
+  { label: 'Sun', value: 0 },
+];
 
 export function SettingsPage() {
   const navigate = useNavigate();
@@ -24,7 +34,7 @@ export function SettingsPage() {
   const [menopauseStage, setMenopauseStage] = useState(profile?.menopause_stage ?? '');
   const [hasUterus, setHasUterus] = useState(profile?.has_uterus ?? true);
   const [dateOfBirth, setDateOfBirth] = useState(profile?.date_of_birth ?? '');
-  const [checkinFrequency, setCheckinFrequency] = useState(profile?.checkin_frequency ?? '');
+  const [checkinDay, setCheckinDay] = useState<number | null>(profile?.checkin_day ?? null);
   const [nextAppointmentDate, setNextAppointmentDate] = useState(
     profile?.next_appointment_date ?? '',
   );
@@ -49,7 +59,7 @@ export function SettingsPage() {
       setMenopauseStage(profile.menopause_stage ?? '');
       setHasUterus(profile.has_uterus ?? true);
       setDateOfBirth(profile.date_of_birth ?? '');
-      setCheckinFrequency(profile.checkin_frequency ?? '');
+      setCheckinDay(profile.checkin_day ?? null);
       setNextAppointmentDate(profile.next_appointment_date ?? '');
     }
   }, [profile]);
@@ -61,7 +71,10 @@ export function SettingsPage() {
       menopause_stage: (menopauseStage || undefined) as MenopauseStage | undefined,
       has_uterus: hasUterus,
       date_of_birth: dateOfBirth || undefined,
-      checkin_frequency: (checkinFrequency || undefined) as CheckinFrequency | undefined,
+      // Backward compatibility: this stays for recall-period labels.
+      checkin_frequency: 'weekly',
+      // Convention: 0 = Sunday ... 6 = Saturday (matches JS Date#getDay()).
+      checkin_day: checkinDay,
       next_appointment_date: nextAppointmentDate || null,
     });
     if (result.success) {
@@ -120,12 +133,21 @@ export function SettingsPage() {
             options={MENOPAUSE_STAGES.map((s) => ({ value: s.value, label: s.label }))}
           />
           <Select
-            label="Check-in Frequency"
-            value={checkinFrequency}
-            onChange={(e) => setCheckinFrequency(e.target.value)}
-            placeholder="Select frequency"
-            options={CHECKIN_FREQUENCIES.map((f) => ({ value: f.value, label: f.label }))}
+            label="Weekly check-in day"
+            value={String(checkinDay ?? '')}
+            onChange={(e) => {
+              const v = e.target.value;
+              setCheckinDay(v === '' ? null : Number(v));
+            }}
+            placeholder={checkinDay === null ? 'Pick a day (optional)' : 'Pick a day'}
+            options={DAY_OPTIONS.map((d) => ({ value: String(d.value), label: d.label }))}
           />
+          {checkinDay === null && (
+            <p className="text-xs text-sage-500">
+              If you don&apos;t pick a day, your weekly check-in will simply be ready whenever it&apos;s been
+              7+ days since your last full check-in.
+            </p>
+          )}
           <DateOfBirthInput
             label="Date of Birth"
             value={dateOfBirth}

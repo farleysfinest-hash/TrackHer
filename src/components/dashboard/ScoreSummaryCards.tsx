@@ -3,7 +3,6 @@ import { StatCard } from '../ui/StatCard';
 import { getMRSSeverityTier, hasMRSData } from '../../utils/checkinHelpers';
 import { MRS_SEVERITY_HEX, getWellbeingHex } from '../../utils/chartHelpers';
 import type { SymptomCheckin } from '../../types/database';
-import type { CheckinCoverage } from '../../hooks/useCheckinStatus';
 
 function addDaysISO(dateStr: string, delta: number): string {
   const [y, m, d] = dateStr.split('-').map(Number);
@@ -13,10 +12,9 @@ function addDaysISO(dateStr: string, delta: number): string {
 
 interface ScoreSummaryCardsProps {
   checkins: SymptomCheckin[];
-  coverage: CheckinCoverage | null;
 }
 
-export function ScoreSummaryCards({ checkins, coverage }: ScoreSummaryCardsProps) {
+export function ScoreSummaryCards({ checkins }: ScoreSummaryCardsProps) {
   const sorted = useMemo(
     () => [...checkins].sort((a, b) => b.checkin_date.localeCompare(a.checkin_date)),
     [checkins],
@@ -53,10 +51,12 @@ export function ScoreSummaryCards({ checkins, coverage }: ScoreSummaryCardsProps
   const wellbeingColor =
     latest?.overall_wellbeing != null ? getWellbeingHex(latest.overall_wellbeing) : undefined;
 
-  const coverageValue =
-    coverage && coverage.covered >= 2 ? `${coverage.covered}/${coverage.window}` : '—';
-  const coverageSubtext =
-    coverage && coverage.covered >= 2 ? `of last ${coverage.window} days` : undefined;
+  const todayStr = new Date().toISOString().split('T')[0];
+  const monthKey = todayStr.slice(0, 7);
+  const daysLoggedThisMonth = new Set(
+    sorted.filter((c) => c.checkin_date.slice(0, 7) === monthKey).map((c) => c.checkin_date),
+  ).size;
+  const monthCountValue = daysLoggedThisMonth >= 1 ? String(daysLoggedThisMonth) : '—';
 
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -85,7 +85,7 @@ export function ScoreSummaryCards({ checkins, coverage }: ScoreSummaryCardsProps
             : undefined
         }
       />
-      <StatCard label="Coverage" value={coverageValue} subtext={coverageSubtext} />
+      <StatCard label="Days logged" value={monthCountValue} subtext="days logged this month" />
     </div>
   );
 }

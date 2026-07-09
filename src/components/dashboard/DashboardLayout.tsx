@@ -102,7 +102,7 @@ export function DashboardLayout() {
 
           <DateRangeSelector />
 
-          <ScoreSummaryCards checkins={allCheckins} coverage={checkinStatus.coverage} />
+          <ScoreSummaryCards checkins={allCheckins} />
 
           <StrawStageCard />
 

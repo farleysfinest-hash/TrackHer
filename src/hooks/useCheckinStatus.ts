@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useCheckins } from './useCheckins';
 import { useAuthStore } from '../stores/authStore';
 import type { SymptomCheckin } from '../types/database';
-import { getLocalDateISO, getResolvedTimezone } from '../utils/checkinHelpers';
+import { getLocalDateISO, getResolvedTimezone, hasMRSData } from '../utils/checkinHelpers';
 
 function daysBetween(from: string, to: string): number {
   const a = new Date(from + 'T12:00:00');
@@ -14,35 +14,35 @@ function sameCalendarMonth(a: string, b: string): boolean {
   return a.slice(0, 7) === b.slice(0, 7);
 }
 
-export type CheckinCoverage = { covered: number; window: number };
+function uniqueDates(checkins: SymptomCheckin[]): string[] {
+  return [...new Set(checkins.map((c) => c.checkin_date))];
+}
 
 export function useCheckinStatus() {
-  const { getTodaysCheckin, getLastCheckin, getCoverage } = useCheckins();
+  const { checkins, getTodaysCheckin, getLastCheckin } = useCheckins();
   const userId = useAuthStore((s) => s.user?.id);
   const timezone = getResolvedTimezone(useAuthStore((s) => s.profile?.timezone));
-  const frequency = useAuthStore((s) => s.profile?.checkin_frequency ?? 'daily');
+  const checkinDay = useAuthStore((s) => s.profile?.checkin_day ?? null);
 
   const getTodaysCheckinRef = useRef(getTodaysCheckin);
   getTodaysCheckinRef.current = getTodaysCheckin;
   const getLastCheckinRef = useRef(getLastCheckin);
   getLastCheckinRef.current = getLastCheckin;
-  const getCoverageRef = useRef(getCoverage);
-  getCoverageRef.current = getCoverage;
 
   const [status, setStatus] = useState({
     hasCheckedInToday: false,
     todaysCheckin: null as SymptomCheckin | null,
-    coverage: null as CheckinCoverage | null,
     lastCheckinDate: null as string | null,
     isDue: true,
     daysSinceLastCheckin: null as number | null,
+    daysLoggedThisMonth: null as number | null,
+    totalDaysLogged: null as number | null,
   });
   const [isLoading, setIsLoading] = useState(true);
 
   const computeStatus = useCallback(
     async (
       today: SymptomCheckin | null,
-      coverage: CheckinCoverage | null,
       lastCheckin: SymptomCheckin | null,
       todayStr: string,
     ) => {
@@ -52,41 +52,54 @@ export function useCheckinStatus() {
         daysSinceLastCheckin = daysBetween(lastDate, todayStr);
       }
 
+      const lastFull = [...checkins]
+        .filter(hasMRSData)
+        .sort((a, b) => b.checkin_date.localeCompare(a.checkin_date))[0];
+      const hasRecentFull =
+        !!lastFull && daysBetween(lastFull.checkin_date, todayStr) < 7;
+
       let isDue = false;
-      if (today) {
+      if (today && hasMRSData(today)) {
+        // Full check-in today satisfies due-ness.
         isDue = false;
-      } else if (!lastCheckin) {
+      } else if (hasRecentFull) {
+        isDue = false;
+      } else if (checkinDay === null) {
+        // If user hasn't picked a day yet, weekly check-in is due as soon as it's been 7+ days.
         isDue = true;
-      } else if (frequency === 'daily') {
-        isDue = true;
-      } else if (frequency === 'weekly') {
-        isDue = daysBetween(lastCheckin.checkin_date, todayStr) >= 7;
       } else {
-        isDue = !sameCalendarMonth(lastCheckin.checkin_date, todayStr);
+        // Convention: 0 = Sunday ... 6 = Saturday (matches JS Date#getDay()).
+        const todayDow = new Date().getDay();
+        isDue = todayDow >= checkinDay;
       }
+
+      const allDates = uniqueDates(checkins);
+      const monthDates = allDates.filter((d) => sameCalendarMonth(d, todayStr));
+      const daysLoggedThisMonth = monthDates.length > 0 ? monthDates.length : null;
+      const totalDaysLogged = allDates.length > 0 ? allDates.length : null;
 
       return {
         hasCheckedInToday: !!today,
         todaysCheckin: today,
-        coverage,
         lastCheckinDate: lastDate,
         isDue,
         daysSinceLastCheckin,
+        daysLoggedThisMonth,
+        totalDaysLogged,
       };
     },
-    [frequency],
+    [checkins, checkinDay],
   );
 
   const refresh = useCallback(async () => {
     const todayStr = getLocalDateISO(timezone);
 
-    const [today, coverage, lastCheckin] = await Promise.all([
+    const [today, lastCheckin] = await Promise.all([
       getTodaysCheckinRef.current(),
-      getCoverageRef.current(),
       getLastCheckinRef.current(),
     ]);
 
-    setStatus(await computeStatus(today, coverage, lastCheckin, todayStr));
+    setStatus(await computeStatus(today, lastCheckin, todayStr));
     setIsLoading(false);
   }, [timezone, computeStatus]);
 
@@ -97,15 +110,14 @@ export function useCheckinStatus() {
       try {
         if (!userId) return;
         const todayStr = getLocalDateISO(timezone);
-        const [today, coverage, lastCheckin] = await Promise.all([
+        const [today, lastCheckin] = await Promise.all([
           getTodaysCheckinRef.current(),
-          getCoverageRef.current(),
           getLastCheckinRef.current(),
         ]);
 
         if (cancelled) return;
 
-        setStatus(await computeStatus(today, coverage, lastCheckin, todayStr));
+        setStatus(await computeStatus(today, lastCheckin, todayStr));
       } catch (err) {
         console.error('Failed to fetch checkin status:', err);
       } finally {
@@ -116,7 +128,7 @@ export function useCheckinStatus() {
     return () => {
       cancelled = true;
     };
-  }, [userId, timezone, frequency, computeStatus]);
+  }, [userId, timezone, computeStatus]);
 
   return { ...status, isLoading, refresh };
 }

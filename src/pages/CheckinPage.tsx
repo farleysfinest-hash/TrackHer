@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { useCheckinStatus } from '../hooks/useCheckinStatus';
 import { useCheckins } from '../hooks/useCheckins';
@@ -15,6 +15,7 @@ import { Input } from '../components/ui/Input';
 import { hasMRSData, getLocalDateISO, getResolvedTimezone } from '../utils/checkinHelpers';
 import { formatLoggingDate } from '../utils/formatters';
 import type { SymptomCheckin } from '../types/database';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 function addDaysISO(dateStr: string, delta: number): string {
   const [y, m, d] = dateStr.split('-').map(Number);
@@ -25,6 +26,8 @@ function addDaysISO(dateStr: string, delta: number): string {
 }
 
 export function CheckinPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const { hasCheckedInToday, todaysCheckin, refresh, isLoading } = useCheckinStatus();
   const { fetchCheckinDetail, getCheckinForDate } = useCheckins();
   const setMode = useCheckinStore((s) => s.setMode);
@@ -110,6 +113,18 @@ export function CheckinPage() {
     setBackdateValue('');
     void refresh();
   };
+
+  useEffect(() => {
+    if (activeFlow) return;
+    const params = new URLSearchParams(location.search);
+    const mode = params.get('mode');
+    if (mode !== 'quick' && mode !== 'full') return;
+
+    // Auto-start from dashboard prompt.
+    void startCheckin(mode);
+    navigate('/checkin', { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search, activeFlow]);
 
   if (activeFlow) {
     return <CheckinFlow onClose={() => setActiveFlow(false)} onComplete={handleFlowComplete} />;

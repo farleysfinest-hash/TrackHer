@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import type { CheckinFrequency } from '../types/database';
 import type {
   StagingSubStep,
   StagingAnswers,
@@ -29,7 +28,8 @@ export interface OnboardingFormData {
   dateOfBirth: string;
   hasUterus: boolean | null;
   lastPeriodDate: string;
-  checkinFrequency: CheckinFrequency | null;
+  /** Convention: 0 = Sunday ... 6 = Saturday (matches JS Date#getDay()). */
+  checkinDay: number | null;
   staging: StagingAnswers;
   stagingResult: StagingResult | null;
   selectedSymptoms: string[];
@@ -71,7 +71,7 @@ const initialFormData: OnboardingFormData = {
   dateOfBirth: '',
   hasUterus: null,
   lastPeriodDate: '',
-  checkinFrequency: 'weekly',
+  checkinDay: null,
   staging: initialStaging,
   stagingResult: null,
   selectedSymptoms: [],
@@ -285,7 +285,8 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
       display_name: formData.displayName,
       date_of_birth: formData.dateOfBirth || null,
       has_uterus: formData.hasUterus ?? true,
-      checkin_frequency: formData.checkinFrequency ?? null,
+      checkin_frequency: 'weekly' as const,
+      checkin_day: formData.checkinDay ?? null,
       onboarding_completed: true,
     };
 

@@ -100,6 +100,12 @@ export interface Profile {
   has_uterus: boolean;
   date_of_birth: string | null;
   checkin_frequency: CheckinFrequency | null;
+  /**
+   * Weekly check-in day.
+   * Convention: 0 = Sunday ... 6 = Saturday (matches JS Date#getDay()).
+   * NULL means "any day is fine" (no chosen day yet).
+   */
+  checkin_day: number | null;
   next_appointment_date: string | null;
   onboarding_completed: boolean;
   timezone: string;
@@ -355,6 +361,7 @@ export type Database = {
           date_of_birth?: string | null;
           last_period_date?: string | null;
           checkin_frequency?: CheckinFrequency | null;
+          checkin_day?: number | null;
           onboarding_completed?: boolean;
           timezone?: string;
         };
