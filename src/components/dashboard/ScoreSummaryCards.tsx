@@ -56,7 +56,7 @@ export function ScoreSummaryCards({ checkins, coverage }: ScoreSummaryCardsProps
   const coverageValue =
     coverage && coverage.covered >= 2 ? `${coverage.covered}/${coverage.window}` : '—';
   const coverageSubtext =
-    coverage && coverage.covered >= 2 ? 'of last days logged' : undefined;
+    coverage && coverage.covered >= 2 ? `of last ${coverage.window} days` : undefined;
 
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
