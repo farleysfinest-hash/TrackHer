@@ -60,13 +60,13 @@ function OverlayChartComponent({ data, changeMarkers }: OverlayChartProps) {
               <Tooltip content={<ChartTooltipContent />} />
               <Line
                 yAxisId="mrs"
-                type="monotone"
+                type="linear"
                 dataKey="mrsTotal"
                 stroke={CHART_COLORS.mrsTotal}
                 strokeWidth={2}
                 strokeDasharray="5 4"
                 dot={{ r: 4, fill: CHART_COLORS.mrsTotal, strokeWidth: 0 }}
-                connectNulls={false}
+                connectNulls
                 isAnimationActive={false}
               />
               <Line
