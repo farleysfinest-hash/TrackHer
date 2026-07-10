@@ -11,7 +11,7 @@ import {
   ReferenceLine,
 } from 'recharts';
 import { ChartCard } from '../ui/ChartCard';
-import { MRS_CORE_SYMPTOMS } from '../../data/symptoms';
+import { MRS_CORE_SYMPTOMS, getSymptomChipLabel } from '../../data/symptoms';
 import { DRILL_DOWN_COLORS, CHART_COLORS, formatChartDate } from '../../utils/chartHelpers';
 import { weeklySeriesProps } from '../../utils/chartStyle';
 import type { ChangeMarker } from '../../hooks/useChartData';
@@ -106,13 +106,13 @@ export function DrillDownControls({
                 type="button"
                 onClick={() => toggleSymptom(s.key)}
                 className={[
-                  'rounded-full px-2.5 py-1 text-xs font-medium transition-colors',
+                  'max-w-[9.5rem] rounded-2xl px-3 py-1.5 text-center text-xs font-medium leading-snug break-words transition-colors',
                   selectedSymptoms.includes(s.key)
                     ? 'bg-sage-500 text-white'
                     : 'border border-sand-200 text-sage-600 hover:bg-sage-50',
                 ].join(' ')}
               >
-                {s.label.length > 20 ? s.label.slice(0, 18) + '…' : s.label}
+                {getSymptomChipLabel(s)}
               </button>
             ))}
           </div>
@@ -125,7 +125,7 @@ export function DrillDownControls({
                 type="button"
                 onClick={() => toggleMed(m.id)}
                 className={[
-                  'rounded-full px-2.5 py-1 text-xs font-medium transition-colors',
+                  'max-w-[9.5rem] rounded-2xl px-3 py-1.5 text-center text-xs font-medium leading-snug break-words transition-colors',
                   selectedMeds.includes(m.id)
                     ? 'bg-sage-500 text-white'
                     : 'border border-sand-200 text-sage-600 hover:bg-sage-50',

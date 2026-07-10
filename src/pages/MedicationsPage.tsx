@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, ChevronDown, ChevronUp } from 'lucide-react';
 import { useMedications } from '../hooks/useMedications';
+import { useMedicationChanges } from '../hooks/useMedicationChanges';
 import { ActiveMedicationsList } from '../components/medications/ActiveMedicationsList';
 import { MedicationEntryWizard } from '../components/medications/MedicationEntryWizard';
 import { MedicationDetailModal } from '../components/medications/MedicationDetailModal';
@@ -13,6 +14,7 @@ import type { Medication } from '../types/database';
 
 export function MedicationsPage() {
   const { medications, isLoading, fetchMedications } = useMedications();
+  const { changes, fetchChanges } = useMedicationChanges();
   const [showWizard, setShowWizard] = useState(false);
   const [selectedMed, setSelectedMed] = useState<Medication | null>(null);
   const [discontinueMed, setDiscontinueMed] = useState<Medication | null>(null);
@@ -20,13 +22,23 @@ export function MedicationsPage() {
 
   useEffect(() => {
     void fetchMedications();
-  }, [fetchMedications]);
+    void fetchChanges();
+  }, [fetchMedications, fetchChanges]);
 
   const activeCount = medications.filter((m) => m.is_active).length;
 
+  const historySummary = useMemo(() => {
+    const medCount = medications.length;
+    const changeCount = changes.length;
+    const medLabel = `${medCount} medication${medCount === 1 ? '' : 's'}`;
+    const changeLabel = `${changeCount} change${changeCount === 1 ? '' : 's'}`;
+    return `${medLabel} · ${changeLabel}`;
+  }, [medications.length, changes.length]);
+
   const handleRefresh = useCallback(() => {
     void fetchMedications();
-  }, [fetchMedications]);
+    void fetchChanges();
+  }, [fetchMedications, fetchChanges]);
 
   return (
     <div className="space-y-10">
@@ -71,14 +83,23 @@ export function MedicationsPage() {
         <button
           type="button"
           onClick={() => setHistoryExpanded(!historyExpanded)}
-          className="flex w-full items-center justify-between text-left"
+          aria-expanded={historyExpanded}
+          className="flex w-full cursor-pointer items-center justify-between rounded-lg px-2 py-3 text-left transition-colors hover:bg-sage-50"
         >
-          <h2 className="font-display text-2xl text-sage-800">Medication History</h2>
-          {historyExpanded ? (
-            <ChevronUp className="h-5 w-5 text-sage-400" />
-          ) : (
-            <ChevronDown className="h-5 w-5 text-sage-400" />
-          )}
+          <div className="min-w-0 pr-4">
+            <h2 className="font-display text-2xl text-sage-800">Medication History</h2>
+            {!historyExpanded && (
+              <p className="mt-1 text-sm text-sage-500">{historySummary}</p>
+            )}
+          </div>
+          <div className="flex shrink-0 items-center gap-1.5 text-sm text-sage-500">
+            <span>{historyExpanded ? 'Hide history' : 'Show history'}</span>
+            {historyExpanded ? (
+              <ChevronUp className="h-5 w-5" aria-hidden />
+            ) : (
+              <ChevronDown className="h-5 w-5" aria-hidden />
+            )}
+          </div>
         </button>
         <div className="mt-4">
           <MedicationHistory isExpanded={historyExpanded} />

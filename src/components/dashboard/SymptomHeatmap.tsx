@@ -1,11 +1,20 @@
 import { Fragment, memo } from 'react';
 import { HEATMAP_COLORS } from '../../utils/chartHelpers';
+import { getSymptomByKey } from '../../data/symptoms';
 import type { HeatmapRow } from '../../hooks/useChartData';
 import { ChartCard } from '../ui/ChartCard';
 import { SEVERITY_LABELS } from '../../utils/checkinHelpers';
 
+const LABEL_COLUMN_WIDTH = '168px';
+
 interface SymptomHeatmapProps {
   rows: HeatmapRow[];
+}
+
+function heatmapDisplayLabel(symptomKey: string, fallbackLabel: string): string {
+  const symptom = getSymptomByKey(symptomKey);
+  if (symptom?.shortLabel) return symptom.shortLabel;
+  return fallbackLabel;
 }
 
 function SymptomHeatmapComponent({ rows }: SymptomHeatmapProps) {
@@ -26,7 +35,7 @@ function SymptomHeatmapComponent({ rows }: SymptomHeatmapProps) {
             <div
               className="grid gap-px"
               style={{
-                gridTemplateColumns: `140px repeat(${dates.length}, minmax(36px, 1fr))`,
+                gridTemplateColumns: `${LABEL_COLUMN_WIDTH} repeat(${dates.length}, minmax(32px, 1fr))`,
               }}
             >
               <div className="sticky left-0 z-10 bg-white p-2 text-xs font-medium text-sage-500">
@@ -41,35 +50,43 @@ function SymptomHeatmapComponent({ rows }: SymptomHeatmapProps) {
                 </div>
               ))}
 
-              {rows.map((row) => (
-                <Fragment key={row.symptomKey}>
-                  <div
-                    className="sticky left-0 z-10 truncate bg-white p-2 text-xs text-sage-700"
-                    title={row.label}
-                  >
-                    {row.label.length > 18 ? row.label.slice(0, 16) + '…' : row.label}
-                  </div>
-                  {row.cells.map((cell) => {
-                    const bg =
-                      cell.score === null
-                        ? '#f5ebef'
-                        : HEATMAP_COLORS[cell.score as 0 | 1 | 2 | 3 | 4] ?? '#f5ebef';
-                    const tip = `${row.label} · ${cell.dateLabel}: ${
-                      cell.score === null ? 'Not rated' : SEVERITY_LABELS[cell.score]
-                    }`;
-                    return (
-                      <div
-                        key={`${row.symptomKey}-${cell.date}`}
-                        className="flex h-8 min-w-[36px] items-center justify-center rounded-sm text-[10px] text-sage-600"
-                        style={{ backgroundColor: bg }}
-                        title={tip}
-                      >
-                        {cell.score === null ? '—' : cell.score}
-                      </div>
-                    );
-                  })}
-                </Fragment>
-              ))}
+              {rows.map((row) => {
+                const symptom = getSymptomByKey(row.symptomKey);
+                const displayLabel = heatmapDisplayLabel(row.symptomKey, row.label);
+                const allowWrap = !symptom?.shortLabel;
+
+                return (
+                  <Fragment key={row.symptomKey}>
+                    <div
+                      className={[
+                        'sticky left-0 z-10 flex min-h-8 items-center bg-white p-2 text-xs leading-snug text-sage-700',
+                        allowWrap ? 'break-words' : '',
+                      ].join(' ')}
+                    >
+                      <span className={allowWrap ? 'line-clamp-2' : ''}>{displayLabel}</span>
+                    </div>
+                    {row.cells.map((cell) => {
+                      const bg =
+                        cell.score === null
+                          ? '#f5ebef'
+                          : HEATMAP_COLORS[cell.score as 0 | 1 | 2 | 3 | 4] ?? '#f5ebef';
+                      const tip = `${row.label} · ${cell.dateLabel}: ${
+                        cell.score === null ? 'Not rated' : SEVERITY_LABELS[cell.score]
+                      }`;
+                      return (
+                        <div
+                          key={`${row.symptomKey}-${cell.date}`}
+                          className="flex h-8 min-w-[32px] items-center justify-center rounded-sm text-[10px] text-sage-600"
+                          style={{ backgroundColor: bg }}
+                          title={tip}
+                        >
+                          {cell.score === null ? '—' : cell.score}
+                        </div>
+                      );
+                    })}
+                  </Fragment>
+                );
+              })}
             </div>
           </div>
         </div>
