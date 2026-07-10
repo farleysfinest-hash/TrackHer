@@ -3,18 +3,25 @@ import {
   ResponsiveContainer,
   ComposedChart,
   ReferenceArea,
-  Line,
+  Scatter,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
 } from 'recharts';
+import type { ScatterPointItem } from 'recharts';
 import { ChartCard } from '../ui/ChartCard';
 import { LabTooltipContent } from './ChartTooltipContent';
 import { LabTrendSelector } from './LabTrendSelector';
 import { CHART_COLORS, formatChartDate, formatChartDateLong } from '../../utils/chartHelpers';
 import { getBiomarkerByKey } from '../../data/labRanges';
 import { getTrendDirection } from '../../utils/labHelpers';
+import {
+  computeLabYDomain,
+  formatLabChartValue,
+  referenceEdgeArea,
+  resolveReferenceBands,
+} from '../../utils/labChartHelpers';
 import type { LabTrendPoint } from '../../hooks/useChartData';
 import type { LabResult } from '../../types/database';
 
@@ -24,6 +31,11 @@ interface LabTrendChartProps {
   labResults: LabResult[];
   onBiomarkerChange: (key: string) => void;
 }
+
+const LAB_DOT_FILL = CHART_COLORS.mrsTotalDot;
+const LAB_DOT_STROKE = '#ffffff';
+const LAB_DOT_RADIUS = 6;
+const LAB_VALUE_COLOR = CHART_COLORS.mrsTotal;
 
 function formatDateSpan(start: string, end: string): string {
   const days = Math.round(
@@ -39,7 +51,7 @@ function buildTrendSummary(data: LabTrendPoint[], unit: string) {
   if (data.length === 1) {
     const point = data[0];
     return {
-      headline: `${point.value} ${unit}`,
+      headline: `${formatLabChartValue(point.value)} ${unit}`,
       detail: `${formatChartDateLong(point.date)} · Add another draw to compare trend`,
       tone: 'neutral' as const,
     };
@@ -55,20 +67,49 @@ function buildTrendSummary(data: LabTrendPoint[], unit: string) {
 
   if (direction === 'flat' || diff === 0) {
     return {
-      headline: `→ No change · ${last.value} ${unit}`,
+      headline: `→ No change · ${formatLabChartValue(last.value)} ${unit}`,
       detail: `${formatChartDate(first.date)} – ${formatChartDate(last.date)} (${span})`,
       tone: 'neutral' as const,
     };
   }
 
   const arrow = direction === 'up' ? '↑' : '↓';
-  const signedDiff = diff > 0 ? `+${diff}` : `${diff}`;
+  const signedDiff =
+    diff > 0 ? `+${formatLabChartValue(diff)}` : formatLabChartValue(diff);
 
   return {
     headline: `${arrow} ${signedDiff} ${unit}`,
-    detail: `${first.value} → ${last.value} over ${span} (${formatChartDate(first.date)} – ${formatChartDate(last.date)})`,
+    detail: `${formatLabChartValue(first.value)} → ${formatLabChartValue(last.value)} over ${span} (${formatChartDate(first.date)} – ${formatChartDate(last.date)})`,
     tone: direction === 'up' ? ('up' as const) : ('down' as const),
   };
+}
+
+function LabDrawDot(props: ScatterPointItem) {
+  const { cx, cy, payload } = props;
+  if (cx == null || cy == null || !payload) return null;
+  const value = (payload as LabTrendPoint).value;
+  return (
+    <g>
+      <circle
+        cx={cx}
+        cy={cy}
+        r={LAB_DOT_RADIUS}
+        fill={LAB_DOT_FILL}
+        stroke={LAB_DOT_STROKE}
+        strokeWidth={2}
+      />
+      <text
+        x={cx}
+        y={cy - LAB_DOT_RADIUS - 6}
+        textAnchor="middle"
+        fontSize={11}
+        fontWeight={600}
+        fill={LAB_VALUE_COLOR}
+      >
+        {formatLabChartValue(value)}
+      </text>
+    </g>
+  );
 }
 
 function LabTrendChartComponent({
@@ -82,18 +123,18 @@ function LabTrendChartComponent({
   const isEmpty = data.length === 0;
 
   const yDomain = useMemo(() => {
-    if (data.length === 0) return [0, 100] as [number, number];
-    const values = data.map((d) => d.value);
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-    const optMin = biomarker?.optimalRange?.min ?? min;
-    const optMax = biomarker?.optimalRange?.max ?? max;
-    const convMin = biomarker?.conventionalRange?.min ?? optMin;
-    const convMax = biomarker?.conventionalRange?.max ?? optMax;
-    const low = Math.min(min, convMin, optMin) * 0.9;
-    const high = Math.max(max, convMax, optMax) * 1.1;
-    return [Math.floor(low), Math.ceil(high)] as [number, number];
-  }, [data, biomarker]);
+    const domain = computeLabYDomain(data.map((d) => d.value));
+    return [domain.min, domain.max] as [number, number];
+  }, [data]);
+
+  const referenceContext = useMemo(() => {
+    if (!biomarker) return { bands: [], edges: [] };
+    const domain = { min: yDomain[0], max: yDomain[1] };
+    return resolveReferenceBands(biomarker, domain, {
+      conventional: CHART_COLORS.conventionalBand,
+      optimal: CHART_COLORS.optimalBand,
+    });
+  }, [biomarker, yDomain]);
 
   const trendSummary = biomarker ? buildTrendSummary(data, biomarker.unit) : null;
 
@@ -145,50 +186,59 @@ function LabTrendChartComponent({
           </div>
 
           <ResponsiveContainer width="100%" height={250}>
-            <ComposedChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-              {biomarker.optimalRange && (
+            <ComposedChart data={data} margin={{ top: 20, right: 12, left: 0, bottom: 0 }}>
+              {referenceContext.bands.map((band) => (
                 <ReferenceArea
-                  y1={biomarker.optimalRange.min}
-                  y2={biomarker.optimalRange.max}
-                  fill={CHART_COLORS.optimalBand}
-                  fillOpacity={0.12}
+                  key={band.label}
+                  y1={band.y1}
+                  y2={band.y2}
+                  fill={band.fill}
+                  fillOpacity={band.fillOpacity}
+                  label={{
+                    value: band.label,
+                    position: 'insideTopLeft',
+                    fontSize: 10,
+                    fill: CHART_COLORS.axisText,
+                  }}
                 />
-              )}
-              {biomarker.conventionalRange &&
-                (biomarker.conventionalRange.min !== biomarker.optimalRange?.min ||
-                  biomarker.conventionalRange.max !== biomarker.optimalRange?.max) && (
+              ))}
+              {referenceContext.edges.map((edge) => {
+                const area = referenceEdgeArea(edge.edge, { min: yDomain[0], max: yDomain[1] });
+                return (
                   <ReferenceArea
-                    y1={biomarker.conventionalRange.min}
-                    y2={biomarker.conventionalRange.max}
-                    fill={CHART_COLORS.conventionalBand}
-                    fillOpacity={0.08}
+                    key={edge.label}
+                    y1={area.y1}
+                    y2={area.y2}
+                    fill={edge.fill}
+                    fillOpacity={0.22}
+                    label={{
+                      value: edge.label,
+                      position: edge.edge === 'top' ? 'insideTopRight' : 'insideBottomRight',
+                      fontSize: 10,
+                      fill: CHART_COLORS.axisText,
+                    }}
                   />
-                )}
+                );
+              })}
               <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
               <XAxis dataKey="dateLabel" tick={{ fontSize: 11, fill: CHART_COLORS.axisText }} />
               <YAxis
                 domain={yDomain}
                 tick={{ fontSize: 11, fill: CHART_COLORS.axisText }}
-                width={40}
+                width={44}
+                tickFormatter={(v) => formatLabChartValue(Number(v))}
               />
               <Tooltip
                 content={
                   <LabTooltipContent biomarkerLabel={biomarker.label} unit={biomarker.unit} />
                 }
               />
-              <Line
-                type="monotone"
+              <Scatter
+                data={data}
                 dataKey="value"
-                stroke="transparent"
-                strokeWidth={0}
-                dot={{
-                  r: 6,
-                  fill: CHART_COLORS.mrsTotal,
-                  stroke: 'white',
-                  strokeWidth: 2,
-                }}
-                activeDot={{ r: 7, stroke: CHART_COLORS.mrsTotal, strokeWidth: 2 }}
+                fill={LAB_DOT_FILL}
                 isAnimationActive={false}
+                shape={LabDrawDot}
               />
             </ComposedChart>
           </ResponsiveContainer>
