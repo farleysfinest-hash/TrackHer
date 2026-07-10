@@ -7,20 +7,39 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ReferenceLine,
 } from 'recharts';
 import { ChartCard } from '../ui/ChartCard';
 import { ChartTooltipContent } from './ChartTooltipContent';
+import { MedicationLane } from './MedicationLane';
 import { CHART_COLORS } from '../../utils/chartHelpers';
 import { dailySeriesProps, rollingAverageCentered3, weeklySeriesProps } from '../../utils/chartStyle';
-import type { SymptomTrendPoint, ChangeMarker } from '../../hooks/useChartData';
+import {
+  buildMedicationLaneRows,
+  changeMarkerPercents,
+  CHART_MARGIN_LEFT,
+  CHART_MARGIN_RIGHT,
+} from '../../utils/medicationLaneHelpers';
+import type { SymptomTrendPoint } from '../../hooks/useChartData';
+import type { Medication, MedicationChange } from '../../types/database';
+
+const CHART_HEIGHT = 300;
+const LANE_ROW_HEIGHT = 40;
 
 interface OverlayChartProps {
   data: SymptomTrendPoint[];
-  changeMarkers: ChangeMarker[];
+  medications: Medication[];
+  medicationChanges: MedicationChange[];
+  windowStart: string;
+  windowEnd: string;
 }
 
-function OverlayChartComponent({ data, changeMarkers }: OverlayChartProps) {
+function OverlayChartComponent({
+  data,
+  medications,
+  medicationChanges,
+  windowStart,
+  windowEnd,
+}: OverlayChartProps) {
   const isEmpty = data.length < 2;
 
   const chartData = useMemo(() => {
@@ -32,8 +51,30 @@ function OverlayChartComponent({ data, changeMarkers }: OverlayChartProps) {
     }));
   }, [data]);
 
+  const domainDates = useMemo(() => chartData.map((d) => d.date), [chartData]);
+
+  const laneRows = useMemo(
+    () =>
+      buildMedicationLaneRows(
+        medications,
+        medicationChanges,
+        domainDates,
+        windowStart,
+        windowEnd,
+      ),
+    [medications, medicationChanges, domainDates, windowStart, windowEnd],
+  );
+
+  const markerLines = useMemo(
+    () => changeMarkerPercents(medicationChanges, domainDates, windowStart, windowEnd),
+    [medicationChanges, domainDates, windowStart, windowEnd],
+  );
+
   const mrsStyle = weeklySeriesProps(CHART_COLORS.mrsTotal, CHART_COLORS.mrsTotalDot);
   const energyStyle = dailySeriesProps(CHART_COLORS.wellbeing);
+
+  const laneHeight = laneRows.length > 0 ? laneRows.length * LANE_ROW_HEIGHT + 12 : 0;
+  const ruleHeight = CHART_HEIGHT + laneHeight;
 
   return (
     <ChartCard
@@ -51,53 +92,75 @@ function OverlayChartComponent({ data, changeMarkers }: OverlayChartProps) {
     >
       {!isEmpty && (
         <>
-          <ResponsiveContainer width="100%" height={300}>
-            <ComposedChart data={chartData} margin={{ top: 24, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
-              <XAxis dataKey="dateLabel" tick={{ fontSize: 11, fill: CHART_COLORS.axisText }} />
-              <YAxis
-                yAxisId="mrs"
-                domain={[0, 44]}
-                tick={{ fontSize: 11, fill: CHART_COLORS.axisText }}
-                width={36}
-              />
-              <YAxis
-                yAxisId="wellbeing"
-                orientation="right"
-                domain={[1, 5]}
-                tick={{ fontSize: 11, fill: CHART_COLORS.axisText }}
-                width={28}
-              />
-              <Tooltip content={<ChartTooltipContent />} />
-              <Line
-                yAxisId="mrs"
-                dataKey="mrsTotal"
-                stroke={CHART_COLORS.mrsTotal}
-                {...mrsStyle}
-              />
-              <Line
-                yAxisId="wellbeing"
-                dataKey="wellbeingSmoothed"
-                stroke={CHART_COLORS.wellbeing}
-                {...energyStyle}
-              />
-              {changeMarkers.map((marker) => (
-                <ReferenceLine
-                  key={marker.id}
+          <div className="relative">
+            <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+              <ComposedChart
+                data={chartData}
+                margin={{ top: 24, right: CHART_MARGIN_RIGHT, left: CHART_MARGIN_LEFT, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
+                <XAxis dataKey="dateLabel" tick={{ fontSize: 11, fill: CHART_COLORS.axisText }} />
+                <YAxis
                   yAxisId="mrs"
-                  x={marker.dateLabel}
-                  stroke={CHART_COLORS.changeLine}
-                  strokeDasharray="4 4"
-                  label={{
-                    value: marker.label,
-                    position: 'top',
-                    fontSize: 10,
-                    fill: CHART_COLORS.axisText,
+                  domain={[0, 44]}
+                  tick={{ fontSize: 11, fill: CHART_COLORS.axisText }}
+                  width={CHART_MARGIN_LEFT}
+                />
+                <YAxis
+                  yAxisId="wellbeing"
+                  orientation="right"
+                  domain={[1, 5]}
+                  tick={{ fontSize: 11, fill: CHART_COLORS.axisText }}
+                  width={CHART_MARGIN_RIGHT}
+                />
+                <Tooltip content={<ChartTooltipContent />} />
+                <Line
+                  yAxisId="mrs"
+                  dataKey="mrsTotal"
+                  stroke={CHART_COLORS.mrsTotal}
+                  {...mrsStyle}
+                />
+                <Line
+                  yAxisId="wellbeing"
+                  dataKey="wellbeingSmoothed"
+                  stroke={CHART_COLORS.wellbeing}
+                  {...energyStyle}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+
+            <div
+              className="pointer-events-none absolute top-0"
+              style={{
+                left: CHART_MARGIN_LEFT,
+                right: CHART_MARGIN_RIGHT,
+                height: ruleHeight,
+              }}
+              aria-hidden
+            >
+              {markerLines.map((marker) => (
+                <div
+                  key={marker.id}
+                  className="absolute top-0 border-l border-dashed"
+                  style={{
+                    left: `${marker.leftPercent}%`,
+                    height: ruleHeight,
+                    borderColor: CHART_COLORS.changeLine,
                   }}
                 />
               ))}
-            </ComposedChart>
-          </ResponsiveContainer>
+            </div>
+
+            <div
+              className="px-0"
+              style={{
+                marginLeft: CHART_MARGIN_LEFT,
+                marginRight: CHART_MARGIN_RIGHT,
+              }}
+            >
+              <MedicationLane rows={laneRows} />
+            </div>
+          </div>
 
           <div className="mt-2 flex flex-wrap justify-center gap-x-6 gap-y-1 text-xs text-sage-600">
             <div className="flex items-center gap-2">

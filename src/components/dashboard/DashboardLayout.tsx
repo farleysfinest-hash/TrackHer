@@ -45,6 +45,7 @@ export function DashboardLayout() {
     checkins,
     allCheckins,
     medications,
+    changes,
     labResults,
     allLabResults,
     refreshAll,
@@ -134,7 +135,13 @@ export function DashboardLayout() {
 
           <DashboardInsightsPanel insights={insights} onDismiss={dismissInsight} />
 
-          <OverlayChart data={symptomTrend} changeMarkers={changeMarkers} />
+          <OverlayChart
+            data={symptomTrend}
+            medications={medications}
+            medicationChanges={changes}
+            windowStart={dateRange.start}
+            windowEnd={dateRange.end}
+          />
 
           <PersonalSymptomTrends checkins={checkins} extendedLogs={extendedSymptoms} />
 
