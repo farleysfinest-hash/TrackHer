@@ -10,10 +10,10 @@ import {
   hasMRSData,
   type MRSSeverityBandInfo,
   MRS_TOTAL_MAX,
-  formatDailyChannels,
   SEVERITY_LABELS,
   getResolvedTimezone,
 } from '../../utils/checkinHelpers';
+import { DailyChannelsDisplay } from '../ui/DailyChannelsDisplay';
 import {
   formatMrsDeltaLine,
   formatMrsHeadline,
@@ -136,9 +136,9 @@ export function CheckinReadout({
         <div className="space-y-4 rounded-xl border border-sand-200 bg-white p-4">
           <Card variant="outlined" padding="sm">
             <p className="text-sm text-sage-500">Daily pulse</p>
-            <p className="mt-1 font-medium text-sage-800">
-              {formatDailyChannels(previewCheckin as SymptomCheckin)}
-            </p>
+            <div className="mt-2">
+              <DailyChannelsDisplay checkin={previewCheckin} />
+            </div>
           </Card>
           <Card variant="outlined" padding="sm">
             <InstrumentScoreBadge instrument={instrument} score={instrumentScore} />

@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { useQuickLogStore } from '../../stores/quickLogStore';
 import { useSymptomSelections, seedDevSymptomSelectionsIfEmpty } from '../../hooks/useSymptomSelections';
-import { getSymptomByKey } from '../../data/symptoms';
+import { getSymptomByKey, getSymptomChipLabel } from '../../data/symptoms';
 import type { SymptomBodySystem } from '../../types/symptoms';
 import { QuickLogSheet } from './QuickLogSheet';
 import { RecentLogs } from './RecentLogs';
@@ -60,7 +60,7 @@ export function QuickLogWidget() {
               className="inline-flex items-center gap-2 rounded-full border border-sage-200 bg-sage-50 px-4 py-2.5 text-sm font-medium text-sage-700 transition-colors hover:border-sage-400 hover:bg-sage-100 active:scale-[0.98]"
             >
               <SymptomIcon bodySystem={def.bodySystem} />
-              {def.label}
+              {getSymptomChipLabel(def)}
             </button>
           );
         })}

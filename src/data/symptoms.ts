@@ -22,6 +22,7 @@ const RAW_SYMPTOM_CATALOG: RawSymptom[] = [
   {
     key: 'hot_flashes',
     label: 'Hot flashes / night sweats',
+    shortLabel: 'Hot flashes',
     description:
       'Sudden feeling of warmth, flushing, sweating — especially in the face, neck, and chest. Night sweats that disrupt sleep.',
     category: 'body',
@@ -33,6 +34,7 @@ const RAW_SYMPTOM_CATALOG: RawSymptom[] = [
   {
     key: 'heart_discomfort',
     label: 'Heart discomfort / palpitations',
+    shortLabel: 'Heart discomfort',
     description:
       'Unusual awareness of heartbeat, racing heart, skipped beats, or chest tightness.',
     category: 'body',
@@ -99,6 +101,7 @@ const RAW_SYMPTOM_CATALOG: RawSymptom[] = [
   {
     key: 'sexual_problems',
     label: 'Sexual problems / low libido',
+    shortLabel: 'Sexual problems',
     description:
       'Decreased sexual desire, difficulty with arousal or orgasm, changes in sexual enjoyment.',
     category: 'sexual_pelvic',
@@ -1238,6 +1241,12 @@ export function getExtendedByCategory(category: SymptomCategory): SymptomDefinit
 
 export function getSymptomByKey(key: string): SymptomDefinition | undefined {
   return SYMPTOM_CATALOG.find((s) => s.key === key);
+}
+
+/** Chip/tap label — uses shortLabel when set to avoid visual collision in quick-log contexts. */
+export function getSymptomChipLabel(symptom: SymptomDefinition | undefined): string {
+  if (!symptom) return '';
+  return symptom.shortLabel ?? symptom.label;
 }
 
 export function searchSymptomCatalog(query: string, limit = 20): SymptomDefinition[] {

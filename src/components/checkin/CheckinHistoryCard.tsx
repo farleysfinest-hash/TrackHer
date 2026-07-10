@@ -1,7 +1,8 @@
 import { memo } from 'react';
 import type { SymptomCheckin } from '../../types/database';
 import { formatDateLong } from '../../utils/formatters';
-import { getTopConcerns, hasMRSData, MRS_CANONICAL_KEYS, formatDailyChannels, type MRSScoresMap, type MRSSymptomKey } from '../../utils/checkinHelpers';
+import { getTopConcerns, hasMRSData, MRS_CANONICAL_KEYS, type MRSScoresMap, type MRSSymptomKey } from '../../utils/checkinHelpers';
+import { DailyChannelsDisplay } from '../ui/DailyChannelsDisplay';
 import { MRSScoreBadge } from './MRSScoreBadge';
 import { Button } from '../ui/Button';
 
@@ -43,7 +44,7 @@ function CheckinHistoryCardComponent({ checkin, onViewDetails }: CheckinHistoryC
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-end text-right">
-          <p className="text-xs text-sage-500">{formatDailyChannels(checkin)}</p>
+          <DailyChannelsDisplay checkin={checkin} compact />
         </div>
       </div>
 

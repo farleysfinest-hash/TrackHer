@@ -12,7 +12,8 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
-import { hasMRSData, getLocalDateISO, getResolvedTimezone, formatDailyChannels } from '../utils/checkinHelpers';
+import { hasMRSData, getLocalDateISO, getResolvedTimezone } from '../utils/checkinHelpers';
+import { DailyChannelsDisplay } from '../components/ui/DailyChannelsDisplay';
 import { formatLoggingDate } from '../utils/formatters';
 import type { SymptomCheckin } from '../types/database';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -149,8 +150,8 @@ export function CheckinPage() {
                 <h2 className="font-display text-lg text-sage-800">
                   {todaysIsPulse ? 'Pulse logged today' : "You've already checked in today"}
                 </h2>
-                <div className="mt-2 flex flex-wrap gap-4 text-sm">
-                  <span className="text-sage-600">{formatDailyChannels(todaysCheckin)}</span>
+                <div className="mt-2 flex flex-wrap items-center gap-4 text-sm">
+                  <DailyChannelsDisplay checkin={todaysCheckin} />
                   {hasMRSData(todaysCheckin) && (
                     <MRSScoreBadge total={todaysCheckin.total_score} compact showDot />
                   )}

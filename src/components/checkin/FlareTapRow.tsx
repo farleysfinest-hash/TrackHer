@@ -3,7 +3,7 @@ import { useCheckinStore } from '../../stores/checkinStore';
 import { useSymptomSelections } from '../../hooks/useSymptomSelections';
 import { useQuickLog } from '../../hooks/useQuickLog';
 import { useAuthStore } from '../../stores/authStore';
-import { getSymptomByKey } from '../../data/symptoms';
+import { getSymptomByKey, getSymptomChipLabel } from '../../data/symptoms';
 import { getLocalDateISO, getResolvedTimezone } from '../../utils/checkinHelpers';
 
 export function FlareTapRow() {
@@ -52,7 +52,7 @@ export function FlareTapRow() {
               ].join(' ')}
               aria-pressed={isSelected}
             >
-              {def.label}
+              {getSymptomChipLabel(def)}
             </button>
           );
         })}

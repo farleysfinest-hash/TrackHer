@@ -6,7 +6,7 @@ import { useQuickLog } from '../../hooks/useQuickLog';
 import { useSymptomSelections } from '../../hooks/useSymptomSelections';
 import { useToast } from '../../stores/toastStore';
 import { buildQuickLogEcho } from '../../utils/echoHelpers';
-import { getSymptomByKey, searchSymptomCatalog } from '../../data/symptoms';
+import { getSymptomByKey, getSymptomChipLabel, searchSymptomCatalog } from '../../data/symptoms';
 import { SYMPTOM_BODY_SYSTEM_LABELS } from '../../types/symptoms';
 import type { QuickLogTriggerTag } from '../../types/database';
 import { Button } from '../ui/Button';
@@ -222,7 +222,7 @@ export function QuickLogSheet() {
                           : 'border-sage-200 bg-sage-50 text-sage-700 hover:border-sage-400',
                       ].join(' ')}
                     >
-                      {def.label}
+                      {getSymptomChipLabel(def)}
                     </button>
                   );
                 })}

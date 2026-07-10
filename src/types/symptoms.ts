@@ -35,6 +35,8 @@ export const SYMPTOM_BODY_SYSTEM_LABELS: Record<SymptomBodySystem, string> = {
 export interface SymptomDefinition {
   key: string;
   label: string;
+  /** Compact label for chip/tap contexts when full label would collide with another watched symptom. */
+  shortLabel?: string;
   description?: string;
   category: SymptomCategory;
   bodySystem: SymptomBodySystem;

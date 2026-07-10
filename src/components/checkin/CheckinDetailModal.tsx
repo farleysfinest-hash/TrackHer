@@ -7,7 +7,8 @@ import { Button } from '../ui/Button';
 import { MRSScoreBadge } from './MRSScoreBadge';
 import { getSymptomByKey, MRS_CANONICAL_SYMPTOMS } from '../../data/symptoms';
 import { formatDateLong } from '../../utils/formatters';
-import { CATEGORY_LABELS, SEVERITY_LABELS, hasMRSData, formatDailyChannels } from '../../utils/checkinHelpers';
+import { CATEGORY_LABELS, SEVERITY_LABELS, hasMRSData } from '../../utils/checkinHelpers';
+import { DailyChannelsDisplay } from '../ui/DailyChannelsDisplay';
 import type { MRSSymptomKey } from '../../utils/checkinHelpers';
 
 interface CheckinDetailModalProps {
@@ -78,9 +79,9 @@ export function CheckinDetailModal({
                   </span>
                 )}
               </p>
-              <p className="mt-1 text-lg font-medium text-sage-800">
-                {formatDailyChannels(checkin)}
-              </p>
+              <div className="mt-1">
+                <DailyChannelsDisplay checkin={checkin} />
+              </div>
             </div>
             {hasMRSData(checkin) ? (
               <MRSScoreBadge

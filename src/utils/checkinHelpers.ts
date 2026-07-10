@@ -274,7 +274,7 @@ export function getDailySignal(checkin: SymptomCheckin): number | null {
   return null;
 }
 
-function hasNewDailyChannels(checkin: SymptomCheckin): boolean {
+export function hasNewDailyChannels(checkin: SymptomCheckin): boolean {
   return (
     checkin.energy_level !== null ||
     checkin.mood_level !== null ||

@@ -9,8 +9,8 @@ import {
   SEVERITY_LABELS,
   INITIAL_MRS_SCORES,
   getMRSSeverityBand,
-  formatDailyChannels,
 } from '../../utils/checkinHelpers';
+import { DailyChannelsDisplay } from '../ui/DailyChannelsDisplay';
 import type { SymptomCheckin } from '../../types/database';
 import { useAuthStore } from '../../stores/authStore';
 import { formatDateLong, formatLoggingDate } from '../../utils/formatters';
@@ -26,11 +26,6 @@ import type { MRSScore } from '../../types/database';
 interface CheckinSummaryProps {
   onBack: () => void;
   onSuccess: () => void;
-}
-
-function formatChannelValue(value: number | null, max?: number): string {
-  if (value === null) return 'Skipped';
-  return max ? `${value}/${max}` : String(value);
 }
 
 export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
@@ -160,13 +155,8 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
 
       <Card>
         <p className="text-sm text-sage-500">Daily pulse</p>
-        <p className="mt-1 text-lg font-medium text-sage-800">
-          {formatDailyChannels(previewCheckin as SymptomCheckin)}
-        </p>
-        <div className="mt-2 space-y-1 text-sm text-sage-600">
-          <p>Energy: {formatChannelValue(energyLevel)}</p>
-          <p>Mood: {formatChannelValue(moodLevel)}</p>
-          <p>Sleep: {formatChannelValue(sleepQuality, 5)}</p>
+        <div className="mt-2">
+          <DailyChannelsDisplay checkin={previewCheckin} />
         </div>
       </Card>
 

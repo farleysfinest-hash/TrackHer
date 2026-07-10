@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useQuickLog } from '../../hooks/useQuickLog';
-import { getSymptomByKey } from '../../data/symptoms';
+import { getSymptomByKey, getSymptomChipLabel } from '../../data/symptoms';
 import { formatRelativeTime, capitalize } from '../../utils/formatters';
 
 function severityColor(severity: number): string {
@@ -47,7 +47,7 @@ export function RecentLogs() {
                   />
                 )}
                 <span className="flex-1 truncate text-sage-800">
-                  {def?.label ?? event.symptom_id}
+                  {getSymptomChipLabel(def) || event.symptom_id}
                 </span>
                 {event.trigger_tag && (
                   <span className="hidden text-xs text-sage-400 sm:inline">
