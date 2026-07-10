@@ -70,3 +70,36 @@ export function severityLabel(score: MRSScore | null): string {
   const labels = ['None', 'Mild', 'Moderate', 'Severe', 'Very Severe'];
   return `${score} (${labels[score]})`;
 }
+
+export interface HeatmapSortableRow {
+  label: string;
+  avgSeverity: number;
+  cells: Array<{ date: string; score: number | null }>;
+}
+
+/** Mean severity across rated cells in the visible window; unrated rows sort last. */
+export function meanHeatmapSeverity(
+  cells: Array<{ score: number | null | undefined }>,
+): number {
+  const rated = cells.filter((cell) => cell.score !== null && cell.score !== undefined);
+  if (rated.length === 0) return -1;
+  return rated.reduce((sum, cell) => sum + Number(cell.score), 0) / rated.length;
+}
+
+function mostRecentHeatmapScore(cells: Array<{ score: number | null | undefined }>): number {
+  for (let i = cells.length - 1; i >= 0; i--) {
+    const score = cells[i].score;
+    if (score !== null && score !== undefined) return Number(score);
+  }
+  return -1;
+}
+
+/** Worst symptoms first: mean severity desc, then most recent value, then label. */
+export function sortHeatmapRows<T extends HeatmapSortableRow>(rows: T[]): T[] {
+  return [...rows].sort((a, b) => {
+    if (b.avgSeverity !== a.avgSeverity) return b.avgSeverity - a.avgSeverity;
+    const recentDiff = mostRecentHeatmapScore(b.cells) - mostRecentHeatmapScore(a.cells);
+    if (recentDiff !== 0) return recentDiff;
+    return a.label.localeCompare(b.label);
+  });
+}

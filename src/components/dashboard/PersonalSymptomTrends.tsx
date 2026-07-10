@@ -21,6 +21,12 @@ interface PersonalSymptomTrendsProps {
   extendedLogs: ExtendedSymptomLog[];
 }
 
+const RENDER_OFFSET_STEP = 0.06;
+
+function displayDataKey(symptomKey: string): string {
+  return `__display_${symptomKey}`;
+}
+
 function extendedSeverity(log: ExtendedSymptomLog): number {
   if (log.severity_score !== null && log.severity_score !== undefined) {
     return log.severity_score;
@@ -31,6 +37,72 @@ function extendedSeverity(log: ExtendedSymptomLog): number {
   return 0;
 }
 
+function seriesMatch(
+  points: Array<Record<string, string | number | null>>,
+  keyA: string,
+  keyB: string,
+): boolean {
+  for (const point of points) {
+    const a = point[keyA];
+    const b = point[keyB];
+    if (a === null && b === null) continue;
+    if (a !== b) return false;
+  }
+  return true;
+}
+
+function assignRenderOffsets(keys: string[], points: Array<Record<string, string | number | null>>) {
+  const offsets = new Map<string, number>();
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    let offset = 0;
+    for (let j = 0; j < i; j++) {
+      if (seriesMatch(points, key, keys[j])) {
+        offset = (offsets.get(keys[j]) ?? 0) + 1;
+        break;
+      }
+    }
+    offsets.set(key, offset);
+  }
+  return offsets;
+}
+
+interface PersonalTrendTooltipProps {
+  active?: boolean;
+  payload?: Array<{
+    dataKey?: string;
+    color?: string;
+    name?: string;
+    payload?: Record<string, number | null>;
+  }>;
+  label?: string | number;
+}
+
+function PersonalTrendTooltip({ active, payload, label }: PersonalTrendTooltipProps) {
+  if (!active || !payload?.length) return null;
+
+  const entries = payload.filter(
+    (item) => typeof item.dataKey === 'string' && item.dataKey.startsWith('__display_'),
+  );
+  if (entries.length === 0) return null;
+
+  return (
+    <div className="rounded-lg border border-sand-200 bg-white px-4 py-3 text-sm shadow-lg">
+      <p className="font-medium text-sage-800">{label}</p>
+      {entries.map((item) => {
+        const symptomKey = (item.dataKey as string).slice('__display_'.length);
+        const value = item.payload?.[symptomKey];
+        if (value === null || value === undefined) return null;
+        return (
+          <p key={symptomKey} className="mt-1 text-sage-700" style={{ color: item.color }}>
+            {item.name}: <strong>{value}</strong>
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
 export function PersonalSymptomTrends({ checkins, extendedLogs }: PersonalSymptomTrendsProps) {
   const { trackedSymptomIds } = useSymptomSelections();
 
@@ -38,19 +110,36 @@ export function PersonalSymptomTrends({ checkins, extendedLogs }: PersonalSympto
     if (trackedSymptomIds.length === 0) return { points: [], keys: [] as string[] };
 
     const sorted = [...checkins].sort((a, b) => a.checkin_date.localeCompare(b.checkin_date));
-    const keys = trackedSymptomIds.slice(0, 5);
+    const candidateKeys = trackedSymptomIds.slice(0, 5);
 
-    const points = sorted.map((checkin) => {
+    const rawPoints = sorted.map((checkin) => {
       const row: Record<string, string | number | null> = {
         dateLabel: formatChartDate(checkin.checkin_date),
       };
-      for (const key of keys) {
+      for (const key of candidateKeys) {
         const log = extendedLogs.find(
           (l) => l.checkin_id === checkin.id && l.symptom_key === key,
         );
         row[key] = log ? extendedSeverity(log) : null;
       }
       return row;
+    });
+
+    const keys = candidateKeys.filter((key) =>
+      rawPoints.some((point) => point[key] !== null && point[key] !== undefined),
+    );
+    if (keys.length === 0) return { points: [], keys: [] as string[] };
+
+    const offsets = assignRenderOffsets(keys, rawPoints);
+    const points = rawPoints.map((row) => {
+      const displayRow = { ...row };
+      for (const key of keys) {
+        const value = row[key];
+        const offset = offsets.get(key) ?? 0;
+        displayRow[displayDataKey(key)] =
+          value !== null && value !== undefined ? Number(value) + offset * RENDER_OFFSET_STEP : null;
+      }
+      return displayRow;
     });
 
     return { points, keys };
@@ -74,16 +163,17 @@ export function PersonalSymptomTrends({ checkins, extendedLogs }: PersonalSympto
             <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
             <XAxis dataKey="dateLabel" tick={{ fontSize: 11, fill: CHART_COLORS.axisText }} />
             <YAxis domain={[0, 4]} tick={{ fontSize: 11, fill: CHART_COLORS.axisText }} width={28} />
-            <Tooltip contentStyle={{ fontSize: 12 }} />
+            <Tooltip content={<PersonalTrendTooltip />} />
             <Legend wrapperStyle={{ fontSize: 12 }} />
             {chartData.keys.map((key, i) => (
               <Line
                 key={key}
                 type="monotone"
-                dataKey={key}
+                dataKey={displayDataKey(key)}
                 name={getSymptomByKey(key)?.label ?? key}
                 stroke={DRILL_DOWN_COLORS[i % DRILL_DOWN_COLORS.length]}
                 strokeWidth={2}
+                strokeDasharray="5 4"
                 dot={{ r: 3 }}
                 connectNulls
               />

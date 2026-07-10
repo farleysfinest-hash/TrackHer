@@ -1,6 +1,15 @@
-import { getTopConcerns, MRS_CANONICAL_KEYS, MRS_TOTAL_MAX, getDailySignal, type MRSScoresMap, type MRSSymptomKey } from '../../utils/checkinHelpers';
+import {
+  getTopConcerns,
+  hasMRSData,
+  MRS_CANONICAL_KEYS,
+  MRS_TOTAL_MAX,
+  getDailySignal,
+  type MRSScoresMap,
+  type MRSSymptomKey,
+} from '../../utils/checkinHelpers';
 import type { SymptomCheckin } from '../../types/database';
 import { formatChartDateLong, severityLabel } from '../../utils/chartHelpers';
+import type { SymptomTrendPoint } from '../../hooks/useChartData';
 
 interface ChartTooltipProps {
   active?: boolean;
@@ -20,31 +29,32 @@ export function ChartTooltipContent(props: ChartTooltipProps) {
   const { active, payload, label } = props;
   if (!active || !payload?.length) return null;
 
-  const point = payload[0]?.payload as unknown as SymptomCheckin & {
-    mrsTotal?: number;
-    wellbeing?: number | null;
-    checkin?: SymptomCheckin;
-    date?: string;
-  };
+  const point = payload[0]?.payload as SymptomTrendPoint | undefined;
+  if (!point) return null;
 
-  const checkin = point?.checkin ?? point;
-  const dateStr = point?.date ?? (typeof label === 'string' ? label : '');
-  const mrs = point?.mrsTotal ?? checkin?.total_score;
-  const energy = point?.wellbeing ?? (checkin ? getDailySignal(checkin) : null);
+  const checkin = point.checkin;
+  const dateStr = point.date ?? (typeof label === 'string' ? label : '');
+  const measuredMrs = point.mrsTotal !== null && point.mrsTotal !== undefined;
+  const energy =
+    point.wellbeing !== null && point.wellbeing !== undefined
+      ? point.wellbeing
+      : checkin
+        ? getDailySignal(checkin)
+        : null;
 
-  if (!checkin?.hot_flashes && mrs === undefined) return null;
+  if (!measuredMrs && (energy === null || energy === undefined)) return null;
 
   const concerns =
-    checkin?.hot_flashes !== undefined ? getTopConcerns(checkinToScores(checkin), 3) : [];
+    checkin && hasMRSData(checkin) ? getTopConcerns(checkinToScores(checkin), 3) : [];
 
   return (
     <div className="rounded-lg border border-sand-200 bg-white px-4 py-3 text-sm shadow-lg">
       <p className="font-medium text-sage-800">
         {dateStr.includes('-') ? formatChartDateLong(dateStr) : label}
       </p>
-      {mrs !== undefined && (
+      {measuredMrs && (
         <p className="mt-1 text-sage-700">
-          MRS Score: <strong>{mrs}</strong>/{MRS_TOTAL_MAX}
+          MRS Score: <strong>{point.mrsTotal}</strong>/{MRS_TOTAL_MAX}
         </p>
       )}
       {energy !== null && energy !== undefined && (

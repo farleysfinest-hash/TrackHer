@@ -7,7 +7,7 @@ import type { SymptomCheckin, Medication, MedicationChange } from '../types/data
 import { MRS_CANONICAL_SYMPTOMS } from '../data/symptoms';
 import type { MRSSymptomKey } from '../utils/checkinHelpers';
 import { hasMRSData, getDailySignal } from '../utils/checkinHelpers';
-import { formatChartDate, filterByDateRange } from '../utils/chartHelpers';
+import { formatChartDate, filterByDateRange, meanHeatmapSeverity, sortHeatmapRows } from '../utils/chartHelpers';
 import { getEffectiveDailyDose } from '../utils/medicationHelpers';
 import { getBiomarkerValue } from '../utils/labHelpers';
 import type { DateRange } from '../stores/dashboardStore';
@@ -164,15 +164,11 @@ export function useChartData(dateRange: DateRange) {
         dateLabel: formatChartDate(c.checkin_date),
         score: c[key] as number | null,
       }));
-      const rated = cells.filter((cell) => cell.score !== null);
-      const avg =
-        rated.length > 0
-          ? rated.reduce((s, cell) => s + (cell.score ?? 0), 0) / rated.length
-          : 0;
+      const avg = meanHeatmapSeverity(cells);
       return { symptomKey: key, label: symptom.label, avgSeverity: avg, cells };
     });
 
-    return rows.sort((a, b) => b.avgSeverity - a.avgSeverity);
+    return sortHeatmapRows(rows);
   }, [mrsCheckins]);
 
   const getLabTrendData = useCallback(
