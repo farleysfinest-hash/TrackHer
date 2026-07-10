@@ -13,6 +13,7 @@ import {
 import { ChartCard } from '../ui/ChartCard';
 import { MRS_CORE_SYMPTOMS } from '../../data/symptoms';
 import { DRILL_DOWN_COLORS, CHART_COLORS, formatChartDate } from '../../utils/chartHelpers';
+import { weeklySeriesProps } from '../../utils/chartStyle';
 import type { ChangeMarker } from '../../hooks/useChartData';
 import type { Medication } from '../../types/database';
 
@@ -148,19 +149,18 @@ export function DrillDownControls({
                 }}
               />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              {drillData.symptomLines.map((line, i) => (
-                <Line
-                  key={line.key}
-                  type="monotone"
-                  dataKey={line.key}
-                  name={line.label}
-                  stroke={DRILL_DOWN_COLORS[i % DRILL_DOWN_COLORS.length]}
-                  strokeWidth={2}
-                  dot={{ r: 2 }}
-                  connectNulls
-                  isAnimationActive={false}
-                />
-              ))}
+              {drillData.symptomLines.map((line, i) => {
+                const color = DRILL_DOWN_COLORS[i % DRILL_DOWN_COLORS.length];
+                return (
+                  <Line
+                    key={line.key}
+                    dataKey={line.key}
+                    name={line.label}
+                    stroke={color}
+                    {...weeklySeriesProps(color)}
+                  />
+                );
+              })}
               {medMarkers.map((marker) => (
                 <ReferenceLine
                   key={marker.id}

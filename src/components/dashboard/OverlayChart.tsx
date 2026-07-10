@@ -12,6 +12,7 @@ import {
 import { ChartCard } from '../ui/ChartCard';
 import { ChartTooltipContent } from './ChartTooltipContent';
 import { CHART_COLORS } from '../../utils/chartHelpers';
+import { dailySeriesProps, rollingAverageCentered3, weeklySeriesProps } from '../../utils/chartStyle';
 import type { SymptomTrendPoint, ChangeMarker } from '../../hooks/useChartData';
 
 interface OverlayChartProps {
@@ -22,7 +23,17 @@ interface OverlayChartProps {
 function OverlayChartComponent({ data, changeMarkers }: OverlayChartProps) {
   const isEmpty = data.length < 2;
 
-  const chartData = useMemo(() => data.map((d) => ({ ...d, checkin: d.checkin })), [data]);
+  const chartData = useMemo(() => {
+    const rows = data.map((d) => ({ ...d, checkin: d.checkin }));
+    const smoothedEnergy = rollingAverageCentered3(rows.map((d) => d.wellbeing));
+    return rows.map((row, i) => ({
+      ...row,
+      wellbeingSmoothed: smoothedEnergy[i],
+    }));
+  }, [data]);
+
+  const mrsStyle = weeklySeriesProps(CHART_COLORS.mrsTotal, CHART_COLORS.mrsTotalDot);
+  const energyStyle = dailySeriesProps(CHART_COLORS.wellbeing);
 
   return (
     <ChartCard
@@ -60,26 +71,15 @@ function OverlayChartComponent({ data, changeMarkers }: OverlayChartProps) {
               <Tooltip content={<ChartTooltipContent />} />
               <Line
                 yAxisId="mrs"
-                type="linear"
                 dataKey="mrsTotal"
                 stroke={CHART_COLORS.mrsTotal}
-                strokeWidth={2}
-                strokeDasharray="5 4"
-                dot={{ r: 4, fill: CHART_COLORS.mrsTotal, strokeWidth: 0 }}
-                connectNulls
-                isAnimationActive={false}
+                {...mrsStyle}
               />
               <Line
                 yAxisId="wellbeing"
-                type="monotone"
-                dataKey="wellbeing"
+                dataKey="wellbeingSmoothed"
                 stroke={CHART_COLORS.wellbeing}
-                strokeWidth={1.5}
-                strokeOpacity={0.75}
-                dot={false}
-                activeDot={{ r: 3, fill: CHART_COLORS.wellbeing }}
-                connectNulls
-                isAnimationActive={false}
+                {...energyStyle}
               />
               {changeMarkers.map((marker) => (
                 <ReferenceLine
@@ -101,24 +101,21 @@ function OverlayChartComponent({ data, changeMarkers }: OverlayChartProps) {
 
           <div className="mt-2 flex flex-wrap justify-center gap-x-6 gap-y-1 text-xs text-sage-600">
             <div className="flex items-center gap-2">
-              <span
-                className="inline-flex h-2 w-4 items-center"
-                aria-hidden
-              >
+              <span className="inline-flex h-2 w-4 items-center" aria-hidden>
                 <span
-                  className="h-0 w-full border-t-2 border-dashed"
-                  style={{ borderColor: CHART_COLORS.mrsTotal }}
+                  className="h-0.5 w-full rounded-full"
+                  style={{ backgroundColor: CHART_COLORS.mrsTotal }}
                 />
                 <span
                   className="ml-[-2px] h-2 w-2 rounded-full"
-                  style={{ backgroundColor: CHART_COLORS.mrsTotal }}
+                  style={{ backgroundColor: CHART_COLORS.mrsTotalDot }}
                 />
               </span>
               <span>MRS Score (0–44)</span>
             </div>
             <div className="flex items-center gap-2">
               <span
-                className="inline-block h-0.5 w-4"
+                className="inline-block h-0.5 w-4 rounded-full"
                 style={{ backgroundColor: CHART_COLORS.wellbeing, opacity: 0.75 }}
                 aria-hidden
               />

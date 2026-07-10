@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import {
   ResponsiveContainer,
   LineChart,
@@ -11,6 +12,7 @@ import {
 import { ChartCard } from '../ui/ChartCard';
 import { ChartTooltipContent } from './ChartTooltipContent';
 import { CHART_COLORS } from '../../utils/chartHelpers';
+import { dailySeriesProps, rollingAverageCentered3, weeklySeriesProps } from '../../utils/chartStyle';
 import type { SymptomTrendPoint } from '../../hooks/useChartData';
 
 interface SymptomTrendChartProps {
@@ -19,6 +21,17 @@ interface SymptomTrendChartProps {
 
 export function SymptomTrendChart({ data }: SymptomTrendChartProps) {
   const isEmpty = data.length < 2;
+
+  const chartData = useMemo(() => {
+    const smoothedEnergy = rollingAverageCentered3(data.map((d) => d.wellbeing));
+    return data.map((row, i) => ({
+      ...row,
+      wellbeingSmoothed: smoothedEnergy[i],
+    }));
+  }, [data]);
+
+  const mrsStyle = weeklySeriesProps(CHART_COLORS.mrsTotal, CHART_COLORS.mrsTotalDot);
+  const energyStyle = dailySeriesProps(CHART_COLORS.wellbeing);
 
   return (
     <ChartCard
@@ -30,7 +43,7 @@ export function SymptomTrendChart({ data }: SymptomTrendChartProps) {
     >
       {!isEmpty && (
         <ResponsiveContainer width="100%" height={250}>
-          <LineChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+          <LineChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
             <XAxis dataKey="dateLabel" tick={{ fontSize: 11, fill: CHART_COLORS.axisText }} />
             <YAxis yAxisId="mrs" domain={[0, 44]} tick={{ fontSize: 11, fill: CHART_COLORS.axisText }} width={36} />
@@ -45,23 +58,17 @@ export function SymptomTrendChart({ data }: SymptomTrendChartProps) {
             <Legend wrapperStyle={{ fontSize: 12 }} />
             <Line
               yAxisId="mrs"
-              type="monotone"
               dataKey="mrsTotal"
               name="MRS Score"
               stroke={CHART_COLORS.mrsTotal}
-              strokeWidth={2}
-              dot={{ r: 3 }}
+              {...mrsStyle}
             />
             <Line
               yAxisId="wb"
-              type="monotone"
-              dataKey="wellbeing"
+              dataKey="wellbeingSmoothed"
               name="Energy"
               stroke={CHART_COLORS.wellbeing}
-              strokeWidth={2}
-              strokeDasharray="6 3"
-              dot={{ r: 3 }}
-              connectNulls
+              {...energyStyle}
             />
           </LineChart>
         </ResponsiveContainer>

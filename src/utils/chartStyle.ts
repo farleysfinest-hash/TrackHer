@@ -1,0 +1,71 @@
+/**
+ * Shared Recharts line grammar — matches Compare Symptoms & Medications chart.
+ * Weekly cadence: smooth solid curve + prominent dots. Daily cadence: smooth solid + small/no dots.
+ * Never put strokeDasharray on data series (dots inherit it and render as broken arcs).
+ */
+
+export interface SeriesLineProps {
+  type: 'monotone';
+  strokeWidth: number;
+  connectNulls: boolean;
+  isAnimationActive: boolean;
+  dot:
+    | false
+    | {
+        r: number;
+        fill: string;
+        stroke: string;
+        strokeWidth: number;
+      };
+  activeDot: {
+    r: number;
+    fill: string;
+    stroke?: string;
+    strokeWidth?: number;
+  };
+  strokeOpacity?: number;
+}
+
+/** Weekly measurements (MRS, subscales, symptom trends): solid monotone curve + prominent round dots. */
+export function weeklySeriesProps(stroke: string, dotColor: string = stroke): SeriesLineProps {
+  return {
+    type: 'monotone',
+    strokeWidth: 2,
+    connectNulls: true,
+    isAnimationActive: false,
+    dot: { r: 4, fill: dotColor, stroke: dotColor, strokeWidth: 0 },
+    activeDot: { r: 5, fill: dotColor, stroke: '#ffffff', strokeWidth: 1 },
+  };
+}
+
+/** Daily pulse channels: solid monotone curve, light stroke, minimal markers. */
+export function dailySeriesProps(stroke: string): SeriesLineProps {
+  return {
+    type: 'monotone',
+    strokeWidth: 1.5,
+    strokeOpacity: 0.75,
+    connectNulls: true,
+    isAnimationActive: false,
+    dot: false,
+    activeDot: { r: 3, fill: stroke },
+  };
+}
+
+/** 3-day centered rolling mean for presentation smoothing; edge days use available neighbors only. */
+export function rollingAverageCentered3(values: Array<number | null | undefined>): Array<number | null> {
+  return values.map((_, i) => {
+    const windowIndices =
+      i === 0
+        ? [0, 1]
+        : i === values.length - 1
+          ? [i - 1, i]
+          : [i - 1, i, i + 1];
+
+    const nums = windowIndices
+      .map((j) => values[j])
+      .filter((v): v is number => v !== null && v !== undefined);
+
+    if (nums.length === 0) return null;
+    return nums.reduce((sum, v) => sum + v, 0) / nums.length;
+  });
+}

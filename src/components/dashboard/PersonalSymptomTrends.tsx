@@ -12,9 +12,9 @@ import {
 import { ChartCard } from '../ui/ChartCard';
 import { useSymptomSelections } from '../../hooks/useSymptomSelections';
 import { getSymptomByKey } from '../../data/symptoms';
-import { formatChartDate } from '../../utils/chartHelpers';
+import { CHART_COLORS, DRILL_DOWN_COLORS, formatChartDate } from '../../utils/chartHelpers';
+import { weeklySeriesProps } from '../../utils/chartStyle';
 import type { SymptomCheckin, ExtendedSymptomLog } from '../../types/database';
-import { CHART_COLORS, DRILL_DOWN_COLORS } from '../../utils/chartHelpers';
 
 interface PersonalSymptomTrendsProps {
   checkins: SymptomCheckin[];
@@ -165,19 +165,18 @@ export function PersonalSymptomTrends({ checkins, extendedLogs }: PersonalSympto
             <YAxis domain={[0, 4]} tick={{ fontSize: 11, fill: CHART_COLORS.axisText }} width={28} />
             <Tooltip content={<PersonalTrendTooltip />} />
             <Legend wrapperStyle={{ fontSize: 12 }} />
-            {chartData.keys.map((key, i) => (
-              <Line
-                key={key}
-                type="monotone"
-                dataKey={displayDataKey(key)}
-                name={getSymptomByKey(key)?.label ?? key}
-                stroke={DRILL_DOWN_COLORS[i % DRILL_DOWN_COLORS.length]}
-                strokeWidth={2}
-                strokeDasharray="5 4"
-                dot={{ r: 3 }}
-                connectNulls
-              />
-            ))}
+            {chartData.keys.map((key, i) => {
+              const color = DRILL_DOWN_COLORS[i % DRILL_DOWN_COLORS.length];
+              return (
+                <Line
+                  key={key}
+                  dataKey={displayDataKey(key)}
+                  name={getSymptomByKey(key)?.label ?? key}
+                  stroke={color}
+                  {...weeklySeriesProps(color)}
+                />
+              );
+            })}
           </LineChart>
         </ResponsiveContainer>
       )}

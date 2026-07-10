@@ -2,7 +2,8 @@ import type { MRSScore } from '../types/database';
 
 /** Chart palette — aligned with soft blush theme (#BE739A) */
 export const CHART_COLORS = {
-  mrsTotal: '#4a2338',
+  mrsTotal: '#7a3b5e',
+  mrsTotalDot: '#a64d79',
   wellbeing: '#c989a7',
   /** MRS subscale line ramp: light blush → mid → brand rose (all clearly distinct) */
   somatic: '#d4a0b5',
