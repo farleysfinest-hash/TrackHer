@@ -51,16 +51,16 @@ function MedicationLaneComponent({ rows }: MedicationLaneProps) {
 
   return (
     <>
-      <div className="mt-1 space-y-2 border-t border-sand-100 pt-2">
+      <div className="mt-1 space-y-2 pt-1">
         {rows.map((row) => (
           <div key={row.medicationId} className="space-y-1">
             <p className="truncate text-[10px] text-sage-500">{row.rowLabel}</p>
-            <div className="relative h-3 rounded-sm bg-sand-50/80">
+            <div className="relative h-[12px] rounded-[3px] bg-sand-50/50">
               {row.segments.map((segment) => (
                 <button
                   key={segment.id}
                   type="button"
-                  className="absolute top-0 h-full rounded-sm transition-opacity hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sage-400"
+                  className="absolute top-0 h-[12px] rounded-[3px] transition-opacity hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sage-400"
                   style={{
                     left: `${segment.leftPercent}%`,
                     width: `${segment.widthPercent}%`,

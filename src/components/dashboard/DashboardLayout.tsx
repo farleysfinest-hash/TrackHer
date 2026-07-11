@@ -11,7 +11,7 @@ import { DateRangeSelector } from './DateRangeSelector';
 import { ScoreSummaryCards } from './ScoreSummaryCards';
 import { WelcomeMessage } from './WelcomeMessage';
 import { CheckinPromptWidget } from '../checkin/CheckinPromptWidget';
-import { OverlayChart } from './OverlayChart';
+import { StoryColumn } from './StoryColumn';
 import { SubscaleChart } from './SubscaleChart';
 import { SymptomHeatmap } from './SymptomHeatmap';
 import { LabTrendChart } from './LabTrendChart';
@@ -135,12 +135,13 @@ export function DashboardLayout() {
 
           <DashboardInsightsPanel insights={insights} onDismiss={dismissInsight} />
 
-          <OverlayChart
+          <StoryColumn
             data={symptomTrend}
             medications={medications}
             medicationChanges={changes}
             windowStart={dateRange.start}
             windowEnd={dateRange.end}
+            insights={insights}
           />
 
           <PersonalSymptomTrends checkins={checkins} extendedLogs={extendedSymptoms} />

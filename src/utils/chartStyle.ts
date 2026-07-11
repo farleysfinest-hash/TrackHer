@@ -69,3 +69,22 @@ export function rollingAverageCentered3(values: Array<number | null | undefined>
     return nums.reduce((sum, v) => sum + v, 0) / nums.length;
   });
 }
+
+/**
+ * Pulse terrain smoothing: null anywhere in the window yields null (honest gaps).
+ * Edge days use a 2-day window; interior days use 3-day centered.
+ */
+export function rollingAverageCentered3Strict(
+  values: Array<number | null | undefined>,
+): Array<number | null> {
+  return values.map((_, i) => {
+    const windowIndices =
+      i === 0 ? [0, 1] : i === values.length - 1 ? [i - 1, i] : [i - 1, i, i + 1];
+
+    const windowVals = windowIndices.map((j) => values[j]);
+    if (windowVals.some((v) => v === null || v === undefined)) return null;
+
+    const nums = windowVals as number[];
+    return nums.reduce((sum, v) => sum + v, 0) / nums.length;
+  });
+}

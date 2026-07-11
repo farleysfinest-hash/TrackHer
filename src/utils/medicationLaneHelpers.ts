@@ -1,7 +1,11 @@
 import type { Medication, MedicationChange } from '../types/database';
 import { formatFrequency } from './medicationHelpers';
 
-export const MED_LANE_SEGMENT_COLORS = ['#dfaec7', '#c989a7', '#a64d79', '#7a3b5e'] as const;
+export const MED_LANE_CONTINUOUS = '#e5aac8';
+export const MED_LANE_BEFORE_CHANGE = '#dfaec7';
+export const MED_LANE_AFTER_CHANGE = '#a64d79';
+/** ~2px visual gap between dose-change segments at typical lane widths */
+export const MED_LANE_SEGMENT_GAP_PCT = 0.35;
 
 export const CHART_MARGIN_LEFT = 36;
 export const CHART_MARGIN_RIGHT = 28;
@@ -195,10 +199,22 @@ export function buildMedicationLaneRows(
       .map((p) => clipPeriod(p, windowStart, windowEnd))
       .filter((p): p is DosePeriod => p !== null);
 
+    const hasDoseChange = periods.length > 1;
     const segments: MedicationLaneSegment[] = periods.map((period, index) => {
-      const left = dateToCategoryPercent(period.startDate, domainDates);
-      const right = dateToCategoryPercent(period.endDate, domainDates);
+      let left = dateToCategoryPercent(period.startDate, domainDates);
+      let right = dateToCategoryPercent(period.endDate, domainDates);
+      if (hasDoseChange && index > 0) {
+        left += MED_LANE_SEGMENT_GAP_PCT / 2;
+      }
+      if (hasDoseChange && index < periods.length - 1) {
+        right -= MED_LANE_SEGMENT_GAP_PCT / 2;
+      }
       const width = Math.max(right - left, 1.5);
+      const color = hasDoseChange
+        ? index === 0
+          ? MED_LANE_BEFORE_CHANGE
+          : MED_LANE_AFTER_CHANGE
+        : MED_LANE_CONTINUOUS;
       return {
         id: `${med.id}-${index}`,
         startDate: period.startDate,
@@ -206,7 +222,7 @@ export function buildMedicationLaneRows(
         dose: period.dose,
         doseUnit: period.doseUnit,
         doseLabel: formatDoseAmount(period.dose, period.doseUnit),
-        color: MED_LANE_SEGMENT_COLORS[Math.min(index, MED_LANE_SEGMENT_COLORS.length - 1)],
+        color,
         leftPercent: left,
         widthPercent: width,
       };
@@ -237,14 +253,20 @@ export function buildMedicationLaneRows(
   });
 }
 
-export function changeMarkerPercents(
+/** Dose increases/decreases only — not starts/stops (lane bar edges carry those). */
+export function doseChangeMarkerPercents(
   changes: MedicationChange[],
   domainDates: string[],
   windowStart: string,
   windowEnd: string,
 ): Array<{ id: string; leftPercent: number }> {
   return changes
-    .filter((c) => c.change_date >= windowStart && c.change_date <= windowEnd)
+    .filter(
+      (c) =>
+        (c.change_type === 'dose_increased' || c.change_type === 'dose_decreased') &&
+        c.change_date >= windowStart &&
+        c.change_date <= windowEnd,
+    )
     .map((c) => ({
       id: c.id,
       leftPercent: dateToCategoryPercent(c.change_date, domainDates),
