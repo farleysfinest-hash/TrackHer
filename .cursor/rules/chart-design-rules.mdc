@@ -1,0 +1,35 @@
+---
+description: TrackHer binding chart design rules — rose palette, three registers, reference chart grammar
+alwaysApply: true
+---
+
+# TrackHer DESIGN-RULES
+
+These rules are binding and override any conflicting instruction elsewhere in the prompt. The reference standard for chart styling is the Compare Symptoms & Medications chart and the Personal Symptom Trends chart as they render today. When any detail is unspecified, copy the reference charts exactly — never invent, never fall back to library defaults.
+
+## The three registers (dots mean something)
+
+A dot marks a measurement the user deliberately made. Ambient flow renders as terrain. This maps to the app's own logging registers:
+
+- **Check-in data (weekly MRS, subscales, tracked symptom trends): dots + line.** Solid round dots at each real check-in, connected by a smooth solid curve.
+- **Daily pulse data (Energy / Mood / Sleep): terrain.** A soft filled area with a thin top stroke. No dots on the series (the tooltip's activeDot appears on hover/tap only).
+- **Lab data (blood draws): dots alone.** Labeled round dots, NO connecting line of any kind.
+
+## Hard rules
+
+1. **Circles only.** Every marker in the app is a solid round circle. NEVER diamonds, squares, triangles, crosses, stars, or any Recharts `shape`/`symbol` variant — including for accessibility differentiation. Series are distinguished by color and legend, never geometry.
+2. **#4a2338 is a text color only.** It must never appear as a `stroke`, `fill`, or dot color on any chart element. Darkest permitted chart ink: `#7a3b5e`.
+3. **Rose family only.** Approved chart inks: `#7a3b5e`, `#a64d79`, `#c989a7`, `#dfaec7`, `#e0a8c6`, `#e5aac8`. No red, green, orange, blue, gray series, or any color not listed here without explicit new approval in the prompt.
+4. **No dashed or dotted DATA strokes.** All series strokes are solid. `strokeDasharray` is permitted only on `CartesianGrid` and dose-change `ReferenceLine` chrome.
+5. **Standard legend.** Bottom-centered, ring-and-line glyphs identical to the reference charts. No side legends, no custom glyph shapes.
+6. **One y-axis per panel. Dual y-axes are banned app-wide.** Series on different scales get separate stacked panels sharing one x-axis.
+7. **Gaps are honest.** Days/weeks with no logged data render as visible breaks (dots absent; terrain notched). Never interpolate over missing pulse days. (MRS check-ins connect across intervening non-check-in days — those are not missing data, they are the instrument's weekly cadence.)
+8. **The taste test.** Every choice must look at home in a beautifully designed women's health app — soft, warm, feminine. If it resembles an engineering dashboard, it is wrong even if functional.
+
+## Standard values (use exactly; do not improvise)
+
+- Check-in dot: `r=4.5`, solid fill in series color, no dash, `activeDot r=6`.
+- Very light dots (`#e0a8c6`, `#e5aac8`): add `stroke=#a64d79`, `strokeWidth=0.75` so they hold on white.
+- Check-in line: `type="monotone"`, `strokeWidth=2` (2.5 for a panel's primary series), solid.
+- Terrain: `type="monotone"`, top stroke `strokeWidth=1.5`, `fillOpacity=0.20`, same hex for stroke and fill.
+- Dose-change rule: `stroke=#a64d79`, `strokeWidth=1`, `strokeDasharray="3 3"`, `opacity=0.5`.
