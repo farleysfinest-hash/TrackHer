@@ -51,7 +51,7 @@ function MedicationLaneComponent({ rows }: MedicationLaneProps) {
 
   return (
     <>
-      <div className="mt-1 space-y-2 pt-1">
+      <div className="mt-1 space-y-2 pb-3 pt-1">
         {rows.map((row) => (
           <div key={row.medicationId} className="space-y-1">
             <p className="truncate text-[10px] text-sage-500">{row.rowLabel}</p>
@@ -78,7 +78,7 @@ function MedicationLaneComponent({ rows }: MedicationLaneProps) {
               {row.boundaries.map((boundary) => (
                 <span
                   key={boundary.id}
-                  className="pointer-events-none absolute top-full mt-0.5 max-w-[8rem] -translate-x-1/2 truncate text-[9px] leading-tight text-sage-500"
+                  className="pointer-events-none absolute top-full mt-1 max-w-[7rem] -translate-x-1/2 truncate whitespace-nowrap text-[9px] leading-tight text-sage-500"
                   style={{ left: `${boundary.leftPercent}%` }}
                 >
                   {boundary.label}

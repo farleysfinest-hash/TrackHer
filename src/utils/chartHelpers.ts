@@ -85,6 +85,7 @@ export function severityLabel(score: MRSScore | null): string {
 export interface HeatmapSortableRow {
   label: string;
   avgSeverity: number;
+  recentSeverity: number;
   cells: Array<{ date: string; score: number | null }>;
 }
 
@@ -97,6 +98,20 @@ export function meanHeatmapSeverity(
   return rated.reduce((sum, cell) => sum + Number(cell.score), 0) / rated.length;
 }
 
+/** Mean severity across the most recent 4 rated cells; unrated rows sort last. */
+export function recentHeatmapSeverity(
+  cells: Array<{ score: number | null | undefined }>,
+  n = 4,
+): number {
+  const rated: number[] = [];
+  for (let i = cells.length - 1; i >= 0 && rated.length < n; i--) {
+    const score = cells[i].score;
+    if (score !== null && score !== undefined) rated.push(Number(score));
+  }
+  if (rated.length === 0) return -1;
+  return rated.reduce((sum, v) => sum + v, 0) / rated.length;
+}
+
 function mostRecentHeatmapScore(cells: Array<{ score: number | null | undefined }>): number {
   for (let i = cells.length - 1; i >= 0; i--) {
     const score = cells[i].score;
@@ -105,9 +120,10 @@ function mostRecentHeatmapScore(cells: Array<{ score: number | null | undefined 
   return -1;
 }
 
-/** Worst symptoms first: mean severity desc, then most recent value, then label. */
+/** Worst symptoms NOW first: recent severity desc, then whole-window mean, then label. */
 export function sortHeatmapRows<T extends HeatmapSortableRow>(rows: T[]): T[] {
   return [...rows].sort((a, b) => {
+    if (b.recentSeverity !== a.recentSeverity) return b.recentSeverity - a.recentSeverity;
     if (b.avgSeverity !== a.avgSeverity) return b.avgSeverity - a.avgSeverity;
     const recentDiff = mostRecentHeatmapScore(b.cells) - mostRecentHeatmapScore(a.cells);
     if (recentDiff !== 0) return recentDiff;

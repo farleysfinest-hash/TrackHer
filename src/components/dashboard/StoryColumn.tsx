@@ -15,7 +15,6 @@ import { ChartTooltipContent } from './ChartTooltipContent';
 import { MedicationLane } from './MedicationLane';
 import { CHART_COLORS } from '../../utils/chartHelpers';
 import { formatChartDateLong } from '../../utils/chartHelpers';
-import { rollingAverageCentered3Strict } from '../../utils/chartStyle';
 import {
   buildMedicationLaneRows,
   doseChangeMarkerPercents,
@@ -35,7 +34,7 @@ import type { Insight } from '../../engine/types';
 const PANEL_MRS_HEIGHT = 200;
 const PANEL_PULSE_HEIGHT = 170;
 const X_AXIS_HEIGHT = 28;
-const LANE_ROW_HEIGHT = 36;
+const LANE_ROW_HEIGHT = 50;
 const SYNC_ID = 'story-column';
 
 const INK = {
@@ -112,11 +111,9 @@ function StoryColumnComponent({
 
   const chartData = useMemo(() => {
     const rawValues = data.map((d) => getPulseChannelValue(d.checkin, activeChannel));
-    const smoothed = rollingAverageCentered3Strict(rawValues);
     return data.map((row, i) => ({
       ...row,
       pulseRaw: rawValues[i],
-      pulseSmoothed: smoothed[i],
     }));
   }, [data, activeChannel]);
 
@@ -142,7 +139,7 @@ function StoryColumnComponent({
   const laneHeight = laneRows.length > 0 ? laneRows.length * LANE_ROW_HEIGHT + 8 : 0;
 
   const mrsTicks = [0, 22, 44];
-  const pulseTicks = [1, 3, 5];
+  const pulseTicks = [1, 2, 3, 4, 5];
 
   return (
     <ChartCard
@@ -222,7 +219,7 @@ function StoryColumnComponent({
                   />
                   <Tooltip content={<PulseTooltip channel={activeChannel} />} />
                   <Area
-                    dataKey="pulseSmoothed"
+                    dataKey="pulseRaw"
                     type="monotone"
                     stroke={INK.pulse}
                     strokeWidth={1.5}

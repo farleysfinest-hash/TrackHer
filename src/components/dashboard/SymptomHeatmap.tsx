@@ -24,7 +24,7 @@ function SymptomHeatmapComponent({ rows }: SymptomHeatmapProps) {
   return (
     <ChartCard
       title="Symptom Heatmap"
-      description="Severity at a glance — worst symptoms at top"
+      description="Severity at a glance — worst symptoms right now at top"
       isEmpty={isEmpty}
       emptyState={{ message: 'Complete check-ins to see your symptom heatmap.' }}
       minHeight="320px"

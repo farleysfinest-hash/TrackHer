@@ -7,7 +7,7 @@ import type { SymptomCheckin, Medication, MedicationChange } from '../types/data
 import { MRS_CANONICAL_SYMPTOMS } from '../data/symptoms';
 import type { MRSSymptomKey } from '../utils/checkinHelpers';
 import { hasMRSData, getDailySignal } from '../utils/checkinHelpers';
-import { formatChartDate, filterByDateRange, meanHeatmapSeverity, sortHeatmapRows } from '../utils/chartHelpers';
+import { formatChartDate, filterByDateRange, meanHeatmapSeverity, recentHeatmapSeverity, sortHeatmapRows } from '../utils/chartHelpers';
 import { getEffectiveDailyDose } from '../utils/medicationHelpers';
 import { getBiomarkerValue } from '../utils/labHelpers';
 import type { DateRange } from '../stores/dashboardStore';
@@ -46,6 +46,7 @@ export interface HeatmapRow {
   symptomKey: string;
   label: string;
   avgSeverity: number;
+  recentSeverity: number;
   cells: Array<{ date: string; dateLabel: string; score: number | null }>;
 }
 
@@ -165,7 +166,8 @@ export function useChartData(dateRange: DateRange) {
         score: c[key] as number | null,
       }));
       const avg = meanHeatmapSeverity(cells);
-      return { symptomKey: key, label: symptom.label, avgSeverity: avg, cells };
+      const recent = recentHeatmapSeverity(cells);
+      return { symptomKey: key, label: symptom.label, avgSeverity: avg, recentSeverity: recent, cells };
     });
 
     return sortHeatmapRows(rows);
