@@ -6,17 +6,11 @@ Thanks for helping test TrackHer. You can try it **in your browser** (easiest) o
 
 Your collaborator will send you a URL like:
 
-`https://trackher-xxxxx.vercel.app`
+`https://trackher-xxxxx.pages.dev`
 
 Open it in Chrome, Safari, or Firefox on any computer. No install needed.
 
-### If you see a DEV MODE badge
-
-The app is using sample data. You can click around the dashboard, medications, check-ins, labs, and insights without creating an account. Data is stored in your browser session only.
-
-### If there is no DEV MODE badge
-
-Create an account with email and password. Your data is saved to the shared test database. Use a real email if you want to test password reset.
+Create an account with email and password, or use the seeded test account credentials your collaborator provides. Your data is saved to the shared test database. Use a real email if you want to test password reset.
 
 ---
 
@@ -31,10 +25,7 @@ npm install
 cp .env.example .env
 ```
 
-Edit `.env`:
-
-- For quick demo: set `VITE_DEV_MODE=true`
-- For real backend: ask the project owner for Supabase URL and anon key, set `VITE_DEV_MODE=false`
+Edit `.env` — ask the project owner for `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
 
 ```bash
 npm run dev

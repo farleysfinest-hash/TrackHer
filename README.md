@@ -20,7 +20,6 @@ HRT/BHRT symptom and wellness tracker for menopausal women. Track medications, s
 - Dashboard with charts, heatmaps, and drill-down
 - Rule-based insights (pattern engine)
 - PDF provider report export
-- Dev mode with mock data for UI testing without Supabase
 
 ## Quick start (local)
 
@@ -29,7 +28,7 @@ npm install
 cp .env.example .env
 ```
 
-For fastest local demo, set `VITE_DEV_MODE=true` in `.env`, then:
+Add your Supabase URL and anon key to `.env`, then:
 
 ```bash
 npm run dev
@@ -37,7 +36,7 @@ npm run dev
 
 Open `http://localhost:5173`
 
-For real auth and persistence, see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for deployment and the seeded test account.
 
 ## Share with a tester
 
@@ -48,7 +47,7 @@ You do **not** need your own domain. Deploy to Vercel and send a link.
 | Deploy + test URL + production path | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) |
 | Instructions for your tester | [docs/TESTER.md](docs/TESTER.md) |
 
-**Fast path:** GitHub → Vercel → set `VITE_DEV_MODE=true` → share the URL.
+**Fast path:** GitHub → Cloudflare Pages (or Vercel) → set Supabase env vars → share the URL.
 
 ## Scripts
 
@@ -67,7 +66,7 @@ src/
 ├── engine/       # Rule-based pattern recognition (Batch 6)
 ├── data/         # Medication, symptom, lab catalogs
 ├── hooks/        # Data fetching and business logic
-├── lib/          # Supabase, dev mode, mock data
+├── lib/          # Supabase client and shared utilities
 ├── pages/        # Route pages
 ├── stores/       # Zustand state
 └── utils/        # Helpers, formatters, PDF

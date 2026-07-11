@@ -1,8 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { IS_DEV_MODE } from '../lib/devMode';
-import { MOCK_USER } from '../lib/mockData';
-import { getDevSymptomSelections, setDevSymptomSelections } from '../lib/devStore';
 import { useAuthStore } from '../stores/authStore';
 import type { UserSymptomSelection } from '../types/database';
 import { isMRSCanonicalKey } from '../utils/checkinHelpers';
@@ -20,18 +17,6 @@ export function useSymptomSelections() {
   const getUserId = () => useAuthStore.getState().user?.id;
 
   const fetchSelections = useCallback(async () => {
-    if (IS_DEV_MODE) {
-      const dev = getDevSymptomSelections();
-      setSelections(
-        dev.map((s) => ({
-          symptom_id: s.symptom_id,
-          is_watch_symptom: s.is_watch_symptom,
-        })),
-      );
-      setIsLoading(false);
-      return;
-    }
-
     const userId = getUserId();
     if (!userId) {
       setSelections([]);
@@ -74,17 +59,6 @@ export function useSymptomSelections() {
         is_watch_symptom: watchSymptoms.includes(s.symptom_id),
       }));
 
-      if (IS_DEV_MODE) {
-        setDevSymptomSelections(rows);
-        setSelections(
-          rows.map((r) => ({
-            symptom_id: r.symptom_id,
-            is_watch_symptom: r.is_watch_symptom,
-          })),
-        );
-        return true;
-      }
-
       const { error: deleteError } = await supabase
         .from('user_symptom_selections')
         .delete()
@@ -126,18 +100,4 @@ export function useSymptomSelections() {
     fetchSelections,
     saveSelections,
   };
-}
-
-/** Dev-only: seed default symptom selections when empty */
-export function seedDevSymptomSelectionsIfEmpty(): void {
-  if (!IS_DEV_MODE) return;
-  if (getDevSymptomSelections().length > 0) return;
-
-  setDevSymptomSelections([
-    { user_id: MOCK_USER.id, symptom_id: 'brain_fog', is_watch_symptom: true },
-    { user_id: MOCK_USER.id, symptom_id: 'headaches', is_watch_symptom: true },
-    { user_id: MOCK_USER.id, symptom_id: 'dry_itchy_skin', is_watch_symptom: true },
-    { user_id: MOCK_USER.id, symptom_id: 'weight_gain', is_watch_symptom: false },
-    { user_id: MOCK_USER.id, symptom_id: 'night_sweats', is_watch_symptom: true },
-  ]);
 }

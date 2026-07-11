@@ -1,13 +1,5 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { IS_DEV_MODE } from '../lib/devMode';
-import { MOCK_USER } from '../lib/mockData';
-import {
-  getDevCheckins,
-  setDevCheckins,
-  getDevExtendedSymptomLogs,
-  setDevExtendedSymptomLogs,
-} from '../lib/devStore';
 import { useAuthStore } from '../stores/authStore';
 import type {
   SymptomCheckin,
@@ -18,12 +10,10 @@ import type {
 import {
   getLocalDateISO,
   getResolvedTimezone,
-  calculateMRS,
-  INITIAL_MRS_SCORES,
   MRS_CANONICAL_KEYS,
   LEGACY_MRS_EXTRA_KEYS,
 } from '../utils/checkinHelpers';
-import type { MRSSymptomKey, MRSScoresMap } from '../utils/checkinHelpers';
+import type { MRSSymptomKey } from '../utils/checkinHelpers';
 import { buildAssessmentScore, saveAssessmentResult } from './assessmentPersistence';
 
 export interface CheckinInput {
@@ -73,171 +63,16 @@ function addDaysISO(dateStr: string, delta: number): string {
   return `${dt.getFullYear()}-${month}-${day}`;
 }
 
-function scoresFromInput(mrsScores: Record<string, MRSScore | null>): MRSScoresMap {
-  const map = { ...INITIAL_MRS_SCORES };
-  for (const key of MRS_CANONICAL_KEYS) {
-    map[key] = (mrsScores[key] ?? null) as MRSScore | null;
-  }
-  return map;
-}
-
-function buildDevCheckin(
-  data: CheckinInput,
-  id: string,
-  userId: string,
-  timezone: string,
-): SymptomCheckin {
-  const checkinType = data.checkinType ?? 'full';
-  const isPulse = checkinType === 'pulse';
-  const mrsMap = isPulse ? { ...INITIAL_MRS_SCORES } : scoresFromInput(data.mrsScores);
-  const checkinDate = data.checkinDate ?? getLocalDateISO(timezone);
-  const today = getLocalDateISO(timezone);
-  const mrs = isPulse
-    ? { total: 0, somatic: 0, psychological: 0, urogenital: 0 }
-    : calculateMRS(mrsMap);
-
-  return {
-    id,
-    user_id: userId,
-    checkin_date: checkinDate,
-    hot_flashes: mrsMap.hot_flashes,
-    heart_discomfort: mrsMap.heart_discomfort,
-    sleep_problems: mrsMap.sleep_problems,
-    depressed_mood: mrsMap.depressed_mood,
-    irritability: mrsMap.irritability,
-    anxiety: mrsMap.anxiety,
-    exhaustion: mrsMap.exhaustion,
-    sexual_problems: mrsMap.sexual_problems,
-    bladder_problems: mrsMap.bladder_problems,
-    vaginal_dryness: mrsMap.vaginal_dryness,
-    joint_muscle_pain: mrsMap.joint_muscle_pain,
-    dry_itchy_skin: null,
-    brain_fog: null,
-    irregular_periods: null,
-    heavy_bleeding: null,
-    misophonia: null,
-    checkin_type: checkinType,
-    total_score: mrs.total,
-    somatic_score: mrs.somatic,
-    psychological_score: mrs.psychological,
-    urogenital_score: mrs.urogenital,
-    overall_wellbeing: null,
-    energy_level: data.energyLevel,
-    mood_level: data.moodLevel,
-    sleep_quality: data.sleepQuality ?? null,
-    notes: isPulse ? null : data.notes || null,
-    is_backdated: checkinDate !== today,
-    created_at: new Date().toISOString(),
-  };
-}
-
-function computeDevStreak(timezone: string, frequency: string): number {
-  const allCheckins = getDevCheckins();
-  if (allCheckins.length === 0) return 0;
-
-  const dates = allCheckins.map((c) => c.checkin_date);
-  const uniqueDates = [...new Set(dates)].sort((a, b) => b.localeCompare(a));
-
-  if (frequency === 'daily') {
-    let streak = 0;
-    const today = getLocalDateISO(timezone);
-    let cursorDate = today;
-
-    for (let i = 0; i < 365; i++) {
-      if (uniqueDates.includes(cursorDate)) {
-        streak++;
-        cursorDate = addDaysISO(cursorDate, -1);
-      } else if (i === 0) {
-        cursorDate = addDaysISO(cursorDate, -1);
-        continue;
-      } else {
-        break;
-      }
-    }
-    return streak;
-  }
-
-  if (frequency === 'weekly') {
-    let streak = 0;
-    const now = new Date();
-    for (let w = 0; w < 52; w++) {
-      const weekStart = new Date(now);
-      weekStart.setDate(weekStart.getDate() - w * 7 - 6);
-      const weekEnd = new Date(now);
-      weekEnd.setDate(weekEnd.getDate() - w * 7);
-      const hasCheckin = uniqueDates.some((d) => {
-        const dt = new Date(d + 'T12:00:00');
-        return dt >= weekStart && dt <= weekEnd;
-      });
-      if (hasCheckin) streak++;
-      else if (w > 0) break;
-    }
-    return streak;
-  }
-
-  let streak = 0;
-  const now = new Date();
-  for (let m = 0; m < 24; m++) {
-    const month = now.getMonth() - m;
-    const year = now.getFullYear() + Math.floor(month / 12);
-    const normalizedMonth = ((month % 12) + 12) % 12;
-    const hasCheckin = uniqueDates.some((d) => {
-      const dt = new Date(d + 'T12:00:00');
-      return dt.getFullYear() === year && dt.getMonth() === normalizedMonth;
-    });
-    if (hasCheckin) streak++;
-    else if (m > 0) break;
-  }
-  return streak;
-}
-
-function saveDevExtendedSymptoms(
-  checkinId: string,
-  userId: string,
-  symptoms: Array<{ symptom_key: string; severity: MRSScore }>,
-): void {
-  const others = getDevExtendedSymptomLogs().filter((l) => l.checkin_id !== checkinId);
-  const newLogs: ExtendedSymptomLog[] = symptoms.map((s, i) => ({
-    id: `ext-dev-${checkinId}-${i}`,
-    user_id: userId,
-    checkin_id: checkinId,
-    symptom_key: s.symptom_key,
-    severity: null,
-    severity_score: s.severity,
-    created_at: new Date().toISOString(),
-  }));
-  setDevExtendedSymptomLogs([...others, ...newLogs]);
-}
-
 export function useCheckins() {
-  const [checkins, setCheckins] = useState<SymptomCheckin[]>(
-    IS_DEV_MODE ? [...getDevCheckins()] : [],
-  );
-  const [isLoading, setIsLoading] = useState(!IS_DEV_MODE);
+  const [checkins, setCheckins] = useState<SymptomCheckin[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const getUserId = () => useAuthStore.getState().user?.id;
   const getTimezone = () =>
     getResolvedTimezone(useAuthStore.getState().profile?.timezone);
 
-  const syncDevCheckins = useCallback(() => {
-    const sorted = [...getDevCheckins()].sort((a, b) =>
-      b.checkin_date.localeCompare(a.checkin_date),
-    );
-    setCheckins(sorted);
-    setIsLoading(false);
-  }, []);
-
   const fetchCheckins = useCallback(async (limit = 50) => {
-    if (IS_DEV_MODE) {
-      const sorted = [...getDevCheckins()]
-        .sort((a, b) => b.checkin_date.localeCompare(a.checkin_date))
-        .slice(0, limit);
-      setCheckins(sorted);
-      setIsLoading(false);
-      return;
-    }
-
     const userId = getUserId();
     if (!userId) return;
 
@@ -260,14 +95,6 @@ export function useCheckins() {
   }, []);
 
   const fetchCheckinsPage = useCallback(async (offset: number, pageSize = 10) => {
-    if (IS_DEV_MODE) {
-      const sorted = [...getDevCheckins()].sort((a, b) =>
-        b.checkin_date.localeCompare(a.checkin_date),
-      );
-      const rows = sorted.slice(offset, offset + pageSize);
-      return { data: rows, hasMore: offset + pageSize < sorted.length };
-    }
-
     const userId = getUserId();
     if (!userId) return { data: [], hasMore: false };
 
@@ -290,13 +117,6 @@ export function useCheckins() {
   const fetchCheckinDetail = useCallback(async (
     id: string,
   ): Promise<{ checkin: SymptomCheckin; extendedSymptoms: ExtendedSymptomLog[] } | null> => {
-    if (IS_DEV_MODE) {
-      const checkin = getDevCheckins().find((c) => c.id === id);
-      if (!checkin) return null;
-      const extendedSymptoms = getDevExtendedSymptomLogs().filter((l) => l.checkin_id === id);
-      return { checkin, extendedSymptoms };
-    }
-
     const { data: checkin, error: checkinError } = await supabase
       .from('symptom_checkins')
       .select('*')
@@ -317,13 +137,6 @@ export function useCheckins() {
   }, []);
 
   const getLastCheckin = async (): Promise<SymptomCheckin | null> => {
-    if (IS_DEV_MODE) {
-      const sorted = [...getDevCheckins()].sort((a, b) =>
-        b.checkin_date.localeCompare(a.checkin_date),
-      );
-      return sorted[0] ?? null;
-    }
-
     const userId = getUserId();
     if (!userId) return null;
 
@@ -344,10 +157,6 @@ export function useCheckins() {
   };
 
   const getCheckinForDate = async (date: string): Promise<SymptomCheckin | null> => {
-    if (IS_DEV_MODE) {
-      return getDevCheckins().find((c) => c.checkin_date === date) ?? null;
-    }
-
     const userId = getUserId();
     if (!userId) return null;
 
@@ -370,15 +179,6 @@ export function useCheckins() {
     const today = getLocalDateISO(timezone);
     const since = addDaysISO(today, -(window - 1));
 
-    if (IS_DEV_MODE) {
-      const dates = new Set(
-        getDevCheckins()
-          .filter((c) => c.checkin_date >= since && c.checkin_date <= today)
-          .map((c) => c.checkin_date),
-      );
-      return { covered: dates.size, window };
-    }
-
     const userId = getUserId();
     if (!userId) return null;
 
@@ -396,40 +196,6 @@ export function useCheckins() {
   const createCheckin = async (data: CheckinInput): Promise<SymptomCheckin | null> => {
     const userId = getUserId();
     if (!userId) return null;
-
-    if (IS_DEV_MODE) {
-      const checkinDate = data.checkinDate ?? getLocalDateISO(getTimezone());
-      const id = `checkin-dev-${Date.now()}`;
-      const newCheckin = buildDevCheckin({ ...data, checkinDate }, id, MOCK_USER.id, getTimezone());
-
-      const filtered = getDevCheckins().filter((c) => c.checkin_date !== checkinDate);
-      setDevCheckins([newCheckin, ...filtered]);
-
-      if (data.extendedSymptoms.length > 0) {
-        saveDevExtendedSymptoms(id, MOCK_USER.id, data.extendedSymptoms);
-      }
-
-      if (data.checkinType !== 'pulse') {
-        const instrumentId = data.instrumentId ?? 'mrs';
-        const assessmentScore = buildAssessmentScore(
-          data.mrsScores,
-          instrumentId,
-          checkinDate,
-        );
-        if (assessmentScore) {
-          await saveAssessmentResult(
-            MOCK_USER.id,
-            assessmentScore,
-            id,
-            `${checkinDate}T12:00:00.000Z`,
-          );
-        }
-      }
-
-      syncDevCheckins();
-      console.log('[DEV] Check-in saved:', newCheckin);
-      return newCheckin;
-    }
 
     const payload = buildCheckinPayload(
       { ...data, checkinDate: data.checkinDate ?? getLocalDateISO(getTimezone()) },
@@ -486,39 +252,6 @@ export function useCheckins() {
     const userId = getUserId();
     if (!userId) return false;
 
-    if (IS_DEV_MODE) {
-      const existing = getDevCheckins().find((c) => c.id === id);
-      if (!existing) return false;
-
-      const updated = buildDevCheckin(data, id, MOCK_USER.id, getTimezone());
-      updated.checkin_date = existing.checkin_date;
-      updated.created_at = existing.created_at;
-
-      setDevCheckins(getDevCheckins().map((c) => (c.id === id ? updated : c)));
-      saveDevExtendedSymptoms(id, MOCK_USER.id, data.extendedSymptoms);
-
-      const instrumentId = data.instrumentId ?? 'mrs';
-      if (data.checkinType !== 'pulse') {
-        const assessmentScore = buildAssessmentScore(
-          data.mrsScores,
-          instrumentId,
-          existing.checkin_date,
-        );
-        if (assessmentScore) {
-          await saveAssessmentResult(
-            MOCK_USER.id,
-            assessmentScore,
-            id,
-            `${existing.checkin_date}T12:00:00.000Z`,
-          );
-        }
-      }
-
-      syncDevCheckins();
-      console.log('[DEV] Check-in updated:', updated);
-      return true;
-    }
-
     const payload = buildCheckinPayload(data, userId, getTimezone());
     delete payload.user_id;
     delete payload.checkin_date;
@@ -572,14 +305,6 @@ export function useCheckins() {
   };
 
   const deleteCheckin = async (id: string): Promise<boolean> => {
-    if (IS_DEV_MODE) {
-      setDevCheckins(getDevCheckins().filter((c) => c.id !== id));
-      setDevExtendedSymptomLogs(getDevExtendedSymptomLogs().filter((l) => l.checkin_id !== id));
-      syncDevCheckins();
-      console.log('[DEV] Check-in deleted:', id);
-      return true;
-    }
-
     const { error: deleteError } = await supabase.from('symptom_checkins').delete().eq('id', id);
     if (deleteError) {
       setError(deleteError.message);
@@ -590,11 +315,6 @@ export function useCheckins() {
   };
 
   const getStreak = async (): Promise<number> => {
-    if (IS_DEV_MODE) {
-      const frequency = useAuthStore.getState().profile?.checkin_frequency ?? 'daily';
-      return computeDevStreak(getTimezone(), frequency);
-    }
-
     const userId = getUserId();
     if (!userId) return 0;
 

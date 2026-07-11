@@ -15,8 +15,6 @@ import {
 } from '../lib/strawStaging';
 import { useAuthStore } from './authStore';
 import { supabase } from '../lib/supabase';
-import { IS_DEV_MODE } from '../lib/devMode';
-import { setDevSymptomSelections } from '../lib/devStore';
 import { SYMPTOM_CATALOG } from '../data/symptoms';
 import type { StrawStageCode } from '../lib/strawStaging';
 
@@ -262,13 +260,6 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
       symptom_id: symptomId,
       is_watch_symptom: formData.watchSymptoms.includes(symptomId),
     }));
-
-    if (IS_DEV_MODE) {
-      setDevSymptomSelections(rows);
-      set({ isSubmitting: false });
-      console.log('[DEV] Symptom selections saved:', rows);
-      return { success: true };
-    }
 
     const { error: deleteError } = await supabase
       .from('user_symptom_selections')

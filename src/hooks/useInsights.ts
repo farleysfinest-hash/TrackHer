@@ -6,13 +6,6 @@ import { useMedications } from './useMedications';
 import { useMedicationChanges } from './useMedicationChanges';
 import { useLabResults } from './useLabResults';
 import { useAuthStore } from '../stores/authStore';
-import { IS_DEV_MODE } from '../lib/devMode';
-import {
-  getDevExtendedSymptomLogs,
-  getDevDismissedInsights,
-  addDevDismissedInsight,
-  getDevMedicationAdministrations,
-} from '../lib/devStore';
 import { supabase } from '../lib/supabase';
 import type { ExtendedSymptomLog, MedicationAdministration } from '../types/database';
 import type { DismissalRecord } from '../utils/insightHelpers';
@@ -31,12 +24,10 @@ export function useInsights() {
   const { labResults, fetchLabResults, isLoading: labsLoading } = useLabResults();
   const [extendedSymptoms, setExtendedSymptoms] = useState<ExtendedSymptomLog[]>([]);
   const [administrations, setAdministrations] = useState<MedicationAdministration[]>([]);
-  const [extendedLoading, setExtendedLoading] = useState(!IS_DEV_MODE);
-  const [administrationsLoading, setAdministrationsLoading] = useState(!IS_DEV_MODE);
-  const [dismissals, setDismissals] = useState<DismissalRecord[]>(() =>
-    IS_DEV_MODE ? getDevDismissedInsights() : [],
-  );
-  const [dismissalsLoading, setDismissalsLoading] = useState(!IS_DEV_MODE);
+  const [extendedLoading, setExtendedLoading] = useState(true);
+  const [administrationsLoading, setAdministrationsLoading] = useState(true);
+  const [dismissals, setDismissals] = useState<DismissalRecord[]>([]);
+  const [dismissalsLoading, setDismissalsLoading] = useState(true);
 
   useEffect(() => {
     void fetchCheckins(100);
@@ -47,12 +38,6 @@ export function useInsights() {
   }, []);
 
   useEffect(() => {
-    if (IS_DEV_MODE) {
-      setExtendedSymptoms(getDevExtendedSymptomLogs());
-      setExtendedLoading(false);
-      return;
-    }
-
     if (!userId) {
       setExtendedSymptoms([]);
       setExtendedLoading(false);
@@ -85,12 +70,6 @@ export function useInsights() {
   }, [userId]);
 
   useEffect(() => {
-    if (IS_DEV_MODE) {
-      setAdministrations(getDevMedicationAdministrations());
-      setAdministrationsLoading(false);
-      return;
-    }
-
     if (!userId) {
       setAdministrations([]);
       setAdministrationsLoading(false);
@@ -122,12 +101,6 @@ export function useInsights() {
   }, [userId]);
 
   useEffect(() => {
-    if (IS_DEV_MODE) {
-      setDismissals(getDevDismissedInsights());
-      setDismissalsLoading(false);
-      return;
-    }
-
     if (!userId) {
       setDismissals([]);
       setDismissalsLoading(false);
@@ -185,11 +158,6 @@ export function useInsights() {
         ...prev.filter((d) => d.insight_id !== insightId),
         { insight_id: insightId, dismissed_at: dismissedAt },
       ]);
-
-      if (IS_DEV_MODE) {
-        addDevDismissedInsight(insightId, dismissedAt);
-        return;
-      }
 
       if (!userId) return;
 

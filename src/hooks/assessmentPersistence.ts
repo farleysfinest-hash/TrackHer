@@ -1,9 +1,7 @@
-import { IS_DEV_MODE } from '../lib/devMode';
 import { supabase } from '../lib/supabase';
-import type { AssessmentResult, InstrumentScore } from '../types/instruments';
+import type { InstrumentScore } from '../types/instruments';
 import { getInstrumentById } from '../data/instruments/registry';
 import { calculateInstrumentScore } from '../utils/checkinHelpers';
-import { getDevAssessments, setDevAssessments } from './useAssessments';
 
 export async function saveAssessmentResult(
   userId: string,
@@ -21,16 +19,6 @@ export async function saveAssessmentResult(
     item_responses: score.itemResponses,
     assessed_at: assessedAt,
   };
-
-  if (IS_DEV_MODE) {
-    const result: AssessmentResult = {
-      id: `assessment-dev-${Date.now()}`,
-      ...payload,
-      created_at: new Date().toISOString(),
-    };
-    setDevAssessments([result, ...getDevAssessments()]);
-    return;
-  }
 
   const { error } = await supabase.from('assessment_results').insert(payload);
   if (error) {

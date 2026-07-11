@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import {
   Flame,
   Brain,
@@ -9,12 +8,11 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useQuickLogStore } from '../../stores/quickLogStore';
-import { useSymptomSelections, seedDevSymptomSelectionsIfEmpty } from '../../hooks/useSymptomSelections';
+import { useSymptomSelections } from '../../hooks/useSymptomSelections';
 import { getSymptomByKey, getSymptomChipLabel } from '../../data/symptoms';
 import type { SymptomBodySystem } from '../../types/symptoms';
 import { QuickLogSheet } from './QuickLogSheet';
 import { RecentLogs } from './RecentLogs';
-import { IS_DEV_MODE } from '../../lib/devMode';
 
 const ICON_BY_SYSTEM: Partial<Record<SymptomBodySystem, LucideIcon>> = {
   vasomotor: Flame,
@@ -32,10 +30,6 @@ function SymptomIcon({ bodySystem }: { bodySystem: SymptomBodySystem }) {
 export function QuickLogWidget() {
   const openSheet = useQuickLogStore((s) => s.openSheet);
   const { watchSymptomIds, isLoading } = useSymptomSelections();
-
-  useEffect(() => {
-    if (IS_DEV_MODE) seedDevSymptomSelectionsIfEmpty();
-  }, []);
 
   if (isLoading) return null;
 

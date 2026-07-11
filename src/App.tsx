@@ -1,5 +1,4 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { IS_DEV_MODE } from './lib/devMode';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { AppShell } from './components/layout/AppShell';
 import { ToastContainer } from './components/ui/Toast';
@@ -56,12 +55,6 @@ export function App() {
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
-
-      {IS_DEV_MODE && (
-        <div className="pointer-events-none fixed bottom-20 right-4 z-40 rounded-full bg-sage-700 px-3 py-1 font-mono text-xs text-white opacity-80 shadow-lg md:bottom-4">
-          DEV MODE
-        </div>
-      )}
     </BrowserRouter>
   );
 }

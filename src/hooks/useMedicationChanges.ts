@@ -1,10 +1,5 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { IS_DEV_MODE } from '../lib/devMode';
-import {
-  getDevMedications,
-  getDevMedicationChanges,
-} from '../lib/devStore';
 import { useAuthStore } from '../stores/authStore';
 import type { MedicationChange, Medication } from '../types/database';
 
@@ -25,21 +20,6 @@ export function useMedicationChanges() {
 
     setIsLoading(true);
     setError(null);
-
-    if (IS_DEV_MODE) {
-      let devChanges = getDevMedicationChanges();
-      if (medicationId) {
-        devChanges = devChanges.filter((c) => c.medication_id === medicationId);
-      }
-      const medMap = new Map(getDevMedications().map((m) => [m.id, m]));
-      const enriched = devChanges.map((change) => ({
-        ...change,
-        medication: change.medication_id ? medMap.get(change.medication_id) ?? null : null,
-      }));
-      setChanges(enriched);
-      setIsLoading(false);
-      return;
-    }
 
     let query = supabase
       .from('medication_changes')
