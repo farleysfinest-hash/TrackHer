@@ -5,10 +5,10 @@ export const CHART_COLORS = {
   mrsTotal: '#7a3b5e',
   mrsTotalDot: '#a64d79',
   wellbeing: '#c989a7',
-  /** MRS subscale line ramp: light blush → mid → brand rose (all clearly distinct) */
-  somatic: '#d4a0b5',
-  psychological: '#be739a',
-  urogenital: '#c989a7',
+  /** MRS subscale line ramp: deep rose → raspberry → light blush */
+  psychological: '#7a3b5e',
+  somatic: '#a64d79',
+  urogenital: '#e0a8c6',
   optimalBand: '#5a8a4a',
   conventionalBand: '#c4946c',
   outOfRange: '#b54f4f',

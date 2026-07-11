@@ -1,12 +1,10 @@
-/** Option C subscale palette — distinct at a glance, rose-family coherent. */
+/** MRS subscale palette — a lightness-separated rose ramp. */
 export const MRS_SUBSCALE_COLORS = {
-  psychological: '#4a2338',
+  psychological: '#7a3b5e',
   somatic: '#a64d79',
-  urogenital: '#e5aac8',
+  urogenital: '#e0a8c6',
   urogenitalDotOutline: '#a64d79',
 } as const;
-
-export type SubscaleMarkerShape = 'circle' | 'diamond' | 'square';
 
 export const MRS_SUBSCALES = [
   {
@@ -17,8 +15,6 @@ export const MRS_SUBSCALES = [
     dotFill: MRS_SUBSCALE_COLORS.psychological,
     dotStroke: MRS_SUBSCALE_COLORS.psychological,
     dotStrokeWidth: 0,
-    markerShape: 'diamond' as SubscaleMarkerShape,
-    dotRadius: 4.5,
   },
   {
     dataKey: 'somatic' as const,
@@ -28,8 +24,6 @@ export const MRS_SUBSCALES = [
     dotFill: MRS_SUBSCALE_COLORS.somatic,
     dotStroke: MRS_SUBSCALE_COLORS.somatic,
     dotStrokeWidth: 0,
-    markerShape: 'circle' as SubscaleMarkerShape,
-    dotRadius: 5,
   },
   {
     dataKey: 'urogenital' as const,
@@ -38,9 +32,7 @@ export const MRS_SUBSCALES = [
     color: MRS_SUBSCALE_COLORS.urogenital,
     dotFill: MRS_SUBSCALE_COLORS.urogenital,
     dotStroke: MRS_SUBSCALE_COLORS.urogenitalDotOutline,
-    dotStrokeWidth: 0.5,
-    markerShape: 'square' as SubscaleMarkerShape,
-    dotRadius: 4,
+    dotStrokeWidth: 0.75,
   },
 ] as const;
 
