@@ -170,15 +170,15 @@ export function formatApplicationSite(site: string | null): string {
 
 export function getHormoneColor(category: HormoneCategory): string {
   const colors: Record<HormoneCategory, string> = {
-    estrogen: 'text-clay-500 bg-clay-500/10',
-    progesterone: 'text-sage-600 bg-sage-600/10',
-    testosterone: 'text-info bg-info/10',
-    combination: 'text-sage-800 bg-sage-800/10',
-    dhea: 'text-sand-400 bg-sand-400/10',
-    oxytocin: 'text-clay-400 bg-clay-400/10',
-    thyroid: 'text-sage-400 bg-sage-400/10',
-    supplement: 'text-sand-300 bg-sand-300/10',
-    other: 'text-sand-400 bg-sand-400/10',
+    estrogen: 'text-sage-700 bg-sage-500/10',
+    progesterone: 'text-sage-600 bg-sage-400/10',
+    testosterone: 'text-sage-800 bg-sage-800/10',
+    combination: 'text-sage-700 bg-sage-500/10',
+    dhea: 'text-sage-500 bg-sage-300/10',
+    oxytocin: 'text-sage-500 bg-sage-300/10',
+    thyroid: 'text-sage-500 bg-sage-300/10',
+    supplement: 'text-sage-500 bg-sage-300/10',
+    other: 'text-sage-500 bg-sage-300/10',
   };
   return colors[category] ?? colors.other;
 }
@@ -325,7 +325,7 @@ export function getChangeTimelineColor(type: MedicationChangeType): string {
       return 'bg-sage-500';
     case 'method_changed':
     case 'switched':
-      return 'bg-info';
+      return 'bg-sage-400';
     default:
       return 'bg-sage-400';
   }

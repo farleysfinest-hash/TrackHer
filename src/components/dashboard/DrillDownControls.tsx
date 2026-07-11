@@ -33,7 +33,7 @@ interface DrillDownControlsProps {
   changeMarkers: ChangeMarker[];
 }
 
-const MAX_SYMPTOMS = 4;
+const MAX_SYMPTOMS = 3;
 const MAX_MEDS = 3;
 
 export function DrillDownControls({
@@ -91,7 +91,7 @@ export function DrillDownControls({
   return (
     <ChartCard
       title="Compare Symptoms & Medications"
-      description="Select up to 4 symptoms and 3 medications to compare"
+      description="Select up to 3 symptoms and 3 medications to compare"
       isEmpty={isEmpty}
       emptyState={{ message: 'Need at least 2 check-ins for comparison charts.' }}
       minHeight="360px"

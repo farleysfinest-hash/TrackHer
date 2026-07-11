@@ -8,6 +8,9 @@ interface MedicationTimelineProps {
   bars: MedicationBar[];
 }
 
+/** Every HormoneCategory gets a rose ink. Adjuncts (dhea, thyroid, oxytocin,
+ *  supplement) share one light supportive tone — they are not the therapy the
+ *  engine reasons about, and every bar is labelled with its drug name. */
 function categoryColor(category: string): string {
   switch (category) {
     case 'estrogen':
@@ -16,6 +19,13 @@ function categoryColor(category: string): string {
       return CHART_COLORS.progesterone;
     case 'testosterone':
       return CHART_COLORS.testosterone;
+    case 'combination':
+      return CHART_COLORS.combination;
+    case 'dhea':
+    case 'thyroid':
+    case 'oxytocin':
+    case 'supplement':
+      return CHART_COLORS.supportive;
     default:
       return CHART_COLORS.other;
   }

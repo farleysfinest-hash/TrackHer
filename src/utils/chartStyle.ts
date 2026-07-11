@@ -26,15 +26,26 @@ export interface SeriesLineProps {
   strokeOpacity?: number;
 }
 
+import { LIGHT_SERIES_INKS, LIGHT_SERIES_OUTLINE } from './chartHelpers';
+
 /** Weekly measurements (MRS, subscales, symptom trends): solid monotone curve + prominent round dots. */
 export function weeklySeriesProps(stroke: string, dotColor: string = stroke): SeriesLineProps {
+  const needsOutline = LIGHT_SERIES_INKS.includes(stroke) || LIGHT_SERIES_INKS.includes(dotColor);
+  const dotStroke = needsOutline ? LIGHT_SERIES_OUTLINE : dotColor;
+  const dotStrokeWidth = needsOutline ? 0.75 : 0;
+
   return {
     type: 'monotone',
     strokeWidth: 2,
     connectNulls: true,
     isAnimationActive: false,
-    dot: { r: 4, fill: dotColor, stroke: dotColor, strokeWidth: 0 },
-    activeDot: { r: 5, fill: dotColor, stroke: '#ffffff', strokeWidth: 1 },
+    dot: { r: 4.5, fill: dotColor, stroke: dotStroke, strokeWidth: dotStrokeWidth },
+    activeDot: {
+      r: 6,
+      fill: dotColor,
+      stroke: needsOutline ? LIGHT_SERIES_OUTLINE : '#ffffff',
+      strokeWidth: needsOutline ? 0.75 : 1,
+    },
   };
 }
 

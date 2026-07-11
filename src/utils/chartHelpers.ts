@@ -12,16 +12,24 @@ export const CHART_COLORS = {
   optimalBand: '#e5aac8',
   conventionalBand: '#dfaec7',
   outOfRange: '#7a3b5e',
-  estrogen: '#d4a0b5',
-  progesterone: '#be739a',
-  testosterone: '#8a6a7a',
-  other: '#c4b4b8',
+  estrogen: '#a64d79',
+  progesterone: '#c989a7',
+  testosterone: '#7a3b5e',
+  combination: '#be739a',
+  supportive: '#dfaec7',
+  other: '#dfaec7',
   changeLine: '#ce93ad',
   grid: '#f0eaec',
   axisText: '#b896a3',
 } as const;
 
-export const DRILL_DOWN_COLORS = ['#be739a', '#a88088', '#8a6a7a', '#7a3b5e'] as const;
+/** Series ramp — three separable rose depths. The rose family does not support a
+ *  fourth distinguishable line colour; selection is capped at 3 to match. */
+export const DRILL_DOWN_COLORS = ['#7a3b5e', '#c07396', '#e5aac8'] as const;
+
+/** Series lighter than this need a dot outline to hold on white (design rule 5). */
+export const LIGHT_SERIES_INKS: readonly string[] = ['#e5aac8', '#e0a8c6', '#dfaec7'];
+export const LIGHT_SERIES_OUTLINE = '#a64d79';
 
 /** Severity as depth of rose (design rule 8) — monotonic lightness, grayscale-safe */
 export const HEATMAP_COLORS: Record<number, string> = {

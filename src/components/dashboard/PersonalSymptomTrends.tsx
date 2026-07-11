@@ -110,7 +110,7 @@ export function PersonalSymptomTrends({ checkins, extendedLogs }: PersonalSympto
     if (trackedSymptomIds.length === 0) return { points: [], keys: [] as string[] };
 
     const sorted = [...checkins].sort((a, b) => a.checkin_date.localeCompare(b.checkin_date));
-    const candidateKeys = trackedSymptomIds.slice(0, 5);
+    const candidateKeys = trackedSymptomIds.slice(0, DRILL_DOWN_COLORS.length);
 
     const rawPoints = sorted.map((checkin) => {
       const row: Record<string, string | number | null> = {
