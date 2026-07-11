@@ -5,7 +5,7 @@ import type { HeatmapRow } from '../../hooks/useChartData';
 import { ChartCard } from '../ui/ChartCard';
 import { SEVERITY_LABELS } from '../../utils/checkinHelpers';
 
-const LABEL_COLUMN_WIDTH = '168px';
+const LABEL_COLUMN_WIDTH = '126px';
 
 interface SymptomHeatmapProps {
   rows: HeatmapRow[];
@@ -24,18 +24,18 @@ function SymptomHeatmapComponent({ rows }: SymptomHeatmapProps) {
   return (
     <ChartCard
       title="Symptom Heatmap"
-      description="Severity at a glance — worst symptoms right now at top"
+      description="Worst symptoms at top · last 8 check-ins"
       isEmpty={isEmpty}
       emptyState={{ message: 'Complete check-ins to see your symptom heatmap.' }}
       minHeight="320px"
     >
       {!isEmpty && (
-        <div className="overflow-x-auto">
-          <div className="inline-block min-w-full">
+        <div>
+          <div className="w-full">
             <div
               className="grid gap-px"
               style={{
-                gridTemplateColumns: `${LABEL_COLUMN_WIDTH} repeat(${dates.length}, minmax(32px, 1fr))`,
+                gridTemplateColumns: `${LABEL_COLUMN_WIDTH} repeat(${dates.length}, minmax(0, 1fr))`,
               }}
             >
               <div className="sticky left-0 z-10 bg-white p-2 text-xs font-medium text-sage-500">
@@ -51,19 +51,15 @@ function SymptomHeatmapComponent({ rows }: SymptomHeatmapProps) {
               ))}
 
               {rows.map((row) => {
-                const symptom = getSymptomByKey(row.symptomKey);
                 const displayLabel = heatmapDisplayLabel(row.symptomKey, row.label);
-                const allowWrap = !symptom?.shortLabel;
 
                 return (
                   <Fragment key={row.symptomKey}>
                     <div
-                      className={[
-                        'sticky left-0 z-10 flex min-h-8 items-center bg-white p-2 text-xs leading-snug text-sage-700',
-                        allowWrap ? 'break-words' : '',
-                      ].join(' ')}
+                      className="sticky left-0 z-10 flex h-8 items-center overflow-hidden bg-white pr-2 text-xs text-sage-700"
+                      title={row.label}
                     >
-                      <span className={allowWrap ? 'line-clamp-2' : ''}>{displayLabel}</span>
+                      <span className="truncate whitespace-nowrap">{displayLabel}</span>
                     </div>
                     {row.cells.map((cell) => {
                       const bg =

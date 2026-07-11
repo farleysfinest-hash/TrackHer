@@ -157,10 +157,19 @@ export function useChartData(dateRange: DateRange) {
       }));
   }, [medications, dateRange]);
 
+  /** The heatmap is a "right now" instrument: it shows the most recent check-ins only,
+   *  and it ranks on exactly the columns it displays. Do not widen this to the global
+   *  date range — a ranking computed from off-screen data is what broke this surface. */
+  const HEATMAP_WINDOW = 8;
+
   const getHeatmapData = useCallback((): HeatmapRow[] => {
+    const windowCheckins = [...mrsCheckins]
+      .sort((a, b) => a.checkin_date.localeCompare(b.checkin_date))
+      .slice(-HEATMAP_WINDOW);
+
     const rows = MRS_CANONICAL_SYMPTOMS.map((symptom) => {
       const key = symptom.key as MRSSymptomKey;
-      const cells = mrsCheckins.map((c) => ({
+      const cells = windowCheckins.map((c) => ({
         date: c.checkin_date,
         dateLabel: formatChartDate(c.checkin_date),
         score: c[key] as number | null,

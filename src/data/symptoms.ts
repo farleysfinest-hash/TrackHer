@@ -90,6 +90,7 @@ const RAW_SYMPTOM_CATALOG: RawSymptom[] = [
   {
     key: 'exhaustion',
     label: 'Physical and mental exhaustion',
+    shortLabel: 'Exhaustion',
     description:
       'Feeling drained, reduced stamina, difficulty concentrating, forgetfulness.',
     category: 'body',
@@ -135,6 +136,7 @@ const RAW_SYMPTOM_CATALOG: RawSymptom[] = [
   {
     key: 'joint_muscle_pain',
     label: 'Joint and muscle pain',
+    shortLabel: 'Joint & muscle pain',
     description:
       'Aching, stiffness, or pain in joints or muscles — especially in the morning.',
     category: 'body',

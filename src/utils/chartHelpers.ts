@@ -120,11 +120,15 @@ function mostRecentHeatmapScore(cells: Array<{ score: number | null | undefined 
   return -1;
 }
 
-/** Worst symptoms NOW first: recent severity desc, then whole-window mean, then label. */
+/**
+ * Worst symptoms at top. Ranked by MEAN severity across exactly the columns shown —
+ * all 3s outranks 2s-and-3s outranks all 2s. `recentSeverity` is now only a tiebreak.
+ * Never rank on data that is not on screen.
+ */
 export function sortHeatmapRows<T extends HeatmapSortableRow>(rows: T[]): T[] {
   return [...rows].sort((a, b) => {
-    if (b.recentSeverity !== a.recentSeverity) return b.recentSeverity - a.recentSeverity;
     if (b.avgSeverity !== a.avgSeverity) return b.avgSeverity - a.avgSeverity;
+    if (b.recentSeverity !== a.recentSeverity) return b.recentSeverity - a.recentSeverity;
     const recentDiff = mostRecentHeatmapScore(b.cells) - mostRecentHeatmapScore(a.cells);
     if (recentDiff !== 0) return recentDiff;
     return a.label.localeCompare(b.label);
