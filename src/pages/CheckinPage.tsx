@@ -7,12 +7,12 @@ import { useAuthStore } from '../stores/authStore';
 import { CheckinFlow } from '../components/checkin/CheckinFlow';
 import { CheckinHistory } from '../components/checkin/CheckinHistory';
 import { CheckinDetailModal } from '../components/checkin/CheckinDetailModal';
-import { MRSScoreBadge } from '../components/checkin/MRSScoreBadge';
+import { MrsScoreDisplay } from '../components/checkin/MrsScoreDisplay';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
-import { hasMRSData, getLocalDateISO, getResolvedTimezone } from '../utils/checkinHelpers';
+import { getLocalDateISO, getResolvedTimezone } from '../utils/checkinHelpers';
 import { DailyChannelsDisplay } from '../components/ui/DailyChannelsDisplay';
 import { formatLoggingDate } from '../utils/formatters';
 import type { SymptomCheckin } from '../types/database';
@@ -152,9 +152,7 @@ export function CheckinPage() {
                 </h2>
                 <div className="mt-2 flex flex-wrap items-center gap-4 text-sm">
                   <DailyChannelsDisplay checkin={todaysCheckin} />
-                  {hasMRSData(todaysCheckin) && (
-                    <MRSScoreBadge total={todaysCheckin.total_score} compact showDot />
-                  )}
+                  <MrsScoreDisplay checkin={todaysCheckin} compact showDot />
                 </div>
               </div>
             </div>

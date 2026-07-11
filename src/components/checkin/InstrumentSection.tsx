@@ -137,13 +137,22 @@ export function InstrumentSection({ instrument, onNext, onBack }: InstrumentSect
       <div className="rounded-xl border border-sand-200 bg-white p-4">
         <InstrumentScoreBadge instrument={instrument} score={score} />
         <p className="mt-2 text-xs text-sage-400">
-          Total {instrument.abbreviation}: {score.total}/{instrument.totalScoreRange[1]}
-          {instrument.subscales.map((sub) => (
-            <span key={sub.id}>
-              {' '}
-              · {sub.label} {score.subscales[sub.id]?.score ?? 0}/{sub.maxScore}
-            </span>
-          ))}
+          {score.isComplete && score.total !== null ? (
+            <>
+              Total {instrument.abbreviation}: {score.total}/{instrument.totalScoreRange[1]}
+              {instrument.subscales.map((sub) => {
+                const subScore = score.subscales[sub.id]?.score;
+                return (
+                  <span key={sub.id}>
+                    {' '}
+                    · {sub.label} {subScore ?? '—'}/{sub.maxScore}
+                  </span>
+                );
+              })}
+            </>
+          ) : (
+            `No total yet — ${score.missingItemCount} of ${instrument.items.length} questions unanswered`
+          )}
         </p>
         <p className="mt-2 text-xs text-sage-400">
           Scored with the {instrument.name} ({instrument.abbreviation}) — a validated scale your

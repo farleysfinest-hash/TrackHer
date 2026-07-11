@@ -1,9 +1,9 @@
 import { memo } from 'react';
 import type { SymptomCheckin } from '../../types/database';
 import { formatDateLong } from '../../utils/formatters';
-import { getTopConcerns, hasMRSData, MRS_CANONICAL_KEYS, type MRSScoresMap, type MRSSymptomKey } from '../../utils/checkinHelpers';
+import { getTopConcerns, MRS_CANONICAL_KEYS, type MRSScoresMap, type MRSSymptomKey } from '../../utils/checkinHelpers';
 import { DailyChannelsDisplay } from '../ui/DailyChannelsDisplay';
-import { MRSScoreBadge } from './MRSScoreBadge';
+import { MrsScoreDisplay } from './MrsScoreDisplay';
 import { Button } from '../ui/Button';
 
 interface CheckinHistoryCardProps {
@@ -36,11 +36,7 @@ function CheckinHistoryCardComponent({ checkin, onViewDetails }: CheckinHistoryC
             )}
           </p>
           <div className="mt-2">
-            {hasMRSData(checkin) ? (
-              <MRSScoreBadge total={checkin.total_score} compact showDot />
-            ) : (
-              <span className="text-sm text-sage-500">Pulse</span>
-            )}
+            <MrsScoreDisplay checkin={checkin} compact showDot />
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-end text-right">

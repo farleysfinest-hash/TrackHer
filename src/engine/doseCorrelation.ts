@@ -1,6 +1,6 @@
 import type { Insight } from './types';
 import { INSIGHT_DISCLAIMER } from './types';
-import type { SymptomCheckin, MedicationChange, Medication } from '../types/database';
+import type { SymptomCheckin, MedicationChange, Medication, MRSScore } from '../types/database';
 import { MRS_CORE_SYMPTOMS } from '../data/symptoms';
 import type { MRSSymptomKey } from '../utils/checkinHelpers';
 import { hasMRSData } from '../utils/checkinHelpers';
@@ -61,13 +61,18 @@ export function analyzeDoseCorrelations(input: DoseCorrelationInput): Insight[] 
 
     for (const symptom of MRS_CORE_SYMPTOMS) {
       const key = symptom.key as MRSSymptomKey;
+      const symBeforeValues = beforeCheckins
+        .map((c) => c[key])
+        .filter((v): v is MRSScore => v !== null && v !== undefined);
+      const symAfterValues = afterCheckins
+        .map((c) => c[key])
+        .filter((v): v is MRSScore => v !== null && v !== undefined);
+      if (symBeforeValues.length === 0 || symAfterValues.length === 0) continue;
+
       const symBefore =
-        beforeCheckins
-          .map((c) => Number(c[key] ?? 0))
-          .reduce((a, b) => a + b, 0) / beforeCheckins.length;
+        symBeforeValues.reduce<number>((sum, v) => sum + v, 0) / symBeforeValues.length;
       const symAfter =
-        afterCheckins.map((c) => Number(c[key] ?? 0)).reduce((a, b) => a + b, 0) /
-        afterCheckins.length;
+        symAfterValues.reduce<number>((sum, v) => sum + v, 0) / symAfterValues.length;
       const delta = symAfter - symBefore;
 
       if (Math.abs(delta) >= 0.5) {

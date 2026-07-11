@@ -50,6 +50,8 @@ export function useAssessments() {
       const userId = getUserId();
       if (!userId) return null;
 
+      if (!score.isComplete || score.total === null) return null;
+
       const payload = {
         user_id: userId,
         instrument_id: score.instrumentId,
@@ -65,7 +67,7 @@ export function useAssessments() {
         .from('assessment_results')
         .insert(payload)
         .select()
-        .single();
+        .maybeSingle();
 
       if (insertError) {
         setError(insertError.message);

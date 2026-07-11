@@ -71,10 +71,10 @@ interface CheckinState {
     extendedSymptoms: ExtendedSymptomLog[],
   ) => void;
   reset: () => void;
-  getTotalMRS: () => number;
-  getSomaticScore: () => number;
-  getPsychologicalScore: () => number;
-  getUrogenitalScore: () => number;
+  getTotalMRS: () => number | null;
+  getSomaticScore: () => number | null;
+  getPsychologicalScore: () => number | null;
+  getUrogenitalScore: () => number | null;
   getMRSScore: () => ReturnType<typeof calculateMRS>;
   getInstrumentScore: (instrument: InstrumentDefinition) => ReturnType<typeof calculateInstrumentScore>;
   getTopConcerns: () => Array<{ key: string; label: string; score: MRSScore }>;

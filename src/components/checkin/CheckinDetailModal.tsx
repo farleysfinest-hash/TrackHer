@@ -4,10 +4,10 @@ import { useCheckins } from '../../hooks/useCheckins';
 import { useToast } from '../../stores/toastStore';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
-import { MRSScoreBadge } from './MRSScoreBadge';
+import { MrsScoreDisplay } from './MrsScoreDisplay';
 import { getSymptomByKey, MRS_CANONICAL_SYMPTOMS } from '../../data/symptoms';
 import { formatDateLong } from '../../utils/formatters';
-import { CATEGORY_LABELS, SEVERITY_LABELS, hasMRSData } from '../../utils/checkinHelpers';
+import { CATEGORY_LABELS, SEVERITY_LABELS, hasMRSData, hasPartialMRSData } from '../../utils/checkinHelpers';
 import { DailyChannelsDisplay } from '../ui/DailyChannelsDisplay';
 import type { MRSSymptomKey } from '../../utils/checkinHelpers';
 
@@ -83,19 +83,16 @@ export function CheckinDetailModal({
                 <DailyChannelsDisplay checkin={checkin} />
               </div>
             </div>
-            {hasMRSData(checkin) ? (
-              <MRSScoreBadge
-                total={checkin.total_score}
-                somatic={checkin.somatic_score}
-                psychological={checkin.psychological_score}
-                urogenital={checkin.urogenital_score}
-              />
-            ) : (
-              <span className="text-sm text-sage-500">Daily pulse</span>
-            )}
+            <MrsScoreDisplay
+              checkin={checkin}
+              onFinish={() => {
+                onClose();
+                onEdit(checkin);
+              }}
+            />
           </div>
 
-          {hasMRSData(checkin) && (
+          {(hasMRSData(checkin) || hasPartialMRSData(checkin)) && (
           <div>
             <h3 className="mb-3 font-medium text-sage-800">MRS Assessment (11 items)</h3>
             <div className="grid grid-cols-1 gap-2 md:grid-cols-2">

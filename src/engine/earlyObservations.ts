@@ -27,8 +27,9 @@ function topSubscaleLabel(score: InstrumentScore): string {
   const ranked = MRS_INSTRUMENT.subscales
     .map((sub) => ({
       id: sub.id,
-      value: score.subscales[sub.id]?.score ?? 0,
+      value: score.subscales[sub.id]?.score,
     }))
+    .filter((entry): entry is { id: string; value: number } => entry.value != null)
     .sort((a, b) => b.value - a.value);
   const top = ranked[0];
   return MRS_SUBSCALE_FRIENDLY_LABELS[top.id] ?? top.id;
@@ -42,6 +43,9 @@ function sortedMrsCheckins(checkins: SymptomCheckin[]): SymptomCheckin[] {
 
 function baselineObservation(checkin: SymptomCheckin): Insight {
   const score = scoreCheckin(checkin);
+  if (!score.isComplete || score.total === null) {
+    throw new Error('baselineObservation requires a complete MRS check-in');
+  }
   const band = getMRSSeverityBand(score.total);
   const subscale = topSubscaleLabel(score);
 
@@ -69,8 +73,9 @@ function largestSymptomDelta(
 
   for (const item of MRS_INSTRUMENT.items) {
     const key = getItemStorageKey(item);
-    const before = (previous[key as keyof SymptomCheckin] as number | null) ?? 0;
-    const after = (latest[key as keyof SymptomCheckin] as number | null) ?? 0;
+    const before = previous[key as keyof SymptomCheckin] as number | null;
+    const after = latest[key as keyof SymptomCheckin] as number | null;
+    if (before === null || after === null) continue;
     const delta = Math.abs(after - before);
     if (!best || delta > best.delta) {
       best = { label: item.label, before, after, delta };
@@ -83,6 +88,14 @@ function largestSymptomDelta(
 function deltaObservation(previous: SymptomCheckin, latest: SymptomCheckin): Insight {
   const prevScore = scoreCheckin(previous);
   const latestScore = scoreCheckin(latest);
+  if (
+    !prevScore.isComplete ||
+    !latestScore.isComplete ||
+    prevScore.total === null ||
+    latestScore.total === null
+  ) {
+    throw new Error('deltaObservation requires complete MRS check-ins');
+  }
   const totalDelta = latestScore.total - prevScore.total;
   const absDelta = Math.abs(totalDelta);
 

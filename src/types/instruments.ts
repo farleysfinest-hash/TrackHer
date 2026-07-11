@@ -41,22 +41,24 @@ export interface InstrumentDefinition {
   subscales: InstrumentSubscale[];
   totalSeverityBands: SeverityBands;
   targetStages: string[];
-  scoringFunction: (responses: Record<string, number>) => InstrumentScore;
+  scoringFunction: (responses: Record<string, number | null>) => InstrumentScore;
 }
 
 export interface InstrumentScore {
   instrumentId: string;
-  total: number;
-  totalSeverity: SeverityLevel;
+  total: number | null;
+  totalSeverity: SeverityLevel | null;
   subscales: Record<
     string,
     {
-      score: number;
-      severity: SeverityLevel;
+      score: number | null;
+      severity: SeverityLevel | null;
     }
   >;
   completedAt: string;
   itemResponses: Record<string, number>;
+  isComplete: boolean;
+  missingItemCount: number;
 }
 
 export interface AssessmentResult {

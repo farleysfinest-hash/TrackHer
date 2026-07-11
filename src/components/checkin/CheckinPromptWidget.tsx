@@ -1,11 +1,10 @@
 import { Link } from 'react-router-dom';
 import { Leaf, CheckCircle2 } from 'lucide-react';
 import type { SymptomCheckin } from '../../types/database';
-import { hasMRSData } from '../../utils/checkinHelpers';
 import { DailyChannelsDisplay } from '../ui/DailyChannelsDisplay';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
-import { MRSScoreBadge } from './MRSScoreBadge';
+import { MrsScoreDisplay } from './MrsScoreDisplay';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 
 export interface CheckinPromptWidgetProps {
@@ -40,9 +39,7 @@ export function CheckinPromptWidget({
             <h2 className="font-display text-lg text-sage-800">Checked in today</h2>
             <div className="mt-2 flex flex-wrap items-center gap-4 text-sm">
               <DailyChannelsDisplay checkin={todaysCheckin} />
-              {hasMRSData(todaysCheckin) && (
-                <MRSScoreBadge total={todaysCheckin.total_score} compact showDot />
-              )}
+              <MrsScoreDisplay checkin={todaysCheckin} compact showDot />
             </div>
             {isDue && (
               <p className="mt-3 text-sm text-sage-500">

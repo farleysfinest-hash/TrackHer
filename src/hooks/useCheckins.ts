@@ -15,6 +15,8 @@ import {
 } from '../utils/checkinHelpers';
 import type { MRSSymptomKey } from '../utils/checkinHelpers';
 import { buildAssessmentScore, saveAssessmentResult } from './assessmentPersistence';
+import { isInstrumentComplete } from '../data/instruments/scoring';
+import { MRS_INSTRUMENT } from '../data/instruments/mrs';
 
 export interface CheckinInput {
   energyLevel: number | null;
@@ -50,6 +52,12 @@ function buildCheckinPayload(data: CheckinInput, userId: string, timezone: strin
   }
   for (const key of LEGACY_MRS_EXTRA_KEYS) {
     payload[key] = null;
+  }
+
+  if (!isPulse) {
+    payload.mrs_complete = isInstrumentComplete(data.mrsScores, MRS_INSTRUMENT);
+  } else {
+    payload.mrs_complete = false;
   }
 
   return payload;
@@ -234,7 +242,7 @@ export function useCheckins() {
     if (data.checkinType !== 'pulse') {
       const instrumentId = data.instrumentId ?? 'mrs';
       const assessmentScore = buildAssessmentScore(data.mrsScores, instrumentId, checkin.checkin_date);
-      if (assessmentScore) {
+      if (assessmentScore?.isComplete) {
         await saveAssessmentResult(
           userId,
           assessmentScore,
@@ -290,7 +298,7 @@ export function useCheckins() {
     const instrumentId = data.instrumentId ?? 'mrs';
     if (data.checkinType !== 'pulse') {
       const assessmentScore = buildAssessmentScore(data.mrsScores, instrumentId, checkinDate);
-      if (assessmentScore) {
+      if (assessmentScore?.isComplete) {
         await saveAssessmentResult(
           userId,
           assessmentScore,

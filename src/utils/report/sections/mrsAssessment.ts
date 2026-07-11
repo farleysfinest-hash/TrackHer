@@ -49,6 +49,17 @@ export function renderMrsAssessmentPage(
     MRS_INSTRUMENT,
   );
 
+  if (!latestScore.isComplete || latestScore.total === null) {
+    doc.setFontSize(9);
+    doc.setTextColor(...PDF_COLORS.textMuted);
+    doc.text('The most recent check-in in this period is incomplete — no MRS total was calculated.', 14, y);
+    return;
+  }
+
+  const psychScore = latestScore.subscales.psychological?.score;
+  const somaticScore = latestScore.subscales.somatic?.score;
+  const urogenitalScore = latestScore.subscales.urogenital?.score;
+
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...PDF_COLORS.text);
@@ -59,9 +70,9 @@ export function renderMrsAssessmentPage(
   doc.setFontSize(9);
   const scoreLines = [
     `Total: ${latestScore.total}/44 (${getSeverityLabel(getMrsTotalSeverityLevel(latestScore.total))})`,
-    `Psychological subscale: ${latestScore.subscales.psychological?.score ?? 0}/16 (${getSeverityLabel(latestScore.subscales.psychological?.severity ?? 'none')})`,
-    `Somatic subscale: ${latestScore.subscales.somatic?.score ?? 0}/16 (${getSeverityLabel(latestScore.subscales.somatic?.severity ?? 'none')})`,
-    `Urogenital subscale: ${latestScore.subscales.urogenital?.score ?? 0}/12 (${getSeverityLabel(latestScore.subscales.urogenital?.severity ?? 'none')})`,
+    `Psychological subscale: ${psychScore}/16 (${getSeverityLabel(latestScore.subscales.psychological?.severity ?? 'none')})`,
+    `Somatic subscale: ${somaticScore}/16 (${getSeverityLabel(latestScore.subscales.somatic?.severity ?? 'none')})`,
+    `Urogenital subscale: ${urogenitalScore}/12 (${getSeverityLabel(latestScore.subscales.urogenital?.severity ?? 'none')})`,
     `Most recent assessment: ${formatChartDateLong(latest.checkin_date)}`,
   ];
   for (const line of scoreLines) {
@@ -146,7 +157,10 @@ export function renderMrsAssessmentPage(
     const startVal = earliest
       ? (earliest[storageKey as keyof SymptomCheckin] as number | null)
       : null;
-    const arrow = trendArrow(current ?? 0, startVal ?? undefined);
+    const arrow =
+      current !== null
+        ? trendArrow(current, startVal ?? undefined)
+        : '—';
 
     return [
       item.label,

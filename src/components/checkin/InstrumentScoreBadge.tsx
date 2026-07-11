@@ -4,6 +4,7 @@ import {
   getMRSSeverityColor,
   getMRSSeverityDot,
   getMRSSeverityTier,
+  getIncompleteMrsMessage,
   type MRSSeverityLevel,
 } from '../../utils/checkinHelpers';
 
@@ -30,6 +31,14 @@ export function InstrumentScoreBadge({
   compact = false,
   showDot = false,
 }: InstrumentScoreBadgeProps) {
+  if (!score.isComplete || score.total === null || score.totalSeverity === null) {
+    const message = getIncompleteMrsMessage(score.missingItemCount);
+    if (compact) {
+      return <span className="text-sm text-sage-600">Incomplete check-in</span>;
+    }
+    return <p className="text-sm text-sage-600">{message}</p>;
+  }
+
   const tier = score.totalSeverity as MRSSeverityLevel;
   const colorClass = getMRSSeverityColor(tier);
 
@@ -53,7 +62,7 @@ export function InstrumentScoreBadge({
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-sage-600">
         {instrument.subscales.map((sub) => {
           const subScore = score.subscales[sub.id];
-          if (!subScore) return null;
+          if (!subScore || subScore.score === null || subScore.severity === null) return null;
           return (
             <span key={sub.id}>
               {sub.label}: {subScore.score}/{sub.maxScore}

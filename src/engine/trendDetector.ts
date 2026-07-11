@@ -106,7 +106,7 @@ export function analyzeTrends(input: TrendInput): Insight[] {
         supportingData: {
           trendData: sorted.map((c) => ({
             date: c.checkin_date,
-            score: Number(c[key] ?? 0),
+            score: c[key] as number,
           })),
         },
         relatedSymptoms: [symptom.key],
@@ -126,7 +126,7 @@ export function analyzeTrends(input: TrendInput): Insight[] {
         supportingData: {
           trendData: sorted.map((c) => ({
             date: c.checkin_date,
-            score: Number(c[key] ?? 0),
+            score: c[key] as number,
           })),
         },
         relatedSymptoms: [symptom.key],

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { StatCard } from '../ui/StatCard';
-import { hasMRSData, getDailySignal } from '../../utils/checkinHelpers';
+import { hasMRSData, hasPartialMRSData, getDailySignal } from '../../utils/checkinHelpers';
 import { addDaysISO, todayISO } from '../../utils/localDate';
 import type { SymptomCheckin } from '../../types/database';
 
@@ -16,6 +16,10 @@ export function ScoreSummaryCards({ checkins }: ScoreSummaryCardsProps) {
 
   const mrsCheckins = useMemo(() => sorted.filter(hasMRSData), [sorted]);
   const latestMrs = mrsCheckins[0];
+  const latestPartialMrs = useMemo(
+    () => sorted.find((c) => hasPartialMRSData(c) && !hasMRSData(c)),
+    [sorted],
+  );
   const latest = sorted[0];
   const today = todayISO();
   const thirtyDaysAgo = addDaysISO(today, -30);
@@ -64,8 +68,20 @@ export function ScoreSummaryCards({ checkins }: ScoreSummaryCardsProps) {
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <StatCard
         label="MRS Score"
-        value={latestMrs?.total_score ?? '—'}
-        subtext={`/44 · Psych ${latestMrs?.psychological_score ?? '—'} · Som ${latestMrs?.somatic_score ?? '—'} · Uro ${latestMrs?.urogenital_score ?? '—'}`}
+        value={
+          latestMrs
+            ? latestMrs.total_score
+            : latestPartialMrs
+              ? 'Incomplete check-in'
+              : '—'
+        }
+        subtext={
+          latestMrs
+            ? `/44 · Psych ${latestMrs.psychological_score ?? '—'} · Som ${latestMrs.somatic_score ?? '—'} · Uro ${latestMrs.urogenital_score ?? '—'}`
+            : latestPartialMrs
+              ? 'Finish your check-in to see a score'
+              : '/44'
+        }
       />
       <StatCard
         label="Energy"

@@ -220,6 +220,7 @@ export interface SymptomCheckin {
   heavy_bleeding: MRSScore | null;
   misophonia: MRSScore | null;
   checkin_type: CheckinType;
+  mrs_complete: boolean;
   total_score: number;
   somatic_score: number;
   psychological_score: number;

@@ -8,6 +8,7 @@ import { getStageMrsFraming } from '../../engine/stageProfile';
 import { getSymptomByKey } from '../../data/symptoms';
 import {
   hasMRSData,
+  getIncompleteMrsMessage,
   type MRSSeverityBandInfo,
   MRS_TOTAL_MAX,
   SEVERITY_LABELS,
@@ -29,8 +30,10 @@ import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 
 interface CheckinReadoutProps {
-  scoreTotal: number;
-  severityBand: MRSSeverityBandInfo;
+  scoreTotal: number | null;
+  isComplete: boolean;
+  missingItemCount: number;
+  severityBand: MRSSeverityBandInfo | null;
   isBackdated: boolean;
   targetDate: string;
   dateLabel: string;
@@ -44,6 +47,8 @@ interface CheckinReadoutProps {
 
 export function CheckinReadout({
   scoreTotal,
+  isComplete,
+  missingItemCount,
   severityBand,
   isBackdated,
   targetDate,
@@ -81,8 +86,14 @@ export function CheckinReadout({
     return prior?.total_score ?? null;
   }, [mrsCheckins, targetDate]);
 
-  const deltaLine = formatMrsDeltaLine(scoreTotal, previousMrsTotal, isBackdated);
-  const mrsHeadline = formatMrsHeadline(scoreTotal, severityBand, deltaLine);
+  const deltaLine =
+    isComplete && scoreTotal !== null && severityBand
+      ? formatMrsDeltaLine(scoreTotal, previousMrsTotal, isBackdated)
+      : null;
+  const mrsHeadline =
+    isComplete && scoreTotal !== null && severityBand && deltaLine
+      ? formatMrsHeadline(scoreTotal, severityBand, deltaLine)
+      : getIncompleteMrsMessage(missingItemCount);
   const stageFraming = getStageMrsFraming(stageProfile);
 
   const patternPhrase =
@@ -102,7 +113,13 @@ export function CheckinReadout({
       <Card className="border-l-4 border-l-sage-500">
         <p className="text-xs font-medium uppercase tracking-wide text-sage-500">Your MRS</p>
         <p className="mt-2 font-display text-xl text-sage-800">{mrsHeadline}</p>
-        <p className="mt-2 text-sm text-sage-600">{severityBand.meaning}</p>
+        {severityBand ? (
+          <p className="mt-2 text-sm text-sage-600">{severityBand.meaning}</p>
+        ) : (
+          <p className="mt-2 text-sm text-sage-600">
+            You can return to this check-in anytime to answer the remaining questions.
+          </p>
+        )}
         {stageFraming ? (
           <p className="mt-3 text-sm text-sage-500">{stageFraming}</p>
         ) : (
@@ -143,7 +160,9 @@ export function CheckinReadout({
           <Card variant="outlined" padding="sm">
             <InstrumentScoreBadge instrument={instrument} score={instrumentScore} />
             <p className="mt-2 text-xs text-sage-400">
-              Total {instrument.abbreviation}: {scoreTotal}/{MRS_TOTAL_MAX}
+              {isComplete && scoreTotal !== null
+                ? `Total ${instrument.abbreviation}: ${scoreTotal}/${MRS_TOTAL_MAX}`
+                : getIncompleteMrsMessage(missingItemCount)}
             </p>
           </Card>
           {ratedExtended.length > 0 && (

@@ -57,7 +57,8 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
 
   const score = getInstrumentScore(instrument);
   const topConcerns = getTopConcerns();
-  const severityBand = getMRSSeverityBand(score.total);
+  const severityBand =
+    score.isComplete && score.total !== null ? getMRSSeverityBand(score.total) : null;
 
   const topConcernLabels = topConcerns.map((c) => {
     const item = instrument.items.find((i) => getItemStorageKey(i) === c.key);
@@ -130,6 +131,8 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
     return (
       <CheckinReadout
         scoreTotal={score.total}
+        isComplete={score.isComplete}
+        missingItemCount={score.missingItemCount}
         severityBand={severityBand}
         isBackdated={isBackdated}
         targetDate={targetDate}

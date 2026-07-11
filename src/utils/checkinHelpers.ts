@@ -63,14 +63,16 @@ export const INITIAL_MRS_SCORES: MRSScoresMap = {
 export type MRSSeverityLevel = 'none' | 'mild' | 'moderate' | 'severe';
 
 export interface MRSScoreResult {
-  total: number;
-  psychological: number;
-  somatic: number;
-  urogenital: number;
-  totalSeverity: MRSSeverityLevel;
-  psychologicalSeverity: MRSSeverityLevel;
-  somaticSeverity: MRSSeverityLevel;
-  urogenitalSeverity: MRSSeverityLevel;
+  total: number | null;
+  psychological: number | null;
+  somatic: number | null;
+  urogenital: number | null;
+  totalSeverity: MRSSeverityLevel | null;
+  psychologicalSeverity: MRSSeverityLevel | null;
+  somaticSeverity: MRSSeverityLevel | null;
+  urogenitalSeverity: MRSSeverityLevel | null;
+  isComplete: boolean;
+  missingItemCount: number;
 }
 
 function subscaleSeverity(
@@ -93,13 +95,15 @@ export function calculateMRS(responses: Record<string, number | null | undefined
   const instrumentScore = scoreInstrument(responses, MRS_INSTRUMENT);
   return {
     total: instrumentScore.total,
-    psychological: instrumentScore.subscales.psychological?.score ?? 0,
-    somatic: instrumentScore.subscales.somatic?.score ?? 0,
-    urogenital: instrumentScore.subscales.urogenital?.score ?? 0,
+    psychological: instrumentScore.subscales.psychological?.score ?? null,
+    somatic: instrumentScore.subscales.somatic?.score ?? null,
+    urogenital: instrumentScore.subscales.urogenital?.score ?? null,
     totalSeverity: instrumentScore.totalSeverity,
-    psychologicalSeverity: instrumentScore.subscales.psychological?.severity ?? 'none',
-    somaticSeverity: instrumentScore.subscales.somatic?.severity ?? 'none',
-    urogenitalSeverity: instrumentScore.subscales.urogenital?.severity ?? 'none',
+    psychologicalSeverity: instrumentScore.subscales.psychological?.severity ?? null,
+    somaticSeverity: instrumentScore.subscales.somatic?.severity ?? null,
+    urogenitalSeverity: instrumentScore.subscales.urogenital?.severity ?? null,
+    isComplete: instrumentScore.isComplete,
+    missingItemCount: instrumentScore.missingItemCount,
   };
 }
 
@@ -121,19 +125,19 @@ export function countRatedInstrumentItems(
   }).length;
 }
 
-export function computeTotalMRS(scores: MRSScoresMap): number {
+export function computeTotalMRS(scores: MRSScoresMap): number | null {
   return calculateMRS(scores).total;
 }
 
-export function computeSomaticScore(scores: MRSScoresMap): number {
+export function computeSomaticScore(scores: MRSScoresMap): number | null {
   return calculateMRS(scores).somatic;
 }
 
-export function computePsychologicalScore(scores: MRSScoresMap): number {
+export function computePsychologicalScore(scores: MRSScoresMap): number | null {
   return calculateMRS(scores).psychological;
 }
 
-export function computeUrogenitalScore(scores: MRSScoresMap): number {
+export function computeUrogenitalScore(scores: MRSScoresMap): number | null {
   return calculateMRS(scores).urogenital;
 }
 
@@ -319,12 +323,45 @@ export function countRatedMRS(scores: MRSScoresMap): number {
   return MRS_CANONICAL_KEYS.filter((k) => scores[k] !== null).length;
 }
 
-export function isMRSCanonicalKey(key: string): key is MRSSymptomKey {
-  return (MRS_CANONICAL_KEYS as readonly string[]).includes(key);
+export function countMissingMrsFromCheckin(checkin: SymptomCheckin): number {
+  return MRS_CANONICAL_KEYS.filter(
+    (k) => checkin[k] === null || checkin[k] === undefined,
+  ).length;
+}
+
+export function getIncompleteMrsMessage(missingCount: number): string {
+  const total = MRS_CANONICAL_KEYS.length;
+  return `This check-in is incomplete — ${missingCount} of ${total} questions unanswered, so no score was calculated.`;
+}
+
+export function hasPartialMRSData(checkin: SymptomCheckin): boolean {
+  if (checkin.checkin_type === 'pulse') return false;
+  const rated = countRatedMRS(checkinToScores(checkin));
+  return rated > 0 && rated < MRS_CANONICAL_KEYS.length;
+}
+
+function checkinToScores(checkin: SymptomCheckin): MRSScoresMap {
+  const scores = { ...INITIAL_MRS_SCORES };
+  for (const key of MRS_CANONICAL_KEYS) {
+    scores[key] = checkin[key];
+  }
+  return scores;
 }
 
 export function hasMRSData(checkin: SymptomCheckin): boolean {
-  return checkin.checkin_type !== 'pulse';
+  if (checkin.checkin_type === 'pulse') return false;
+  return MRS_CANONICAL_KEYS.every(
+    (k) => checkin[k] !== null && checkin[k] !== undefined,
+  );
+}
+
+export function getTrustedMrsTotal(checkin: SymptomCheckin): number | null {
+  if (!hasMRSData(checkin)) return null;
+  return checkin.total_score;
+}
+
+export function isMRSCanonicalKey(key: string): key is MRSSymptomKey {
+  return (MRS_CANONICAL_KEYS as readonly string[]).includes(key);
 }
 
 export const SEVERITY_LABELS = ['None', 'Mild', 'Moderate', 'Severe', 'Very Severe'] as const;

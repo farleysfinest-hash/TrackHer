@@ -9,6 +9,10 @@ export async function saveAssessmentResult(
   checkinId: string,
   assessedAt: string,
 ): Promise<void> {
+  if (!score.isComplete || score.total === null || score.totalSeverity === null) {
+    return;
+  }
+
   const payload = {
     user_id: userId,
     instrument_id: score.instrumentId,

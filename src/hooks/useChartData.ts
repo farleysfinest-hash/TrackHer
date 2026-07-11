@@ -6,7 +6,7 @@ import { useLabResults } from './useLabResults';
 import type { SymptomCheckin, Medication, MedicationChange } from '../types/database';
 import { MRS_CANONICAL_SYMPTOMS } from '../data/symptoms';
 import type { MRSSymptomKey } from '../utils/checkinHelpers';
-import { hasMRSData, getDailySignal } from '../utils/checkinHelpers';
+import { hasMRSData, getDailySignal, getTrustedMrsTotal } from '../utils/checkinHelpers';
 import { formatChartDate, filterByDateRange, meanHeatmapSeverity, recentHeatmapSeverity, sortHeatmapRows } from '../utils/chartHelpers';
 import { getEffectiveDailyDose } from '../utils/medicationHelpers';
 import { todayISO } from '../utils/localDate';
@@ -117,11 +117,12 @@ export function useChartData(dateRange: DateRange) {
 
   const getSymptomTrendData = useCallback((): SymptomTrendPoint[] => {
     return filteredCheckins.map((c) => {
-      const includeMrs = hasMRSData(c);
+      const trustedTotal = getTrustedMrsTotal(c);
+      const includeMrs = trustedTotal !== null;
       return {
         date: c.checkin_date,
         dateLabel: formatChartDate(c.checkin_date),
-        mrsTotal: includeMrs ? c.total_score : null,
+        mrsTotal: trustedTotal,
         wellbeing: getDailySignal(c),
         somatic: includeMrs ? c.somatic_score : null,
         psychological: includeMrs ? c.psychological_score : null,
