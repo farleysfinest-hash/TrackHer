@@ -1,5 +1,6 @@
 import type { Medication, MedicationChange } from '../types/database';
 import { getMedLaneRamp } from './chartHelpers';
+import { todayISO } from './localDate';
 import { formatFrequency } from './medicationHelpers';
 
 /** ~2px visual gap between dose-change segments at typical lane widths */
@@ -186,7 +187,7 @@ export function buildMedicationLaneRows(
   domainDates: string[],
   windowStart: string,
   windowEnd: string,
-  today: string = new Date().toISOString().split('T')[0],
+  today: string = todayISO(),
 ): MedicationLaneRow[] {
   const activeMeds = medications
     .filter((m) => m.start_date <= windowEnd && (m.end_date ?? today) >= windowStart)

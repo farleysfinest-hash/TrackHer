@@ -7,6 +7,7 @@ import { useLabResults } from './useLabResults';
 import { useQuickLog } from './useQuickLog';
 import { generateProviderReport } from '../utils/pdfReport';
 import { formatChartDateLong } from '../utils/chartHelpers';
+import { todayISO } from '../utils/localDate';
 import { IS_DEV_MODE } from '../lib/devMode';
 import {
   getDevCheckins,
@@ -97,7 +98,7 @@ export function useProviderReport() {
           dateRange,
         });
 
-        const today = formatChartDateLong(new Date().toISOString().split('T')[0]);
+        const today = formatChartDateLong(todayISO());
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;

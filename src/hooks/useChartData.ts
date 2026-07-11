@@ -9,6 +9,7 @@ import type { MRSSymptomKey } from '../utils/checkinHelpers';
 import { hasMRSData, getDailySignal } from '../utils/checkinHelpers';
 import { formatChartDate, filterByDateRange, meanHeatmapSeverity, recentHeatmapSeverity, sortHeatmapRows } from '../utils/chartHelpers';
 import { getEffectiveDailyDose } from '../utils/medicationHelpers';
+import { todayISO } from '../utils/localDate';
 import { getBiomarkerValue } from '../utils/labHelpers';
 import type { DateRange } from '../stores/dashboardStore';
 
@@ -143,7 +144,7 @@ export function useChartData(dateRange: DateRange) {
   }, [filteredChanges, medications]);
 
   const getMedicationTimelineData = useCallback((): MedicationBar[] => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayISO();
     return medications
       .filter((m) => m.start_date <= dateRange.end && (m.end_date ?? today) >= dateRange.start)
       .map((m) => ({

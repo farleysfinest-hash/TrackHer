@@ -8,6 +8,7 @@ import { PelletFields } from './PelletFields';
 import { CombinationPelletFields } from './CombinationPelletFields';
 import { DoseScheduleFields } from './DoseScheduleFields';
 import { validators } from '../../utils/validation';
+import { todayISO } from '../../utils/localDate';
 
 interface StepDoseFrequencyProps {
   onBack: () => void;
@@ -86,7 +87,7 @@ export function StepDoseFrequency({ onBack, onNext }: StepDoseFrequencyProps) {
       <Input
         label="Start date"
         type="date"
-        max={new Date().toISOString().split('T')[0]}
+        max={todayISO()}
         value={formData.start_date}
         onChange={(e) => updateFormData({ start_date: e.target.value })}
       />

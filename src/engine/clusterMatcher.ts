@@ -4,6 +4,7 @@ import { INSIGHT_DISCLAIMER } from './types';
 import type { SymptomCheckin, ExtendedSymptomLog } from '../types/database';
 import { SYMPTOM_CATALOG } from '../data/symptoms';
 import { MRS_CANONICAL_KEYS, hasMRSData } from '../utils/checkinHelpers';
+import { todayISO } from '../utils/localDate';
 
 interface ClusterMatchInput {
   checkins: SymptomCheckin[];
@@ -130,7 +131,7 @@ export function analyzeSymptomClusters(input: ClusterMatchInput): Insight[] {
   );
   if (spanDays < MIN_SPAN_DAYS) return [];
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayISO();
   const windowStart = addDaysISO(today, -WINDOW_DAYS);
   const eligibleCheckins = mrsCheckins.filter((c) => !c.is_backdated);
   const windowCheckins = eligibleCheckins.filter((c) => c.checkin_date >= windowStart);

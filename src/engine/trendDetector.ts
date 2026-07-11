@@ -6,6 +6,7 @@ import type { MRSSymptomKey } from '../utils/checkinHelpers';
 import { hasMRSData } from '../utils/checkinHelpers';
 import { formatDateLong } from '../utils/formatters';
 import { formatMedicationDoseShort } from '../utils/medicationHelpers';
+import { todayISO } from '../utils/localDate';
 
 interface TrendInput {
   checkins: SymptomCheckin[];
@@ -161,7 +162,7 @@ export function analyzeTrends(input: TrendInput): Insight[] {
     });
   }
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayISO();
   if (labResults.length === 0) {
     insights.push({
       id: 'lab-due-none',

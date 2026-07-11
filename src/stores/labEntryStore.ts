@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { LabResult } from '../types/database';
 import { LAB_BIOMARKERS } from '../data/labRanges';
 import { BIOMARKER_KEYS, labToValues } from '../utils/labHelpers';
+import { todayISO } from '../utils/localDate';
 
 function initialValues(): Record<string, number | null> {
   const values: Record<string, number | null> = {};
@@ -9,10 +10,6 @@ function initialValues(): Record<string, number | null> {
     values[key] = null;
   }
   return values;
-}
-
-function todayISO(): string {
-  return new Date().toISOString().split('T')[0];
 }
 
 interface LabEntryState {

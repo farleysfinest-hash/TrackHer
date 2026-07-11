@@ -15,7 +15,7 @@ import type {
   MedicationFrequency,
   MedicationChange,
 } from '../types/database';
-import { getEffectiveDailyDose } from '../utils/medicationHelpers';
+import { getEffectiveDailyDose, todayISO } from '../utils/medicationHelpers';
 
 export interface MedicationDoseUpdate {
   dose_amount: number;
@@ -265,7 +265,7 @@ export function useMedications() {
         return { ok: false, error: message };
       }
 
-      const changeDate = effectiveDate ?? new Date().toISOString().split('T')[0];
+      const changeDate = effectiveDate ?? todayISO();
       const previousEffective = getEffectiveDailyDose(currentMed);
       const nextMed: Medication = {
         ...currentMed,
@@ -318,7 +318,7 @@ export function useMedications() {
       return { ok: false, error: message };
     }
 
-    const changeDate = effectiveDate ?? new Date().toISOString().split('T')[0];
+    const changeDate = effectiveDate ?? todayISO();
     const previousEffective = getEffectiveDailyDose(currentMed);
     const nextMed: Medication = {
       ...currentMed,
@@ -386,7 +386,7 @@ export function useMedications() {
     }
 
     if (IS_DEV_MODE) {
-      const changeDate = effectiveDate ?? new Date().toISOString().split('T')[0];
+      const changeDate = effectiveDate ?? todayISO();
       setDevMedications(
         getDevMedications().map((m) =>
           m.id === id
@@ -415,7 +415,7 @@ export function useMedications() {
       return { ok: true };
     }
 
-    const changeDate = effectiveDate ?? new Date().toISOString().split('T')[0];
+    const changeDate = effectiveDate ?? todayISO();
 
     const { error: updateError } = await supabase
       .from('medications')
@@ -515,7 +515,7 @@ export function useMedications() {
     if (!userId) return false;
 
     if (IS_DEV_MODE) {
-      const today = new Date().toISOString().split('T')[0];
+      const today = todayISO();
       setDevMedications(
         getDevMedications().map((m) =>
           m.id === id
@@ -539,7 +539,7 @@ export function useMedications() {
       return true;
     }
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayISO();
 
     const { error: updateError } = await supabase
       .from('medications')

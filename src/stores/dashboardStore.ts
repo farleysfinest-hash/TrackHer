@@ -1,20 +1,11 @@
 import { create } from 'zustand';
+import { addDaysISO, todayISO } from '../utils/localDate';
 
 export type DateRangePreset = '30d' | '90d' | '6mo' | '1yr' | 'all';
 
 export interface DateRange {
   start: string;
   end: string;
-}
-
-function todayISO(): string {
-  return new Date().toISOString().split('T')[0];
-}
-
-function addDaysISO(dateStr: string, delta: number): string {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const dt = new Date(y, m - 1, d + delta);
-  return dt.toISOString().split('T')[0];
 }
 
 export function getDateRangeFromPreset(preset: DateRangePreset): DateRange {

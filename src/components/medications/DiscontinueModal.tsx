@@ -7,6 +7,7 @@ import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { DISCONTINUE_REASONS } from '../../lib/medicationConstants';
 import { formatMedicationDoseShort } from '../../utils/medicationHelpers';
+import { todayISO } from '../../utils/localDate';
 
 interface DiscontinueModalProps {
   medication: Medication | null;
@@ -23,7 +24,7 @@ export function DiscontinueModal({
 }: DiscontinueModalProps) {
   const { discontinueMedication } = useMedications();
   const toast = useToast();
-  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(todayISO());
   const [reasonType, setReasonType] = useState('');
   const [otherReason, setOtherReason] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -66,7 +67,7 @@ export function DiscontinueModal({
         <Input
           label="Last date taken"
           type="date"
-          max={new Date().toISOString().split('T')[0]}
+          max={todayISO()}
           value={endDate}
           onChange={(e) => setEndDate(e.target.value)}
         />

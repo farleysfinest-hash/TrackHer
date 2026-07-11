@@ -1,5 +1,6 @@
 import { useMedicationEntryStore } from '../../stores/medicationEntryStore';
 import { Input } from '../ui/Input';
+import { todayISO } from '../../utils/localDate';
 import { Select } from '../ui/Select';
 import { formatDateLong } from '../../utils/formatters';
 import { getPelletReplacementDate } from '../../utils/medicationHelpers';
@@ -58,7 +59,7 @@ export function CombinationPelletFields() {
       <Input
         label="Date of insertion"
         type="date"
-        max={new Date().toISOString().split('T')[0]}
+        max={todayISO()}
         value={formData.pellet_insertion_date ?? formData.start_date}
         onChange={(e) => updateFormData({ pellet_insertion_date: e.target.value })}
       />

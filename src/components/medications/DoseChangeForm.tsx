@@ -8,6 +8,7 @@ import {
   formatMedicationDoseDetail,
   getUnitsPerDose,
 } from '../../utils/medicationHelpers';
+import { todayISO } from '../../utils/localDate';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
@@ -49,7 +50,7 @@ export function DoseChangeForm({
   });
 
   const [newFrequency, setNewFrequency] = useState<MedicationFrequency>(medication.frequency);
-  const [effectiveDate, setEffectiveDate] = useState(new Date().toISOString().split('T')[0]);
+  const [effectiveDate, setEffectiveDate] = useState(todayISO());
   const [reason, setReason] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -152,7 +153,7 @@ export function DoseChangeForm({
       <Input
         label="Effective date"
         type="date"
-        max={new Date().toISOString().split('T')[0]}
+        max={todayISO()}
         value={effectiveDate}
         onChange={(e) => setEffectiveDate(e.target.value)}
       />

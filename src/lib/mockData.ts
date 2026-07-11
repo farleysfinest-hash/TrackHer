@@ -1,10 +1,9 @@
 import type { Profile, Medication, SymptomCheckin, MedicationChange, LabResult, QuickLogEvent } from '../types/database';
 import type { MRSScore } from '../types/database';
+import { addDaysISO, todayISO } from '../utils/localDate';
 
 function getPastDate(daysAgo: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - daysAgo);
-  return d.toISOString().split('T')[0];
+  return addDaysISO(todayISO(), -daysAgo);
 }
 
 export { getPastDate };

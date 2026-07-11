@@ -1,13 +1,8 @@
 import { useMemo } from 'react';
 import { StatCard } from '../ui/StatCard';
 import { hasMRSData, getDailySignal } from '../../utils/checkinHelpers';
+import { addDaysISO, todayISO } from '../../utils/localDate';
 import type { SymptomCheckin } from '../../types/database';
-
-function addDaysISO(dateStr: string, delta: number): string {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const dt = new Date(y, m - 1, d + delta);
-  return dt.toISOString().split('T')[0];
-}
 
 interface ScoreSummaryCardsProps {
   checkins: SymptomCheckin[];
@@ -22,7 +17,7 @@ export function ScoreSummaryCards({ checkins }: ScoreSummaryCardsProps) {
   const mrsCheckins = useMemo(() => sorted.filter(hasMRSData), [sorted]);
   const latestMrs = mrsCheckins[0];
   const latest = sorted[0];
-  const today = new Date().toISOString().split('T')[0];
+  const today = todayISO();
   const thirtyDaysAgo = addDaysISO(today, -30);
 
   const mrsTrend = useMemo(() => {
@@ -58,7 +53,7 @@ export function ScoreSummaryCards({ checkins }: ScoreSummaryCardsProps) {
         .join(' · ') || undefined
     : undefined;
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = todayISO();
   const monthKey = todayStr.slice(0, 7);
   const daysLoggedThisMonth = new Set(
     sorted.filter((c) => c.checkin_date.slice(0, 7) === monthKey).map((c) => c.checkin_date),

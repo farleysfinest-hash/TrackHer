@@ -1,5 +1,6 @@
 import { Select } from '../ui/Select';
 import { Input } from '../ui/Input';
+import { todayISO } from '../../utils/localDate';
 import { formatDateLong } from '../../utils/formatters';
 
 interface PelletFieldsProps {
@@ -26,7 +27,7 @@ export function PelletFields({
       <Input
         label="Date of insertion"
         type="date"
-        max={new Date().toISOString().split('T')[0]}
+        max={todayISO()}
         value={insertionDate}
         onChange={(e) => onInsertionDateChange(e.target.value)}
       />

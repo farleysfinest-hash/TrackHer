@@ -339,9 +339,7 @@ export function formatDoseDisplay(amount: number, unit: string): string {
   return `${amount} ${unit}`;
 }
 
-export function todayISO(): string {
-  return new Date().toISOString().split('T')[0];
-}
+export { todayISO } from './localDate';
 
 export function findCatalogProductForMedication(med: Medication): MedicationOption | undefined {
   return MEDICATION_CATALOG.find(

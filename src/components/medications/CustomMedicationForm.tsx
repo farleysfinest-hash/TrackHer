@@ -5,6 +5,7 @@ import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
 import { DoseScheduleFields } from './DoseScheduleFields';
 import { validators } from '../../utils/validation';
+import { todayISO } from '../../utils/localDate';
 import type { HormoneCategory, DeliveryMethod } from '../../types/database';
 
 interface CustomMedicationFormProps {
@@ -106,7 +107,7 @@ export function CustomMedicationForm({ onBack, onNext }: CustomMedicationFormPro
       <Input
         label="Start date"
         type="date"
-        max={new Date().toISOString().split('T')[0]}
+        max={todayISO()}
         value={formData.start_date}
         onChange={(e) => updateFormData({ start_date: e.target.value })}
       />

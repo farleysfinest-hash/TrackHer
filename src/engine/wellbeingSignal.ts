@@ -2,6 +2,7 @@ import type { Insight } from './types';
 import { INSIGHT_DISCLAIMER } from './types';
 import type { Medication, MedicationChange, SymptomCheckin, MedicationAdministration } from '../types/database';
 import { getDoseCycleDays, getMedicationChangeLabel } from '../utils/medicationHelpers';
+import { todayISO } from '../utils/localDate';
 import { getDailySignal } from '../utils/checkinHelpers';
 
 interface WellbeingSignalInput {
@@ -379,10 +380,6 @@ function troughInsightForMed(
   );
 }
 
-function todayISO(): string {
-  return new Date().toISOString().split('T')[0];
-}
-
 function troughInsights(input: WellbeingSignalInput): Insight[] {
   const points = dailySignalSeries(input.checkins);
   if (points.length < 20) return [];
@@ -453,7 +450,7 @@ export function analyzeWellbeingSignal(input: WellbeingSignalInput): Insight[] {
   const doseInsights = doseChangeWellbeingInsights(input);
 
   const today =
-    dailySignalSeries(input.checkins).slice(-1)[0]?.date ?? new Date().toISOString().split('T')[0];
+    dailySignalSeries(input.checkins).slice(-1)[0]?.date ?? todayISO();
 
   const suppressForDoseWindow =
     hasPostChangeWindowOpen(input.medicationChanges, today) || doseInsights.length > 0;

@@ -10,6 +10,7 @@ import type {
 } from '../types/database';
 import type { DateRange } from '../stores/dashboardStore';
 import { formatChartDateLong } from './chartHelpers';
+import { todayISO } from './localDate';
 import { isMRSCanonicalKey } from './checkinHelpers';
 import type { PdfPageContext } from './report/pdfTheme';
 import { addPageFooter, addNewPage, setTotalPages } from './report/pdfTheme';
@@ -48,7 +49,7 @@ function countReportPages(data: ProviderReportData): number {
 export async function generateProviderReport(data: ProviderReportData): Promise<Blob> {
   const doc = new jsPDF();
   const patientName = data.profile.display_name ?? 'Patient';
-  const reportDate = formatChartDateLong(new Date().toISOString().split('T')[0]);
+  const reportDate = formatChartDateLong(todayISO());
   const totalPages = countReportPages(data);
 
   const ctx: PdfPageContext = {
