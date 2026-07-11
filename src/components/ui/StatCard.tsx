@@ -13,10 +13,8 @@ interface StatCardProps {
 export function StatCard({ label, value, subtext, trend, color }: StatCardProps) {
   const trendColor = trend
     ? trend.isPositive
-      ? 'text-success'
-      : trend.direction === 'flat'
-        ? 'text-sage-400'
-        : 'text-danger'
+      ? 'text-moss-700'
+      : 'text-sage-600'
     : '';
 
   return (

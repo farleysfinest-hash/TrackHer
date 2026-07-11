@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import { StatCard } from '../ui/StatCard';
-import { getMRSSeverityTier, hasMRSData, getDailySignal } from '../../utils/checkinHelpers';
-import { MRS_SEVERITY_HEX, getWellbeingHex } from '../../utils/chartHelpers';
+import { hasMRSData, getDailySignal } from '../../utils/checkinHelpers';
 import type { SymptomCheckin } from '../../types/database';
 
 function addDaysISO(dateStr: string, delta: number): string {
@@ -34,22 +33,21 @@ export function ScoreSummaryCards({ checkins }: ScoreSummaryCardsProps) {
     if (!older) return null;
     const diff = latestMrs.total_score - older.total_score;
     if (diff === 0) {
-      return { direction: 'flat' as const, label: '→ No change' };
+      return {
+        headline: 'No change',
+        detail: 'same as a month ago',
+        improving: false,
+      };
     }
     const improving = diff < 0;
     return {
-      direction: improving ? ('down' as const) : ('up' as const),
-      label: `${improving ? '↓' : '↑'} ${Math.abs(diff)} pts · ${improving ? 'improving' : 'worth watching'}`,
+      headline: improving ? 'Easing' : 'Worth watching',
+      detail: `${improving ? '↓' : '↑'} ${Math.abs(diff)} pts vs. a month ago`,
+      improving,
     };
   }, [latestMrs, mrsCheckins, thirtyDaysAgo]);
 
-  const mrsColor = latestMrs
-    ? MRS_SEVERITY_HEX[getMRSSeverityTier(latestMrs.total_score)]
-    : undefined;
-
   const energySignal = latest ? getDailySignal(latest) : null;
-  const energyColor =
-    energySignal != null ? getWellbeingHex(energySignal * 2) : undefined;
 
   const channelSubtext = latest
     ? [
@@ -73,17 +71,17 @@ export function ScoreSummaryCards({ checkins }: ScoreSummaryCardsProps) {
         label="MRS Score"
         value={latestMrs?.total_score ?? '—'}
         subtext={`/44 · Psych ${latestMrs?.psychological_score ?? '—'} · Som ${latestMrs?.somatic_score ?? '—'} · Uro ${latestMrs?.urogenital_score ?? '—'}`}
-        color={mrsColor}
       />
       <StatCard
         label="Energy"
         value={energySignal ?? '—'}
         subtext={channelSubtext ?? '/5'}
-        color={energyColor}
       />
       <StatCard
-        label="30-Day Change"
-        value={mrsTrend?.label ?? '—'}
+        label="Symptom burden"
+        value={mrsTrend?.headline ?? '—'}
+        subtext={mrsTrend?.detail}
+        color={mrsTrend?.improving ? '#57634a' : undefined}
       />
       <StatCard label="Days logged" value={monthCountValue} subtext="days logged this month" />
     </div>

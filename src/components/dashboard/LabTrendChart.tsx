@@ -15,7 +15,7 @@ import { LabTooltipContent } from './ChartTooltipContent';
 import { LabTrendSelector } from './LabTrendSelector';
 import { CHART_COLORS, formatChartDate, formatChartDateLong } from '../../utils/chartHelpers';
 import { getBiomarkerByKey } from '../../data/labRanges';
-import { getTrendDirection } from '../../utils/labHelpers';
+import { getTrendDirection, getValueStatus, type LabValueStatus } from '../../utils/labHelpers';
 import {
   computeLabYDomain,
   formatLabChartValue,
@@ -24,6 +24,7 @@ import {
 } from '../../utils/labChartHelpers';
 import type { LabTrendPoint } from '../../hooks/useChartData';
 import type { LabResult } from '../../types/database';
+import type { LabBiomarker } from '../../types/labs';
 
 interface LabTrendChartProps {
   data: LabTrendPoint[];
@@ -47,7 +48,14 @@ function formatDateSpan(start: string, end: string): string {
   return months === 1 ? '~1 month' : `~${months} months`;
 }
 
-function buildTrendSummary(data: LabTrendPoint[], unit: string) {
+function statusRank(status: LabValueStatus | null): number {
+  if (status === 'optimal') return 2;
+  if (status === 'conventional') return 1;
+  if (status === 'out_of_range') return 0;
+  return -1;
+}
+
+function buildTrendSummary(data: LabTrendPoint[], unit: string, biomarker: LabBiomarker) {
   if (data.length === 1) {
     const point = data[0];
     return {
@@ -64,6 +72,9 @@ function buildTrendSummary(data: LabTrendPoint[], unit: string) {
   const diff = last.value - first.value;
   const direction = getTrendDirection(last.value, first.value);
   const span = formatDateSpan(first.date, last.date);
+  const movedTowardTarget =
+    statusRank(getValueStatus(last.value, biomarker)) >
+    statusRank(getValueStatus(first.value, biomarker));
 
   if (direction === 'flat' || diff === 0) {
     return {
@@ -80,7 +91,7 @@ function buildTrendSummary(data: LabTrendPoint[], unit: string) {
   return {
     headline: `${arrow} ${signedDiff} ${unit}`,
     detail: `${formatLabChartValue(first.value)} → ${formatLabChartValue(last.value)} over ${span} (${formatChartDate(first.date)} – ${formatChartDate(last.date)})`,
-    tone: direction === 'up' ? ('up' as const) : ('down' as const),
+    tone: movedTowardTarget ? ('toward' as const) : ('neutral' as const),
   };
 }
 
@@ -136,16 +147,11 @@ function LabTrendChartComponent({
     });
   }, [biomarker, yDomain]);
 
-  const trendSummary = biomarker ? buildTrendSummary(data, biomarker.unit) : null;
+  const trendSummary = biomarker ? buildTrendSummary(data, biomarker.unit, biomarker) : null;
 
   if (!hasAnyLabData) return null;
 
-  const toneClass =
-    trendSummary?.tone === 'up'
-      ? 'text-success'
-      : trendSummary?.tone === 'down'
-        ? 'text-danger'
-        : 'text-sage-700';
+  const toneClass = trendSummary?.tone === 'toward' ? 'text-moss-700' : 'text-sage-700';
 
   return (
     <ChartCard

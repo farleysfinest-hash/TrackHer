@@ -26,6 +26,12 @@
   --color-clay-500: #be739a;
   --color-clay-600: #9a5a78;
 
+  /* Moss — the ONLY non-rose data colour. Means "your body responded". No negative counterpart. */
+  --color-moss-100: #ecefe2;
+  --color-moss-300: #b4bf9c;
+  --color-moss-500: #83936c;
+  --color-moss-700: #57634a;
+
   /* Semantic */
   --color-success: #5a8a4a;
   --color-warning: #c4946c;

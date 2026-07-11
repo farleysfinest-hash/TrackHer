@@ -54,14 +54,19 @@ export function getStatusBorderClass(status: LabValueStatus | null): string {
   }
 }
 
+/**
+ * Lab dots do not judge (design rule 9). A high FSH is not an emergency — it is
+ * what menopause is. Depth of rose marks distance from her target range; the
+ * WORDS beside the value carry the interpretation.
+ */
 export function getStatusDotClass(status: LabValueStatus | null): string {
   switch (status) {
     case 'optimal':
-      return 'bg-success';
+      return 'bg-[#e5aac8]';
     case 'conventional':
-      return 'bg-warning';
+      return 'bg-[#c989a7]';
     case 'out_of_range':
-      return 'bg-danger';
+      return 'bg-[#a64d79]';
     default:
       return 'bg-sand-300';
   }
