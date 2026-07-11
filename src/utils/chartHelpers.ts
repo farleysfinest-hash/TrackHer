@@ -9,9 +9,9 @@ export const CHART_COLORS = {
   psychological: '#7a3b5e',
   somatic: '#a64d79',
   urogenital: '#e0a8c6',
-  optimalBand: '#5a8a4a',
-  conventionalBand: '#c4946c',
-  outOfRange: '#b54f4f',
+  optimalBand: '#e5aac8',
+  conventionalBand: '#dfaec7',
+  outOfRange: '#7a3b5e',
   estrogen: '#d4a0b5',
   progesterone: '#be739a',
   testosterone: '#8a6a7a',
@@ -21,27 +21,29 @@ export const CHART_COLORS = {
   axisText: '#b896a3',
 } as const;
 
-export const DRILL_DOWN_COLORS = ['#be739a', '#a88088', '#8a6a7a', '#c4946c'] as const;
+export const DRILL_DOWN_COLORS = ['#be739a', '#a88088', '#8a6a7a', '#7a3b5e'] as const;
 
+/** Severity as depth of rose (design rule 8) — monotonic lightness, grayscale-safe */
 export const HEATMAP_COLORS: Record<number, string> = {
   0: '#faf5f8',
-  1: '#f5d0e0',
-  2: '#fbbf24',
-  3: '#f97316',
-  4: '#ef4444',
+  1: '#eec9dd',
+  2: '#c989a7',
+  3: '#a64d79',
+  4: '#7a3b5e',
 };
 
+/** Severity tier accents: depth of rose, never judgment hues (design rules 8–9) */
 export const MRS_SEVERITY_HEX: Record<string, string> = {
-  none: '#5a8a4a',
-  mild: '#d97706',
-  moderate: '#ea580c',
-  severe: '#dc2626',
+  none: '#ddb3c4',
+  mild: '#c989a7',
+  moderate: '#a64d79',
+  severe: '#7a3b5e',
 };
 
 export function getWellbeingHex(score: number): string {
-  if (score >= 7) return CHART_COLORS.mrsTotal;
-  if (score >= 4) return '#d97706';
-  return '#dc2626';
+  if (score >= 7) return '#7a3b5e';
+  if (score >= 4) return '#a64d79';
+  return '#c989a7';
 }
 
 export function formatChartDate(dateStr: string): string {

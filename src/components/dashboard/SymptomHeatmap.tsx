@@ -76,7 +76,10 @@ function SymptomHeatmapComponent({ rows }: SymptomHeatmapProps) {
                       return (
                         <div
                           key={`${row.symptomKey}-${cell.date}`}
-                          className="flex h-8 min-w-[32px] items-center justify-center rounded-sm text-[10px] text-sage-600"
+                          className={[
+                            'flex h-8 min-w-[32px] items-center justify-center rounded-sm text-[10px]',
+                            cell.score !== null && cell.score >= 3 ? 'text-white' : 'text-sage-600',
+                          ].join(' ')}
                           style={{ backgroundColor: bg }}
                           title={tip}
                         >

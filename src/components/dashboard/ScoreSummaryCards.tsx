@@ -34,13 +34,12 @@ export function ScoreSummaryCards({ checkins }: ScoreSummaryCardsProps) {
     if (!older) return null;
     const diff = latestMrs.total_score - older.total_score;
     if (diff === 0) {
-      return { direction: 'flat' as const, label: '→ No change', isPositive: true };
+      return { direction: 'flat' as const, label: '→ No change' };
     }
     const improving = diff < 0;
     return {
       direction: improving ? ('down' as const) : ('up' as const),
-      label: `${improving ? '↓' : '↑'} ${Math.abs(diff)} pts`,
-      isPositive: improving,
+      label: `${improving ? '↓' : '↑'} ${Math.abs(diff)} pts · ${improving ? 'improving' : 'worth watching'}`,
     };
   }, [latestMrs, mrsCheckins, thirtyDaysAgo]);
 
@@ -85,15 +84,6 @@ export function ScoreSummaryCards({ checkins }: ScoreSummaryCardsProps) {
       <StatCard
         label="30-Day Change"
         value={mrsTrend?.label ?? '—'}
-        color={
-          mrsTrend
-            ? mrsTrend.isPositive
-              ? '#5a8a4a'
-              : mrsTrend.direction === 'flat'
-                ? undefined
-                : '#dc2626'
-            : undefined
-        }
       />
       <StatCard label="Days logged" value={monthCountValue} subtext="days logged this month" />
     </div>
