@@ -23,6 +23,26 @@ export const CHART_COLORS = {
   axisText: '#b896a3',
 } as const;
 
+/**
+ * Medication lane: colour encodes CATEGORY (identity), depth encodes dose state.
+ * A dose increase deepens the bar WITHIN its own category tone — a progesterone
+ * bar never turns into estrogen's ink. `base` = continuous / pre-change dose,
+ * `deep` = post-increase dose.
+ */
+export const MED_LANE_RAMP: Record<string, { base: string; deep: string }> = {
+  estrogen: { base: '#dfaec7', deep: '#a64d79' },
+  progesterone: { base: '#e5aac8', deep: '#c989a7' },
+  testosterone: { base: '#c989a7', deep: '#7a3b5e' },
+  combination: { base: '#e0a8c6', deep: '#be739a' },
+  supportive: { base: '#f0d8e4', deep: '#dfaec7' },
+  other: { base: '#f0d8e4', deep: '#dfaec7' },
+};
+
+export function getMedLaneRamp(category: string | null | undefined) {
+  if (!category) return MED_LANE_RAMP.other;
+  return MED_LANE_RAMP[category] ?? MED_LANE_RAMP.other;
+}
+
 /** Series ramp — three separable rose depths. The rose family does not support a
  *  fourth distinguishable line colour; selection is capped at 3 to match. */
 export const DRILL_DOWN_COLORS = ['#7a3b5e', '#c07396', '#e5aac8'] as const;

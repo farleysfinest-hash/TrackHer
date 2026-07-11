@@ -1,9 +1,7 @@
 import type { Medication, MedicationChange } from '../types/database';
+import { getMedLaneRamp } from './chartHelpers';
 import { formatFrequency } from './medicationHelpers';
 
-export const MED_LANE_CONTINUOUS = '#e5aac8';
-export const MED_LANE_BEFORE_CHANGE = '#dfaec7';
-export const MED_LANE_AFTER_CHANGE = '#a64d79';
 /** ~2px visual gap between dose-change segments at typical lane widths */
 export const MED_LANE_SEGMENT_GAP_PCT = 0.35;
 
@@ -210,11 +208,8 @@ export function buildMedicationLaneRows(
         right -= MED_LANE_SEGMENT_GAP_PCT / 2;
       }
       const width = Math.max(right - left, 1.5);
-      const color = hasDoseChange
-        ? index === 0
-          ? MED_LANE_BEFORE_CHANGE
-          : MED_LANE_AFTER_CHANGE
-        : MED_LANE_CONTINUOUS;
+      const ramp = getMedLaneRamp(med.hormone_category);
+      const color = hasDoseChange && index > 0 ? ramp.deep : ramp.base;
       return {
         id: `${med.id}-${index}`,
         startDate: period.startDate,
