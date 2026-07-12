@@ -62,11 +62,11 @@ export function getStatusBorderClass(status: LabValueStatus | null): string {
 export function getStatusDotClass(status: LabValueStatus | null): string {
   switch (status) {
     case 'optimal':
-      return 'bg-[#e5aac8]';
+      return 'bg-sage-200';
     case 'conventional':
-      return 'bg-[#c989a7]';
+      return 'bg-sage-500';
     case 'out_of_range':
-      return 'bg-[#a64d79]';
+      return 'bg-sage-800';
     default:
       return 'bg-sand-300';
   }

@@ -7,7 +7,8 @@ import { useSymptomSelections } from '../../hooks/useSymptomSelections';
 import { useToast } from '../../stores/toastStore';
 import { buildQuickLogEcho } from '../../utils/echoHelpers';
 import { getSymptomByKey, getSymptomChipLabel, searchSymptomCatalog } from '../../data/symptoms';
-import { SYMPTOM_BODY_SYSTEM_LABELS } from '../../types/symptoms';
+import { SYMPTOM_BODY_SYSTEM_COLORS, SYMPTOM_BODY_SYSTEM_LABELS } from '../../types/symptoms';
+import type { SymptomBodySystem } from '../../types/symptoms';
 import type { QuickLogTriggerTag } from '../../types/database';
 import { Button } from '../ui/Button';
 
@@ -70,6 +71,14 @@ function buildTimeOptions(): { id: TimeOptionId; label: string; getIso: () => st
 }
 
 const TIME_OPTIONS = buildTimeOptions();
+
+const identityDot = (bodySystem: SymptomBodySystem) => (
+  <span
+    aria-hidden="true"
+    className="inline-block h-2 w-2 flex-shrink-0 rounded-full"
+    style={{ backgroundColor: SYMPTOM_BODY_SYSTEM_COLORS[bodySystem] }}
+  />
+);
 
 function resolveLoggedAt(timeId: TimeOptionId): string {
   const opt = TIME_OPTIONS.find((o) => o.id === timeId);
@@ -216,12 +225,15 @@ export function QuickLogSheet() {
                       type="button"
                       onClick={() => handleSelectSymptom(id)}
                       className={[
-                        'rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',
+                        'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',
                         isSelected
                           ? 'border-sage-500 bg-sage-500 text-white'
                           : 'border-sage-200 bg-sage-50 text-sage-700 hover:border-sage-400',
                       ].join(' ')}
                     >
+                      <span className={isSelected ? 'rounded-full ring-1 ring-white' : undefined}>
+                        {identityDot(def.bodySystem)}
+                      </span>
                       {getSymptomChipLabel(def)}
                     </button>
                   );
@@ -261,13 +273,16 @@ export function QuickLogSheet() {
                               type="button"
                               onClick={() => handleSelectSymptom(s.key)}
                               className={[
-                                'flex w-full flex-col items-start px-3 py-2.5 text-left text-sm hover:bg-sand-50',
+                                'flex w-full items-center gap-1.5 px-3 py-2.5 text-left text-sm hover:bg-sand-50',
                                 selectedSymptomId === s.key ? 'bg-sage-50' : '',
                               ].join(' ')}
                             >
-                              <span className="font-medium text-sage-800">{s.label}</span>
-                              <span className="text-xs text-sage-400">
-                                {SYMPTOM_BODY_SYSTEM_LABELS[s.bodySystem]}
+                              {identityDot(s.bodySystem)}
+                              <span className="flex flex-col items-start">
+                                <span className="font-medium text-sage-800">{s.label}</span>
+                                <span className="text-xs text-sage-400">
+                                  {SYMPTOM_BODY_SYSTEM_LABELS[s.bodySystem]}
+                                </span>
                               </span>
                             </button>
                           </li>

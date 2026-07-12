@@ -1,0 +1,21 @@
+# Color Roles (amends the green rule; approved Jul 12 2026)
+
+Every color in TrackHer does exactly one of four jobs:
+
+1. **Judgment** — how intense, how far from target. Rose (`sage-*`) depth ONLY.
+   Never a hue shift. Never red, orange, or amber, anywhere, ever.
+2. **Celebration** — her body responded. Moss (`moss-*`) on data surfaces.
+   Earned, rare, exactly as governed by the original moss rule.
+3. **Action wins** — she did the thing (dose logged, medication Active,
+   days logged, saved). Vivid action green (#5a8a4a, the `success` token).
+   Distinct from moss on purpose: moss is quiet gratitude on data; action
+   green is energetic acknowledgment of her own doing. Neither green ever
+   grades her body, and no body metric is ever green.
+4. **Identity** — which symptom, which body system. The muted no-valence
+   palette in `SYMPTOM_BODY_SYSTEM_COLORS`. Identity hues are name tags:
+   they may never encode severity, status, or judgment, and no identity
+   hue may be a red, orange, or amber.
+
+Raw body metrics (MRS total, energy, subscale scores) are never green.
+Chart rule 3 (rose-only series) still governs charts; extending identity
+hues to symptom-series charts requires a new explicit decision.

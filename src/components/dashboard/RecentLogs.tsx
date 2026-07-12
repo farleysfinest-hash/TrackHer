@@ -43,10 +43,16 @@ export function RecentLogs() {
                 className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sm hover:bg-sand-50"
               >
                 {event.severity !== null && (
-                  <span
-                    className={`h-2.5 w-2.5 shrink-0 rounded-full ${severityColor(event.severity)}`}
-                    aria-hidden
-                  />
+                  <span className="flex shrink-0 items-center gap-1.5">
+                    <span
+                      className={`h-2.5 w-2.5 rounded-full ${severityColor(event.severity)}`}
+                      aria-hidden
+                    />
+                    <span className="text-xs font-medium tabular-nums text-sage-600">
+                      {event.severity}
+                      <span className="sr-only"> of 10 severity</span>
+                    </span>
+                  </span>
                 )}
                 <span className="flex-1 truncate text-sage-800">
                   {getSymptomChipLabel(def) || event.symptom_id}
