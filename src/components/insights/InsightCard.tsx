@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Sparkles, X } from 'lucide-react';
 import type { Insight } from '../../engine/types';
+import { formatConfidenceLine } from '../../engine/confidence';
 import type { StageProfile } from '../../engine/stageProfile';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
@@ -58,6 +59,7 @@ export function InsightCard({ insight, compact = false, onDismiss, stageProfile 
             </div>
 
             <h3 className="font-display text-lg text-sage-800">{insight.title}</h3>
+            <p className="mt-1 text-sm text-sage-500">{formatConfidenceLine(insight.confidence)}</p>
             <p className={`mt-2 text-sage-600 ${compact ? 'text-sm line-clamp-3' : 'text-sm'}`}>
               {insight.body}
             </p>

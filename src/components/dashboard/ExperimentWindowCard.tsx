@@ -29,6 +29,7 @@ function hasReadoutForChange(change: MedicationChangeWithMed, insights: Insight[
       i.relatedMedication === medId &&
       (i.category === 'dose_correlation' ||
         i.category === 'wellbeing_signal' ||
+        i.category === 'mixed_signals' ||
         i.id === `wb-dose-${change.id}`),
   );
 }

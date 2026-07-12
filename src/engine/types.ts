@@ -1,3 +1,13 @@
+import type {
+  SymptomCheckin,
+  ExtendedSymptomLog,
+  Medication,
+  MedicationChange,
+  MedicationAdministration,
+  LabResult,
+  Profile,
+} from '../types/database';
+
 export type InsightCategory =
   | 'dose_correlation'
   | 'wellbeing_signal'
@@ -8,11 +18,27 @@ export type InsightCategory =
   | 'new_symptom'
   | 'medication_note'
   | 'lab_due'
-  | 'observation';
+  | 'observation'
+  | 'mixed_signals';
 
 export type InsightPriority = 'high' | 'medium' | 'low' | 'positive';
 
+export type ConfidenceLevel = 'low' | 'moderate' | 'high';
+
+export interface InsightConfidence {
+  level: ConfidenceLevel;
+  score: number;
+  basis: string;
+}
+
 export type InsightSampleSize = { before: number; after: number } | { n: number };
+
+export interface InsightConflictMeta {
+  medicationChangeId?: string;
+  windowStart: string;
+  windowEnd: string;
+  direction: 'improvement' | 'worsening';
+}
 
 export interface InsightSupportingData {
   beforePeriod?: { startDate: string; endDate: string; avgScore?: number };
@@ -29,6 +55,7 @@ export interface InsightSupportingData {
   matchConfidence?: number;
   labValue?: { biomarker: string; value: number; range: string };
   trendData?: Array<{ date: string; score: number }>;
+  mergedInsightIds?: string[];
 }
 
 export interface Insight {
@@ -38,6 +65,12 @@ export interface Insight {
   title: string;
   body: string;
   sampleSize: InsightSampleSize;
+  confidence: InsightConfidence;
+  conflict?: InsightConflictMeta;
+  /** When true, insight is excluded from the primary panel and shown under "more". */
+  demotedToMore?: boolean;
+  /** Source insight ids replaced by a mixed_signals card. */
+  mergedFrom?: string[];
   supportingData: InsightSupportingData;
   relatedMedication?: string;
   relatedSymptoms?: string[];
@@ -45,6 +78,22 @@ export interface Insight {
   actionSuggestion?: string;
   disclaimer: string;
   generatedAt: string;
+}
+
+export interface EngineInput {
+  checkins: SymptomCheckin[];
+  extendedSymptoms: ExtendedSymptomLog[];
+  medications: Medication[];
+  medicationChanges: MedicationChange[];
+  administrations: MedicationAdministration[];
+  labResults: LabResult[];
+  profile: Profile | null;
+}
+
+export interface PatternEngineResult {
+  primary: Insight[];
+  more: Insight[];
+  all: Insight[];
 }
 
 export const INSIGHT_DISCLAIMER =

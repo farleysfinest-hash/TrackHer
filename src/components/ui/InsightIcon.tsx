@@ -39,6 +39,8 @@ export function InsightIcon({ category, className = 'h-5 w-5' }: InsightIconProp
       return <CalendarClock className={className} />;
     case 'observation':
       return <Eye className={className} />;
+    case 'mixed_signals':
+      return <Lightbulb className={className} />;
     default:
       return <Lightbulb className={className} />;
   }

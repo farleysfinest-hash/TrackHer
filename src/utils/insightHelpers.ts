@@ -59,7 +59,7 @@ export const INSIGHT_FILTER_OPTIONS: Array<{ key: InsightFilterGroup; label: str
 
 const FILTER_GROUPS: Record<InsightFilterGroup, InsightCategory[] | null> = {
   all: null,
-  correlations: ['dose_correlation'],
+  correlations: ['dose_correlation', 'mixed_signals'],
   wellbeing: ['wellbeing_signal'],
   patterns: ['symptom_cluster'],
   trends: ['trend_alert', 'new_symptom', 'medication_note'],
@@ -130,6 +130,8 @@ export function getCategoryLabel(category: InsightCategory): string {
       return 'Lab Reminder';
     case 'observation':
       return 'Observation';
+    case 'mixed_signals':
+      return 'Mixed signals';
   }
 }
 

@@ -10,6 +10,7 @@ import {
   MRS_SUBSCALE_FRIENDLY_LABELS,
   MRS_TOTAL_MAX,
 } from '../utils/checkinHelpers';
+import { computeInsightConfidence } from './confidence';
 
 interface EarlyObservationsInput {
   checkins: SymptomCheckin[];
@@ -41,6 +42,12 @@ function sortedMrsCheckins(checkins: SymptomCheckin[]): SymptomCheckin[] {
     .sort((a, b) => a.checkin_date.localeCompare(b.checkin_date));
 }
 
+function daysBetween(from: string, to: string): number {
+  const a = new Date(from + 'T12:00:00');
+  const b = new Date(to + 'T12:00:00');
+  return Math.floor(Math.abs(b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24));
+}
+
 function baselineObservation(checkin: SymptomCheckin): Insight {
   const score = scoreCheckin(checkin);
   if (!score.isComplete || score.total === null) {
@@ -60,6 +67,15 @@ function baselineObservation(checkin: SymptomCheckin): Insight {
       false,
     ),
     sampleSize: { n: 1 },
+    confidence: computeInsightConfidence({
+      sampleFloor: 1,
+      sampleCount: 1,
+      delta: score.total,
+      pooledStdDev: 11,
+      windowDays: 7,
+      actualInWindow: 1,
+      sampleSize: { n: 1 },
+    }),
     actionSuggestion:
       "Scores of 9+ are generally considered clinically relevant — worth bringing to your provider if you haven't already.",
     supportingData: {
@@ -117,6 +133,15 @@ function deltaObservation(previous: SymptomCheckin, latest: SymptomCheckin): Ins
         false,
       ),
       sampleSize: pairSample,
+      confidence: computeInsightConfidence({
+        sampleFloor: 2,
+        sampleCount: 2,
+        delta: absDelta,
+        pooledStdDev: 4,
+        windowDays: 14,
+        actualInWindow: 2,
+        sampleSize: pairSample,
+      }),
       supportingData: {
         trendData: [
           { date: previous.checkin_date, score: prevScore.total },
@@ -144,6 +169,15 @@ function deltaObservation(previous: SymptomCheckin, latest: SymptomCheckin): Ins
       false,
     ),
     sampleSize: pairSample,
+    confidence: computeInsightConfidence({
+      sampleFloor: 2,
+      sampleCount: 2,
+      delta: absDelta,
+      pooledStdDev: 4,
+      windowDays: 14,
+      actualInWindow: 2,
+      sampleSize: pairSample,
+    }),
     supportingData: {
       trendData: [
         { date: previous.checkin_date, score: prevScore.total },
@@ -183,6 +217,18 @@ function dominantSymptomObservation(recent: SymptomCheckin[]): Insight | null {
       false,
     ),
     sampleSize: { n: recent.length },
+    confidence: computeInsightConfidence({
+      sampleFloor: 3,
+      sampleCount: recent.length,
+      delta: top.avg,
+      pooledStdDev: 2,
+      windowDays: Math.max(
+        7,
+        daysBetween(recent[0].checkin_date, recent[recent.length - 1].checkin_date) || 7,
+      ),
+      actualInWindow: recent.length,
+      sampleSize: { n: recent.length },
+    }),
     supportingData: {},
     relatedSymptoms: [top.key],
     disclaimer: INSIGHT_DISCLAIMER,

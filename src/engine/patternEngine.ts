@@ -4,26 +4,15 @@ import { analyzeLabDiscordance } from './labDiscordance';
 import { analyzeTrends } from './trendDetector';
 import { analyzeEarlyObservations } from './earlyObservations';
 import { analyzeWellbeingSignal } from './wellbeingSignal';
-import type { Insight, InsightPriority } from './types';
-import type {
-  SymptomCheckin,
-  ExtendedSymptomLog,
-  Medication,
-  MedicationChange,
-  MedicationAdministration,
-  LabResult,
-  Profile,
-} from '../types/database';
+import { resolveConflicts } from './conflictResolution';
+import {
+  getCachedEngineResult,
+  hashEngineInput,
+  setCachedEngineResult,
+} from './insightCache';
+import type { Insight, InsightPriority, EngineInput, PatternEngineResult } from './types';
 
-export interface EngineInput {
-  checkins: SymptomCheckin[];
-  extendedSymptoms: ExtendedSymptomLog[];
-  medications: Medication[];
-  medicationChanges: MedicationChange[];
-  administrations: MedicationAdministration[];
-  labResults: LabResult[];
-  profile: Profile | null;
-}
+export type { EngineInput, PatternEngineResult };
 
 const PRIORITY_ORDER: Record<InsightPriority, number> = {
   high: 0,
@@ -32,21 +21,38 @@ const PRIORITY_ORDER: Record<InsightPriority, number> = {
   low: 3,
 };
 
+const PRIMARY_PANEL_CAP = 3;
+
 function capObservations(insights: Insight[]): Insight[] {
   const hasHigherPriority = insights.some(
     (i) => i.priority === 'high' || i.priority === 'medium' || i.priority === 'positive',
   );
   if (!hasHigherPriority) return insights;
 
-  // Observation cap should not suppress wellbeing_signal insights.
   const observations = insights.filter((i) => i.category === 'observation');
   const others = insights.filter((i) => i.category !== 'observation');
   return [...others, ...observations.slice(0, 1)];
 }
 
-export function runPatternEngine(input: EngineInput): Insight[] {
+function partitionPanel(insights: Insight[]): PatternEngineResult {
+  const primaryCandidates = insights
+    .filter((i) => i.confidence.level !== 'low' && !i.demotedToMore)
+    .sort((a, b) => {
+      const priorityDiff = PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
+      if (priorityDiff !== 0) return priorityDiff;
+      return b.confidence.score - a.confidence.score;
+    });
+
+  const primary = primaryCandidates.slice(0, PRIMARY_PANEL_CAP);
+  const primaryIds = new Set(primary.map((i) => i.id));
+  const more = insights.filter((i) => !primaryIds.has(i.id));
+
+  return { primary, more, all: insights };
+}
+
+function runPatternEngineInternal(input: EngineInput): PatternEngineResult {
   if (!input.profile || input.checkins.length === 0) {
-    return [];
+    return { primary: [], more: [], all: [] };
   }
 
   const doseInsights = analyzeDoseCorrelations({
@@ -83,7 +89,7 @@ export function runPatternEngine(input: EngineInput): Insight[] {
   });
 
   const seen = new Set<string>();
-  const allInsights = [
+  const collected = [
     ...doseInsights,
     ...wellbeingInsights,
     ...clusterInsights,
@@ -96,11 +102,27 @@ export function runPatternEngine(input: EngineInput): Insight[] {
     return true;
   });
 
-  allInsights.sort((a, b) => {
+  const capped = capObservations(collected);
+  const resolved = resolveConflicts(capped);
+  const ranked = [...resolved].sort((a, b) => {
     const priorityDiff = PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
     if (priorityDiff !== 0) return priorityDiff;
-    return b.generatedAt.localeCompare(a.generatedAt);
+    return b.confidence.score - a.confidence.score;
   });
+  return partitionPanel(ranked);
+}
 
-  return capObservations(allInsights);
+export function runPatternEngine(input: EngineInput): PatternEngineResult {
+  const hash = hashEngineInput(input);
+  const cached = getCachedEngineResult(hash);
+  if (cached) return cached;
+
+  const result = runPatternEngineInternal(input);
+  setCachedEngineResult(hash, result);
+  return result;
+}
+
+/** @deprecated Use runPatternEngine — returns all insights flat for legacy callers. */
+export function runPatternEngineFlat(input: EngineInput): Insight[] {
+  return runPatternEngine(input).all;
 }

@@ -4,6 +4,7 @@ import { useStageProfile } from '../hooks/useStageProfile';
 import { MedicalDisclaimer } from '../components/ui/MedicalDisclaimer';
 import { InsightCategoryFilter } from '../components/insights/InsightCategoryFilter';
 import { InsightsList } from '../components/insights/InsightsList';
+import { Button } from '../components/ui/Button';
 import {
   filterInsightsByGroup,
   type InsightFilterGroup,
@@ -11,13 +12,18 @@ import {
 } from '../utils/insightHelpers';
 
 export function InsightsPage() {
-  const { insights, isLoading, dismissInsight } = useInsights();
+  const { primaryInsights, moreInsights, insights, isLoading, dismissInsight } = useInsights();
   const stageProfile = useStageProfile();
   const [activeFilter, setActiveFilter] = useState<InsightFilterGroup>('all');
+  const [showMore, setShowMore] = useState(false);
 
-  const filtered = useMemo(
-    () => filterInsightsByGroup(insights, activeFilter),
-    [insights, activeFilter],
+  const filteredPrimary = useMemo(
+    () => filterInsightsByGroup(primaryInsights, activeFilter),
+    [primaryInsights, activeFilter],
+  );
+  const filteredMore = useMemo(
+    () => filterInsightsByGroup(moreInsights, activeFilter),
+    [moreInsights, activeFilter],
   );
 
   const counts = useMemo(() => {
@@ -47,11 +53,27 @@ export function InsightsPage() {
       />
 
       <InsightsList
-        insights={filtered}
+        insights={filteredPrimary}
         isLoading={isLoading}
         onDismiss={dismissInsight}
         stageProfile={stageProfile}
       />
+
+      {!isLoading && filteredMore.length > 0 && (
+        <div className="space-y-4">
+          <Button variant="ghost" size="sm" className="px-0" onClick={() => setShowMore((v) => !v)}>
+            {showMore ? 'Hide' : 'Show'} {filteredMore.length} more insight
+            {filteredMore.length === 1 ? '' : 's'}
+          </Button>
+          {showMore && (
+            <InsightsList
+              insights={filteredMore}
+              onDismiss={dismissInsight}
+              stageProfile={stageProfile}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }

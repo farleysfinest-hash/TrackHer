@@ -35,7 +35,7 @@ const FULL_DASHBOARD_CHECKINS = 7;
 export function DashboardLayout() {
   const dateRange = useDashboardStore((s) => s.dateRange);
   const checkinStatus = useCheckinStatus();
-  const { insights, dismissInsight, extendedSymptoms } = useInsights();
+  const { insights, primaryInsights, moreInsights, dismissInsight, extendedSymptoms } = useInsights();
   const {
     getSymptomTrendData,
     getMedicationChangeMarkers,
@@ -133,7 +133,11 @@ export function DashboardLayout() {
 
           <AppointmentCountdownCard checkins={allCheckins} />
 
-          <DashboardInsightsPanel insights={insights} onDismiss={dismissInsight} />
+          <DashboardInsightsPanel
+            primaryInsights={primaryInsights}
+            moreInsights={moreInsights}
+            onDismiss={dismissInsight}
+          />
 
           <StoryColumn
             data={symptomTrend}
@@ -193,8 +197,12 @@ export function DashboardLayout() {
 
           <UnlockProgress checkinCount={mrsCheckinCount} />
 
-          {insights.length > 0 && (
-            <DashboardInsightsPanel insights={insights} onDismiss={dismissInsight} />
+          {(primaryInsights.length > 0 || moreInsights.length > 0) && (
+            <DashboardInsightsPanel
+              primaryInsights={primaryInsights}
+              moreInsights={moreInsights}
+              onDismiss={dismissInsight}
+            />
           )}
 
           <ActiveMedicationsSummary medications={medications} />

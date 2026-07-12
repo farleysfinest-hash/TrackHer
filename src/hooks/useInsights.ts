@@ -132,8 +132,10 @@ export function useInsights() {
     [changes],
   );
 
-  const engineInsights = useMemo(() => {
-    if (!profile || checkins.length === 0) return [];
+  const engineResult = useMemo(() => {
+    if (!profile || checkins.length === 0) {
+      return { primary: [] as Insight[], more: [] as Insight[], all: [] as Insight[] };
+    }
 
     return runPatternEngine({
       checkins,
@@ -146,10 +148,12 @@ export function useInsights() {
     });
   }, [checkins, extendedSymptoms, medications, medicationChanges, administrations, labResults, profile]);
 
-  const insights = useMemo(
-    () => filterDismissedInsights(engineInsights, dismissals),
-    [engineInsights, dismissals],
-  );
+  const { insights, primaryInsights, moreInsights } = useMemo(() => {
+    const all = filterDismissedInsights(engineResult.all, dismissals);
+    const primary = filterDismissedInsights(engineResult.primary, dismissals);
+    const more = filterDismissedInsights(engineResult.more, dismissals);
+    return { insights: all, primaryInsights: primary, moreInsights: more };
+  }, [engineResult, dismissals]);
 
   const dismissInsight = useCallback(
     async (insightId: string) => {
@@ -193,7 +197,16 @@ export function useInsights() {
     administrationsLoading ||
     dismissalsLoading;
 
-  return { insights, highPriority, positive, isLoading, dismissInsight, extendedSymptoms };
+  return {
+    insights,
+    primaryInsights,
+    moreInsights,
+    highPriority,
+    positive,
+    isLoading,
+    dismissInsight,
+    extendedSymptoms,
+  };
 }
 
 export type { Insight };

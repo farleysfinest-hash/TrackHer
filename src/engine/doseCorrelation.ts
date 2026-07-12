@@ -10,6 +10,8 @@ import {
   passesMrsDoseEffectFloor,
   windowWeeksLabel,
 } from './engineStats';
+import { confidenceFromBeforeAfter } from './confidence';
+import { conflictWindowForChange } from './conflictResolution';
 
 interface DoseCorrelationInput {
   checkins: SymptomCheckin[];
@@ -109,6 +111,7 @@ export function analyzeDoseCorrelations(input: DoseCorrelationInput): Insight[] 
       before: beforeCheckins.length,
       after: afterCheckins.length,
     };
+    const conflictWindow = conflictWindowForChange(change.change_date, windowDays);
 
     insights.push({
       id: `dose-corr-${change.id}`,
@@ -117,6 +120,19 @@ export function analyzeDoseCorrelations(input: DoseCorrelationInput): Insight[] 
       title,
       body: finalizeInsightBody(coreBody, sampleSize, true),
       sampleSize,
+      confidence: confidenceFromBeforeAfter(
+        beforeScores,
+        afterScores,
+        totalDelta,
+        windowDays,
+        MIN_CHECKINS_PER_WINDOW,
+        sampleSize,
+      ),
+      conflict: {
+        medicationChangeId: change.id,
+        ...conflictWindow,
+        direction: scoresHigherAfter ? 'worsening' : 'improvement',
+      },
       supportingData: {
         beforePeriod: {
           startDate: beforeCheckins[0]?.checkin_date ?? change.change_date,

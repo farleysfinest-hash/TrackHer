@@ -7,8 +7,11 @@ import { getDailySignal } from '../utils/checkinHelpers';
 import {
   collectBeforeAfterWindows,
   passesScalarDoseEffectFloor,
+  pooledStdDev,
   windowWeeksLabel,
 } from './engineStats';
+import { confidenceFromBeforeAfter, computeInsightConfidence } from './confidence';
+import { conflictWindowForChange } from './conflictResolution';
 
 interface WellbeingSignalInput {
   checkins: SymptomCheckin[];
@@ -119,6 +122,7 @@ function doseChangeWellbeingInsights(input: WellbeingSignalInput): Insight[] {
     ).toFixed(1)}. In the ${weeksLabel} following, it averaged ${round1(avgAfter).toFixed(1)}.`;
 
     const sampleSize = { before: before.length, after: after.length };
+    const conflictWindow = conflictWindowForChange(change.change_date, windowDays);
 
     insights.push({
       id: `wb-dose-${change.id}`,
@@ -127,6 +131,19 @@ function doseChangeWellbeingInsights(input: WellbeingSignalInput): Insight[] {
       title,
       body: finalizeInsightBody(coreBody, sampleSize, true),
       sampleSize,
+      confidence: confidenceFromBeforeAfter(
+        beforeValues,
+        afterValues,
+        diff,
+        windowDays,
+        WELLBEING_DOSE_MIN_POINTS,
+        sampleSize,
+      ),
+      conflict: {
+        medicationChangeId: change.id,
+        ...conflictWindow,
+        direction: scoresHigherAfter ? 'improvement' : 'worsening',
+      },
       supportingData: {},
       relatedMedication: medication.id,
       actionSuggestion: scoresHigherAfter
@@ -181,6 +198,15 @@ function volatilityInsight(input: WellbeingSignalInput, suppress: boolean): Insi
         false,
       ),
       sampleSize: { n: recent.length },
+      confidence: computeInsightConfidence({
+        sampleFloor: VOLATILITY_MIN_POINTS,
+        sampleCount: recent.length,
+        delta: avgSwing,
+        pooledStdDev: pooledStdDev(swings, []),
+        windowDays: VOLATILITY_LOOKBACK_DAYS,
+        actualInWindow: recent.length,
+        sampleSize: { n: recent.length },
+      }),
       supportingData: {},
       actionSuggestion:
         'Fluctuation patterns are worth showing your provider — they can point toward different adjustments than consistently low days do.',
@@ -231,6 +257,15 @@ function moodVolatilityInsight(input: WellbeingSignalInput, suppress: boolean): 
         false,
       ),
       sampleSize: { n: recent.length },
+      confidence: computeInsightConfidence({
+        sampleFloor: VOLATILITY_MIN_POINTS,
+        sampleCount: recent.length,
+        delta: avgSwing,
+        pooledStdDev: pooledStdDev(swings, []),
+        windowDays: VOLATILITY_LOOKBACK_DAYS,
+        actualInWindow: recent.length,
+        sampleSize: { n: recent.length },
+      }),
       supportingData: {},
       actionSuggestion:
         'Mood fluctuation patterns are worth showing your provider — fluctuation (not just low mood) is characteristic of hormonal transition.',
@@ -279,6 +314,15 @@ function buildTroughInsight(
     title: `Your energy readings dip at the end of your ${med.medication_name} cycle`,
     body: finalizeInsightBody(coreBody, { n: completeCycles }, true),
     sampleSize: { n: completeCycles },
+    confidence: computeInsightConfidence({
+      sampleFloor: TROUGH_MIN_CYCLES,
+      sampleCount: completeCycles,
+      delta: bestMean - endMean,
+      pooledStdDev: 1,
+      windowDays: TROUGH_LOOKBACK_DAYS,
+      actualInWindow: completeCycles,
+      sampleSize: { n: completeCycles },
+    }),
     supportingData: {},
     relatedMedication: med.id,
     actionSuggestion:
@@ -456,6 +500,15 @@ function dipTripwire(input: WellbeingSignalInput, suppress: boolean): Insight[] 
         false,
       ),
       sampleSize: { n: recent4.length },
+      confidence: computeInsightConfidence({
+        sampleFloor: 4,
+        sampleCount: recent4.length,
+        delta: avg30 - mean(recent4.map((p) => p.value))!,
+        pooledStdDev: 1,
+        windowDays: 30,
+        actualInWindow: recent4.length,
+        sampleSize: { n: recent4.length },
+      }),
       supportingData: {},
       actionSuggestion: undefined,
       disclaimer: INSIGHT_DISCLAIMER,

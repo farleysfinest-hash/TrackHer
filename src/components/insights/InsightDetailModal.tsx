@@ -4,6 +4,7 @@ import { Modal } from '../ui/Modal';
 import { Badge } from '../ui/Badge';
 import { formatDateLong } from '../../utils/formatters';
 import { getCategoryLabel, getPriorityLabel, getPriorityBadgeVariant } from '../../utils/insightHelpers';
+import { formatConfidenceLine } from '../../engine/confidence';
 
 interface InsightDetailModalProps {
   insight: Insight;
@@ -32,6 +33,7 @@ export function InsightDetailModal({
           <Badge variant="info">{getCategoryLabel(insight.category)}</Badge>
         </div>
 
+        <p className="text-sm text-sage-500">{formatConfidenceLine(insight.confidence)}</p>
         <p className="text-sm text-sage-600">{insight.body}</p>
 
         {supportingData.beforePeriod && supportingData.afterPeriod && (

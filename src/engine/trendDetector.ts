@@ -7,6 +7,8 @@ import { hasMRSData } from '../utils/checkinHelpers';
 import { formatDateLong } from '../utils/formatters';
 import { formatMedicationDoseShort } from '../utils/medicationHelpers';
 import { todayISO } from '../utils/localDate';
+import { computeInsightConfidence, confidenceFromBeforeAfter } from './confidence';
+import { pooledStdDev } from './engineStats';
 
 interface TrendInput {
   checkins: SymptomCheckin[];
@@ -71,6 +73,17 @@ export function analyzeTrends(input: TrendInput): Insight[] {
         false,
       ),
       sampleSize: periodSampleSize,
+      confidence: confidenceFromBeforeAfter(
+        earlyCheckins.map((c) => c.total_score),
+        lateCheckins.map((c) => c.total_score),
+        overallDelta,
+        Math.max(
+          14,
+          daysBetween(sorted[0].checkin_date, sorted[sorted.length - 1].checkin_date),
+        ),
+        thirdLen,
+        periodSampleSize,
+      ),
       supportingData: {
         trendData: sorted.map((c) => ({ date: c.checkin_date, score: c.total_score })),
       },
@@ -91,6 +104,17 @@ export function analyzeTrends(input: TrendInput): Insight[] {
         false,
       ),
       sampleSize: periodSampleSize,
+      confidence: confidenceFromBeforeAfter(
+        earlyCheckins.map((c) => c.total_score),
+        lateCheckins.map((c) => c.total_score),
+        overallDelta,
+        Math.max(
+          14,
+          daysBetween(sorted[0].checkin_date, sorted[sorted.length - 1].checkin_date),
+        ),
+        thirdLen,
+        periodSampleSize,
+      ),
       supportingData: {
         trendData: sorted.map((c) => ({ date: c.checkin_date, score: c.total_score })),
       },
@@ -134,6 +158,15 @@ export function analyzeTrends(input: TrendInput): Insight[] {
           false,
         ),
         sampleSize: fourCheckinSample,
+        confidence: computeInsightConfidence({
+          sampleFloor: 4,
+          sampleCount: 4,
+          delta: lastFour[3] - lastFour[0],
+          pooledStdDev: pooledStdDev(lastFour.slice(0, 2), lastFour.slice(2)),
+          windowDays: 28,
+          actualInWindow: 4,
+          sampleSize: fourCheckinSample,
+        }),
         supportingData: {
           trendData: sorted.map((c) => ({
             date: c.checkin_date,
@@ -159,6 +192,15 @@ export function analyzeTrends(input: TrendInput): Insight[] {
           false,
         ),
         sampleSize: fourCheckinSample,
+        confidence: computeInsightConfidence({
+          sampleFloor: 4,
+          sampleCount: 4,
+          delta: lastFour[0] - lastFour[3],
+          pooledStdDev: pooledStdDev(lastFour.slice(0, 2), lastFour.slice(2)),
+          windowDays: 28,
+          actualInWindow: 4,
+          sampleSize: fourCheckinSample,
+        }),
         supportingData: {
           trendData: sorted.map((c) => ({
             date: c.checkin_date,
@@ -195,6 +237,15 @@ export function analyzeTrends(input: TrendInput): Insight[] {
         true,
       ),
       sampleSize: medSampleSize,
+      confidence: computeInsightConfidence({
+        sampleFloor: 2,
+        sampleCount: lateCheckins.length,
+        delta: recentAvg,
+        pooledStdDev: 8,
+        windowDays: 90,
+        actualInWindow: lateCheckins.length,
+        sampleSize: medSampleSize,
+      }),
       supportingData: {},
       relatedMedication: med.id,
       actionSuggestion:
@@ -217,6 +268,15 @@ export function analyzeTrends(input: TrendInput): Insight[] {
         true,
       ),
       sampleSize: { n: 0 },
+      confidence: computeInsightConfidence({
+        sampleFloor: 1,
+        sampleCount: 0,
+        delta: 0,
+        pooledStdDev: 1,
+        windowDays: 7,
+        actualInWindow: 0,
+        sampleSize: { n: 0 },
+      }),
       supportingData: {},
       actionSuggestion: 'Add your most recent lab results under Labs when you have them.',
       disclaimer: INSIGHT_DISCLAIMER,
@@ -239,6 +299,15 @@ export function analyzeTrends(input: TrendInput): Insight[] {
           true,
         ),
         sampleSize: { n: labResults.length },
+        confidence: computeInsightConfidence({
+          sampleFloor: 1,
+          sampleCount: labResults.length,
+          delta: weeksSince,
+          pooledStdDev: 12,
+          windowDays: weeksSince * 7,
+          actualInWindow: labResults.length,
+          sampleSize: { n: labResults.length },
+        }),
         supportingData: {},
         relatedLabs: ['estradiol'],
         actionSuggestion:

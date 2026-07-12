@@ -5,6 +5,7 @@ import type { SymptomCheckin, ExtendedSymptomLog } from '../types/database';
 import { SYMPTOM_CATALOG } from '../data/symptoms';
 import { MRS_CANONICAL_KEYS, hasMRSData } from '../utils/checkinHelpers';
 import { todayISO } from '../utils/localDate';
+import { computeInsightConfidence } from './confidence';
 
 interface ClusterMatchInput {
   checkins: SymptomCheckin[];
@@ -172,6 +173,15 @@ export function analyzeSymptomClusters(input: ClusterMatchInput): Insight[] {
         true,
       ),
       sampleSize: { n: windowCheckins.length },
+      confidence: computeInsightConfidence({
+        sampleFloor: MIN_WINDOW_CHECKINS,
+        sampleCount: windowCheckins.length,
+        delta: confidence * 4,
+        pooledStdDev: 2,
+        windowDays: WINDOW_DAYS,
+        actualInWindow: windowCheckins.length,
+        sampleSize: { n: windowCheckins.length },
+      }),
       relatedSymptoms: allMatches.map((m) => m.key),
       relatedLabs: pattern.relatedLabs.map((l) => l.biomarkerKey),
       supportingData: {
