@@ -96,9 +96,13 @@ function SeveritySliderComponent({
           );
         })}
       </div>
-      <p className="mt-1.5 text-center text-xs text-sage-400">
-        None · Mild · Moderate · Severe · Very Severe
-      </p>
+      <div className="mt-1.5 flex text-xs text-sage-400">
+        {scores.map((score) => (
+          <span key={score} className="flex-1 px-0.5 text-center leading-tight">
+            {SEVERITY_LABELS[score]}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
