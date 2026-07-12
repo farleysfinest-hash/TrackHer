@@ -8,8 +8,10 @@ import { resolveConflicts } from './conflictResolution';
 import {
   getCachedEngineResult,
   hashEngineInput,
+  peekCachedEngineResult,
   setCachedEngineResult,
 } from './insightCache';
+import { applyInsightRecomputationNotices } from './insightRecomputation';
 import { confidenceSortScore } from './confidence';
 import type { Insight, InsightPriority, EngineInput, PatternEngineResult } from './types';
 
@@ -59,6 +61,8 @@ function runPatternEngineInternal(input: EngineInput): PatternEngineResult {
     return { primary: [], more: [], all: [] };
   }
 
+  const { timezone } = input;
+
   const doseInsights = analyzeDoseCorrelations({
     checkins: input.checkins,
     medicationChanges: input.medicationChanges,
@@ -68,6 +72,7 @@ function runPatternEngineInternal(input: EngineInput): PatternEngineResult {
   const clusterInsights = analyzeSymptomClusters({
     checkins: input.checkins,
     extendedSymptoms: input.extendedSymptoms,
+    timezone,
   });
 
   const labInsights = analyzeLabDiscordance({
@@ -79,6 +84,7 @@ function runPatternEngineInternal(input: EngineInput): PatternEngineResult {
     checkins: input.checkins,
     medications: input.medications,
     labResults: input.labResults,
+    timezone,
   });
 
   const wellbeingInsights = analyzeWellbeingSignal({
@@ -86,6 +92,7 @@ function runPatternEngineInternal(input: EngineInput): PatternEngineResult {
     medicationChanges: input.medicationChanges,
     medications: input.medications,
     administrations: input.administrations,
+    timezone,
   });
 
   const observationInsights = analyzeEarlyObservations({
@@ -121,9 +128,11 @@ export function runPatternEngine(input: EngineInput): PatternEngineResult {
   const cached = getCachedEngineResult(hash);
   if (cached) return cached;
 
+  const previous = peekCachedEngineResult();
   const result = runPatternEngineInternal(input);
-  setCachedEngineResult(hash, result);
-  return result;
+  const withNotices = applyInsightRecomputationNotices(result, previous, input.checkins);
+  setCachedEngineResult(hash, withNotices);
+  return withNotices;
 }
 
 /** @deprecated Use runPatternEngine — returns all insights flat for legacy callers. */

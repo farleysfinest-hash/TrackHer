@@ -165,10 +165,11 @@ export function getOptimalSegment(
   return { left: Math.max(0, left), width: Math.min(100 - left, width) };
 }
 
-export function getWeeksSinceDraw(drawDate: string): number {
-  const draw = new Date(drawDate + 'T12:00:00');
-  const now = new Date();
-  return Math.floor((now.getTime() - draw.getTime()) / (7 * 24 * 60 * 60 * 1000));
+import { daysBetweenISO, todayISO } from './localDate';
+
+export function getWeeksSinceDraw(drawDate: string, today: string = todayISO()): number {
+  const days = daysBetweenISO(drawDate, today);
+  return Math.floor(days / 7);
 }
 
 export function getNextLabsMessage(drawDate: string | null): string {

@@ -17,6 +17,7 @@ interface WellbeingSignalInput {
   medicationChanges: MedicationChange[];
   medications: Medication[];
   administrations: MedicationAdministration[];
+  timezone: string;
 }
 
 // sleep_quality collected from slice 12 onward; mood_level from slice 15 onward.
@@ -400,8 +401,12 @@ function troughInsightForMed(
   med: Medication,
   recent: Array<{ date: string; value: number }>,
   administrations: MedicationAdministration[],
+  timezone: string,
 ): Insight | null {
-  const windowStart = addDaysISO(recent[recent.length - 1]?.date ?? todayISO(), -TROUGH_LOOKBACK_DAYS);
+  const windowStart = addDaysISO(
+    recent[recent.length - 1]?.date ?? todayISO(timezone),
+    -TROUGH_LOOKBACK_DAYS,
+  );
   const medAdmins = administrations
     .filter((a) => a.medication_id === med.id && a.taken_at >= `${windowStart}T00:00:00`)
     .sort((a, b) => a.taken_at.localeCompare(b.taken_at));
@@ -469,7 +474,7 @@ function troughInsights(input: WellbeingSignalInput): Insight[] {
   const insights: Insight[] = [];
 
   for (const med of input.medications.filter((m) => m.is_active)) {
-    const insight = troughInsightForMed(med, recent, input.administrations);
+    const insight = troughInsightForMed(med, recent, input.administrations, input.timezone);
     if (insight) insights.push(insight);
   }
 
@@ -541,7 +546,7 @@ export function analyzeWellbeingSignal(input: WellbeingSignalInput): Insight[] {
   const doseInsights = doseChangeWellbeingInsights(input);
 
   const today =
-    dailySignalSeries(input.checkins).slice(-1)[0]?.date ?? todayISO();
+    dailySignalSeries(input.checkins).slice(-1)[0]?.date ?? todayISO(input.timezone);
 
   const suppressForDoseWindow =
     hasPostChangeWindowOpen(input.medicationChanges, today) || doseInsights.length > 0;

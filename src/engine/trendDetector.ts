@@ -6,7 +6,7 @@ import type { MRSSymptomKey } from '../utils/checkinHelpers';
 import { hasMRSData } from '../utils/checkinHelpers';
 import { formatDateLong } from '../utils/formatters';
 import { formatMedicationDoseShort } from '../utils/medicationHelpers';
-import { todayISO } from '../utils/localDate';
+import { addDaysISO, calendarMonthsBetween, daysBetweenISO, todayISO } from '../utils/localDate';
 import { computeComparativeConfidence, computeObservationalConfidence, confidenceFromBeforeAfter } from './confidence';
 import { pooledStdDev } from './engineStats';
 
@@ -14,22 +14,11 @@ interface TrendInput {
   checkins: SymptomCheckin[];
   medications: Medication[];
   labResults: LabResult[];
+  timezone: string;
 }
 
-function getMonthsSince(dateStr: string): number {
-  const then = new Date(dateStr + 'T12:00:00');
-  const now = new Date();
-  let months = (now.getFullYear() - then.getFullYear()) * 12 + (now.getMonth() - then.getMonth());
-  if (now.getDate() < then.getDate()) {
-    months -= 1;
-  }
-  return Math.max(0, months);
-}
-
-function daysBetween(from: string, to: string): number {
-  const a = new Date(from + 'T12:00:00');
-  const b = new Date(to + 'T12:00:00');
-  return Math.floor((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24));
+function getMonthsSince(dateStr: string, today: string): number {
+  return calendarMonthsBetween(dateStr, today);
 }
 
 function formatCheckinSequence(values: number[]): string {
@@ -44,7 +33,8 @@ function formatCheckinSequence(values: number[]): string {
 
 export function analyzeTrends(input: TrendInput): Insight[] {
   const insights: Insight[] = [];
-  const { checkins, medications, labResults } = input;
+  const { checkins, medications, labResults, timezone } = input;
+  const today = todayISO(timezone);
 
   const sorted = [...checkins].filter(hasMRSData).sort((a, b) => a.checkin_date.localeCompare(b.checkin_date));
   if (sorted.length < 3) return insights;
@@ -79,7 +69,7 @@ export function analyzeTrends(input: TrendInput): Insight[] {
         overallDelta,
         Math.max(
           14,
-          daysBetween(sorted[0].checkin_date, sorted[sorted.length - 1].checkin_date),
+          daysBetweenISO(sorted[0].checkin_date, sorted[sorted.length - 1].checkin_date),
         ),
         thirdLen,
         periodSampleSize,
@@ -110,7 +100,7 @@ export function analyzeTrends(input: TrendInput): Insight[] {
         overallDelta,
         Math.max(
           14,
-          daysBetween(sorted[0].checkin_date, sorted[sorted.length - 1].checkin_date),
+          daysBetweenISO(sorted[0].checkin_date, sorted[sorted.length - 1].checkin_date),
         ),
         thirdLen,
         periodSampleSize,
@@ -215,12 +205,10 @@ export function analyzeTrends(input: TrendInput): Insight[] {
     }
   }
 
-  const sixMonthsAgo = new Date();
-  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+  const sixMonthsAgo = addDaysISO(today, -183);
 
   for (const med of medications.filter((m) => m.is_active)) {
-    const startDate = new Date(med.start_date + 'T12:00:00');
-    if (startDate > sixMonthsAgo) continue;
+    if (med.start_date > sixMonthsAgo) continue;
 
     const recentAvg = lateCheckins.reduce((s, c) => s + c.total_score, 0) / lateCheckins.length;
     if (recentAvg < 20) continue;
@@ -230,7 +218,7 @@ export function analyzeTrends(input: TrendInput): Insight[] {
       id: `stale-med-${med.id}`,
       category: 'medication_note',
       priority: 'low',
-      title: `${med.medication_name} has been at the same dose for ${getMonthsSince(med.start_date)} months`,
+      title: `${med.medication_name} has been at the same dose for ${getMonthsSince(med.start_date, today)} months`,
       body: finalizeInsightBody(
         `You've been taking ${med.medication_name} (${formatMedicationDoseShort(med)}) since ${formatDateLong(med.start_date)} without a dose adjustment. Your recent MRS average is ${Math.round(recentAvg)}/44 across your latest logged check-ins.`,
         medSampleSize,
@@ -243,6 +231,7 @@ export function analyzeTrends(input: TrendInput): Insight[] {
         windowDays: 90,
         actualInWindow: lateCheckins.length,
         mostRecentDataDate: lateCheckins[lateCheckins.length - 1].checkin_date,
+        today,
         sampleSize: medSampleSize,
       }),
       supportingData: {},
@@ -254,7 +243,6 @@ export function analyzeTrends(input: TrendInput): Insight[] {
     });
   }
 
-  const today = todayISO();
   if (labResults.length === 0) {
     insights.push({
       id: 'lab-due-none',
@@ -273,6 +261,7 @@ export function analyzeTrends(input: TrendInput): Insight[] {
         windowDays: 7,
         actualInWindow: 0,
         mostRecentDataDate: today,
+        today,
         sampleSize: { n: 0 },
       }),
       supportingData: {},
@@ -282,7 +271,7 @@ export function analyzeTrends(input: TrendInput): Insight[] {
     });
   } else {
     const latestLab = [...labResults].sort((a, b) => b.draw_date.localeCompare(a.draw_date))[0];
-    const daysSinceLabs = daysBetween(latestLab.draw_date, today);
+    const daysSinceLabs = daysBetweenISO(latestLab.draw_date, today);
     const weeksSince = Math.floor(daysSinceLabs / 7);
 
     if (weeksSince >= 12) {
@@ -303,6 +292,7 @@ export function analyzeTrends(input: TrendInput): Insight[] {
           windowDays: Math.max(7, daysSinceLabs),
           actualInWindow: labResults.length,
           mostRecentDataDate: latestLab.draw_date,
+          today,
           sampleSize: { n: labResults.length },
         }),
         supportingData: {},

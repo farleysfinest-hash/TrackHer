@@ -23,6 +23,8 @@ export interface ObservationalConfidenceInputs {
   actualInWindow: number;
   /** ISO date of the most recent supporting data point. */
   mostRecentDataDate: string;
+  /** Calendar today (YYYY-MM-DD) in the user's timezone. */
+  today?: string;
   basis?: string;
   sampleSize?: InsightSampleSize;
 }
@@ -96,7 +98,7 @@ export function computeObservationalConfidence(
 ): InsightConfidence {
   const density = densityScore(inputs.windowDays, inputs.actualInWindow);
   const sufficiency = Math.min(1, inputs.sampleCount / inputs.sampleFloor);
-  const recency = recencyScore(inputs.mostRecentDataDate);
+  const recency = recencyScore(inputs.mostRecentDataDate, inputs.today);
   const score = 0.5 * density + 0.3 * sufficiency + 0.2 * recency;
   const basis =
     inputs.basis ??

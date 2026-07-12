@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Sparkles, X } from 'lucide-react';
 import type { Insight } from '../../engine/types';
 import { formatConfidenceLine } from '../../engine/confidence';
 import type { StageProfile } from '../../engine/stageProfile';
+import { markInsightAsViewed } from '../../utils/insightReadState';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
@@ -24,6 +25,10 @@ interface InsightCardProps {
 
 export function InsightCard({ insight, compact = false, onDismiss, stageProfile }: InsightCardProps) {
   const [showDetail, setShowDetail] = useState(false);
+
+  useEffect(() => {
+    markInsightAsViewed(insight);
+  }, [insight]);
 
   return (
     <>

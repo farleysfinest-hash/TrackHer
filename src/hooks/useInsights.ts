@@ -6,6 +6,7 @@ import { useMedications } from './useMedications';
 import { useMedicationChanges } from './useMedicationChanges';
 import { useLabResults } from './useLabResults';
 import { useAuthStore } from '../stores/authStore';
+import { getResolvedTimezone } from '../utils/checkinHelpers';
 import { supabase } from '../lib/supabase';
 import type { ExtendedSymptomLog, MedicationAdministration } from '../types/database';
 import type { DismissalRecord } from '../utils/insightHelpers';
@@ -18,6 +19,7 @@ const ADMINISTRATIONS_DAYS = 90;
 export function useInsights() {
   const profile = useAuthStore((s) => s.profile);
   const userId = useAuthStore((s) => s.user?.id);
+  const timezone = getResolvedTimezone(profile?.timezone);
   const { checkins, fetchCheckins, isLoading: checkinsLoading } = useCheckins();
   const { medications, fetchMedications, isLoading: medsLoading } = useMedications();
   const { changes, fetchChanges, isLoading: changesLoading } = useMedicationChanges();
@@ -145,8 +147,9 @@ export function useInsights() {
       administrations,
       labResults,
       profile,
+      timezone,
     });
-  }, [checkins, extendedSymptoms, medications, medicationChanges, administrations, labResults, profile]);
+  }, [checkins, extendedSymptoms, medications, medicationChanges, administrations, labResults, profile, timezone]);
 
   const { insights, primaryInsights, moreInsights } = useMemo(() => {
     const all = filterDismissedInsights(engineResult.all, dismissals);

@@ -12,6 +12,7 @@ function simpleHash(input: string): string {
 
 export function hashEngineInput(input: EngineInput): string {
   const payload = {
+    tz: input.timezone,
     checkins: input.checkins.map((c) => ({
       id: c.id,
       d: c.checkin_date,
@@ -20,6 +21,7 @@ export function hashEngineInput(input: EngineInput): string {
       e: c.energy_level,
       m: c.mood_level,
       s: c.sleep_quality,
+      bd: c.is_backdated,
     })),
     changes: input.medicationChanges.map((c) => ({
       id: c.id,
@@ -47,6 +49,10 @@ let cache: { hash: string; result: PatternEngineResult } | null = null;
 export function getCachedEngineResult(hash: string): PatternEngineResult | null {
   if (cache?.hash === hash) return cache.result;
   return null;
+}
+
+export function peekCachedEngineResult(): PatternEngineResult | null {
+  return cache?.result ?? null;
 }
 
 export function setCachedEngineResult(hash: string, result: PatternEngineResult): void {

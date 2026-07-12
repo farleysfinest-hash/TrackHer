@@ -8,6 +8,7 @@ import {
   getSeverityLabel,
 } from '../data/instruments/scoring';
 import { getMrsTotalSeverityLevel } from './mrsTotalSeverity';
+import { todayISO } from './localDate';
 
 /** Canonical 11-item Menopause Rating Scale — only these count toward MRS total (max 44). */
 export const MRS_ITEMS = {
@@ -244,7 +245,7 @@ export const MRS_SUBSCALE_MAX = {
 export const MRS_TOTAL_MAX = 44;
 
 export function getLocalDateISO(timezone = 'America/Los_Angeles'): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(new Date());
+  return todayISO(timezone);
 }
 
 /** Browser timezone when profile timezone is unset; LA as last resort. */

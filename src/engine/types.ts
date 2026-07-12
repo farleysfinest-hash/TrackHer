@@ -78,6 +78,8 @@ export interface Insight {
   actionSuggestion?: string;
   disclaimer: string;
   generatedAt: string;
+  /** Set when a backdated check-in changes an insight the user already read. */
+  updateNotice?: string;
 }
 
 export interface EngineInput {
@@ -88,6 +90,8 @@ export interface EngineInput {
   administrations: MedicationAdministration[];
   labResults: LabResult[];
   profile: Profile | null;
+  /** IANA timezone from profile (via getResolvedTimezone). */
+  timezone: string;
 }
 
 export interface PatternEngineResult {

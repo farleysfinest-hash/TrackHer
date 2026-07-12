@@ -18,14 +18,6 @@ import { formatLoggingDate } from '../utils/formatters';
 import type { SymptomCheckin } from '../types/database';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-function addDaysISO(dateStr: string, delta: number): string {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const dt = new Date(y, m - 1, d + delta);
-  const month = String(dt.getMonth() + 1).padStart(2, '0');
-  const day = String(dt.getDate()).padStart(2, '0');
-  return `${dt.getFullYear()}-${month}-${day}`;
-}
-
 export function CheckinPage() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -37,7 +29,6 @@ export function CheckinPage() {
   const loadExistingCheckin = useCheckinStore((s) => s.loadExistingCheckin);
   const timezone = getResolvedTimezone(useAuthStore((s) => s.profile?.timezone));
   const todayStr = getLocalDateISO(timezone);
-  const minBackdate = addDaysISO(todayStr, -14);
 
   const [activeFlow, setActiveFlow] = useState(false);
   const [showDuplicatePrompt, setShowDuplicatePrompt] = useState(false);
@@ -215,7 +206,6 @@ export function CheckinPage() {
                     label="Check-in date"
                     type="date"
                     value={backdateValue}
-                    min={minBackdate}
                     max={todayStr}
                     onChange={(e) => setBackdateValue(e.target.value)}
                   />

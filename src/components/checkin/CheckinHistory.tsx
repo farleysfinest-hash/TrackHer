@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useCheckins } from '../../hooks/useCheckins';
+import { useAuthStore } from '../../stores/authStore';
 import type { SymptomCheckin } from '../../types/database';
+import { getLocalDateISO, getResolvedTimezone } from '../../utils/checkinHelpers';
+import { addDaysISO } from '../../utils/localDate';
 import { CheckinHistoryCard } from './CheckinHistoryCard';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { Button } from '../ui/Button';
@@ -13,6 +16,7 @@ type DateRange = '7' | '30' | '90' | 'all';
 
 export function CheckinHistory({ onViewDetails }: CheckinHistoryProps) {
   const { fetchCheckinsPage } = useCheckins();
+  const timezone = getResolvedTimezone(useAuthStore((s) => s.profile?.timezone));
   const [items, setItems] = useState<SymptomCheckin[]>([]);
   const [range, setRange] = useState<DateRange>('30');
   const [hasMore, setHasMore] = useState(false);
@@ -23,11 +27,10 @@ export function CheckinHistory({ onViewDetails }: CheckinHistoryProps) {
     (rows: SymptomCheckin[]) => {
       if (range === 'all') return rows;
       const days = Number(range);
-      const cutoff = new Date();
-      cutoff.setDate(cutoff.getDate() - days);
-      return rows.filter((r) => new Date(r.checkin_date) >= cutoff);
+      const cutoff = addDaysISO(getLocalDateISO(timezone), -days);
+      return rows.filter((r) => r.checkin_date >= cutoff);
     },
-    [range],
+    [range, timezone],
   );
 
   const load = useCallback(

@@ -10,6 +10,7 @@ import type {
   MedicationAdministration,
 } from '../types/database';
 import { APPLICATION_SITE_LABELS } from '../lib/medicationConstants';
+import { addDaysISO, addMonthsISO, daysBetweenISO, todayISO } from './localDate';
 
 export function getMethodsForHormone(hormone: HormoneCategory): DeliveryMethod[] {
   return [
@@ -199,15 +200,18 @@ export function getHormoneLabel(category: HormoneCategory): string {
 }
 
 export function getPelletReplacementDate(insertionDate: string, durationMonths: number): Date {
-  const date = new Date(insertionDate);
-  date.setMonth(date.getMonth() + durationMonths);
-  return date;
+  const iso = addMonthsISO(insertionDate, durationMonths);
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d);
 }
 
-export function isPelletDueSoon(insertionDate: string, durationMonths: number): boolean {
-  const replacementDate = getPelletReplacementDate(insertionDate, durationMonths);
-  const twoWeeksFromNow = new Date();
-  twoWeeksFromNow.setDate(twoWeeksFromNow.getDate() + 14);
+export function isPelletDueSoon(
+  insertionDate: string,
+  durationMonths: number,
+  today: string = todayISO(),
+): boolean {
+  const replacementDate = addMonthsISO(insertionDate, durationMonths);
+  const twoWeeksFromNow = addDaysISO(today, 14);
   return replacementDate <= twoWeeksFromNow;
 }
 
@@ -262,9 +266,7 @@ export function getDoseCycleDays(med: Pick<Medication, 'frequency'>): number | n
 }
 
 function daysBetweenDates(from: string, to: string): number {
-  const a = new Date(from + 'T12:00:00');
-  const b = new Date(to + 'T12:00:00');
-  return Math.floor((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24));
+  return daysBetweenISO(from, to);
 }
 
 const DAILY_DOSE_FREQUENCIES: MedicationFrequency[] = [
@@ -305,13 +307,7 @@ export function isDoseLoggedForMed(
   return false;
 }
 
-export function addDaysISO(dateStr: string, delta: number): string {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const dt = new Date(y, m - 1, d + delta);
-  const month = String(dt.getMonth() + 1).padStart(2, '0');
-  const day = String(dt.getDate()).padStart(2, '0');
-  return `${dt.getFullYear()}-${month}-${day}`;
-}
+export { addDaysISO } from './localDate';
 
 export function getChangeTimelineColor(type: MedicationChangeType): string {
   switch (type) {

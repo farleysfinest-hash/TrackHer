@@ -17,7 +17,7 @@ export interface DismissalRecord {
 
 const DISMISSAL_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000;
 
-const OBSERVATION_PREFIXES = ['obs-baseline', 'obs-delta', 'obs-dominant', 'obs-steady'] as const;
+const OBSERVATION_PREFIXES = ['obs-baseline', 'obs-pair', 'obs-highest', 'obs-delta', 'obs-dominant', 'obs-steady'] as const;
 
 function getObservationTypePrefix(insightId: string): string | null {
   if (!insightId.startsWith('obs-')) return null;

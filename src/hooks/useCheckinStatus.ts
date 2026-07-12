@@ -3,12 +3,7 @@ import { useCheckins } from './useCheckins';
 import { useAuthStore } from '../stores/authStore';
 import type { SymptomCheckin } from '../types/database';
 import { getLocalDateISO, getResolvedTimezone, hasMRSData } from '../utils/checkinHelpers';
-
-function daysBetween(from: string, to: string): number {
-  const a = new Date(from + 'T12:00:00');
-  const b = new Date(to + 'T12:00:00');
-  return Math.floor((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24));
-}
+import { dayOfWeekISO, daysBetweenISO } from '../utils/localDate';
 
 function sameCalendarMonth(a: string, b: string): boolean {
   return a.slice(0, 7) === b.slice(0, 7);
@@ -49,14 +44,14 @@ export function useCheckinStatus() {
       const lastDate = lastCheckin?.checkin_date ?? null;
       let daysSinceLastCheckin: number | null = null;
       if (lastDate) {
-        daysSinceLastCheckin = daysBetween(lastDate, todayStr);
+        daysSinceLastCheckin = daysBetweenISO(lastDate, todayStr);
       }
 
       const lastFull = [...checkins]
         .filter(hasMRSData)
         .sort((a, b) => b.checkin_date.localeCompare(a.checkin_date))[0];
       const hasRecentFull =
-        !!lastFull && daysBetween(lastFull.checkin_date, todayStr) < 7;
+        !!lastFull && daysBetweenISO(lastFull.checkin_date, todayStr) < 7;
 
       let isDue = false;
       if (today && hasMRSData(today)) {
@@ -69,7 +64,7 @@ export function useCheckinStatus() {
         isDue = true;
       } else {
         // Convention: 0 = Sunday ... 6 = Saturday (matches JS Date#getDay()).
-        const todayDow = new Date().getDay();
+        const todayDow = dayOfWeekISO(todayStr);
         isDue = todayDow >= checkinDay;
       }
 

@@ -4,12 +4,13 @@ import { finalizeInsightBody, INSIGHT_DISCLAIMER } from './types';
 import type { SymptomCheckin, ExtendedSymptomLog } from '../types/database';
 import { SYMPTOM_CATALOG } from '../data/symptoms';
 import { MRS_CANONICAL_KEYS, hasMRSData } from '../utils/checkinHelpers';
-import { todayISO } from '../utils/localDate';
+import { addDaysISO, daysBetweenISO, todayISO } from '../utils/localDate';
 import { confidenceFromBeforeAfter } from './confidence';
 
 interface ClusterMatchInput {
   checkins: SymptomCheckin[];
   extendedSymptoms: ExtendedSymptomLog[];
+  timezone: string;
 }
 
 const MIN_TOTAL_MRS_CHECKINS = 10;
@@ -34,18 +35,8 @@ function severityFromExtended(log: ExtendedSymptomLog): number {
   return 0;
 }
 
-function addDaysISO(dateStr: string, delta: number): string {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const dt = new Date(y, m - 1, d + delta);
-  const month = String(dt.getMonth() + 1).padStart(2, '0');
-  const day = String(dt.getDate()).padStart(2, '0');
-  return `${dt.getFullYear()}-${month}-${day}`;
-}
-
 function daysBetween(from: string, to: string): number {
-  const a = new Date(from + 'T12:00:00');
-  const b = new Date(to + 'T12:00:00');
-  return Math.floor((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24));
+  return daysBetweenISO(from, to);
 }
 
 function buildSeverityMap(
@@ -119,7 +110,7 @@ function matchPattern(
 }
 
 export function analyzeSymptomClusters(input: ClusterMatchInput): Insight[] {
-  const { checkins, extendedSymptoms } = input;
+  const { checkins, extendedSymptoms, timezone } = input;
   const mrsCheckins = [...checkins]
     .filter(hasMRSData)
     .sort((a, b) => a.checkin_date.localeCompare(b.checkin_date));
@@ -132,10 +123,9 @@ export function analyzeSymptomClusters(input: ClusterMatchInput): Insight[] {
   );
   if (spanDays < MIN_SPAN_DAYS) return [];
 
-  const today = todayISO();
+  const today = todayISO(timezone);
   const windowStart = addDaysISO(today, -WINDOW_DAYS);
-  const eligibleCheckins = mrsCheckins.filter((c) => !c.is_backdated);
-  const windowCheckins = eligibleCheckins.filter((c) => c.checkin_date >= windowStart);
+  const windowCheckins = mrsCheckins.filter((c) => c.checkin_date >= windowStart);
 
   if (windowCheckins.length < MIN_WINDOW_CHECKINS) return [];
 

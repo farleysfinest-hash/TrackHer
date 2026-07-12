@@ -1,5 +1,6 @@
 import { memo, useState } from 'react';
 import type { Medication } from '../../types/database';
+import { useAuthStore } from '../../stores/authStore';
 import {
   formatApplicationSite,
   getHormoneColor,
@@ -9,6 +10,7 @@ import {
   findCatalogProductForMedication,
   formatMedicationDoseShort,
 } from '../../utils/medicationHelpers';
+import { getLocalDateISO, getResolvedTimezone } from '../../utils/checkinHelpers';
 import { DELIVERY_METHOD_LABELS } from '../../lib/medicationConstants';
 import { formatDateLong } from '../../utils/formatters';
 import { Badge } from '../ui/Badge';
@@ -31,6 +33,8 @@ function MedicationCardComponent({
 }: MedicationCardProps) {
   const [showDoseChange, setShowDoseChange] = useState(false);
   const catalogProduct = findCatalogProductForMedication(medication);
+  const timezone = getResolvedTimezone(useAuthStore((s) => s.profile?.timezone));
+  const today = getLocalDateISO(timezone);
 
   const typeLabel = `${getHormoneLabel(medication.hormone_category)} ${DELIVERY_METHOD_LABELS[medication.delivery_method]?.label ?? medication.delivery_method}`;
 
@@ -38,7 +42,11 @@ function MedicationCardComponent({
     medication.delivery_method === 'pellet' &&
     medication.pellet_insertion_date &&
     medication.pellet_expected_duration_months &&
-    isPelletDueSoon(medication.pellet_insertion_date, medication.pellet_expected_duration_months);
+    isPelletDueSoon(
+      medication.pellet_insertion_date,
+      medication.pellet_expected_duration_months,
+      today,
+    );
 
   const pelletReplaceMonth =
     medication.pellet_insertion_date && medication.pellet_expected_duration_months

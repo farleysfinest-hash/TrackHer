@@ -17,6 +17,7 @@ import type { MRSSymptomKey } from '../utils/checkinHelpers';
 import { buildAssessmentScore, saveAssessmentResult } from './assessmentPersistence';
 import { isInstrumentComplete } from '../data/instruments/scoring';
 import { MRS_INSTRUMENT } from '../data/instruments/mrs';
+import { addDaysISO, addMonthsISO } from '../utils/localDate';
 
 export interface CheckinInput {
   energyLevel: number | null;
@@ -61,14 +62,6 @@ function buildCheckinPayload(data: CheckinInput, userId: string, timezone: strin
   }
 
   return payload;
-}
-
-function addDaysISO(dateStr: string, delta: number): string {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const dt = new Date(y, m - 1, d + delta);
-  const month = String(dt.getMonth() + 1).padStart(2, '0');
-  const day = String(dt.getDate()).padStart(2, '0');
-  return `${dt.getFullYear()}-${month}-${day}`;
 }
 
 export function useCheckins() {
@@ -361,16 +354,11 @@ export function useCheckins() {
 
     if (frequency === 'weekly') {
       let streak = 0;
-      const now = new Date();
+      const today = getLocalDateISO(timezone);
       for (let w = 0; w < 52; w++) {
-        const weekStart = new Date(now);
-        weekStart.setDate(weekStart.getDate() - w * 7 - 6);
-        const weekEnd = new Date(now);
-        weekEnd.setDate(weekEnd.getDate() - w * 7);
-        const hasCheckin = uniqueDates.some((d) => {
-          const dt = new Date(d + 'T12:00:00');
-          return dt >= weekStart && dt <= weekEnd;
-        });
+        const weekEnd = addDaysISO(today, -w * 7);
+        const weekStart = addDaysISO(weekEnd, -6);
+        const hasCheckin = uniqueDates.some((d) => d >= weekStart && d <= weekEnd);
         if (hasCheckin) streak++;
         else if (w > 0) break;
       }
@@ -378,15 +366,11 @@ export function useCheckins() {
     }
 
     let streak = 0;
-    const now = new Date();
+    const today = getLocalDateISO(timezone);
+    const firstOfMonth = `${today.slice(0, 7)}-01`;
     for (let m = 0; m < 24; m++) {
-      const month = now.getMonth() - m;
-      const year = now.getFullYear() + Math.floor(month / 12);
-      const normalizedMonth = ((month % 12) + 12) % 12;
-      const hasCheckin = uniqueDates.some((d) => {
-        const dt = new Date(d + 'T12:00:00');
-        return dt.getFullYear() === year && dt.getMonth() === normalizedMonth;
-      });
+      const key = addMonthsISO(firstOfMonth, -m).slice(0, 7);
+      const hasCheckin = uniqueDates.some((d) => d.slice(0, 7) === key);
       if (hasCheckin) streak++;
       else if (m > 0) break;
     }
