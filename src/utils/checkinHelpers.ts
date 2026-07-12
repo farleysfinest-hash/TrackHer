@@ -351,6 +351,7 @@ function checkinToScores(checkin: SymptomCheckin): MRSScoresMap {
 
 export function hasMRSData(checkin: SymptomCheckin): boolean {
   if (checkin.checkin_type === 'pulse') return false;
+  if (checkin.total_score === null || checkin.total_score === undefined) return false;
   return MRS_CANONICAL_KEYS.every(
     (k) => checkin[k] !== null && checkin[k] !== undefined,
   );

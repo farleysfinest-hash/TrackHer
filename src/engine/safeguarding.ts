@@ -282,11 +282,15 @@ export function analyzeSafeguarding(input: SafeguardingInput): Insight[] {
 
   const results: Insight[] = [];
 
-  const t1 = tier1Insight(complete);
-  if (t1) results.push(t1);
-
+  // Tier 2 supersedes Tier 1: the app never raises its voice twice about
+  // the same four symptoms on the same day.
   const t2 = tier2Insight(complete, input.checkins, input.timezone);
-  if (t2) results.push(t2);
+  if (t2) {
+    results.push(t2);
+  } else {
+    const t1 = tier1Insight(complete);
+    if (t1) results.push(t1);
+  }
 
   const cardiac = cardiacPersistenceInsight(mrsComplete);
   if (cardiac) results.push(cardiac);
