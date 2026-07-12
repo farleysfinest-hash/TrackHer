@@ -1,6 +1,6 @@
 import { HORMONE_PATTERNS, type HormonePattern } from './hormonePatterns';
 import type { Insight } from './types';
-import { INSIGHT_DISCLAIMER } from './types';
+import { finalizeInsightBody, INSIGHT_DISCLAIMER } from './types';
 import type { SymptomCheckin, ExtendedSymptomLog } from '../types/database';
 import { SYMPTOM_CATALOG } from '../data/symptoms';
 import { MRS_CANONICAL_KEYS, hasMRSData } from '../utils/checkinHelpers';
@@ -165,15 +165,20 @@ export function analyzeSymptomClusters(input: ClusterMatchInput): Insight[] {
       id: `cluster-${pattern.key}`,
       category: 'symptom_cluster',
       priority: confidence >= 0.7 ? 'high' : 'medium',
-      title: `Your symptoms suggest a ${pattern.label.toLowerCase()}`,
-      body: `Over the past month, your symptom profile has consistently matched a ${pattern.label.toLowerCase()}. ${pattern.description} You are experiencing ${matchedLabels.join(', ')} at moderate or higher severity on average — ${primaryMatches.length} of ${pattern.primarySymptoms.length} hallmark symptoms of this pattern.`,
+      title: `Your recent symptoms align with a ${pattern.label.toLowerCase()} pattern`,
+      body: finalizeInsightBody(
+        `Over the past month, your symptom profile has matched a ${pattern.label.toLowerCase()} pattern. ${pattern.description} You are experiencing ${matchedLabels.join(', ')} at moderate or higher severity on average — ${primaryMatches.length} of ${pattern.primarySymptoms.length} hallmark symptoms of this pattern.`,
+        { n: windowCheckins.length },
+        true,
+      ),
+      sampleSize: { n: windowCheckins.length },
+      relatedSymptoms: allMatches.map((m) => m.key),
+      relatedLabs: pattern.relatedLabs.map((l) => l.biomarkerKey),
       supportingData: {
         matchedPattern: pattern.key,
         matchedSymptoms: allMatches,
         matchConfidence: Math.round(confidence * 100) / 100,
       },
-      relatedSymptoms: allMatches.map((m) => m.key),
-      relatedLabs: pattern.relatedLabs.map((l) => l.biomarkerKey),
       actionSuggestion: `Questions to consider for your provider:\n${pattern.discussionPoints.map((q) => `• ${q}`).join('\n')}`,
       disclaimer: INSIGHT_DISCLAIMER,
       generatedAt: new Date().toISOString(),

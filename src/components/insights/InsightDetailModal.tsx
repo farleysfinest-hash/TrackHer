@@ -76,8 +76,8 @@ export function InsightDetailModal({
                   className="flex items-center justify-between rounded-lg bg-sand-50 px-3 py-2 text-sm"
                 >
                   <span className="text-sage-700">{s.label}</span>
-                  <span className={s.delta < 0 ? 'text-success' : s.delta > 0 ? 'text-danger' : 'text-sage-500'}>
-                    {s.avgBefore.toFixed(1)} → {s.avgAfter.toFixed(1)} ({s.delta > 0 ? '+' : ''}
+                  <span className="text-sage-600">
+                    {s.avgBefore.toFixed(1)} before, {s.avgAfter.toFixed(1)} after ({s.delta > 0 ? '+' : ''}
                     {s.delta.toFixed(1)})
                   </span>
                 </li>

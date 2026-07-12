@@ -1,4 +1,5 @@
 import type { Insight, InsightCategory, InsightPriority } from '../engine/types';
+import { formatSampleSizeSuffix } from '../engine/types';
 
 export type InsightFilterGroup =
   | 'all'
@@ -73,6 +74,10 @@ export function filterInsightsByGroup(
   const categories = FILTER_GROUPS[group];
   if (!categories) return insights;
   return insights.filter((i) => categories.includes(i.category));
+}
+
+export function formatInsightSampleSize(insight: Insight): string {
+  return formatSampleSizeSuffix(insight.sampleSize);
 }
 
 export function getPriorityLabel(priority: InsightPriority): string {

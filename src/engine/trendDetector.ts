@@ -1,5 +1,5 @@
 import type { Insight } from './types';
-import { INSIGHT_DISCLAIMER } from './types';
+import { finalizeInsightBody, INSIGHT_DISCLAIMER } from './types';
 import type { SymptomCheckin, Medication, LabResult } from '../types/database';
 import { MRS_CORE_SYMPTOMS } from '../data/symptoms';
 import type { MRSSymptomKey } from '../utils/checkinHelpers';
@@ -30,6 +30,16 @@ function daysBetween(from: string, to: string): number {
   return Math.floor((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24));
 }
 
+function formatCheckinSequence(values: number[]): string {
+  return values
+    .map((value, index) =>
+      index === values.length - 1
+        ? `and ${value} on the most recent`
+        : `${value} on check-in ${index + 1}`,
+    )
+    .join(', ');
+}
+
 export function analyzeTrends(input: TrendInput): Insight[] {
   const insights: Insight[] = [];
   const { checkins, medications, labResults } = input;
@@ -44,19 +54,28 @@ export function analyzeTrends(input: TrendInput): Insight[] {
   const earlyAvg = earlyCheckins.reduce((s, c) => s + c.total_score, 0) / earlyCheckins.length;
   const lateAvg = lateCheckins.reduce((s, c) => s + c.total_score, 0) / lateCheckins.length;
   const overallDelta = lateAvg - earlyAvg;
+  const periodSampleSize = {
+    before: earlyCheckins.length,
+    after: lateCheckins.length,
+  };
 
   if (overallDelta <= -5) {
     insights.push({
       id: 'trend-overall-improving',
       category: 'positive_trend',
       priority: 'positive',
-      title: 'Your symptoms are trending in the right direction',
-      body: `Your overall symptom score has decreased from an average of ${Math.round(earlyAvg)} to ${Math.round(lateAvg)} over your tracking period — a ${Math.abs(Math.round(overallDelta))}-point improvement. Your current regimen appears to be helping.`,
+      title: 'Your overall symptom scores are lower than when you started tracking',
+      body: finalizeInsightBody(
+        `Your average MRS total was ${Math.round(earlyAvg)} across your earliest logged check-ins and ${Math.round(lateAvg)} across your most recent — a ${Math.abs(Math.round(overallDelta))}-point difference over your tracking period.`,
+        periodSampleSize,
+        false,
+      ),
+      sampleSize: periodSampleSize,
       supportingData: {
         trendData: sorted.map((c) => ({ date: c.checkin_date, score: c.total_score })),
       },
       actionSuggestion:
-        'Continue your current regimen and keep tracking. Positive trends are worth sharing with your provider.',
+        'Positive trends are worth sharing with your provider when you review your history together.',
       disclaimer: INSIGHT_DISCLAIMER,
       generatedAt: new Date().toISOString(),
     });
@@ -65,13 +84,18 @@ export function analyzeTrends(input: TrendInput): Insight[] {
       id: 'trend-overall-worsening',
       category: 'trend_alert',
       priority: 'high',
-      title: 'Your symptoms have been gradually worsening',
-      body: `Your overall symptom score has increased from an average of ${Math.round(earlyAvg)} to ${Math.round(lateAvg)} — a ${Math.round(overallDelta)}-point increase over your tracking period. This could indicate that your current regimen needs adjustment, or that other factors are affecting your symptoms.`,
+      title: 'Your overall symptom scores are higher than when you started tracking',
+      body: finalizeInsightBody(
+        `Your average MRS total was ${Math.round(earlyAvg)} across your earliest logged check-ins and ${Math.round(lateAvg)} across your most recent — a ${Math.round(overallDelta)}-point difference over your tracking period.`,
+        periodSampleSize,
+        false,
+      ),
+      sampleSize: periodSampleSize,
       supportingData: {
         trendData: sorted.map((c) => ({ date: c.checkin_date, score: c.total_score })),
       },
       actionSuggestion:
-        'Consider scheduling an appointment with your provider to review your current hormone therapy.',
+        'Consider scheduling an appointment with your provider to review your symptom history.',
       disclaimer: INSIGHT_DISCLAIMER,
       generatedAt: new Date().toISOString(),
     });
@@ -96,13 +120,20 @@ export function analyzeTrends(input: TrendInput): Insight[] {
       lastFour[3] < lastFour[0] &&
       lastFour[0] >= 2;
 
+    const fourCheckinSample = { n: 4 };
+
     if (isWorsening) {
       insights.push({
         id: `trend-worsening-${symptom.key}`,
         category: 'trend_alert',
         priority: 'medium',
-        title: `${symptom.label} has been getting worse`,
-        body: `Your ${symptom.label.toLowerCase()} severity has increased over your last 4 check-ins (${lastFour.join(' → ')}). This sustained worsening may warrant attention.`,
+        title: `${symptom.label} scores have been rising across recent check-ins`,
+        body: finalizeInsightBody(
+          `Your ${symptom.label.toLowerCase()} ratings were ${formatCheckinSequence(lastFour)} across your last four scored check-ins.`,
+          fourCheckinSample,
+          false,
+        ),
+        sampleSize: fourCheckinSample,
         supportingData: {
           trendData: sorted.map((c) => ({
             date: c.checkin_date,
@@ -110,7 +141,7 @@ export function analyzeTrends(input: TrendInput): Insight[] {
           })),
         },
         relatedSymptoms: [symptom.key],
-        actionSuggestion: `If ${symptom.label.toLowerCase()} continues worsening, discuss with your provider.${symptom.relatedHormones?.length ? ` This symptom is commonly associated with: ${symptom.relatedHormones.join(', ').replace(/_/g, ' ')}.` : ''}`,
+        actionSuggestion: `If ${symptom.label.toLowerCase()} stays elevated, discuss with your provider.${symptom.relatedHormones?.length ? ` This symptom is commonly associated with: ${symptom.relatedHormones.join(', ').replace(/_/g, ' ')}.` : ''}`,
         disclaimer: INSIGHT_DISCLAIMER,
         generatedAt: new Date().toISOString(),
       });
@@ -121,8 +152,13 @@ export function analyzeTrends(input: TrendInput): Insight[] {
         id: `trend-improving-${symptom.key}`,
         category: 'positive_trend',
         priority: 'positive',
-        title: `${symptom.label} is improving`,
-        body: `Your ${symptom.label.toLowerCase()} has decreased over your last 4 check-ins (${lastFour.join(' → ')}). Your current approach appears to be working for this symptom.`,
+        title: `${symptom.label} scores have been falling across recent check-ins`,
+        body: finalizeInsightBody(
+          `Your ${symptom.label.toLowerCase()} ratings were ${formatCheckinSequence(lastFour)} across your last four scored check-ins.`,
+          fourCheckinSample,
+          false,
+        ),
+        sampleSize: fourCheckinSample,
         supportingData: {
           trendData: sorted.map((c) => ({
             date: c.checkin_date,
@@ -130,7 +166,7 @@ export function analyzeTrends(input: TrendInput): Insight[] {
           })),
         },
         relatedSymptoms: [symptom.key],
-        actionSuggestion: 'Keep it up. This positive trend is worth noting.',
+        actionSuggestion: 'Keep logging — sustained patterns are easier to review with your provider.',
         disclaimer: INSIGHT_DISCLAIMER,
         generatedAt: new Date().toISOString(),
       });
@@ -147,12 +183,18 @@ export function analyzeTrends(input: TrendInput): Insight[] {
     const recentAvg = lateCheckins.reduce((s, c) => s + c.total_score, 0) / lateCheckins.length;
     if (recentAvg < 20) continue;
 
+    const medSampleSize = { n: lateCheckins.length };
     insights.push({
       id: `stale-med-${med.id}`,
       category: 'medication_note',
       priority: 'low',
       title: `${med.medication_name} has been at the same dose for ${getMonthsSince(med.start_date)} months`,
-      body: `You've been taking ${med.medication_name} (${formatMedicationDoseShort(med)}) since ${formatDateLong(med.start_date)} without a dose adjustment, and your MRS score is still at ${Math.round(recentAvg)}/44. It may be worth discussing whether a dose change could help.`,
+      body: finalizeInsightBody(
+        `You've been taking ${med.medication_name} (${formatMedicationDoseShort(med)}) since ${formatDateLong(med.start_date)} without a dose adjustment. Your recent MRS average is ${Math.round(recentAvg)}/44 across your latest logged check-ins.`,
+        medSampleSize,
+        true,
+      ),
+      sampleSize: medSampleSize,
       supportingData: {},
       relatedMedication: med.id,
       actionSuggestion:
@@ -169,7 +211,12 @@ export function analyzeTrends(input: TrendInput): Insight[] {
       category: 'lab_due',
       priority: 'low',
       title: 'No lab results on file yet',
-      body: 'Adding blood work helps the app compare your symptoms with your hormone levels and detect when labs and symptoms tell different stories.',
+      body: finalizeInsightBody(
+        'Adding blood work helps the app compare your symptoms with your hormone levels and note when labs and symptoms tell different stories.',
+        { n: 0 },
+        true,
+      ),
+      sampleSize: { n: 0 },
       supportingData: {},
       actionSuggestion: 'Add your most recent lab results under Labs when you have them.',
       disclaimer: INSIGHT_DISCLAIMER,
@@ -186,10 +233,16 @@ export function analyzeTrends(input: TrendInput): Insight[] {
         category: 'lab_due',
         priority: 'low',
         title: `It's been ${weeksSince} weeks since your last labs`,
-        body: `Your most recent draw was on ${formatDateLong(latestLab.draw_date)}. Regular labs help track whether your hormone therapy is reaching your target levels.`,
+        body: finalizeInsightBody(
+          `Your most recent draw was on ${formatDateLong(latestLab.draw_date)}. Regular labs help you and your provider see how your levels line up with your symptoms over time.`,
+          { n: labResults.length },
+          true,
+        ),
+        sampleSize: { n: labResults.length },
         supportingData: {},
         relatedLabs: ['estradiol'],
-        actionSuggestion: 'Ask your provider when your next labs are due and add results here after your draw.',
+        actionSuggestion:
+          'Ask your provider when your next labs are scheduled and add results here once you have them.',
         disclaimer: INSIGHT_DISCLAIMER,
         generatedAt: new Date().toISOString(),
       });

@@ -1,5 +1,5 @@
 import type { Insight } from './types';
-import { INSIGHT_DISCLAIMER } from './types';
+import { finalizeInsightBody, INSIGHT_DISCLAIMER } from './types';
 import type { SymptomCheckin } from '../types/database';
 import { MRS_INSTRUMENT } from '../data/instruments/mrs';
 import { scoreInstrument, getItemStorageKey } from '../data/instruments/scoring';
@@ -54,12 +54,17 @@ function baselineObservation(checkin: SymptomCheckin): Insight {
     category: 'observation',
     priority: 'low',
     title: `Your baseline: ${band.bandLabel} symptom severity`,
-    body: `Your first MRS score is ${score.total} of ${MRS_TOTAL_MAX} — ${band.rangePhrase}. Your ${subscale} ratings contribute the most. This is your baseline: every future check-in measures change against it.`,
+    body: finalizeInsightBody(
+      `Your first MRS score is ${score.total} of ${MRS_TOTAL_MAX} — ${band.rangePhrase}. Your ${subscale} ratings contribute the most. This is your baseline: every future check-in measures change against it.`,
+      { n: 1 },
+      false,
+    ),
+    sampleSize: { n: 1 },
+    actionSuggestion:
+      "Scores of 9+ are generally considered clinically relevant — worth bringing to your provider if you haven't already.",
     supportingData: {
       trendData: [{ date: checkin.checkin_date, score: score.total }],
     },
-    actionSuggestion:
-      "Scores of 9+ are generally considered clinically relevant — worth bringing to your provider if you haven't already.",
     disclaimer: INSIGHT_DISCLAIMER,
     generatedAt: new Date().toISOString(),
   };
@@ -98,6 +103,7 @@ function deltaObservation(previous: SymptomCheckin, latest: SymptomCheckin): Ins
   }
   const totalDelta = latestScore.total - prevScore.total;
   const absDelta = Math.abs(totalDelta);
+  const pairSample = { n: 2 };
 
   if (absDelta < 2) {
     return {
@@ -105,7 +111,12 @@ function deltaObservation(previous: SymptomCheckin, latest: SymptomCheckin): Ins
       category: 'observation',
       priority: 'low',
       title: 'Holding steady',
-      body: `Your overall MRS score is ${latestScore.total} of ${MRS_TOTAL_MAX} — essentially unchanged from your last check-in (${prevScore.total}). Stability is information too, especially when you are tracking over time.`,
+      body: finalizeInsightBody(
+        `Your overall MRS score is ${latestScore.total} of ${MRS_TOTAL_MAX} — essentially unchanged from your last check-in (${prevScore.total}). Stability is information too, especially when you are tracking over time.`,
+        pairSample,
+        false,
+      ),
+      sampleSize: pairSample,
       supportingData: {
         trendData: [
           { date: previous.checkin_date, score: prevScore.total },
@@ -119,9 +130,7 @@ function deltaObservation(previous: SymptomCheckin, latest: SymptomCheckin): Ins
 
   const symptomChange = largestSymptomDelta(previous, latest);
   const symptomSentence = symptomChange
-    ? ` The biggest change: ${symptomChange.label.toLowerCase()}, ${
-        symptomChange.after < symptomChange.before ? 'down' : 'up'
-      } from ${symptomChange.before} to ${symptomChange.after}.`
+    ? ` The largest single-item shift was ${symptomChange.label.toLowerCase()}, from ${symptomChange.before} to ${symptomChange.after}.`
     : '';
 
   return {
@@ -129,7 +138,12 @@ function deltaObservation(previous: SymptomCheckin, latest: SymptomCheckin): Ins
     category: 'observation',
     priority: 'low',
     title: 'Since your last check-in',
-    body: `Your overall score moved from ${prevScore.total} to ${latestScore.total}.${symptomSentence}`,
+    body: finalizeInsightBody(
+      `Your overall score moved from ${prevScore.total} to ${latestScore.total}.${symptomSentence}`,
+      pairSample,
+      false,
+    ),
+    sampleSize: pairSample,
     supportingData: {
       trendData: [
         { date: previous.checkin_date, score: prevScore.total },
@@ -163,7 +177,12 @@ function dominantSymptomObservation(recent: SymptomCheckin[]): Insight | null {
     category: 'observation',
     priority: 'low',
     title: 'Your most consistent symptom',
-    body: `Across your recent check-ins, ${top.label.toLowerCase()} has consistently rated highest (${subscaleLabel} subscale). If one thing is driving how you feel, it's likely this.`,
+    body: finalizeInsightBody(
+      `Across your recent check-ins, ${top.label.toLowerCase()} has consistently rated highest (${subscaleLabel} subscale).`,
+      { n: recent.length },
+      false,
+    ),
+    sampleSize: { n: recent.length },
     supportingData: {},
     relatedSymptoms: [top.key],
     disclaimer: INSIGHT_DISCLAIMER,

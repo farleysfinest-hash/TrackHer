@@ -1,9 +1,14 @@
 import type { Insight } from './types';
-import { INSIGHT_DISCLAIMER } from './types';
+import { finalizeInsightBody, INSIGHT_DISCLAIMER } from './types';
 import type { Medication, MedicationChange, SymptomCheckin, MedicationAdministration } from '../types/database';
 import { getDoseCycleDays, getMedicationChangeLabel } from '../utils/medicationHelpers';
-import { todayISO } from '../utils/localDate';
+import { addDaysISO, todayISO } from '../utils/localDate';
 import { getDailySignal } from '../utils/checkinHelpers';
+import {
+  collectBeforeAfterWindows,
+  passesScalarDoseEffectFloor,
+  windowWeeksLabel,
+} from './engineStats';
 
 interface WellbeingSignalInput {
   checkins: SymptomCheckin[];
@@ -16,7 +21,7 @@ interface WellbeingSignalInput {
 // Sleep-lag analysis (night sweats -> sleep -> next-day energy) is queued for the AI layer / a future analyzer.
 
 const WINDOW_DAYS = 21;
-const WELLBEING_DOSE_MIN_POINTS = 5;
+const WELLBEING_DOSE_MIN_POINTS = 4;
 const VOLATILITY_LOOKBACK_DAYS = 21;
 const VOLATILITY_MIN_POINTS = 10;
 const VOLATILITY_THRESHOLD = 1.25;
@@ -26,14 +31,6 @@ const TROUGH_MIN_CYCLES = 3;
 const TROUGH_MIN_AVG_POINTS_PER_POSITION = 2;
 const TROUGH_MIN_GAP = 1;
 const TROUGH_MIN_ADMINISTRATIONS = 3;
-
-function addDaysISO(dateStr: string, delta: number): string {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const dt = new Date(y, m - 1, d + delta);
-  const month = String(dt.getMonth() + 1).padStart(2, '0');
-  const day = String(dt.getDate()).padStart(2, '0');
-  return `${dt.getFullYear()}-${month}-${day}`;
-}
 
 function mean(values: number[]): number | null {
   if (values.length === 0) return null;
@@ -85,51 +82,55 @@ function doseChangeWellbeingInsights(input: WellbeingSignalInput): Insight[] {
     const medication = medications.find((m) => m.id === change.medication_id);
     if (!medication) continue;
 
-    const beforeStart = addDaysISO(change.change_date, -WINDOW_DAYS);
-    const afterEnd = addDaysISO(change.change_date, WINDOW_DAYS);
+    const datedPoints = points.map((p) => ({ ...p, checkin_date: p.date }));
+    const windows = collectBeforeAfterWindows(
+      datedPoints,
+      change.change_date,
+      WELLBEING_DOSE_MIN_POINTS,
+    );
+    if (!windows) continue;
 
-    const before = points.filter((p) => p.date >= beforeStart && p.date < change.change_date);
-    const after = points.filter((p) => p.date > change.change_date && p.date <= afterEnd);
+    const { windowDays, before: beforeDated, after: afterDated } = windows;
+    const before = beforeDated.map(({ date, value }) => ({ date, value }));
+    const after = afterDated.map(({ date, value }) => ({ date, value }));
 
-    if (before.length < WELLBEING_DOSE_MIN_POINTS || after.length < WELLBEING_DOSE_MIN_POINTS) {
-      continue;
-    }
+    const beforeValues = before.map((p) => p.value);
+    const afterValues = after.map((p) => p.value);
 
-    const avgBefore = mean(before.map((p) => p.value));
-    const avgAfter = mean(after.map((p) => p.value));
+    const avgBefore = mean(beforeValues);
+    const avgAfter = mean(afterValues);
     if (avgBefore === null || avgAfter === null) continue;
 
     const diff = avgAfter - avgBefore;
-    if (Math.abs(diff) < 1.0) continue;
+    if (!passesScalarDoseEffectFloor(beforeValues, afterValues, diff, 1.0)) {
+      continue;
+    }
 
-    const improved = diff > 0;
+    const scoresHigherAfter = diff > 0;
     const changeLabel = getMedicationChangeLabel(change, medication);
-    const title = improved
-      ? `Your daily energy rose after ${changeLabel}`
-      : `Your daily energy fell after ${changeLabel}`;
+    const weeksLabel = windowWeeksLabel(windowDays);
 
-    const body = improved
-      ? `In the ${WINDOW_DAYS} days before your change on ${change.change_date}, your average daily energy was ${round1(
-          avgBefore,
-        ).toFixed(1)} across ${before.length} daily readings. In the ${WINDOW_DAYS} days after, it averaged ${round1(
-          avgAfter,
-        ).toFixed(1)} across ${after.length} readings.`
-      : `In the ${WINDOW_DAYS} days before your change on ${change.change_date}, your average daily energy was ${round1(
-          avgBefore,
-        ).toFixed(1)} across ${before.length} daily readings. In the ${WINDOW_DAYS} days after, it averaged ${round1(
-          avgAfter,
-        ).toFixed(1)} across ${after.length} readings.`;
+    const title = scoresHigherAfter
+      ? `Your daily energy readings were higher in the ${weeksLabel} following your ${changeLabel} than in the ${weeksLabel} before`
+      : `Your daily energy readings were lower in the ${weeksLabel} following your ${changeLabel} than in the ${weeksLabel} before`;
+
+    const coreBody = `In the ${weeksLabel} before your ${changeLabel} on ${change.change_date}, your average daily energy was ${round1(
+      avgBefore,
+    ).toFixed(1)}. In the ${weeksLabel} following, it averaged ${round1(avgAfter).toFixed(1)}.`;
+
+    const sampleSize = { before: before.length, after: after.length };
 
     insights.push({
       id: `wb-dose-${change.id}`,
       category: 'wellbeing_signal',
-      priority: improved ? 'positive' : 'medium',
+      priority: scoresHigherAfter ? 'positive' : 'medium',
       title,
-      body,
+      body: finalizeInsightBody(coreBody, sampleSize, true),
+      sampleSize,
       supportingData: {},
       relatedMedication: medication.id,
-      actionSuggestion: improved
-        ? 'If this matches how you feel, keep logging daily pulses to see whether the change holds.'
+      actionSuggestion: scoresHigherAfter
+        ? 'If this matches how you feel, keep logging daily pulses to see whether the pattern holds.'
         : 'If this matches how you feel, consider discussing it with your provider.',
       disclaimer: INSIGHT_DISCLAIMER,
       generatedAt: new Date().toISOString(),
@@ -172,9 +173,14 @@ function volatilityInsight(input: WellbeingSignalInput, suppress: boolean): Insi
       category: 'wellbeing_signal',
       priority: 'low',
       title: 'Your day-to-day energy swings widely',
-      body: `Over the past three weeks your daily energy has moved an average of ${round1(
-        avgSwing,
-      ).toFixed(1)} points between days, ranging from ${min} to ${max}. Big day-to-day swings — rather than steadily low days — are a pattern many women notice during hormonal fluctuation.`,
+      body: finalizeInsightBody(
+        `Over the past three weeks your daily energy has moved an average of ${round1(
+          avgSwing,
+        ).toFixed(1)} points between consecutive logged days, ranging from ${min} to ${max}. Big day-to-day swings — rather than steadily low days — are a pattern many women notice during hormonal fluctuation.`,
+        { n: recent.length },
+        false,
+      ),
+      sampleSize: { n: recent.length },
       supportingData: {},
       actionSuggestion:
         'Fluctuation patterns are worth showing your provider — they can point toward different adjustments than consistently low days do.',
@@ -217,9 +223,14 @@ function moodVolatilityInsight(input: WellbeingSignalInput, suppress: boolean): 
       category: 'wellbeing_signal',
       priority: 'low',
       title: 'Your mood swings widely day to day',
-      body: `Over the past three weeks your mood has moved an average of ${round1(
-        avgSwing,
-      ).toFixed(1)} points between days, ranging from ${min} to ${max} on the 1–5 scale.`,
+      body: finalizeInsightBody(
+        `Over the past three weeks your mood has moved an average of ${round1(
+          avgSwing,
+        ).toFixed(1)} points between consecutive logged days, ranging from ${min} to ${max} on the 1–5 scale.`,
+        { n: recent.length },
+        false,
+      ),
+      sampleSize: { n: recent.length },
       supportingData: {},
       actionSuggestion:
         'Mood fluctuation patterns are worth showing your provider — fluctuation (not just low mood) is characteristic of hormonal transition.',
@@ -256,16 +267,18 @@ function buildTroughInsight(
   adminAnchored: boolean,
 ): Insight {
   const anchorNote = adminAnchored ? ', based on your logged doses' : '';
+  const coreBody = `Across your recent pulses, your average daily energy on the last day of your ${med.medication_name} cycle was ${round1(
+    endMean,
+  ).toFixed(1)}, compared with a best-day average of ${round1(bestMean).toFixed(
+    1,
+  )}${anchorNote}. This end-of-cycle dip held across about ${completeCycles} cycles.`;
   return {
     id: `wb-trough-${med.id}`,
     category: 'wellbeing_signal',
     priority: 'medium',
-    title: `Your energy dips at the end of your ${med.medication_name} cycle`,
-    body: `Across your recent pulses, your average daily energy on the last day of your ${med.medication_name} cycle was ${round1(
-      endMean,
-    ).toFixed(1)}, compared with a best-day average of ${round1(bestMean).toFixed(
-      1,
-    )}${anchorNote}. This end-of-cycle dip held across about ${completeCycles} cycles.`,
+    title: `Your energy readings dip at the end of your ${med.medication_name} cycle`,
+    body: finalizeInsightBody(coreBody, { n: completeCycles }, true),
+    sampleSize: { n: completeCycles },
     supportingData: {},
     relatedMedication: med.id,
     actionSuggestion:
@@ -437,7 +450,12 @@ function dipTripwire(input: WellbeingSignalInput, suppress: boolean): Insight[] 
       category: 'observation',
       priority: 'low',
       title: 'Rougher few days than your usual',
-      body: `Your last four daily pulses have run well below your recent average. If it feels right, a full check-in now would capture what's happening while it's happening — useful detail for spotting what changed.`,
+      body: finalizeInsightBody(
+        `Your last four daily pulses have run well below your recent average. If it feels right, a full check-in now would capture what's happening while it's fresh — useful detail for spotting what changed.`,
+        { n: recent4.length },
+        false,
+      ),
+      sampleSize: { n: recent4.length },
       supportingData: {},
       actionSuggestion: undefined,
       disclaimer: INSIGHT_DISCLAIMER,
