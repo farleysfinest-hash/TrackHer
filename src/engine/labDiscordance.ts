@@ -33,6 +33,8 @@ export function analyzeLabDiscordance(input: LabDiscordanceInput): Insight[] {
     .sort((a, b) => b.checkin_date.localeCompare(a.checkin_date))
     .slice(0, 3);
 
+  if (recentCheckins.length === 0) return [];
+
   const labDate = new Date(recentLab.draw_date + 'T12:00:00');
   const checkinDate = new Date(recentCheckins[0].checkin_date + 'T12:00:00');
   const daysBetween = Math.abs(
