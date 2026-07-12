@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import type { MRSScore, SymptomCheckin, ExtendedSymptomLog, CheckinDraftPayload } from '../types/database';
+import type { MRSScore, SymptomCheckin, ExtendedSymptomLog } from '../types/database';
+import type { CheckinDraft } from '../lib/checkinDraft';
 import type { InstrumentDefinition } from '../types/instruments';
 import { getPrimaryInstrument } from '../data/instruments/registry';
 import {
@@ -71,11 +72,8 @@ interface CheckinState {
     extendedSymptoms: ExtendedSymptomLog[],
   ) => void;
   /** Restore a server draft. Caller has already validated date, mode, version, and age. */
-  hydrateFromDraft: (
-    payload: CheckinDraftPayload,
-    targetDate: string,
-    mode: 'full' | 'quick',
-  ) => void;
+  /** Restore a saved draft. Caller has already validated userId, targetDate, mode, and age. */
+  hydrateFromDraft: (draft: CheckinDraft) => void;
   reset: () => void;
   getTotalMRS: () => number | null;
   getSomaticScore: () => number | null;
@@ -272,37 +270,37 @@ export const useCheckinStore = create<CheckinState>((set, get) => ({
     });
   },
 
-  hydrateFromDraft: (payload, targetDate, mode) => {
+  hydrateFromDraft: (draft) => {
     const mrsScores = { ...INITIAL_MRS_SCORES };
     for (const key of MRS_CANONICAL_KEYS) {
-      const value = payload.mrsScores[key];
+      const value = draft.mrsScores[key];
       if (value !== undefined) {
         mrsScores[key] = value as MRSScore | null;
       }
     }
 
-    const extendedSymptoms: ExtendedSymptomEntry[] = payload.extendedSymptoms.map((entry) => ({
+    const extendedSymptoms: ExtendedSymptomEntry[] = draft.extendedSymptoms.map((entry) => ({
       symptom_key: entry.symptom_key,
       severity: entry.severity as MRSScore | null,
     }));
 
     set({
-      mode,
-      targetDate,
-      currentStep: payload.currentStep,
-      instrumentId: payload.instrumentId,
-      energyLevel: payload.energyLevel,
-      moodLevel: payload.moodLevel,
-      sleepQuality: payload.sleepQuality,
-      energyComplete: payload.energyComplete,
-      moodComplete: payload.moodComplete,
-      sleepComplete: payload.sleepComplete,
-      flareSelected: [...payload.flareSelected],
-      flarePreLogged: [...payload.flarePreLogged],
+      mode: draft.mode,
+      targetDate: draft.targetDate,
+      currentStep: draft.currentStep,
+      instrumentId: draft.instrumentId,
+      energyLevel: draft.energyLevel,
+      moodLevel: draft.moodLevel,
+      sleepQuality: draft.sleepQuality,
+      energyComplete: draft.energyComplete,
+      moodComplete: draft.moodComplete,
+      sleepComplete: draft.sleepComplete,
+      flareSelected: [...draft.flareSelected],
+      flarePreLogged: [...draft.flarePreLogged],
       mrsScores,
       extendedSymptoms,
-      pendingKeepWatch: [...payload.pendingKeepWatch],
-      notes: payload.notes,
+      pendingKeepWatch: [...draft.pendingKeepWatch],
+      notes: draft.notes,
       isEditing: false,
       editingCheckinId: null,
     });

@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import type { ProfileUpdate } from '../types/database';
+import { CHECKIN_DRAFT_KEY } from './checkinDraft';
 
 export const PROFILE_RESET_FIELDS: ProfileUpdate = {
   onboarding_completed: false,
@@ -23,6 +24,7 @@ const LOCAL_STORAGE_KEYS = [
   'trackher_first_checkin_done',
   'trackher_full_dashboard_seen',
   'predicther_instrument_tooltip_dismissed',
+  CHECKIN_DRAFT_KEY,
 ] as const;
 
 export function clearTrackHerLocalStorage(): void {
@@ -46,7 +48,6 @@ export async function deleteUserAppData(userId: string): Promise<{ success: bool
   await supabase.from('ai_insights').delete().eq('user_id', userId);
   await supabase.from('reminder_schedule').delete().eq('user_id', userId);
   await supabase.from('dismissed_insights').delete().eq('user_id', userId);
-  await supabase.from('checkin_drafts').delete().eq('user_id', userId);
 
   const { error } = await supabase
     .from('profiles')

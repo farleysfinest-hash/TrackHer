@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useCheckinStore } from '../../stores/checkinStore';
 import { useAuthStore } from '../../stores/authStore';
 import { getPrimaryInstrument } from '../../data/instruments/registry';
@@ -18,24 +18,6 @@ interface CheckinFlowProps {
   onComplete: () => void;
 }
 
-type SaveState = 'idle' | 'saving' | 'saved' | 'failed';
-
-function saveIndicatorCopy(state: SaveState): { text: string; className: string } | null {
-  switch (state) {
-    case 'saving':
-      return { text: 'Saving…', className: 'text-xs text-sage-400' };
-    case 'saved':
-      return { text: 'Saved to your account', className: 'text-xs text-sage-400' };
-    case 'failed':
-      return {
-        text: "Not saved yet — we'll keep trying",
-        className: 'text-xs text-sage-600',
-      };
-    default:
-      return null;
-  }
-}
-
 export function CheckinFlow({ onClose, onComplete }: CheckinFlowProps) {
   const mode = useCheckinStore((s) => s.mode);
   const currentStep = useCheckinStore((s) => s.currentStep);
@@ -52,7 +34,6 @@ export function CheckinFlow({ onClose, onComplete }: CheckinFlowProps) {
   const todayStr = getLocalDateISO(timezone);
   const isBackdated = targetDate !== todayStr;
   const totalSteps = getStepCount();
-  const [saveState, setSaveState] = useState<SaveState>('idle');
 
   useEffect(() => {
     setInstrumentId(getPrimaryInstrument(strawStage).id);
@@ -62,14 +43,14 @@ export function CheckinFlow({ onClose, onComplete }: CheckinFlowProps) {
     if (isEditing) return;
     if (!userId) return;
 
-    let debounceTimer: ReturnType<typeof setTimeout> | undefined;
-    let retryTimer: ReturnType<typeof setTimeout> | undefined;
-    let cancelled = false;
-
-    const write = async () => {
+    const write = () => {
       const s = useCheckinStore.getState();
-      setSaveState('saving');
-      const ok = await saveCheckinDraft(userId, s.targetDate, s.mode, {
+      saveCheckinDraft({
+        v: 1,
+        userId,
+        targetDate: s.targetDate,
+        mode: s.mode,
+        savedAt: new Date().toISOString(),
         currentStep: s.currentStep,
         instrumentId: s.instrumentId,
         energyLevel: s.energyLevel,
@@ -85,32 +66,22 @@ export function CheckinFlow({ onClose, onComplete }: CheckinFlowProps) {
         pendingKeepWatch: s.pendingKeepWatch,
         notes: s.notes,
       });
-      if (cancelled) return;
-      setSaveState(ok ? 'saved' : 'failed');
-      if (!ok) {
-        retryTimer = setTimeout(write, 5000);
-      }
     };
 
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const unsub = useCheckinStore.subscribe(() => {
-      clearTimeout(debounceTimer);
-      clearTimeout(retryTimer);
-      debounceTimer = setTimeout(write, 800);
+      clearTimeout(timer);
+      timer = setTimeout(write, 400);
     });
 
     return () => {
-      cancelled = true;
-      clearTimeout(debounceTimer);
-      clearTimeout(retryTimer);
+      clearTimeout(timer);
       unsub();
     };
   }, [isEditing, userId]);
 
   const handleComplete = () => {
-    const s = useCheckinStore.getState();
-    if (userId) {
-      void clearCheckinDraft(userId, s.targetDate, s.mode);
-    }
+    clearCheckinDraft();
     reset();
     onComplete();
   };
@@ -120,10 +91,7 @@ export function CheckinFlow({ onClose, onComplete }: CheckinFlowProps) {
   };
 
   const handleDiscard = () => {
-    const s = useCheckinStore.getState();
-    if (userId) {
-      void clearCheckinDraft(userId, s.targetDate, s.mode);
-    }
+    clearCheckinDraft();
     reset();
     onClose();
   };
@@ -162,8 +130,6 @@ export function CheckinFlow({ onClose, onComplete }: CheckinFlowProps) {
     }
   };
 
-  const saveLine = saveIndicatorCopy(saveState);
-
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-sand-50">
       <header className="flex items-center justify-between border-b border-sand-200 bg-white px-6 py-4">
@@ -194,9 +160,6 @@ export function CheckinFlow({ onClose, onComplete }: CheckinFlowProps) {
             totalSteps={totalSteps}
             label={`Step ${currentStep} of ${totalSteps}`}
           />
-          {saveLine && !isEditing && (
-            <p className={`-mt-4 mb-6 ${saveLine.className}`}>{saveLine.text}</p>
-          )}
           <div className="animate-fade-in" key={currentStep}>
             {renderStep()}
           </div>

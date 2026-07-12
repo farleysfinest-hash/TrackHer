@@ -199,33 +199,6 @@ export interface MedicationAdministrationInsert {
   taken_at?: string;
 }
 
-export interface CheckinDraftPayload {
-  currentStep: number;
-  instrumentId: string;
-  energyLevel: number | null;
-  moodLevel: number | null;
-  sleepQuality: number | null;
-  energyComplete: boolean;
-  moodComplete: boolean;
-  sleepComplete: boolean;
-  flareSelected: string[];
-  flarePreLogged: string[];
-  mrsScores: Record<string, number | null>;
-  extendedSymptoms: Array<{ symptom_key: string; severity: number | null }>;
-  pendingKeepWatch: string[];
-  notes: string;
-}
-
-export interface CheckinDraft {
-  id: string;
-  user_id: string;
-  target_date: string;
-  mode: 'full' | 'quick';
-  schema_version: number;
-  payload: CheckinDraftPayload;
-  updated_at: string;
-}
-
 export interface SymptomCheckin {
   id: string;
   user_id: string;
@@ -504,14 +477,6 @@ export type Database = {
           dismissed_at?: string;
         };
         Update: Partial<Omit<DismissedInsight, 'id'>>;
-        Relationships: [];
-      };
-      checkin_drafts: {
-        Row: CheckinDraft;
-        Insert: Omit<CheckinDraft, 'id' | 'updated_at'> & {
-          updated_at?: string;
-        };
-        Update: Partial<Omit<CheckinDraft, 'id' | 'user_id'>>;
         Relationships: [];
       };
     };

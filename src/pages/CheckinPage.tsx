@@ -15,7 +15,8 @@ import { Input } from '../components/ui/Input';
 import { getLocalDateISO, getResolvedTimezone } from '../utils/checkinHelpers';
 import { DailyChannelsDisplay } from '../components/ui/DailyChannelsDisplay';
 import { formatLoggingDate } from '../utils/formatters';
-import type { SymptomCheckin, CheckinDraft } from '../types/database';
+import type { SymptomCheckin } from '../types/database';
+import type { CheckinDraft } from '../lib/checkinDraft';
 import { clearCheckinDraft, loadCheckinDraft } from '../lib/checkinDraft';
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -74,7 +75,7 @@ export function CheckinPage() {
     }
 
     if (userId) {
-      const draft = await loadCheckinDraft(userId, targetDate, mode);
+      const draft = loadCheckinDraft(userId, targetDate, mode);
       if (draft) {
         setPendingDraft(draft);
         setPendingStartMode(mode);
@@ -128,16 +129,14 @@ export function CheckinPage() {
 
   const handleResumeDraft = () => {
     if (!pendingDraft) return;
-    hydrateFromDraft(pendingDraft.payload, pendingDraft.target_date, pendingDraft.mode);
+    hydrateFromDraft(pendingDraft);
     setShowResumePrompt(false);
     setPendingDraft(null);
     setActiveFlow(true);
   };
 
-  const handleStartFresh = async () => {
-    if (userId && pendingDraft) {
-      await clearCheckinDraft(userId, pendingDraft.target_date, pendingDraft.mode);
-    }
+  const handleStartFresh = () => {
+    clearCheckinDraft();
     reset();
     setTargetDate(pendingStartDate);
     setMode(pendingStartMode);
@@ -284,12 +283,12 @@ export function CheckinPage() {
       >
         <p className="text-sm text-sage-600">
           You started a check-in for{' '}
-          {pendingDraft ? formatLoggingDate(pendingDraft.target_date) : 'this day'} and didn't
+          {pendingDraft ? formatLoggingDate(pendingDraft.targetDate) : 'this day'} and didn't
           finish it. Your answers are still here.
         </p>
         <div className="mt-4 flex flex-col gap-3 sm:flex-row">
           <Button onClick={handleResumeDraft}>Pick up where I left off</Button>
-          <Button variant="secondary" onClick={() => void handleStartFresh()}>
+          <Button variant="secondary" onClick={handleStartFresh}>
             Start fresh
           </Button>
         </div>
