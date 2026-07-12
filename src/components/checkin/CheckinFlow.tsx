@@ -87,6 +87,7 @@ export function CheckinFlow({ onClose, onComplete }: CheckinFlowProps) {
   };
 
   const handleClose = () => {
+    reset(); // clears in-memory state only — the localStorage draft is untouched
     onClose();
   };
 

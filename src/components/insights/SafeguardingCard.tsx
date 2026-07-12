@@ -29,11 +29,11 @@ export function SafeguardingCard({ insight, onDismiss }: SafeguardingCardProps) 
   }, [insight]);
 
   return (
-    <div className="rounded-xl border border-[--color-alert-700]/20 border-l-[3px] border-l-[--color-alert-700] bg-sand-50 p-5 shadow-sm">
+    <div className="rounded-xl border border-alert-700/20 border-l-[3px] border-l-alert-700 bg-sand-50 p-5 shadow-sm">
       <div className="flex items-start gap-3">
-        <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-[--color-alert-700]" />
+        <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-alert-700" />
         <div className="min-w-0 flex-1">
-          <h3 className="font-display text-lg text-[--color-alert-700]">{insight.title}</h3>
+          <h3 className="font-display text-lg text-alert-700">{insight.title}</h3>
           <p className="mt-1 text-sm text-sage-500">{formatConfidenceLine(insight.confidence)}</p>
           <p className="mt-2 whitespace-pre-line text-sm text-sage-800">{insight.body}</p>
 

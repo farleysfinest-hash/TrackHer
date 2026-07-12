@@ -40,7 +40,8 @@ export function saveCheckinDraft(draft: CheckinDraft): void {
   try {
     localStorage.setItem(CHECKIN_DRAFT_KEY, JSON.stringify(draft));
   } catch (e) {
-    console.warn('Failed to save check-in draft:', e);
+    const message = e instanceof Error ? e.message : String(e);
+    console.error('Failed to save check-in draft:', message);
   }
 }
 
@@ -66,7 +67,9 @@ export function loadCheckinDraft(
     }
 
     return draft;
-  } catch {
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error('Failed to load check-in draft:', message);
     clearCheckinDraft();
     return null;
   }
@@ -75,7 +78,8 @@ export function loadCheckinDraft(
 export function clearCheckinDraft(): void {
   try {
     localStorage.removeItem(CHECKIN_DRAFT_KEY);
-  } catch {
-    // cleanup failure is not worth interrupting her
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.warn('Failed to clear check-in draft:', message);
   }
 }

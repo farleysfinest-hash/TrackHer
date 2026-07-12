@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { AppShell } from './components/layout/AppShell';
 import { ToastContainer } from './components/ui/Toast';
+import { ErrorBoundary, RouteErrorBoundary } from './components/ui/ErrorBoundary';
 import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
@@ -20,41 +21,85 @@ export function App() {
   return (
     <BrowserRouter>
       <ToastContainer />
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/privacy" element={<PrivacyPolicyPage />} />
-        <Route path="/terms" element={<TermsOfServicePage />} />
+      <ErrorBoundary>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/privacy" element={<PrivacyPolicyPage />} />
+          <Route path="/terms" element={<TermsOfServicePage />} />
 
-        <Route
-          path="/onboarding"
-          element={
-            <ProtectedRoute requireOnboarding={false}>
-              <OnboardingPage />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/onboarding"
+            element={
+              <ProtectedRoute requireOnboarding={false}>
+                <OnboardingPage />
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          element={
-            <ProtectedRoute>
-              <AppShell />
-            </ProtectedRoute>
-          }
-        >
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/medications" element={<MedicationsPage />} />
-          <Route path="/checkin" element={<CheckinPage />} />
-          <Route path="/labs" element={<LabsPage />} />
-          <Route path="/insights" element={<InsightsPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-        </Route>
+          <Route
+            element={
+              <ProtectedRoute>
+                <AppShell />
+              </ProtectedRoute>
+            }
+          >
+            <Route
+              path="/dashboard"
+              element={
+                <RouteErrorBoundary>
+                  <DashboardPage />
+                </RouteErrorBoundary>
+              }
+            />
+            <Route
+              path="/medications"
+              element={
+                <RouteErrorBoundary>
+                  <MedicationsPage />
+                </RouteErrorBoundary>
+              }
+            />
+            <Route
+              path="/checkin"
+              element={
+                <RouteErrorBoundary>
+                  <CheckinPage />
+                </RouteErrorBoundary>
+              }
+            />
+            <Route
+              path="/labs"
+              element={
+                <RouteErrorBoundary>
+                  <LabsPage />
+                </RouteErrorBoundary>
+              }
+            />
+            <Route
+              path="/insights"
+              element={
+                <RouteErrorBoundary>
+                  <InsightsPage />
+                </RouteErrorBoundary>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <RouteErrorBoundary>
+                  <SettingsPage />
+                </RouteErrorBoundary>
+              }
+            />
+          </Route>
 
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }
