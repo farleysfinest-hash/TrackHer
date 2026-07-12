@@ -71,37 +71,37 @@ function SeveritySliderComponent({
         role="radiogroup"
         aria-label={`${label} severity`}
         aria-describedby={description ? descId : undefined}
-        className="flex overflow-hidden rounded-lg border border-sand-200"
+        className="grid grid-cols-5 overflow-hidden rounded-lg border border-sand-200"
         onKeyDown={(e) => handleKeyDown(e, value)}
       >
-        {([0, 1, 2, 3, 4] as MRSScore[]).map((score) => {
+        {scores.map((score) => {
           const isSelected = value === score;
           return (
-            <button
+            <div
               key={score}
-              type="button"
-              role="radio"
-              aria-checked={isSelected}
-              aria-label={`${label} severity: ${SEVERITY_LABELS[score]}`}
-              onClick={() => onChange(symptomKey, score)}
-              className={[
-                'min-h-[44px] flex-1 border-r border-sand-200 text-sm font-medium transition-colors last:border-r-0',
-                isSelected
-                  ? SELECTED_STYLES[score]
-                  : 'bg-sand-100 text-sage-600 hover:bg-sand-200',
-              ].join(' ')}
+              className="flex min-w-0 flex-col border-r border-sand-200 last:border-r-0"
             >
-              {score}
-            </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={isSelected}
+                aria-label={`${label} severity: ${SEVERITY_LABELS[score]}`}
+                onClick={() => onChange(symptomKey, score)}
+                className={[
+                  'min-h-[44px] w-full text-sm font-medium transition-colors',
+                  isSelected
+                    ? SELECTED_STYLES[score]
+                    : 'bg-sand-100 text-sage-600 hover:bg-sand-200',
+                ].join(' ')}
+              >
+                {score}
+              </button>
+              <span className="min-w-0 border-t border-sand-200 px-0.5 py-1 text-center text-[10px] leading-tight text-sage-400 sm:text-xs">
+                {SEVERITY_LABELS[score]}
+              </span>
+            </div>
           );
         })}
-      </div>
-      <div className="mt-1.5 flex text-xs text-sage-400">
-        {scores.map((score) => (
-          <span key={score} className="flex-1 px-0.5 text-center leading-tight">
-            {SEVERITY_LABELS[score]}
-          </span>
-        ))}
       </div>
     </div>
   );
