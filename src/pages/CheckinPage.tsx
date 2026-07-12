@@ -15,7 +15,8 @@ import { Input } from '../components/ui/Input';
 import { getLocalDateISO, getResolvedTimezone } from '../utils/checkinHelpers';
 import { DailyChannelsDisplay } from '../components/ui/DailyChannelsDisplay';
 import { formatLoggingDate } from '../utils/formatters';
-import type { SymptomCheckin } from '../types/database';
+import type { SymptomCheckin, CheckinDraft } from '../types/database';
+import { clearCheckinDraft, loadCheckinDraft } from '../lib/checkinDraft';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 export function CheckinPage() {
@@ -27,6 +28,8 @@ export function CheckinPage() {
   const setTargetDate = useCheckinStore((s) => s.setTargetDate);
   const reset = useCheckinStore((s) => s.reset);
   const loadExistingCheckin = useCheckinStore((s) => s.loadExistingCheckin);
+  const hydrateFromDraft = useCheckinStore((s) => s.hydrateFromDraft);
+  const userId = useAuthStore((s) => s.user?.id);
   const timezone = getResolvedTimezone(useAuthStore((s) => s.profile?.timezone));
   const todayStr = getLocalDateISO(timezone);
 
@@ -37,6 +40,10 @@ export function CheckinPage() {
   const [detailCheckin, setDetailCheckin] = useState<SymptomCheckin | null>(null);
   const [showBackdate, setShowBackdate] = useState(false);
   const [backdateValue, setBackdateValue] = useState('');
+  const [showResumePrompt, setShowResumePrompt] = useState(false);
+  const [pendingDraft, setPendingDraft] = useState<CheckinDraft | null>(null);
+  const [pendingStartMode, setPendingStartMode] = useState<'full' | 'quick'>('full');
+  const [pendingStartDate, setPendingStartDate] = useState(todayStr);
 
   const resolveTargetDate = () => (backdateValue && backdateValue <= todayStr ? backdateValue : todayStr);
 
@@ -64,6 +71,17 @@ export function CheckinPage() {
       setDuplicateDate(targetDate);
       setShowDuplicatePrompt(true);
       return;
+    }
+
+    if (userId) {
+      const draft = await loadCheckinDraft(userId, targetDate, mode);
+      if (draft) {
+        setPendingDraft(draft);
+        setPendingStartMode(mode);
+        setPendingStartDate(targetDate);
+        setShowResumePrompt(true);
+        return;
+      }
     }
 
     reset();
@@ -103,7 +121,29 @@ export function CheckinPage() {
     setActiveFlow(false);
     setShowBackdate(false);
     setBackdateValue('');
+    setShowResumePrompt(false);
+    setPendingDraft(null);
     void refresh();
+  };
+
+  const handleResumeDraft = () => {
+    if (!pendingDraft) return;
+    hydrateFromDraft(pendingDraft.payload, pendingDraft.target_date, pendingDraft.mode);
+    setShowResumePrompt(false);
+    setPendingDraft(null);
+    setActiveFlow(true);
+  };
+
+  const handleStartFresh = async () => {
+    if (userId && pendingDraft) {
+      await clearCheckinDraft(userId, pendingDraft.target_date, pendingDraft.mode);
+    }
+    reset();
+    setTargetDate(pendingStartDate);
+    setMode(pendingStartMode);
+    setShowResumePrompt(false);
+    setPendingDraft(null);
+    setActiveFlow(true);
   };
 
   useEffect(() => {
@@ -235,6 +275,25 @@ export function CheckinPage() {
         onEdit={handleEditFromDetail}
         onDeleted={() => void refresh()}
       />
+
+      <Modal
+        isOpen={showResumePrompt}
+        onClose={() => setShowResumePrompt(false)}
+        title="You have an unfinished check-in"
+        size="sm"
+      >
+        <p className="text-sm text-sage-600">
+          You started a check-in for{' '}
+          {pendingDraft ? formatLoggingDate(pendingDraft.target_date) : 'this day'} and didn't
+          finish it. Your answers are still here.
+        </p>
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+          <Button onClick={handleResumeDraft}>Pick up where I left off</Button>
+          <Button variant="secondary" onClick={() => void handleStartFresh()}>
+            Start fresh
+          </Button>
+        </div>
+      </Modal>
 
       <Modal
         isOpen={showDuplicatePrompt}

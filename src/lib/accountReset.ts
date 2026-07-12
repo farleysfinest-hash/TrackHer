@@ -46,6 +46,7 @@ export async function deleteUserAppData(userId: string): Promise<{ success: bool
   await supabase.from('ai_insights').delete().eq('user_id', userId);
   await supabase.from('reminder_schedule').delete().eq('user_id', userId);
   await supabase.from('dismissed_insights').delete().eq('user_id', userId);
+  await supabase.from('checkin_drafts').delete().eq('user_id', userId);
 
   const { error } = await supabase
     .from('profiles')
