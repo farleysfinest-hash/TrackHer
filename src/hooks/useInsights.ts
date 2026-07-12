@@ -32,6 +32,7 @@ export function useInsights() {
   const [dismissalsLoading, setDismissalsLoading] = useState(true);
 
   useEffect(() => {
+    // 100 check-ins ≈ 100 days of pulse data — safeguarding windows need up to 41 days lookback.
     void fetchCheckins(100);
     void fetchMedications();
     void fetchChanges();
@@ -136,7 +137,12 @@ export function useInsights() {
 
   const engineResult = useMemo(() => {
     if (!profile || checkins.length === 0) {
-      return { primary: [] as Insight[], more: [] as Insight[], all: [] as Insight[] };
+      return {
+        primary: [] as Insight[],
+        more: [] as Insight[],
+        safeguarding: [] as Insight[],
+        all: [] as Insight[],
+      };
     }
 
     return runPatternEngine({
@@ -151,11 +157,17 @@ export function useInsights() {
     });
   }, [checkins, extendedSymptoms, medications, medicationChanges, administrations, labResults, profile, timezone]);
 
-  const { insights, primaryInsights, moreInsights } = useMemo(() => {
+  const { insights, primaryInsights, moreInsights, safeguardingInsights } = useMemo(() => {
     const all = filterDismissedInsights(engineResult.all, dismissals);
     const primary = filterDismissedInsights(engineResult.primary, dismissals);
     const more = filterDismissedInsights(engineResult.more, dismissals);
-    return { insights: all, primaryInsights: primary, moreInsights: more };
+    const safeguarding = filterDismissedInsights(engineResult.safeguarding, dismissals);
+    return {
+      insights: all,
+      primaryInsights: primary,
+      moreInsights: more,
+      safeguardingInsights: safeguarding,
+    };
   }, [engineResult, dismissals]);
 
   const dismissInsight = useCallback(
@@ -204,6 +216,7 @@ export function useInsights() {
     insights,
     primaryInsights,
     moreInsights,
+    safeguardingInsights,
     highPriority,
     positive,
     isLoading,

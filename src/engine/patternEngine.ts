@@ -4,6 +4,7 @@ import { analyzeLabDiscordance } from './labDiscordance';
 import { analyzeTrends } from './trendDetector';
 import { analyzeEarlyObservations } from './earlyObservations';
 import { analyzeWellbeingSignal } from './wellbeingSignal';
+import { analyzeSafeguarding } from './safeguarding';
 import { resolveConflicts } from './conflictResolution';
 import {
   getCachedEngineResult,
@@ -53,15 +54,22 @@ function partitionPanel(insights: Insight[]): PatternEngineResult {
   const primaryIds = new Set(primary.map((i) => i.id));
   const more = insights.filter((i) => !primaryIds.has(i.id));
 
-  return { primary, more, all: insights };
+  return { primary, more, safeguarding: [], all: insights };
 }
 
 function runPatternEngineInternal(input: EngineInput): PatternEngineResult {
   if (!input.profile || input.checkins.length === 0) {
-    return { primary: [], more: [], all: [] };
+    return { primary: [], more: [], safeguarding: [], all: [] };
   }
 
   const { timezone } = input;
+
+  const safeguardingResults = analyzeSafeguarding({
+    checkins: input.checkins,
+    timezone,
+  });
+  const safeguarding = safeguardingResults.filter((i) => i.category === 'safeguarding');
+  const safeguardingOrdinary = safeguardingResults.filter((i) => i.category !== 'safeguarding');
 
   const doseInsights = analyzeDoseCorrelations({
     checkins: input.checkins,
@@ -101,6 +109,7 @@ function runPatternEngineInternal(input: EngineInput): PatternEngineResult {
 
   const seen = new Set<string>();
   const collected = [
+    ...safeguardingOrdinary,
     ...doseInsights,
     ...wellbeingInsights,
     ...clusterInsights,
@@ -120,7 +129,12 @@ function runPatternEngineInternal(input: EngineInput): PatternEngineResult {
     if (priorityDiff !== 0) return priorityDiff;
     return confidenceSortScore(b.confidence) - confidenceSortScore(a.confidence);
   });
-  return partitionPanel(ranked);
+  const partitioned = partitionPanel(ranked);
+  return {
+    ...partitioned,
+    safeguarding,
+    all: [...partitioned.all, ...safeguarding],
+  };
 }
 
 export function runPatternEngine(input: EngineInput): PatternEngineResult {

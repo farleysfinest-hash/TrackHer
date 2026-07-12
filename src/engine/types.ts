@@ -19,7 +19,10 @@ export type InsightCategory =
   | 'medication_note'
   | 'lab_due'
   | 'observation'
-  | 'mixed_signals';
+  | 'mixed_signals'
+  | 'psych_trajectory'
+  | 'safeguarding'
+  | 'cardiac_persistence';
 
 export type InsightPriority = 'high' | 'medium' | 'low' | 'positive';
 
@@ -97,8 +100,16 @@ export interface EngineInput {
 export interface PatternEngineResult {
   primary: Insight[];
   more: Insight[];
+  /** Tier 2 only. Rendered above the panel. Never counted against PRIMARY_PANEL_CAP. */
+  safeguarding: Insight[];
   all: Insight[];
 }
+
+/** Categories excluded from the clinician PDF by default. Disclosure is hers. */
+export const MENTAL_HEALTH_CATEGORIES: InsightCategory[] = [
+  'psych_trajectory',
+  'safeguarding',
+];
 
 export const INSIGHT_DISCLAIMER =
   'This is a pattern observed in your data, not a diagnosis. Always discuss changes to your hormone therapy with your healthcare provider.';

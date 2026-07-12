@@ -22,6 +22,7 @@ import { LabSummaryWidget } from './LabSummaryWidget';
 import { AppointmentCountdownCard } from './AppointmentCountdownCard';
 import { ProviderReportButton } from './ProviderReportButton';
 import { DashboardInsightsPanel } from '../insights/DashboardInsightsPanel';
+import { SafeguardingCard } from '../insights/SafeguardingCard';
 import { QuickLogWidget } from './QuickLogWidget';
 import { DoseTapWidget } from './DoseTapWidget';
 import { ExperimentWindowCard } from './ExperimentWindowCard';
@@ -35,7 +36,7 @@ const FULL_DASHBOARD_CHECKINS = 7;
 export function DashboardLayout() {
   const dateRange = useDashboardStore((s) => s.dateRange);
   const checkinStatus = useCheckinStatus();
-  const { insights, primaryInsights, moreInsights, dismissInsight, extendedSymptoms } = useInsights();
+  const { insights, primaryInsights, moreInsights, safeguardingInsights, dismissInsight, extendedSymptoms } = useInsights();
   const {
     getSymptomTrendData,
     getMedicationChangeMarkers,
@@ -133,6 +134,14 @@ export function DashboardLayout() {
 
           <AppointmentCountdownCard checkins={allCheckins} />
 
+          {safeguardingInsights.map((insight) => (
+            <SafeguardingCard
+              key={insight.id}
+              insight={insight}
+              onDismiss={dismissInsight}
+            />
+          ))}
+
           <DashboardInsightsPanel
             primaryInsights={primaryInsights}
             moreInsights={moreInsights}
@@ -188,6 +197,14 @@ export function DashboardLayout() {
           />
 
           <AppointmentCountdownCard checkins={allCheckins} />
+
+          {safeguardingInsights.map((insight) => (
+            <SafeguardingCard
+              key={insight.id}
+              insight={insight}
+              onDismiss={dismissInsight}
+            />
+          ))}
 
           <StrawStageCard />
 

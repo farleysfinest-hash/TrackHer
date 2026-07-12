@@ -14,6 +14,7 @@ import {
   getCategoryLabel,
 } from '../../utils/insightHelpers';
 import { InsightDetailModal } from './InsightDetailModal';
+import { SafeguardingCard } from './SafeguardingCard';
 
 interface InsightCardProps {
   insight: Insight;
@@ -30,6 +31,10 @@ export function InsightCard({ insight, compact = false, onDismiss, stageProfile 
     markInsightAsViewed(insight);
   }, [insight]);
 
+  if (insight.category === 'safeguarding') {
+    return <SafeguardingCard insight={insight} onDismiss={onDismiss} />;
+  }
+
   return (
     <>
       <Card variant="elevated" padding={compact ? 'sm' : 'md'} className="relative">
@@ -39,10 +44,18 @@ export function InsightCard({ insight, compact = false, onDismiss, stageProfile 
             onClick={() => onDismiss(insight.id)}
             className="absolute right-3 top-3 rounded-full p-1 text-sage-400 transition-colors hover:bg-sage-100 hover:text-sage-600"
             aria-label={
-              insight.category === 'trend_alert' ? 'Hide for 30 days' : 'Dismiss this insight'
+              insight.category === 'trend_alert' ||
+              insight.category === 'psych_trajectory' ||
+              insight.category === 'cardiac_persistence'
+                ? 'Hide for 30 days'
+                : 'Dismiss this insight'
             }
             title={
-              insight.category === 'trend_alert' ? 'Hide for 30 days' : 'Dismiss this insight'
+              insight.category === 'trend_alert' ||
+              insight.category === 'psych_trajectory' ||
+              insight.category === 'cardiac_persistence'
+                ? 'Hide for 30 days'
+                : 'Dismiss this insight'
             }
           >
             <X className="h-4 w-4" />

@@ -1,4 +1,13 @@
-type BadgeVariant = 'success' | 'warning' | 'info' | 'neutral' | 'danger';
+type BadgeVariant =
+  | 'success'
+  | 'warning'
+  | 'info'
+  | 'neutral'
+  | 'danger'
+  | 'attention'
+  | 'review'
+  | 'reference'
+  | 'affirmative';
 type BadgeSize = 'sm' | 'md';
 
 interface BadgeProps {
@@ -14,6 +23,10 @@ const variantClasses: Record<BadgeVariant, string> = {
   info: 'bg-info/10 text-info',
   neutral: 'bg-sage-100 text-sage-600',
   danger: 'bg-danger/10 text-danger',
+  attention: 'bg-sage-200 text-sage-800',
+  review: 'bg-sage-100 text-sage-700',
+  affirmative: 'bg-sage-50 text-sage-700',
+  reference: 'bg-sand-200 text-sage-600',
 };
 
 const sizeClasses: Record<BadgeSize, string> = {

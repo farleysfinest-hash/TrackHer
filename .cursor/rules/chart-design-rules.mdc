@@ -33,3 +33,13 @@ A dot marks a measurement the user deliberately made. Ambient flow renders as te
 - Check-in line: `type="monotone"`, `strokeWidth=2` (2.5 for a panel's primary series), solid.
 - Terrain: `type="monotone"`, top stroke `strokeWidth=1.5`, `fillOpacity=0.20`, same hex for stroke and fill.
 - Dose-change rule: `stroke=#a64d79`, `strokeWidth=1`, `strokeDasharray="3 3"`, `opacity=0.5`.
+
+## Reserved safeguarding ink — --color-alert-700 (#8c3a2e)
+
+EXPLICITLY FORBIDDEN outside src/components/insights/SafeguardingCard.tsx.
+
+Never on: charts, heatmaps, severity badges, priority badges, ordinary insight
+cards, medication lanes, toasts, buttons, form validation, navigation, or any
+routine UI. If a card wants this ink, the answer is no. It has exactly one job:
+the Tier 2 psychological safeguarding card. Its power is that she has never
+seen it before.

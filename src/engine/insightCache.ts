@@ -22,6 +22,11 @@ export function hashEngineInput(input: EngineInput): string {
       m: c.mood_level,
       s: c.sleep_quality,
       bd: c.is_backdated,
+      dm: c.depressed_mood,
+      ir: c.irritability,
+      ax: c.anxiety,
+      ex: c.exhaustion,
+      hd: c.heart_discomfort,
     })),
     changes: input.medicationChanges.map((c) => ({
       id: c.id,

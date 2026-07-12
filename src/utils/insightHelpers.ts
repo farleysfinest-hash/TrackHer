@@ -40,7 +40,11 @@ function shouldSuppressInsight(insight: Insight, dismissals: DismissalRecord[], 
   const dismissal = dismissals.find((d) => d.insight_id === insight.id);
   if (!dismissal) return false;
 
-  if (insight.category === 'trend_alert') {
+  if (
+    insight.category === 'trend_alert' ||
+    insight.category === 'psych_trajectory' ||
+    insight.category === 'cardiac_persistence'
+  ) {
     return !isDismissalExpired(dismissal.dismissed_at, now);
   }
 
@@ -95,16 +99,16 @@ export function getPriorityLabel(priority: InsightPriority): string {
 
 export function getPriorityBadgeVariant(
   priority: InsightPriority,
-): 'danger' | 'warning' | 'success' | 'neutral' {
+): 'attention' | 'review' | 'affirmative' | 'reference' {
   switch (priority) {
     case 'high':
-      return 'danger';
+      return 'attention';
     case 'medium':
-      return 'warning';
+      return 'review';
     case 'positive':
-      return 'success';
+      return 'affirmative';
     case 'low':
-      return 'neutral';
+      return 'reference';
   }
 }
 
@@ -132,6 +136,12 @@ export function getCategoryLabel(category: InsightCategory): string {
       return 'Observation';
     case 'mixed_signals':
       return 'Mixed signals';
+    case 'psych_trajectory':
+      return 'Mood & exhaustion';
+    case 'safeguarding':
+      return 'Worth acting on';
+    case 'cardiac_persistence':
+      return 'Heart discomfort';
   }
 }
 
@@ -145,7 +155,7 @@ export function sortInsightsByPriority(insights: Insight[]): Insight[] {
   return [...insights].sort((a, b) => order[a.priority] - order[b.priority]);
 }
 
-/** Remove insights the user has dismissed. trend_alert and obs-* dismissals expire after 30 days. */
+/** Remove insights the user has dismissed. trend_alert, psych_trajectory, cardiac_persistence, and obs-* dismissals expire after 30 days. */
 export function filterDismissedInsights(
   insights: Insight[],
   dismissals: DismissalRecord[] | ReadonlySet<string> | string[],

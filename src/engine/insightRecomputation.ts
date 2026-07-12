@@ -63,6 +63,7 @@ export function applyInsightRecomputationNotices(
   return {
     primary: mapInsights(result.primary, previousById, backdateDate),
     more: mapInsights(result.more, previousById, backdateDate),
+    safeguarding: mapInsights(result.safeguarding, previousById, backdateDate),
     all: mapInsights(result.all, previousById, backdateDate),
   };
 }
