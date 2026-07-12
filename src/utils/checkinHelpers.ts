@@ -210,22 +210,22 @@ export function getMRSSeverityLabel(tier: MRSSeverityLevel): string {
   return getSeverityLabel(tier);
 }
 
-export function getMRSSeverityColor(tier: MRSSeverityLevel): string {
-  const colors: Record<MRSSeverityLevel, string> = {
-    none: 'text-success',
-    mild: 'text-amber-600',
-    moderate: 'text-orange-600',
-    severe: 'text-red-600',
-  };
-  return colors[tier];
+/**
+ * Severity text is the word itself, in one legible ink. Colour never grades
+ * her body (design rules 9 and 11); depth lives in the dot beside the word.
+ * A four-tier pink TEXT ramp is impossible at 10px on sand-100 — only
+ * sage-700/800/900 pass 4.5:1 — so the tier parameter maps to a single ink.
+ */
+export function getMRSSeverityColor(_tier: MRSSeverityLevel): string {
+  return 'text-sage-800';
 }
 
 export function getMRSSeverityDot(tier: MRSSeverityLevel): string {
   const colors: Record<MRSSeverityLevel, string> = {
-    none: 'bg-success',
-    mild: 'bg-amber-500',
-    moderate: 'bg-orange-500',
-    severe: 'bg-red-500',
+    none: 'bg-sage-300',
+    mild: 'bg-sage-500',
+    moderate: 'bg-sage-700',
+    severe: 'bg-sage-900',
   };
   return colors[tier];
 }

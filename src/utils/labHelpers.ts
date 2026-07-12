@@ -44,11 +44,11 @@ export function getValueStatus(value: number, biomarker: LabBiomarker): LabValue
 export function getStatusBorderClass(status: LabValueStatus | null): string {
   switch (status) {
     case 'optimal':
-      return 'border-success';
+      return 'border-sage-400';
     case 'conventional':
-      return 'border-warning';
+      return 'border-sage-600';
     case 'out_of_range':
-      return 'border-danger';
+      return 'border-sage-800';
     default:
       return 'border-sand-200';
   }

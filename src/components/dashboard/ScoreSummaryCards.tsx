@@ -92,7 +92,7 @@ export function ScoreSummaryCards({ checkins }: ScoreSummaryCardsProps) {
         label="Symptom burden"
         value={mrsTrend?.headline ?? '—'}
         subtext={mrsTrend?.detail}
-        color={mrsTrend?.improving ? '#57634a' : undefined}
+        color={mrsTrend?.improving ? '#6f7f58' : undefined}
       />
       <StatCard label="Days logged" value={monthCountValue} subtext="days logged this month" />
     </div>
