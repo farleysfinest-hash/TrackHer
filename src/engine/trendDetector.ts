@@ -7,7 +7,7 @@ import { hasMRSData } from '../utils/checkinHelpers';
 import { formatDateLong } from '../utils/formatters';
 import { formatMedicationDoseShort } from '../utils/medicationHelpers';
 import { todayISO } from '../utils/localDate';
-import { computeInsightConfidence, confidenceFromBeforeAfter } from './confidence';
+import { computeComparativeConfidence, computeObservationalConfidence, confidenceFromBeforeAfter } from './confidence';
 import { pooledStdDev } from './engineStats';
 
 interface TrendInput {
@@ -158,7 +158,7 @@ export function analyzeTrends(input: TrendInput): Insight[] {
           false,
         ),
         sampleSize: fourCheckinSample,
-        confidence: computeInsightConfidence({
+        confidence: computeComparativeConfidence({
           sampleFloor: 4,
           sampleCount: 4,
           delta: lastFour[3] - lastFour[0],
@@ -192,7 +192,7 @@ export function analyzeTrends(input: TrendInput): Insight[] {
           false,
         ),
         sampleSize: fourCheckinSample,
-        confidence: computeInsightConfidence({
+        confidence: computeComparativeConfidence({
           sampleFloor: 4,
           sampleCount: 4,
           delta: lastFour[0] - lastFour[3],
@@ -237,13 +237,12 @@ export function analyzeTrends(input: TrendInput): Insight[] {
         true,
       ),
       sampleSize: medSampleSize,
-      confidence: computeInsightConfidence({
+      confidence: computeObservationalConfidence({
         sampleFloor: 2,
         sampleCount: lateCheckins.length,
-        delta: recentAvg,
-        pooledStdDev: 8,
         windowDays: 90,
         actualInWindow: lateCheckins.length,
+        mostRecentDataDate: lateCheckins[lateCheckins.length - 1].checkin_date,
         sampleSize: medSampleSize,
       }),
       supportingData: {},
@@ -268,13 +267,12 @@ export function analyzeTrends(input: TrendInput): Insight[] {
         true,
       ),
       sampleSize: { n: 0 },
-      confidence: computeInsightConfidence({
+      confidence: computeObservationalConfidence({
         sampleFloor: 1,
         sampleCount: 0,
-        delta: 0,
-        pooledStdDev: 1,
         windowDays: 7,
         actualInWindow: 0,
+        mostRecentDataDate: today,
         sampleSize: { n: 0 },
       }),
       supportingData: {},
@@ -299,13 +297,12 @@ export function analyzeTrends(input: TrendInput): Insight[] {
           true,
         ),
         sampleSize: { n: labResults.length },
-        confidence: computeInsightConfidence({
+        confidence: computeObservationalConfidence({
           sampleFloor: 1,
           sampleCount: labResults.length,
-          delta: weeksSince,
-          pooledStdDev: 12,
-          windowDays: weeksSince * 7,
+          windowDays: Math.max(7, daysSinceLabs),
           actualInWindow: labResults.length,
+          mostRecentDataDate: latestLab.draw_date,
           sampleSize: { n: labResults.length },
         }),
         supportingData: {},

@@ -23,11 +23,11 @@ export type InsightCategory =
 
 export type InsightPriority = 'high' | 'medium' | 'low' | 'positive';
 
-export type ConfidenceLevel = 'low' | 'moderate' | 'high';
+export type ConfidenceLevel = 'low' | 'moderate' | 'high' | 'provisional';
 
 export interface InsightConfidence {
   level: ConfidenceLevel;
-  score: number;
+  score: number | null;
   basis: string;
 }
 

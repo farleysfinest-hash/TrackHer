@@ -10,10 +10,17 @@ import {
   MRS_SUBSCALE_FRIENDLY_LABELS,
   MRS_TOTAL_MAX,
 } from '../utils/checkinHelpers';
-import { computeInsightConfidence } from './confidence';
+import { provisionalInsightConfidence } from './confidence';
 
 interface EarlyObservationsInput {
   checkins: SymptomCheckin[];
+}
+
+const PROVISIONAL_OPENING =
+  'Early days — this is what your first few check-ins show, not a pattern yet. Patterns need a few more weeks of logging before they mean anything.';
+
+function provisionalBody(core: string): string {
+  return `${PROVISIONAL_OPENING} ${core}`;
 }
 
 function scoreCheckin(checkin: SymptomCheckin): InstrumentScore {
@@ -42,12 +49,6 @@ function sortedMrsCheckins(checkins: SymptomCheckin[]): SymptomCheckin[] {
     .sort((a, b) => a.checkin_date.localeCompare(b.checkin_date));
 }
 
-function daysBetween(from: string, to: string): number {
-  const a = new Date(from + 'T12:00:00');
-  const b = new Date(to + 'T12:00:00');
-  return Math.floor(Math.abs(b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24));
-}
-
 function baselineObservation(checkin: SymptomCheckin): Insight {
   const score = scoreCheckin(checkin);
   if (!score.isComplete || score.total === null) {
@@ -60,22 +61,16 @@ function baselineObservation(checkin: SymptomCheckin): Insight {
     id: 'obs-baseline',
     category: 'observation',
     priority: 'low',
-    title: `Your baseline: ${band.bandLabel} symptom severity`,
+    title: `Your first check-in: ${band.bandLabel} symptom severity`,
     body: finalizeInsightBody(
-      `Your first MRS score is ${score.total} of ${MRS_TOTAL_MAX} — ${band.rangePhrase}. Your ${subscale} ratings contribute the most. This is your baseline: every future check-in measures change against it.`,
+      provisionalBody(
+        `Your MRS total on this check-in was ${score.total} of ${MRS_TOTAL_MAX} — ${band.rangePhrase}. Your ${subscale} ratings were the highest on this check-in.`,
+      ),
       { n: 1 },
       false,
     ),
     sampleSize: { n: 1 },
-    confidence: computeInsightConfidence({
-      sampleFloor: 1,
-      sampleCount: 1,
-      delta: score.total,
-      pooledStdDev: 11,
-      windowDays: 7,
-      actualInWindow: 1,
-      sampleSize: { n: 1 },
-    }),
+    confidence: provisionalInsightConfidence(),
     actionSuggestion:
       "Scores of 9+ are generally considered clinically relevant — worth bringing to your provider if you haven't already.",
     supportingData: {
@@ -86,10 +81,10 @@ function baselineObservation(checkin: SymptomCheckin): Insight {
   };
 }
 
-function largestSymptomDelta(
+function largestSymptomShift(
   previous: SymptomCheckin,
   latest: SymptomCheckin,
-): { label: string; before: number; after: number; delta: number } | null {
+): { label: string; before: number; after: number } | null {
   let best: { label: string; before: number; after: number; delta: number } | null = null;
 
   for (const item of MRS_INSTRUMENT.items) {
@@ -106,7 +101,7 @@ function largestSymptomDelta(
   return best && best.delta > 0 ? best : null;
 }
 
-function deltaObservation(previous: SymptomCheckin, latest: SymptomCheckin): Insight {
+function pairObservation(previous: SymptomCheckin, latest: SymptomCheckin): Insight {
   const prevScore = scoreCheckin(previous);
   const latestScore = scoreCheckin(latest);
   if (
@@ -115,69 +110,28 @@ function deltaObservation(previous: SymptomCheckin, latest: SymptomCheckin): Ins
     prevScore.total === null ||
     latestScore.total === null
   ) {
-    throw new Error('deltaObservation requires complete MRS check-ins');
+    throw new Error('pairObservation requires complete MRS check-ins');
   }
-  const totalDelta = latestScore.total - prevScore.total;
-  const absDelta = Math.abs(totalDelta);
   const pairSample = { n: 2 };
-
-  if (absDelta < 2) {
-    return {
-      id: `obs-steady-${latest.checkin_date}`,
-      category: 'observation',
-      priority: 'low',
-      title: 'Holding steady',
-      body: finalizeInsightBody(
-        `Your overall MRS score is ${latestScore.total} of ${MRS_TOTAL_MAX} — essentially unchanged from your last check-in (${prevScore.total}). Stability is information too, especially when you are tracking over time.`,
-        pairSample,
-        false,
-      ),
-      sampleSize: pairSample,
-      confidence: computeInsightConfidence({
-        sampleFloor: 2,
-        sampleCount: 2,
-        delta: absDelta,
-        pooledStdDev: 4,
-        windowDays: 14,
-        actualInWindow: 2,
-        sampleSize: pairSample,
-      }),
-      supportingData: {
-        trendData: [
-          { date: previous.checkin_date, score: prevScore.total },
-          { date: latest.checkin_date, score: latestScore.total },
-        ],
-      },
-      disclaimer: INSIGHT_DISCLAIMER,
-      generatedAt: new Date().toISOString(),
-    };
-  }
-
-  const symptomChange = largestSymptomDelta(previous, latest);
-  const symptomSentence = symptomChange
-    ? ` The largest single-item shift was ${symptomChange.label.toLowerCase()}, from ${symptomChange.before} to ${symptomChange.after}.`
+  const symptomShift = largestSymptomShift(previous, latest);
+  const symptomSentence = symptomShift
+    ? ` On individual items, ${symptomShift.label.toLowerCase()} was ${symptomShift.before} on your prior check-in and ${symptomShift.after} on your latest.`
     : '';
 
   return {
-    id: `obs-delta-${latest.checkin_date}`,
+    id: `obs-pair-${latest.checkin_date}`,
     category: 'observation',
     priority: 'low',
-    title: 'Since your last check-in',
+    title: 'Your last two check-ins',
     body: finalizeInsightBody(
-      `Your overall score moved from ${prevScore.total} to ${latestScore.total}.${symptomSentence}`,
+      provisionalBody(
+        `Your MRS total was ${prevScore.total} of ${MRS_TOTAL_MAX} on your prior check-in and ${latestScore.total} on your latest.${symptomSentence}`,
+      ),
       pairSample,
       false,
     ),
     sampleSize: pairSample,
-    confidence: computeInsightConfidence({
-      sampleFloor: 2,
-      sampleCount: 2,
-      delta: absDelta,
-      pooledStdDev: 4,
-      windowDays: 14,
-      actualInWindow: 2,
-      sampleSize: pairSample,
-    }),
+    confidence: provisionalInsightConfidence(),
     supportingData: {
       trendData: [
         { date: previous.checkin_date, score: prevScore.total },
@@ -189,7 +143,7 @@ function deltaObservation(previous: SymptomCheckin, latest: SymptomCheckin): Ins
   };
 }
 
-function dominantSymptomObservation(recent: SymptomCheckin[]): Insight | null {
+function highestRatedItemObservation(recent: SymptomCheckin[]): Insight | null {
   const averages = MRS_INSTRUMENT.items.map((item) => {
     const key = getItemStorageKey(item);
     const values = recent
@@ -207,28 +161,19 @@ function dominantSymptomObservation(recent: SymptomCheckin[]): Insight | null {
     MRS_SUBSCALE_FRIENDLY_LABELS[top.subscale] ?? top.subscale;
 
   return {
-    id: `obs-dominant-${top.key}`,
+    id: `obs-highest-${top.key}`,
     category: 'observation',
     priority: 'low',
-    title: 'Your most consistent symptom',
+    title: 'What you logged recently',
     body: finalizeInsightBody(
-      `Across your recent check-ins, ${top.label.toLowerCase()} has consistently rated highest (${subscaleLabel} subscale).`,
+      provisionalBody(
+        `Across your recent check-ins, ${top.label.toLowerCase()} had the highest average rating (${subscaleLabel} subscale).`,
+      ),
       { n: recent.length },
       false,
     ),
     sampleSize: { n: recent.length },
-    confidence: computeInsightConfidence({
-      sampleFloor: 3,
-      sampleCount: recent.length,
-      delta: top.avg,
-      pooledStdDev: 2,
-      windowDays: Math.max(
-        7,
-        daysBetween(recent[0].checkin_date, recent[recent.length - 1].checkin_date) || 7,
-      ),
-      actualInWindow: recent.length,
-      sampleSize: { n: recent.length },
-    }),
+    confidence: provisionalInsightConfidence(),
     supportingData: {},
     relatedSymptoms: [top.key],
     disclaimer: INSIGHT_DISCLAIMER,
@@ -249,13 +194,13 @@ export function analyzeEarlyObservations(input: EarlyObservationsInput): Insight
   if (mrsCheckins.length >= 2) {
     const previous = mrsCheckins[mrsCheckins.length - 2];
     const latest = mrsCheckins[mrsCheckins.length - 1];
-    insights.push(deltaObservation(previous, latest));
+    insights.push(pairObservation(previous, latest));
   }
 
   if (mrsCheckins.length >= 3) {
     const recent = mrsCheckins.slice(-5);
-    const dominant = dominantSymptomObservation(recent);
-    if (dominant) insights.push(dominant);
+    const highest = highestRatedItemObservation(recent);
+    if (highest) insights.push(highest);
   }
 
   return insights;

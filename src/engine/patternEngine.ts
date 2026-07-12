@@ -10,6 +10,7 @@ import {
   hashEngineInput,
   setCachedEngineResult,
 } from './insightCache';
+import { confidenceSortScore } from './confidence';
 import type { Insight, InsightPriority, EngineInput, PatternEngineResult } from './types';
 
 export type { EngineInput, PatternEngineResult };
@@ -36,11 +37,14 @@ function capObservations(insights: Insight[]): Insight[] {
 
 function partitionPanel(insights: Insight[]): PatternEngineResult {
   const primaryCandidates = insights
-    .filter((i) => i.confidence.level !== 'low' && !i.demotedToMore)
+    .filter(
+      (i) =>
+        (i.confidence.level === 'provisional' || i.confidence.level !== 'low') && !i.demotedToMore,
+    )
     .sort((a, b) => {
       const priorityDiff = PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
       if (priorityDiff !== 0) return priorityDiff;
-      return b.confidence.score - a.confidence.score;
+      return confidenceSortScore(b.confidence) - confidenceSortScore(a.confidence);
     });
 
   const primary = primaryCandidates.slice(0, PRIMARY_PANEL_CAP);
@@ -107,7 +111,7 @@ function runPatternEngineInternal(input: EngineInput): PatternEngineResult {
   const ranked = [...resolved].sort((a, b) => {
     const priorityDiff = PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
     if (priorityDiff !== 0) return priorityDiff;
-    return b.confidence.score - a.confidence.score;
+    return confidenceSortScore(b.confidence) - confidenceSortScore(a.confidence);
   });
   return partitionPanel(ranked);
 }

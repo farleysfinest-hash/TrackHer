@@ -1,7 +1,7 @@
 import { addDaysISO } from '../utils/localDate';
-import type { Insight, InsightSampleSize } from './types';
+import type { Insight, InsightSampleSize, InsightConfidence } from './types';
 import { finalizeInsightBody, INSIGHT_DISCLAIMER } from './types';
-import type { InsightConfidence } from './types';
+import { confidenceSortScore } from './confidence';
 
 const CONFIDENCE_GAP_THRESHOLD = 0.25;
 
@@ -48,7 +48,9 @@ function mergeSampleSize(a: Insight, b: Insight): InsightSampleSize {
 }
 
 function averagedConfidence(a: Insight, b: Insight, sampleSize: InsightSampleSize): InsightConfidence {
-  const avgScore = (a.confidence.score + b.confidence.score) / 2;
+  const scoreA = confidenceSortScore(a.confidence);
+  const scoreB = confidenceSortScore(b.confidence);
+  const avgScore = (scoreA + scoreB) / 2;
   const basis =
     'before' in sampleSize
       ? `based on ${sampleSize.before} check-in${sampleSize.before === 1 ? '' : 's'} before and ${sampleSize.after} after`
@@ -137,7 +139,9 @@ export function resolveConflicts(insights: Insight[]): Insight[] {
       if (!windowsOverlap(a, b) || !directionsOppose(a, b)) continue;
       processedPairs.add(pairKey);
 
-      const gap = Math.abs(a.confidence.score - b.confidence.score);
+      const gap = Math.abs(
+        confidenceSortScore(a.confidence) - confidenceSortScore(b.confidence),
+      );
       if (gap < CONFIDENCE_GAP_THRESHOLD) {
         byId.get(a.id)!.demotedToMore = true;
         byId.get(b.id)!.demotedToMore = true;
@@ -146,7 +150,8 @@ export function resolveConflicts(insights: Insight[]): Insight[] {
           mixedToAdd.push(buildMixedSignalsInsight(byId.get(a.id)!, byId.get(b.id)!));
         }
       } else {
-        const winner = a.confidence.score >= b.confidence.score ? a : b;
+        const winner =
+          confidenceSortScore(a.confidence) >= confidenceSortScore(b.confidence) ? a : b;
         const loser = winner.id === a.id ? b : a;
         byId.get(loser.id)!.demotedToMore = true;
       }

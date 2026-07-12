@@ -6,7 +6,7 @@ import type { SymptomCheckin, LabResult } from '../types/database';
 import type { MRSSymptomKey } from '../utils/checkinHelpers';
 import { hasMRSData } from '../utils/checkinHelpers';
 import { getBiomarkerValue } from '../utils/labHelpers';
-import { computeInsightConfidence } from './confidence';
+import { computeObservationalConfidence } from './confidence';
 
 interface LabDiscordanceInput {
   checkins: SymptomCheckin[];
@@ -89,13 +89,15 @@ export function analyzeLabDiscordance(input: LabDiscordanceInput): Insight[] {
             true,
           ),
           sampleSize: labSample,
-          confidence: computeInsightConfidence({
+          confidence: computeObservationalConfidence({
             sampleFloor: 3,
             sampleCount: recentCheckins.length,
-            delta: activeSymptomCount,
-            pooledStdDev: 1.5,
             windowDays: 90,
             actualInWindow: recentCheckins.length,
+            mostRecentDataDate:
+              recentCheckins[0].checkin_date > recentLab.draw_date
+                ? recentCheckins[0].checkin_date
+                : recentLab.draw_date,
             sampleSize: labSample,
           }),
           relatedLabs: [labRef.biomarkerKey],

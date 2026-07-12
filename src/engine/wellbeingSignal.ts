@@ -7,10 +7,9 @@ import { getDailySignal } from '../utils/checkinHelpers';
 import {
   collectBeforeAfterWindows,
   passesScalarDoseEffectFloor,
-  pooledStdDev,
   windowWeeksLabel,
 } from './engineStats';
-import { confidenceFromBeforeAfter, computeInsightConfidence } from './confidence';
+import { confidenceFromBeforeAfter } from './confidence';
 import { conflictWindowForChange } from './conflictResolution';
 
 interface WellbeingSignalInput {
@@ -198,15 +197,21 @@ function volatilityInsight(input: WellbeingSignalInput, suppress: boolean): Insi
         false,
       ),
       sampleSize: { n: recent.length },
-      confidence: computeInsightConfidence({
-        sampleFloor: VOLATILITY_MIN_POINTS,
-        sampleCount: recent.length,
-        delta: avgSwing,
-        pooledStdDev: pooledStdDev(swings, []),
-        windowDays: VOLATILITY_LOOKBACK_DAYS,
-        actualInWindow: recent.length,
-        sampleSize: { n: recent.length },
-      }),
+      confidence: (() => {
+        const mid = Math.floor(swings.length / 2);
+        const earlySwings = swings.slice(0, mid);
+        const lateSwings = swings.slice(mid);
+        const earlyMean = mean(earlySwings) ?? 0;
+        const lateMean = mean(lateSwings) ?? 0;
+        return confidenceFromBeforeAfter(
+          earlySwings,
+          lateSwings,
+          lateMean - earlyMean,
+          VOLATILITY_LOOKBACK_DAYS,
+          VOLATILITY_MIN_POINTS,
+          { n: recent.length },
+        );
+      })(),
       supportingData: {},
       actionSuggestion:
         'Fluctuation patterns are worth showing your provider — they can point toward different adjustments than consistently low days do.',
@@ -257,15 +262,21 @@ function moodVolatilityInsight(input: WellbeingSignalInput, suppress: boolean): 
         false,
       ),
       sampleSize: { n: recent.length },
-      confidence: computeInsightConfidence({
-        sampleFloor: VOLATILITY_MIN_POINTS,
-        sampleCount: recent.length,
-        delta: avgSwing,
-        pooledStdDev: pooledStdDev(swings, []),
-        windowDays: VOLATILITY_LOOKBACK_DAYS,
-        actualInWindow: recent.length,
-        sampleSize: { n: recent.length },
-      }),
+      confidence: (() => {
+        const mid = Math.floor(swings.length / 2);
+        const earlySwings = swings.slice(0, mid);
+        const lateSwings = swings.slice(mid);
+        const earlyMean = mean(earlySwings) ?? 0;
+        const lateMean = mean(lateSwings) ?? 0;
+        return confidenceFromBeforeAfter(
+          earlySwings,
+          lateSwings,
+          lateMean - earlyMean,
+          VOLATILITY_LOOKBACK_DAYS,
+          VOLATILITY_MIN_POINTS,
+          { n: recent.length },
+        );
+      })(),
       supportingData: {},
       actionSuggestion:
         'Mood fluctuation patterns are worth showing your provider — fluctuation (not just low mood) is characteristic of hormonal transition.',
@@ -300,6 +311,7 @@ function buildTroughInsight(
   bestMean: number,
   completeCycles: number,
   adminAnchored: boolean,
+  positionMeans: number[],
 ): Insight {
   const anchorNote = adminAnchored ? ', based on your logged doses' : '';
   const coreBody = `Across your recent pulses, your average daily energy on the last day of your ${med.medication_name} cycle was ${round1(
@@ -307,6 +319,9 @@ function buildTroughInsight(
   ).toFixed(1)}, compared with a best-day average of ${round1(bestMean).toFixed(
     1,
   )}${anchorNote}. This end-of-cycle dip held across about ${completeCycles} cycles.`;
+  const mid = Math.floor(positionMeans.length / 2);
+  const beforeMeans = positionMeans.slice(0, mid);
+  const afterMeans = positionMeans.slice(mid);
   return {
     id: `wb-trough-${med.id}`,
     category: 'wellbeing_signal',
@@ -314,15 +329,14 @@ function buildTroughInsight(
     title: `Your energy readings dip at the end of your ${med.medication_name} cycle`,
     body: finalizeInsightBody(coreBody, { n: completeCycles }, true),
     sampleSize: { n: completeCycles },
-    confidence: computeInsightConfidence({
-      sampleFloor: TROUGH_MIN_CYCLES,
-      sampleCount: completeCycles,
-      delta: bestMean - endMean,
-      pooledStdDev: 1,
-      windowDays: TROUGH_LOOKBACK_DAYS,
-      actualInWindow: completeCycles,
-      sampleSize: { n: completeCycles },
-    }),
+    confidence: confidenceFromBeforeAfter(
+      beforeMeans,
+      afterMeans,
+      bestMean - endMean,
+      TROUGH_LOOKBACK_DAYS,
+      TROUGH_MIN_CYCLES,
+      { n: completeCycles },
+    ),
     supportingData: {},
     relatedMedication: med.id,
     actionSuggestion:
@@ -372,7 +386,14 @@ function analyzeTroughFromPositions(
   if (endMean === undefined) return null;
   if (best.mean - endMean < TROUGH_MIN_GAP) return null;
 
-  return buildTroughInsight(med, endMean, best.mean, completeCycles, adminAnchored);
+  return buildTroughInsight(
+    med,
+    endMean,
+    best.mean,
+    completeCycles,
+    adminAnchored,
+    means.map((m) => m.mean),
+  );
 }
 
 function troughInsightForMed(
@@ -500,15 +521,14 @@ function dipTripwire(input: WellbeingSignalInput, suppress: boolean): Insight[] 
         false,
       ),
       sampleSize: { n: recent4.length },
-      confidence: computeInsightConfidence({
-        sampleFloor: 4,
-        sampleCount: recent4.length,
-        delta: avg30 - mean(recent4.map((p) => p.value))!,
-        pooledStdDev: 1,
-        windowDays: 30,
-        actualInWindow: recent4.length,
-        sampleSize: { n: recent4.length },
-      }),
+      confidence: confidenceFromBeforeAfter(
+        last30.map((p) => p.value),
+        recent4.map((p) => p.value),
+        avg30 - mean(recent4.map((p) => p.value))!,
+        30,
+        4,
+        { n: recent4.length },
+      ),
       supportingData: {},
       actionSuggestion: undefined,
       disclaimer: INSIGHT_DISCLAIMER,
