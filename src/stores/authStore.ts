@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import type { User, Session, AuthChangeEvent } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { deleteUserAppData } from '../lib/accountReset';
-import { clearCheckinDraft } from '../lib/checkinDraft';
 import { getAuthErrorMessage } from '../lib/constants';
 import type { Profile, ProfileUpdate } from '../types/database';
 
@@ -116,7 +115,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (e) {
       console.error('signOut error (state cleared anyway):', e);
     } finally {
-      clearCheckinDraft();
       // Always clear local auth state, even if network/signOut fails.
       set({
         user: null,
