@@ -1,8 +1,7 @@
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import {
   ResponsiveContainer,
   LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -11,8 +10,10 @@ import {
 } from 'recharts';
 import { ChartCard } from '../ui/ChartCard';
 import { ChartTooltipContent } from './ChartTooltipContent';
+import { WeeklySegmentLines } from './WeeklySegmentLines';
 import { CHART_COLORS } from '../../utils/chartHelpers';
 import { weeklySeriesProps } from '../../utils/chartStyle';
+import { buildDailyIndexedWeeklyChart, weeklyChartWindow } from '../../utils/weeklyChartSeries';
 import { MRS_SUBSCALES, MRS_SUBSCALE_DESCRIPTION } from '../../data/mrsSubscales';
 import type { SymptomTrendPoint } from '../../hooks/useChartData';
 
@@ -35,8 +36,19 @@ function subscaleSeriesProps(
   };
 }
 
+const SUBSCALE_VALUE_KEYS = MRS_SUBSCALES.map((s) => s.dataKey);
+
 function SubscaleChartComponent({ data }: SubscaleChartProps) {
   const isEmpty = data.length < 2;
+
+  const { dailyRows, weeklySegmentKeys } = useMemo(() => {
+    if (data.length < 2) {
+      return { dailyRows: [], weeklySegmentKeys: {} as Record<string, string[]> };
+    }
+    const dates = data.map((d) => d.date);
+    const window = weeklyChartWindow(dates, dates[0], dates[dates.length - 1]);
+    return buildDailyIndexedWeeklyChart(data, window.start, window.end, SUBSCALE_VALUE_KEYS);
+  }, [data]);
 
   return (
     <ChartCard
@@ -48,19 +60,20 @@ function SubscaleChartComponent({ data }: SubscaleChartProps) {
     >
       {!isEmpty && (
         <ResponsiveContainer width="100%" height={250}>
-          <LineChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+          <LineChart data={dailyRows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
             <XAxis dataKey="dateLabel" tick={{ fontSize: 11, fill: CHART_COLORS.axisText }} />
             <YAxis domain={[0, 16]} tick={{ fontSize: 11, fill: CHART_COLORS.axisText }} width={28} />
             <Tooltip content={<ChartTooltipContent />} />
             <Legend wrapperStyle={{ fontSize: 12 }} />
             {MRS_SUBSCALES.map((subscale) => (
-              <Line
+              <WeeklySegmentLines
                 key={subscale.dataKey}
-                dataKey={subscale.dataKey}
+                segmentKeys={weeklySegmentKeys[subscale.dataKey] ?? []}
                 name={subscale.plainLabel}
                 stroke={subscale.color}
-                {...subscaleSeriesProps(
+                dotColor={subscale.dotFill}
+                seriesProps={subscaleSeriesProps(
                   subscale.color,
                   subscale.dotFill,
                   subscale.dotStroke,

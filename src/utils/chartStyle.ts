@@ -1,11 +1,11 @@
 /**
  * Shared Recharts line grammar — matches Compare Symptoms & Medications chart.
- * Weekly cadence: smooth solid curve + prominent dots. Daily cadence: smooth solid + small/no dots.
+ * Weekly cadence: straight segments between points + prominent dots on a daily-indexed axis.
  * Never put strokeDasharray on data series (dots inherit it and render as broken arcs).
  */
 
 export interface SeriesLineProps {
-  type: 'monotone';
+  type: 'monotone' | 'linear';
   strokeWidth: number;
   connectNulls: boolean;
   isAnimationActive: boolean;
@@ -28,14 +28,14 @@ export interface SeriesLineProps {
 
 import { LIGHT_SERIES_INKS, LIGHT_SERIES_OUTLINE } from './chartHelpers';
 
-/** Weekly measurements (MRS, subscales, symptom trends): solid monotone curve + prominent round dots. */
+/** Weekly measurements (MRS, subscales, symptom trends): linear segments + round dots; connectNulls bridges structural daily nulls. */
 export function weeklySeriesProps(stroke: string, dotColor: string = stroke): SeriesLineProps {
   const needsOutline = LIGHT_SERIES_INKS.includes(stroke) || LIGHT_SERIES_INKS.includes(dotColor);
   const dotStroke = needsOutline ? LIGHT_SERIES_OUTLINE : dotColor;
   const dotStrokeWidth = needsOutline ? 0.75 : 0;
 
   return {
-    type: 'monotone',
+    type: 'linear',
     strokeWidth: 2,
     connectNulls: true,
     isAnimationActive: false,
@@ -46,19 +46,6 @@ export function weeklySeriesProps(stroke: string, dotColor: string = stroke): Se
       stroke: needsOutline ? LIGHT_SERIES_OUTLINE : '#ffffff',
       strokeWidth: needsOutline ? 0.75 : 1,
     },
-  };
-}
-
-/** Daily pulse channels: solid monotone curve, light stroke, minimal markers. */
-export function dailySeriesProps(stroke: string): SeriesLineProps {
-  return {
-    type: 'monotone',
-    strokeWidth: 1.5,
-    strokeOpacity: 0.75,
-    connectNulls: true,
-    isAnimationActive: false,
-    dot: false,
-    activeDot: { r: 3, fill: stroke },
   };
 }
 

@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import {
   ResponsiveContainer,
   LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -13,7 +12,8 @@ import { ChartCard } from '../ui/ChartCard';
 import { useSymptomSelections } from '../../hooks/useSymptomSelections';
 import { getSymptomByKey } from '../../data/symptoms';
 import { CHART_COLORS, DRILL_DOWN_COLORS, formatChartDate } from '../../utils/chartHelpers';
-import { weeklySeriesProps } from '../../utils/chartStyle';
+import { buildDailyIndexedWeeklyChart, weeklyChartWindow } from '../../utils/weeklyChartSeries';
+import { WeeklySegmentLines } from './WeeklySegmentLines';
 import type { SymptomCheckin, ExtendedSymptomLog } from '../../types/database';
 
 interface PersonalSymptomTrendsProps {
@@ -81,17 +81,22 @@ interface PersonalTrendTooltipProps {
 function PersonalTrendTooltip({ active, payload, label }: PersonalTrendTooltipProps) {
   if (!active || !payload?.length) return null;
 
+  const point = payload[0]?.payload as Record<string, unknown> | undefined;
+  const gapNotice = typeof point?.gapNotice === 'string' ? point.gapNotice : null;
+
   const entries = payload.filter(
     (item) => typeof item.dataKey === 'string' && item.dataKey.startsWith('__display_'),
   );
-  if (entries.length === 0) return null;
+  if (entries.length === 0 && !gapNotice) return null;
 
   return (
     <div className="rounded-lg border border-sand-200 bg-white px-4 py-3 text-sm shadow-lg">
       <p className="font-medium text-sage-800">{label}</p>
+      {gapNotice && <p className="mt-1 text-sage-600">{gapNotice}</p>}
       {entries.map((item) => {
         const symptomKey = (item.dataKey as string).slice('__display_'.length);
-        const value = item.payload?.[symptomKey];
+        const displayKey = displayDataKey(symptomKey);
+        const value = item.payload?.[displayKey] ?? item.payload?.[symptomKey];
         if (value === null || value === undefined) return null;
         return (
           <p key={symptomKey} className="mt-1 text-sage-700" style={{ color: item.color }}>
@@ -107,13 +112,16 @@ export function PersonalSymptomTrends({ checkins, extendedLogs }: PersonalSympto
   const { trackedSymptomIds } = useSymptomSelections();
 
   const chartData = useMemo(() => {
-    if (trackedSymptomIds.length === 0) return { points: [], keys: [] as string[] };
+    if (trackedSymptomIds.length === 0) {
+      return { points: [], keys: [] as string[], segmentKeysByDisplay: {} };
+    }
 
     const sorted = [...checkins].sort((a, b) => a.checkin_date.localeCompare(b.checkin_date));
     const candidateKeys = trackedSymptomIds.slice(0, DRILL_DOWN_COLORS.length);
 
     const rawPoints = sorted.map((checkin) => {
       const row: Record<string, string | number | null> = {
+        date: checkin.checkin_date,
         dateLabel: formatChartDate(checkin.checkin_date),
       };
       for (const key of candidateKeys) {
@@ -128,10 +136,12 @@ export function PersonalSymptomTrends({ checkins, extendedLogs }: PersonalSympto
     const keys = candidateKeys.filter((key) =>
       rawPoints.some((point) => point[key] !== null && point[key] !== undefined),
     );
-    if (keys.length === 0) return { points: [], keys: [] as string[] };
+    if (keys.length === 0) {
+      return { points: [], keys: [] as string[], segmentKeysByDisplay: {} };
+    }
 
     const offsets = assignRenderOffsets(keys, rawPoints);
-    const points = rawPoints.map((row) => {
+    const displaySparse = rawPoints.map((row) => {
       const displayRow = { ...row };
       for (const key of keys) {
         const value = row[key];
@@ -142,7 +152,17 @@ export function PersonalSymptomTrends({ checkins, extendedLogs }: PersonalSympto
       return displayRow;
     });
 
-    return { points, keys };
+    const dates = sorted.map((c) => c.checkin_date);
+    const window = weeklyChartWindow(dates, dates[0], dates[dates.length - 1]);
+    const displayKeys = keys.map(displayDataKey);
+    const { dailyRows, weeklySegmentKeys } = buildDailyIndexedWeeklyChart(
+      displaySparse as Array<{ date: string }>,
+      window.start,
+      window.end,
+      displayKeys,
+    );
+
+    return { points: dailyRows, keys, segmentKeysByDisplay: weeklySegmentKeys };
   }, [checkins, extendedLogs, trackedSymptomIds]);
 
   const isEmpty = chartData.points.length < 2 || chartData.keys.length === 0;
@@ -167,13 +187,13 @@ export function PersonalSymptomTrends({ checkins, extendedLogs }: PersonalSympto
             <Legend wrapperStyle={{ fontSize: 12 }} />
             {chartData.keys.map((key, i) => {
               const color = DRILL_DOWN_COLORS[i % DRILL_DOWN_COLORS.length];
+              const displayKey = displayDataKey(key);
               return (
-                <Line
+                <WeeklySegmentLines
                   key={key}
-                  dataKey={displayDataKey(key)}
+                  segmentKeys={chartData.segmentKeysByDisplay[displayKey] ?? []}
                   name={getSymptomByKey(key)?.label ?? key}
                   stroke={color}
-                  {...weeklySeriesProps(color)}
                 />
               );
             })}

@@ -29,11 +29,12 @@ export function ChartTooltipContent(props: ChartTooltipProps) {
   const { active, payload, label } = props;
   if (!active || !payload?.length) return null;
 
-  const point = payload[0]?.payload as SymptomTrendPoint | undefined;
+  const point = payload[0]?.payload as SymptomTrendPoint & { gapNotice?: string } | undefined;
   if (!point) return null;
 
   const checkin = point.checkin;
   const dateStr = point.date ?? (typeof label === 'string' ? label : '');
+  const gapNotice = 'gapNotice' in point ? point.gapNotice : undefined;
   const measuredMrs = point.mrsTotal !== null && point.mrsTotal !== undefined;
   const energy =
     point.wellbeing !== null && point.wellbeing !== undefined
@@ -52,6 +53,7 @@ export function ChartTooltipContent(props: ChartTooltipProps) {
       <p className="font-medium text-sage-800">
         {dateStr.includes('-') ? formatChartDateLong(dateStr) : label}
       </p>
+      {gapNotice && <p className="mt-1 text-sage-600">{gapNotice}</p>}
       {measuredMrs && (
         <p className="mt-1 text-sage-700">
           MRS Score: <strong>{point.mrsTotal}</strong>/{MRS_TOTAL_MAX}

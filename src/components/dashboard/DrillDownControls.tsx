@@ -2,7 +2,6 @@ import { useCallback, useMemo, useState } from 'react';
 import {
   ResponsiveContainer,
   LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -13,7 +12,8 @@ import {
 import { ChartCard } from '../ui/ChartCard';
 import { MRS_CORE_SYMPTOMS, getSymptomChipLabel } from '../../data/symptoms';
 import { DRILL_DOWN_COLORS, CHART_COLORS, formatChartDate } from '../../utils/chartHelpers';
-import { weeklySeriesProps } from '../../utils/chartStyle';
+import { buildDailyIndexedWeeklyChart, weeklyChartWindow } from '../../utils/weeklyChartSeries';
+import { WeeklySegmentLines } from './WeeklySegmentLines';
 import type { ChangeMarker } from '../../hooks/useChartData';
 import type { Medication } from '../../types/database';
 
@@ -53,7 +53,9 @@ export function DrillDownControls({
   );
 
   const chartData = useMemo(() => {
-    return checkinDates.map((date) => {
+    if (checkinDates.length < 2) return { dailyRows: [], segmentKeysByLine: {} as Record<string, string[]> };
+
+    const sparse = checkinDates.map((date) => {
       const point: Record<string, string | number | null> = {
         date,
         dateLabel: formatChartDate(date),
@@ -64,6 +66,16 @@ export function DrillDownControls({
       }
       return point;
     });
+
+    const window = weeklyChartWindow(checkinDates, checkinDates[0], checkinDates[checkinDates.length - 1]);
+    const valueKeys = drillData.symptomLines.map((line) => line.key);
+    const { dailyRows, weeklySegmentKeys } = buildDailyIndexedWeeklyChart(
+      sparse as Array<{ date: string }>,
+      window.start,
+      window.end,
+      valueKeys,
+    );
+    return { dailyRows, segmentKeysByLine: weeklySegmentKeys };
   }, [checkinDates, drillData.symptomLines]);
 
   const medMarkers = changeMarkers.filter(
@@ -137,7 +149,7 @@ export function DrillDownControls({
           </div>
 
           <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={chartData} margin={{ top: 20, right: 8, left: 0, bottom: 0 }}>
+            <LineChart data={chartData.dailyRows} margin={{ top: 20, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
               <XAxis dataKey="dateLabel" tick={{ fontSize: 11, fill: CHART_COLORS.axisText }} />
               <YAxis domain={[0, 4]} tick={{ fontSize: 11, fill: CHART_COLORS.axisText }} width={24} />
@@ -152,12 +164,11 @@ export function DrillDownControls({
               {drillData.symptomLines.map((line, i) => {
                 const color = DRILL_DOWN_COLORS[i % DRILL_DOWN_COLORS.length];
                 return (
-                  <Line
+                  <WeeklySegmentLines
                     key={line.key}
-                    dataKey={line.key}
+                    segmentKeys={chartData.segmentKeysByLine[line.key] ?? []}
                     name={line.label}
                     stroke={color}
-                    {...weeklySeriesProps(color)}
                   />
                 );
               })}

@@ -4,7 +4,6 @@ import {
   LineChart,
   AreaChart,
   Area,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -15,6 +14,8 @@ import { ChartTooltipContent } from './ChartTooltipContent';
 import { MedicationLane } from './MedicationLane';
 import { CHART_COLORS } from '../../utils/chartHelpers';
 import { formatChartDateLong } from '../../utils/chartHelpers';
+import { buildDailyIndexedWeeklyChart } from '../../utils/weeklyChartSeries';
+import { WeeklySegmentLines } from './WeeklySegmentLines';
 import {
   buildMedicationLaneRows,
   doseChangeMarkerPercents,
@@ -109,13 +110,18 @@ function StoryColumnComponent({
       ? pulseDefaults.header
       : `${PULSE_CHANNELS.find((c) => c.id === activeChannel)?.label} · daily pulse · 1–5`;
 
-  const chartData = useMemo(() => {
+  const { chartData, mrsSegmentKeys } = useMemo(() => {
     const rawValues = data.map((d) => getPulseChannelValue(d.checkin, activeChannel));
-    return data.map((row, i) => ({
+    const sparse = data.map((row, i) => ({
       ...row,
       pulseRaw: rawValues[i],
     }));
-  }, [data, activeChannel]);
+    const indexed = buildDailyIndexedWeeklyChart(sparse, windowStart, windowEnd, ['mrsTotal']);
+    return {
+      chartData: indexed.dailyRows,
+      mrsSegmentKeys: indexed.weeklySegmentKeys.mrsTotal ?? [],
+    };
+  }, [data, activeChannel, windowStart, windowEnd]);
 
   const domainDates = useMemo(() => chartData.map((d) => d.date), [chartData]);
 
@@ -172,15 +178,12 @@ function StoryColumnComponent({
                   tickLine={false}
                 />
                 <Tooltip content={<ChartTooltipContent />} />
-                <Line
-                  dataKey="mrsTotal"
-                  type="monotone"
+                <WeeklySegmentLines
+                  segmentKeys={mrsSegmentKeys}
+                  name="MRS Score"
                   stroke={INK.mrsStroke}
-                  strokeWidth={2.5}
-                  connectNulls
-                  isAnimationActive={false}
-                  dot={{ r: 4.5, fill: INK.mrsDot, stroke: INK.mrsDot, strokeWidth: 0 }}
-                  activeDot={{ r: 6, fill: INK.mrsDot, stroke: '#ffffff', strokeWidth: 1 }}
+                  dotColor={INK.mrsDot}
+                  seriesProps={{ strokeWidth: 2.5 }}
                 />
               </LineChart>
             </ResponsiveContainer>
