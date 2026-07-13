@@ -99,7 +99,7 @@ export function DashboardLayout() {
     isFullDashboard && (daysUntilAppointment === null || daysUntilAppointment > 7);
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6 overflow-x-hidden">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-3xl text-sage-800">Dashboard</h1>
