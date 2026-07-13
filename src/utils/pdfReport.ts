@@ -14,6 +14,7 @@ import { todayISO } from './localDate';
 import { isMRSCanonicalKey } from './checkinHelpers';
 import type { PdfPageContext } from './report/pdfTheme';
 import { addPageFooter, addNewPage, setTotalPages } from './report/pdfTheme';
+import { renderExecutiveSummaryPage } from './report/sections/executiveSummary';
 import { renderPatientSummaryPage } from './report/sections/patientSummary';
 import { renderMrsAssessmentPage } from './report/sections/mrsAssessment';
 import { renderExtendedSymptomsPage } from './report/sections/extendedSymptoms';
@@ -37,10 +38,12 @@ export interface ProviderReportData {
   trackedSymptomIds: string[];
   watchSymptomIds: string[];
   dateRange: DateRange;
+  timezone: string;
+  includeSafeguarding: boolean;
 }
 
 function countReportPages(data: ProviderReportData): number {
-  let pages = 3; // patient summary, MRS, extended symptoms
+  let pages = 4; // executive summary, patient summary, MRS, extended symptoms
   if (hasLabResultsInRange(data.labResults, data.dateRange)) pages += 1;
   if (hasMedicationsInRange(data.medications, data.dateRange)) pages += 1;
   return pages;
@@ -68,6 +71,21 @@ export async function generateProviderReport(data: ProviderReportData): Promise<
 
   const checkinDates = sortedCheckins.map((c) => c.checkin_date);
 
+  renderExecutiveSummaryPage(ctx, {
+    profile: data.profile,
+    checkins: data.checkins,
+    labResults: data.labResults,
+    quickLogEvents: data.quickLogEvents,
+    medications: data.medications,
+    medicationChanges: data.medicationChanges,
+    extendedSymptomLogs: data.extendedSymptomLogs,
+    dateRange: data.dateRange,
+    timezone: data.timezone,
+    includeSafeguarding: data.includeSafeguarding,
+  });
+  addPageFooter(ctx);
+
+  addNewPage(ctx);
   renderPatientSummaryPage(ctx, data.profile, data.medications, checkinDates, data.dateRange);
   addPageFooter(ctx);
 

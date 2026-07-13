@@ -5,12 +5,12 @@ This app is a **Vite React frontend** backed by **Supabase** (auth + PostgreSQL)
 ## Architecture
 
 ```
-Browser  →  Cloudflare Pages / Vercel (static React app)  →  Supabase (auth + database)
+Browser  →  Cloudflare Pages (static React app)  →  Supabase (auth + database)
 ```
 
 | Layer | Service | Cost to start |
 |-------|---------|---------------|
-| Frontend | [Cloudflare Pages](https://pages.cloudflare.com) or [Vercel](https://vercel.com) | Free |
+| Frontend | [Cloudflare Pages](https://pages.cloudflare.com) | Free |
 | Backend | [Supabase](https://supabase.com) | Free tier |
 | Code | [GitHub](https://github.com) | Free (private repos OK) |
 
@@ -119,7 +119,7 @@ After GitHub is connected, import the repo in your host with **Import Git Reposi
 
 ---
 
-## Cloudflare Pages / Vercel setup (one time)
+## Cloudflare Pages setup (one time)
 
 1. Sign up and connect your GitHub account.
 2. **Add New → Project** → select the TrackHer repo.

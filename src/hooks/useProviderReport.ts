@@ -7,6 +7,7 @@ import { useLabResults } from './useLabResults';
 import { useQuickLog } from './useQuickLog';
 import { generateProviderReport } from '../utils/pdfReport';
 import { formatChartDateLong } from '../utils/chartHelpers';
+import { getResolvedTimezone } from '../utils/checkinHelpers';
 import { todayISO } from '../utils/localDate';
 import { supabase } from '../lib/supabase';
 import type { ExtendedSymptomLog } from '../types/database';
@@ -23,7 +24,7 @@ export function useProviderReport() {
   const [error, setError] = useState<string | null>(null);
 
   const generateReport = useCallback(
-    async (dateRange: DateRange) => {
+    async (dateRange: DateRange, includeSafeguarding = false) => {
       if (!profile) {
         setError('Profile not loaded');
         return;
@@ -62,6 +63,8 @@ export function useProviderReport() {
             .map((s) => s.symptom_id);
         }
 
+        const timezone = getResolvedTimezone(profile.timezone);
+
         const blob = await generateProviderReport({
           profile,
           medications,
@@ -73,13 +76,15 @@ export function useProviderReport() {
           trackedSymptomIds,
           watchSymptomIds,
           dateRange,
+          timezone,
+          includeSafeguarding,
         });
 
         const today = formatChartDateLong(todayISO());
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `PredictHer-Report-${today.replace(/,/g, '').replace(/ /g, '-')}.pdf`;
+        a.download = `TrackHer-Report-${today.replace(/,/g, '').replace(/ /g, '-')}.pdf`;
         a.click();
         URL.revokeObjectURL(url);
       } catch (err) {

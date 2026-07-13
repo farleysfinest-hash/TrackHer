@@ -40,14 +40,14 @@ See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for deployment and the seeded test 
 
 ## Share with a tester
 
-You do **not** need your own domain. Deploy to Vercel and send a link.
+You do **not** need your own domain. Deploy to Cloudflare Pages and send a link.
 
 | Goal | Guide |
 |------|-------|
 | Deploy + test URL + production path | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) |
 | Instructions for your tester | [docs/TESTER.md](docs/TESTER.md) |
 
-**Fast path:** GitHub → Cloudflare Pages (or Vercel) → set Supabase env vars → share the URL.
+**Fast path:** GitHub → Cloudflare Pages → set Supabase env vars → share the URL.
 
 ## Scripts
 
