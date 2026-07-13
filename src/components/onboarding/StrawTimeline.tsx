@@ -94,7 +94,7 @@ export function StrawTimeline({ stage, stageLabel, description }: StrawTimelineP
       )}
 
       <p className="rounded-lg bg-sage-50 px-4 py-3 text-sm leading-relaxed text-sage-600">
-        This is based on your answers today. As you track with PredictHer, we may suggest
+        This is based on your answers today. As you track with TrackHer, we may suggest
         updates to your stage based on your data.
       </p>
     </div>

@@ -135,7 +135,7 @@ export function renderExtendedSymptomsPage(
 
   y = drawSectionHeader(
     doc,
-    'Additional Symptom Tracking (PredictHer Extended Tracker)',
+    'Additional Symptom Tracking (TrackHer Extended Tracker)',
     y,
   );
   y = drawSubheader(

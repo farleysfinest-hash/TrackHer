@@ -108,7 +108,7 @@ If you have not pushed this repo yet:
 2. In Terminal:
 
 ```bash
-cd /path/to/PredictHer
+cd /path/to/TrackHer
 git remote add origin https://github.com/YOUR_USERNAME/trackher.git
 git push -u origin main
 ```
