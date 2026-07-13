@@ -55,6 +55,7 @@ export function ExperimentWindowCard({ insights, hasCheckedInToday }: Experiment
       changes
         .filter((c) => {
           if (c.change_type === 'stopped') return false;
+          if (!c.medication || c.medication.is_active === false) return false;
           const elapsed = daysBetween(c.change_date, today);
           return elapsed >= 0 && elapsed < WINDOW_DAYS + SPARSE_GRACE_DAYS;
         })
