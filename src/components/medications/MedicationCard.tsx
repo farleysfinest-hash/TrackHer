@@ -117,7 +117,7 @@ function MedicationCardComponent({
             Change Dose
           </Button>
           <Button variant="ghost" size="sm" onClick={() => onDiscontinue(medication)}>
-            Discontinue
+            Remove...
           </Button>
         </div>
       )}

@@ -343,6 +343,16 @@ export function useMedications() {
   };
 
   const deleteMedication = async (id: string): Promise<boolean> => {
+    const { error: changesError } = await supabase
+      .from('medication_changes')
+      .delete()
+      .eq('medication_id', id);
+
+    if (changesError) {
+      setError(changesError.message);
+      return false;
+    }
+
     const { error: deleteError } = await supabase.from('medications').delete().eq('id', id);
 
     if (deleteError) {

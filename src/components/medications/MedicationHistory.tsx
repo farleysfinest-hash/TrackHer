@@ -1,5 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useMedicationChanges, type MedicationChangeWithMed } from '../../hooks/useMedicationChanges';
+import { useMedications } from '../../hooks/useMedications';
+import { useToast } from '../../stores/toastStore';
 import { formatDateLong } from '../../utils/formatters';
 import {
   formatFrequency,
@@ -45,12 +47,32 @@ interface MedicationHistoryProps {
 
 export function MedicationHistory({ isExpanded }: MedicationHistoryProps) {
   const { changes, isLoading, fetchChanges } = useMedicationChanges();
+  const { deleteMedication, error } = useMedications();
+  const toast = useToast();
+  const [pendingConfirmId, setPendingConfirmId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (isExpanded) {
       void fetchChanges();
     }
   }, [isExpanded, fetchChanges]);
+
+  const handleConfirmDelete = async (change: MedicationChangeWithMed) => {
+    const med = change.medication;
+    if (!med) return;
+
+    setIsDeleting(true);
+    const ok = await deleteMedication(med.id);
+    setIsDeleting(false);
+
+    if (ok) {
+      setPendingConfirmId(null);
+      await fetchChanges();
+    } else {
+      toast.error(error ?? 'Failed to delete medication');
+    }
+  };
 
   if (!isExpanded) return null;
 
@@ -68,22 +90,64 @@ export function MedicationHistory({ isExpanded }: MedicationHistoryProps) {
 
   return (
     <div className="relative ml-3 border-l-2 border-sage-200 pl-6">
-      {changes.map((change, index) => (
-        <div key={change.id} className={`relative ${index < changes.length - 1 ? 'pb-8' : ''}`}>
-          <span
-            className={[
-              'absolute -left-[31px] top-1 h-3 w-3 rounded-full',
-              getChangeTimelineColor(change.change_type as MedicationChangeType),
-            ].join(' ')}
-          />
-          <p className="text-sm font-medium text-sage-700">
-            {formatDateLong(change.change_date)}
-          </p>
-          <p className="mt-1 whitespace-pre-line text-sm text-sage-600">
-            {formatTimelineDescription(change)}
-          </p>
-        </div>
-      ))}
+      {changes.map((change, index) => {
+        const showDelete =
+          change.change_type === 'stopped' &&
+          change.medication != null &&
+          change.medication.is_active === false;
+        const medName = change.medication?.medication_name ?? 'Medication';
+        const isConfirming = pendingConfirmId === change.id;
+
+        return (
+          <div key={change.id} className={`relative ${index < changes.length - 1 ? 'pb-8' : ''}`}>
+            <span
+              className={[
+                'absolute -left-[31px] top-1 h-3 w-3 rounded-full',
+                getChangeTimelineColor(change.change_type as MedicationChangeType),
+              ].join(' ')}
+            />
+            <p className="text-sm font-medium text-sage-700">
+              {formatDateLong(change.change_date)}
+            </p>
+            <p className="mt-1 whitespace-pre-line text-sm text-sage-600">
+              {formatTimelineDescription(change)}
+            </p>
+            {showDelete && (
+              <div className="mt-2">
+                {isConfirming ? (
+                  <p className="text-xs text-sage-600">
+                    Erases every record of {medName} — can&apos;t be undone.{' '}
+                    <button
+                      type="button"
+                      disabled={isDeleting}
+                      onClick={() => void handleConfirmDelete(change)}
+                      className="text-xs text-rose-700 underline hover:text-sage-600"
+                    >
+                      Confirm delete
+                    </button>{' '}
+                    <button
+                      type="button"
+                      disabled={isDeleting}
+                      onClick={() => setPendingConfirmId(null)}
+                      className="text-xs text-sage-400 underline hover:text-sage-600"
+                    >
+                      Cancel
+                    </button>
+                  </p>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setPendingConfirmId(change.id)}
+                    className="text-xs text-sage-400 underline hover:text-sage-600"
+                  >
+                    Delete permanently
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
