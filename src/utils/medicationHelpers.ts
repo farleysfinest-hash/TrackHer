@@ -249,6 +249,27 @@ export function getMedicationChangeLabel(change: MedicationChange, med: Medicati
   }
 }
 
+export function getMedicationChangePastLabel(change: MedicationChange, med: Medication): string {
+  switch (change.change_type) {
+    case 'started':
+      return `Started ${med.medication_name} ${change.new_dose} ${med.dose_unit}`;
+    case 'stopped':
+      return `Stopped ${med.medication_name}`;
+    case 'dose_increased':
+      return `Increased ${med.medication_name} from ${change.previous_dose} to ${change.new_dose} ${med.dose_unit}`;
+    case 'dose_decreased':
+      return `Decreased ${med.medication_name} from ${change.previous_dose} to ${change.new_dose} ${med.dose_unit}`;
+    case 'method_changed':
+      return `Changed ${med.medication_name} delivery method`;
+    case 'frequency_changed':
+      return `Changed ${med.medication_name} frequency`;
+    case 'switched':
+      return `Switched ${med.medication_name}`;
+    default:
+      return `Changed ${med.medication_name}`;
+  }
+}
+
 export function getDoseCycleDays(med: Pick<Medication, 'frequency'>): number | null {
   // Conservative: only handle clean integer-day cycles.
   switch (med.frequency) {

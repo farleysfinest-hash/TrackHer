@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useMedicationChanges, type MedicationChangeWithMed } from '../../hooks/useMedicationChanges';
 import { useAuthStore } from '../../stores/authStore';
 import { getLocalDateISO, getResolvedTimezone } from '../../utils/checkinHelpers';
-import { addDaysISO, getMedicationChangeLabel } from '../../utils/medicationHelpers';
-import { formatDateLong } from '../../utils/formatters';
+import { addDaysISO, getMedicationChangePastLabel } from '../../utils/medicationHelpers';
+import { formatDate, formatDateLong } from '../../utils/formatters';
 import { Card } from '../ui/Card';
 import type { Insight } from '../../engine/types';
 
@@ -69,7 +69,8 @@ export function ExperimentWindowCard({ insights, hasCheckedInToday }: Experiment
     const elapsed = daysBetween(activeChange.change_date, today);
     const dayN = elapsed + 1;
     const readoutDate = addDaysISO(activeChange.change_date, WINDOW_DAYS);
-    const changeLabel = getMedicationChangeLabel(activeChange, activeChange.medication);
+    const changeLabel = getMedicationChangePastLabel(activeChange, activeChange.medication);
+    const changeDate = formatDate(activeChange.change_date);
     const hasReadout = hasReadoutForChange(activeChange, insights);
 
     if (elapsed >= WINDOW_DAYS) {
@@ -85,6 +86,7 @@ export function ExperimentWindowCard({ insights, hasCheckedInToday }: Experiment
         mode: 'sparse' as const,
         change: activeChange,
         changeLabel,
+        changeDate,
         readoutDate,
       };
     }
@@ -93,6 +95,7 @@ export function ExperimentWindowCard({ insights, hasCheckedInToday }: Experiment
       mode: 'active' as const,
       change: activeChange,
       changeLabel,
+      changeDate,
       dayN,
       readoutDate,
       progress: Math.min((dayN / WINDOW_DAYS) * 100, 100),
@@ -112,8 +115,8 @@ export function ExperimentWindowCard({ insights, hasCheckedInToday }: Experiment
         <p className="text-xs font-medium uppercase tracking-wide text-sage-500">Dose-change window</p>
         <h2 className="mt-1 font-display text-lg text-sage-800">Window complete</h2>
         <p className="mt-2 text-sm leading-relaxed text-sage-600">
-          There wasn&apos;t quite enough daily data for a clear readout this time — the next change
-          will have a head start.
+          We didn&apos;t have enough daily logs to spot a clear pattern this time. That&apos;s okay — when
+          your next dose changes, the window starts fresh.
         </p>
         <button
           type="button"
@@ -130,11 +133,19 @@ export function ExperimentWindowCard({ insights, hasCheckedInToday }: Experiment
     <Card variant="elevated">
       <p className="text-xs font-medium uppercase tracking-wide text-sage-500">Dose-change window</p>
       <h2 className="mt-1 font-display text-lg text-sage-800">
-        Day {view.dayN} of {WINDOW_DAYS} — {view.changeLabel}
+        {view.changeLabel} on {view.changeDate} — day {view.dayN}
       </h2>
       <p className="mt-2 text-sm leading-relaxed text-sage-600">
-        Daily pulses during this window sharpen what we can tell you about this change. Your readout
-        arrives {formatDateLong(view.readoutDate)}.
+        When a medication changes, your body takes time to respond. We watch the 21 days after a
+        change for patterns in your energy, mood, and sleep.{' '}
+        {view.dayN <= 7
+          ? 'Log your daily pulse as often as you can — even a few entries help.'
+          : view.dayN <= 14
+            ? 'Your early logs are building a picture. Keep going.'
+            : 'Almost there. Every pulse you log sharpens your readout.'}
+      </p>
+      <p className="mt-1 text-sm text-sage-500">
+        Your readout arrives {formatDateLong(view.readoutDate)}.
       </p>
 
       <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-sand-100">
