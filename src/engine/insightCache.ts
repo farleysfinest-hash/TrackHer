@@ -1,67 +1,66 @@
-import type { EngineInput } from './types';
-import type { PatternEngineResult } from './types';
+import type { EngineInput, PatternEngineResult } from './types';
 
-function simpleHash(input: string): string {
-  let hash = 0;
-  for (let i = 0; i < input.length; i++) {
-    hash = (hash << 5) - hash + input.charCodeAt(i);
-    hash |= 0;
+function canonicalize(value: unknown): unknown {
+  if (
+    value === null ||
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
+  ) {
+    return value;
   }
-  return hash.toString(36);
+
+  if (Array.isArray(value)) {
+    return value.map(canonicalize);
+  }
+
+  if (typeof value === 'object') {
+    const obj = value as Record<string, unknown>;
+    const sortedKeys = Object.keys(obj).sort();
+    const canonical: Record<string, unknown> = {};
+    for (const key of sortedKeys) {
+      canonical[key] = canonicalize(obj[key]);
+    }
+    return canonical;
+  }
+
+  throw new Error(`Cannot canonicalize unsupported value type: ${typeof value}`);
 }
 
-export function hashEngineInput(input: EngineInput): string {
-  const payload = {
-    tz: input.timezone,
-    checkins: input.checkins.map((c) => ({
-      id: c.id,
-      d: c.checkin_date,
-      t: c.total_score,
-      mc: c.mrs_complete,
-      e: c.energy_level,
-      m: c.mood_level,
-      s: c.sleep_quality,
-      bd: c.is_backdated,
-      dm: c.depressed_mood,
-      ir: c.irritability,
-      ax: c.anxiety,
-      ex: c.exhaustion,
-      hd: c.heart_discomfort,
-    })),
-    changes: input.medicationChanges.map((c) => ({
-      id: c.id,
-      d: c.change_date,
-      t: c.change_type,
-      m: c.medication_id,
-    })),
-    labs: input.labResults.map((l) => ({
-      id: l.id,
-      d: l.draw_date,
-    })),
-    meds: input.medications.map((m) => ({
-      id: m.id,
-      a: m.is_active,
-      sd: m.start_date,
-    })),
-    ext: input.extendedSymptoms.length,
-    admins: input.administrations.length,
-  };
-  return simpleHash(JSON.stringify(payload));
+export function buildEngineInputCacheKey(input: EngineInput): string {
+  const canonical = canonicalize(input);
+  return JSON.stringify(canonical);
 }
 
-let cache: { hash: string; result: PatternEngineResult } | null = null;
+let cache: {
+  ownerId: string | null;
+  key: string;
+  result: PatternEngineResult;
+} | null = null;
 
-export function getCachedEngineResult(hash: string): PatternEngineResult | null {
-  if (cache?.hash === hash) return cache.result;
+export function getCachedEngineResult(
+  ownerId: string | null,
+  key: string,
+): PatternEngineResult | null {
+  if (cache && cache.ownerId === ownerId && cache.key === key) {
+    return cache.result;
+  }
   return null;
 }
 
-export function peekCachedEngineResult(): PatternEngineResult | null {
-  return cache?.result ?? null;
+export function peekCachedEngineResult(ownerId: string | null): PatternEngineResult | null {
+  if (cache && cache.ownerId === ownerId) {
+    return cache.result;
+  }
+  return null;
 }
 
-export function setCachedEngineResult(hash: string, result: PatternEngineResult): void {
-  cache = { hash, result };
+export function setCachedEngineResult(
+  ownerId: string | null,
+  key: string,
+  result: PatternEngineResult,
+): void {
+  cache = { ownerId, key, result };
 }
 
 export function clearEngineResultCache(): void {

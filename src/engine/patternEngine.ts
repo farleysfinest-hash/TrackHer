@@ -7,8 +7,8 @@ import { analyzeWellbeingSignal } from './wellbeingSignal';
 import { analyzeSafeguarding } from './safeguarding';
 import { resolveConflicts } from './conflictResolution';
 import {
+  buildEngineInputCacheKey,
   getCachedEngineResult,
-  hashEngineInput,
   peekCachedEngineResult,
   setCachedEngineResult,
 } from './insightCache';
@@ -138,14 +138,15 @@ function runPatternEngineInternal(input: EngineInput): PatternEngineResult {
 }
 
 export function runPatternEngine(input: EngineInput): PatternEngineResult {
-  const hash = hashEngineInput(input);
-  const cached = getCachedEngineResult(hash);
+  const ownerId = input.profile?.id ?? null;
+  const cacheKey = buildEngineInputCacheKey(input);
+  const cached = getCachedEngineResult(ownerId, cacheKey);
   if (cached) return cached;
 
-  const previous = peekCachedEngineResult();
+  const previous = peekCachedEngineResult(ownerId);
   const result = runPatternEngineInternal(input);
   const withNotices = applyInsightRecomputationNotices(result, previous, input.checkins);
-  setCachedEngineResult(hash, withNotices);
+  setCachedEngineResult(ownerId, cacheKey, withNotices);
   return withNotices;
 }
 
