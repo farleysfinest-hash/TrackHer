@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   buildEngineInputCacheKey,
   clearEngineResultCache,
@@ -129,6 +129,9 @@ function makeAdministration(overrides: Partial<MedicationAdministration> = {}): 
     user_id: USER_ID,
     medication_id: 'med-1',
     taken_at: '2026-07-01T08:00:00Z',
+    event_timezone: TZ,
+    local_date: '2026-07-01',
+    utc_offset_minutes: -420,
     created_at: '2026-07-01T08:00:00Z',
     ...overrides,
   };
@@ -189,12 +192,14 @@ function makeProfile(overrides: Partial<Profile> = {}): Profile {
     staging_completed_at: '2026-01-01T00:00:00Z',
     welcome_seen: true,
     has_uterus: true,
+    has_uterus_confirmed_at: '2026-01-01T00:00:00Z',
     date_of_birth: '1975-03-15',
     checkin_frequency: 'weekly',
     checkin_day: 0,
     next_appointment_date: '2026-08-01',
     onboarding_completed: true,
     timezone: TZ,
+    timezone_confirmed_at: '2026-01-01T00:00:00Z',
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-06-01T00:00:00Z',
     ...overrides,
@@ -256,6 +261,7 @@ beforeEach(() => {
 
 afterEach(() => {
   clearEngineResultCache();
+  vi.restoreAllMocks();
 });
 
 describe('buildEngineInputCacheKey determinism', () => {
@@ -303,6 +309,39 @@ describe('buildEngineInputCacheKey determinism', () => {
     const input = deepFreeze(makeEngineInput());
     expect(() => buildEngineInputCacheKey(input)).not.toThrow();
     expect(buildEngineInputCacheKey(input)).toBeTypeOf('string');
+  });
+
+  it('distinguishes an explicit undefined property from an omitted property', () => {
+    const omitted = makeEngineInput();
+    const explicit = { ...makeEngineInput(), optionalFutureValue: undefined } as EngineInput;
+    expect(buildEngineInputCacheKey(explicit)).not.toBe(buildEngineInputCacheKey(omitted));
+  });
+
+  it('distinguishes undefined array entries, sparse holes, and null', () => {
+    const undefinedEntry = { ...makeEngineInput(), futureValues: [undefined] } as EngineInput;
+    const sparseValues = new Array(1);
+    const sparseEntry = { ...makeEngineInput(), futureValues: sparseValues } as EngineInput;
+    const nullEntry = { ...makeEngineInput(), futureValues: [null] } as EngineInput;
+
+    expect(buildEngineInputCacheKey(undefinedEntry)).not.toBe(buildEngineInputCacheKey(sparseEntry));
+    expect(buildEngineInputCacheKey(undefinedEntry)).not.toBe(buildEngineInputCacheKey(nullEntry));
+    expect(buildEngineInputCacheKey(sparseEntry)).not.toBe(buildEngineInputCacheKey(nullEntry));
+  });
+
+  it.each([
+    ['function', () => undefined],
+    ['symbol', Symbol('unsupported')],
+    ['bigint', BigInt(1)],
+    ['non-plain object', new Date('2026-07-01T00:00:00Z')],
+  ])('returns null for an unsupported %s value', (_label, unsupported) => {
+    const input = { ...makeEngineInput(), unsupported } as EngineInput;
+    expect(buildEngineInputCacheKey(input)).toBeNull();
+  });
+
+  it('returns null for cyclic input', () => {
+    const input = makeEngineInput() as EngineInput & { cycle?: unknown };
+    input.cycle = input;
+    expect(buildEngineInputCacheKey(input)).toBeNull();
   });
 });
 
@@ -508,6 +547,19 @@ describe('runPatternEngine cache integration', () => {
     const second = runPatternEngine(edited);
     expect(second).not.toBe(first);
   });
+
+  it('runs uncached instead of throwing when the input contains an unsupported value', () => {
+    const input = { ...makeEngineInput(), unsupported: () => undefined } as EngineInput;
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    clearEngineResultCache();
+
+    const first = runPatternEngine(input);
+    const second = runPatternEngine(input);
+
+    expect(second).not.toBe(first);
+    expect(peekCachedEngineResult(USER_ID)).toBeNull();
+    expect(warning).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('runPatternEngine owner isolation', () => {
@@ -530,6 +582,8 @@ describe('runPatternEngine owner isolation', () => {
     expect(resultB).not.toBe(resultA);
     expect(peekCachedEngineResult('user-b')).toBe(resultB);
     expect(peekCachedEngineResult('user-a')).toBeNull();
-    expect(getCachedEngineResult('user-a', buildEngineInputCacheKey(inputA))).toBeNull();
+    const inputAKey = buildEngineInputCacheKey(inputA);
+    expect(inputAKey).not.toBeNull();
+    expect(getCachedEngineResult('user-a', inputAKey!)).toBeNull();
   });
 });

@@ -11,6 +11,9 @@ import { SYMPTOM_BODY_SYSTEM_COLORS, SYMPTOM_BODY_SYSTEM_LABELS } from '../../ty
 import type { SymptomBodySystem } from '../../types/symptoms';
 import type { QuickLogTriggerTag } from '../../types/database';
 import { Button } from '../ui/Button';
+import { useAuthStore } from '../../stores/authStore';
+import { getResolvedTimezone } from '../../utils/checkinHelpers';
+import { dateISOInTimeZone } from '../../utils/localDate';
 
 const TRIGGER_TAGS: { id: QuickLogTriggerTag; label: string }[] = [
   { id: 'stress', label: 'Stress' },
@@ -48,7 +51,7 @@ const QUICK_SEVERITY_LABELS = [
 
 type TimeOptionId = 'now' | '30min' | `hours_${number}`;
 
-function buildTimeOptions(): { id: TimeOptionId; label: string; getIso: () => string }[] {
+function buildTimeOptions(timezone: string): { id: TimeOptionId; label: string; getIso: () => string }[] {
   const now = new Date();
   const options: { id: TimeOptionId; label: string; getIso: () => string }[] = [
     { id: 'now', label: 'Just now', getIso: () => new Date().toISOString() },
@@ -60,7 +63,7 @@ function buildTimeOptions(): { id: TimeOptionId; label: string; getIso: () => st
   ];
   for (let hours = 1; hours <= 12; hours++) {
     const past = new Date(now.getTime() - hours * 60 * 60 * 1000);
-    if (past.toDateString() !== now.toDateString()) break;
+    if (dateISOInTimeZone(past, timezone) !== dateISOInTimeZone(now, timezone)) break;
     options.push({
       id: `hours_${hours}`,
       label: hours === 1 ? '1 hour ago' : `${hours} hours ago`,
@@ -70,8 +73,6 @@ function buildTimeOptions(): { id: TimeOptionId; label: string; getIso: () => st
   return options;
 }
 
-const TIME_OPTIONS = buildTimeOptions();
-
 const identityDot = (bodySystem: SymptomBodySystem) => (
   <span
     aria-hidden="true"
@@ -80,8 +81,11 @@ const identityDot = (bodySystem: SymptomBodySystem) => (
   />
 );
 
-function resolveLoggedAt(timeId: TimeOptionId): string {
-  const opt = TIME_OPTIONS.find((o) => o.id === timeId);
+function resolveLoggedAt(
+  timeId: TimeOptionId,
+  timeOptions: ReturnType<typeof buildTimeOptions>,
+): string {
+  const opt = timeOptions.find((o) => o.id === timeId);
   return opt ? opt.getIso() : new Date().toISOString();
 }
 
@@ -93,6 +97,8 @@ export function QuickLogSheet() {
   const { createEvent, events } = useQuickLog();
   const { watchSymptomIds, trackedSymptomIds } = useSymptomSelections();
   const toast = useToast();
+  const timezone = getResolvedTimezone(useAuthStore((state) => state.profile?.timezone));
+  const timeOptions = buildTimeOptions(timezone);
 
   const [severity, setSeverity] = useState<number | null>(null);
   const [severityTouched, setSeverityTouched] = useState(false);
@@ -139,7 +145,7 @@ export function QuickLogSheet() {
     const result = await createEvent({
       symptom_id: selectedSymptomId,
       severity: severityTouched ? severity : null,
-      logged_at: resolveLoggedAt(selectedTimeId),
+      logged_at: resolveLoggedAt(selectedTimeId, timeOptions),
       duration_minutes: durationMinutes === undefined ? null : durationMinutes,
       trigger_tag: triggerTag,
       notes: notes.trim() || null,
@@ -336,7 +342,7 @@ export function QuickLogSheet() {
                 <div>
                   <label className="text-sm font-medium text-sage-700">When did this happen?</label>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {TIME_OPTIONS.map((opt) => (
+                    {timeOptions.map((opt) => (
                       <button
                         key={opt.id}
                         type="button"

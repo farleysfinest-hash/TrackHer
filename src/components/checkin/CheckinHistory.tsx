@@ -27,7 +27,7 @@ export function CheckinHistory({ onViewDetails }: CheckinHistoryProps) {
     (rows: SymptomCheckin[]) => {
       if (range === 'all') return rows;
       const days = Number(range);
-      const cutoff = addDaysISO(getLocalDateISO(timezone), -days);
+      const cutoff = addDaysISO(getLocalDateISO(timezone), -(days - 1));
       return rows.filter((r) => r.checkin_date >= cutoff);
     },
     [range, timezone],

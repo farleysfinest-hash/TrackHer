@@ -2,7 +2,12 @@ import type { Insight } from './types';
 import { finalizeInsightBody, INSIGHT_DISCLAIMER } from './types';
 import type { Medication, MedicationChange, SymptomCheckin, MedicationAdministration } from '../types/database';
 import { getDoseCycleDays, getMedicationChangeLabel } from '../utils/medicationHelpers';
-import { addDaysISO, todayISO } from '../utils/localDate';
+import {
+  addDaysISO,
+  daysBetweenISO,
+  resolveEventLocalDate,
+  todayISO,
+} from '../utils/localDate';
 import { getDailySignal } from '../utils/checkinHelpers';
 import {
   collectBeforeAfterWindows,
@@ -62,9 +67,7 @@ function moodSeries(checkins: SymptomCheckin[]) {
 }
 
 function daysBetween(from: string, to: string): number {
-  const a = new Date(from + 'T12:00:00');
-  const b = new Date(to + 'T12:00:00');
-  return Math.floor((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24));
+  return daysBetweenISO(from, to);
 }
 
 function hasPostChangeWindowOpen(medicationChanges: MedicationChange[], today: string): boolean {
@@ -287,12 +290,6 @@ function moodVolatilityInsight(input: WellbeingSignalInput, suppress: boolean): 
   ];
 }
 
-function fractionalDaysBetween(fromIso: string, toDateStr: string): number {
-  const from = new Date(fromIso).getTime();
-  const to = new Date(toDateStr + 'T12:00:00').getTime();
-  return (to - from) / (1000 * 60 * 60 * 24);
-}
-
 function meanAdminIntervalDays(admins: MedicationAdministration[]): number | null {
   if (admins.length < 2) return null;
   const intervals: number[] = [];
@@ -408,16 +405,25 @@ function troughInsightForMed(
     -TROUGH_LOOKBACK_DAYS,
   );
   const medAdmins = administrations
-    .filter((a) => a.medication_id === med.id && a.taken_at >= `${windowStart}T00:00:00`)
+    .filter(
+      (a) =>
+        a.medication_id === med.id &&
+        resolveEventLocalDate(a.taken_at, a.local_date, a.event_timezone, timezone) >= windowStart,
+    )
     .sort((a, b) => a.taken_at.localeCompare(b.taken_at));
 
   if (medAdmins.length >= TROUGH_MIN_ADMINISTRATIONS) {
     const cycleDays = meanAdminIntervalDays(medAdmins);
     if (cycleDays && cycleDays >= 1) {
-      const firstAdminDate = medAdmins[0].taken_at.slice(0, 10);
+      const firstAdminDate = resolveEventLocalDate(
+        medAdmins[0].taken_at,
+        medAdmins[0].local_date,
+        medAdmins[0].event_timezone,
+        timezone,
+      );
       const usable = recent.filter((p) => p.date >= firstAdminDate);
       if (usable.length >= cycleDays * TROUGH_MIN_CYCLES) {
-        const spanDays = fractionalDaysBetween(medAdmins[0].taken_at, usable[usable.length - 1].date);
+        const spanDays = daysBetweenISO(firstAdminDate, usable[usable.length - 1].date);
         const completeCycles = Math.floor(spanDays / cycleDays);
         if (completeCycles >= TROUGH_MIN_CYCLES) {
           const insight = analyzeTroughFromPositions(
@@ -425,10 +431,24 @@ function troughInsightForMed(
             usable,
             cycleDays,
             (p) => {
-              const adminsBefore = medAdmins.filter((a) => a.taken_at <= `${p.date}T23:59:59`);
+              const adminsBefore = medAdmins.filter(
+                (a) =>
+                  resolveEventLocalDate(
+                    a.taken_at,
+                    a.local_date,
+                    a.event_timezone,
+                    timezone,
+                  ) <= p.date,
+              );
               if (adminsBefore.length === 0) return null;
               const lastAdmin = adminsBefore[adminsBefore.length - 1];
-              const daysSince = fractionalDaysBetween(lastAdmin.taken_at, p.date);
+              const lastAdminDate = resolveEventLocalDate(
+                lastAdmin.taken_at,
+                lastAdmin.local_date,
+                lastAdmin.event_timezone,
+                timezone,
+              );
+              const daysSince = daysBetweenISO(lastAdminDate, p.date);
               return ((daysSince % cycleDays) + cycleDays) % cycleDays;
             },
             completeCycles,

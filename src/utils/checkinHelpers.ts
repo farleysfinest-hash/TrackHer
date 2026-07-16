@@ -8,7 +8,7 @@ import {
   getSeverityLabel,
 } from '../data/instruments/scoring';
 import { getMrsTotalSeverityLevel } from './mrsTotalSeverity';
-import { todayISO } from './localDate';
+import { getActiveTimezone, todayISO } from './localDate';
 
 /** Canonical 11-item Menopause Rating Scale — only these count toward MRS total (max 44). */
 export const MRS_ITEMS = {
@@ -244,20 +244,13 @@ export const MRS_SUBSCALE_MAX = {
 
 export const MRS_TOTAL_MAX = 44;
 
-export function getLocalDateISO(timezone = 'America/Los_Angeles'): string {
-  return todayISO(timezone);
+export function getLocalDateISO(timezone?: string): string {
+  return todayISO(timezone ?? getActiveTimezone());
 }
 
-/** Browser timezone when profile timezone is unset; LA as last resort. */
+/** Active device timezone; the confirmed preference is fallback only and is never overwritten. */
 export function getResolvedTimezone(profileTimezone?: string | null): string {
-  if (profileTimezone) return profileTimezone;
-  try {
-    const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if (browserTz) return browserTz;
-  } catch {
-    // fall through
-  }
-  return 'America/Los_Angeles';
+  return getActiveTimezone(profileTimezone);
 }
 
 export function getWellbeingLabel(score: number): string {

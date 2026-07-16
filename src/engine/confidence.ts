@@ -1,7 +1,7 @@
 import type { InsightConfidence, InsightSampleSize, ConfidenceLevel } from './types';
 import { formatSampleSizeSuffix } from './types';
 import { pooledStdDev } from './engineStats';
-import { todayISO } from '../utils/localDate';
+import { daysBetweenISO, todayISO } from '../utils/localDate';
 
 export type EngineCategory = 'comparative' | 'observational' | 'provisional';
 
@@ -58,9 +58,7 @@ function scoreToLevel(score: number): ConfidenceLevel {
 }
 
 function daysBetween(from: string, to: string): number {
-  const a = new Date(from + 'T12:00:00');
-  const b = new Date(to + 'T12:00:00');
-  return Math.floor(Math.abs(b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24));
+  return Math.abs(daysBetweenISO(from, to));
 }
 
 function recencyScore(mostRecentDataDate: string, today: string = todayISO()): number {

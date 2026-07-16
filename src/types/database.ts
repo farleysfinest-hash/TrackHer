@@ -97,7 +97,9 @@ export interface Profile {
   period_changes: PeriodChanges | null;
   staging_completed_at: string | null;
   welcome_seen: boolean | null;
-  has_uterus: boolean;
+  /** Null only while the required onboarding/legacy-confirmation question is unanswered. */
+  has_uterus: boolean | null;
+  has_uterus_confirmed_at: string | null;
   date_of_birth: string | null;
   checkin_frequency: CheckinFrequency | null;
   /**
@@ -108,7 +110,9 @@ export interface Profile {
   checkin_day: number | null;
   next_appointment_date: string | null;
   onboarding_completed: boolean;
-  timezone: string;
+  /** Confirmed preferred/home IANA timezone; the current device timezone controls the active day. */
+  timezone: string | null;
+  timezone_confirmed_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -175,6 +179,10 @@ export interface MedicationInsert {
   pellet_expected_duration_months?: number;
 }
 
+export type MedicationUpdate = Partial<
+  Omit<Medication, 'id' | 'user_id' | 'created_at' | 'updated_at'>
+>;
+
 export interface DoseLog {
   id: string;
   user_id: string;
@@ -191,12 +199,18 @@ export interface MedicationAdministration {
   user_id: string;
   medication_id: string;
   taken_at: string;
+  event_timezone: string | null;
+  local_date: string | null;
+  utc_offset_minutes: number | null;
   created_at: string;
 }
 
 export interface MedicationAdministrationInsert {
   medication_id: string;
   taken_at?: string;
+  event_timezone?: string;
+  local_date?: string;
+  utc_offset_minutes?: number;
 }
 
 export interface CheckinDraftPayload {
@@ -290,6 +304,9 @@ export interface QuickLogEvent {
   symptom_id: string;
   severity: number | null;
   logged_at: string;
+  event_timezone: string | null;
+  local_date: string | null;
+  utc_offset_minutes: number | null;
   duration_minutes: number | null;
   trigger_tag: QuickLogTriggerTag | null;
   notes: string | null;
@@ -300,6 +317,9 @@ export interface QuickLogEventInsert {
   symptom_id: string;
   severity?: number | null;
   logged_at?: string;
+  event_timezone?: string;
+  local_date?: string;
+  utc_offset_minutes?: number;
   duration_minutes?: number | null;
   trigger_tag?: QuickLogTriggerTag | null;
   notes?: string | null;
@@ -401,13 +421,15 @@ export type Database = {
           periods_status?: PeriodsStatus | null;
           period_changes?: PeriodChanges | null;
           staging_completed_at?: string | null;
-          has_uterus?: boolean;
+          has_uterus?: boolean | null;
+          has_uterus_confirmed_at?: string | null;
           date_of_birth?: string | null;
           last_period_date?: string | null;
           checkin_frequency?: CheckinFrequency | null;
           checkin_day?: number | null;
           onboarding_completed?: boolean;
-          timezone?: string;
+          timezone?: string | null;
+          timezone_confirmed_at?: string | null;
         };
         Update: ProfileUpdate;
         Relationships: [];
@@ -415,7 +437,7 @@ export type Database = {
       medications: {
         Row: Medication;
         Insert: MedicationInsert & { user_id: string };
-        Update: Partial<MedicationInsert>;
+        Update: MedicationUpdate;
         Relationships: [];
       };
       dose_logs: {

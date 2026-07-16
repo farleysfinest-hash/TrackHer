@@ -1,4 +1,5 @@
 import type { MRSScore } from '../types/database';
+import { civilDateToUTCDate } from './localDate';
 
 /** Chart palette — aligned with soft blush theme (#BE739A) */
 export const CHART_COLORS = {
@@ -75,13 +76,18 @@ export function getWellbeingHex(score: number): string {
 }
 
 export function formatChartDate(dateStr: string): string {
-  const d = new Date(dateStr + 'T12:00:00');
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const d = civilDateToUTCDate(dateStr);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
 }
 
 export function formatChartDateLong(dateStr: string): string {
-  const d = new Date(dateStr + 'T12:00:00');
-  return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const d = civilDateToUTCDate(dateStr);
+  return d.toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
 }
 
 export function filterByDateRange<T extends { checkin_date?: string; draw_date?: string; change_date?: string; start_date?: string }>(

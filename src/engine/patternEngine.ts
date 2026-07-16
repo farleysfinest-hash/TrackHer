@@ -137,16 +137,28 @@ function runPatternEngineInternal(input: EngineInput): PatternEngineResult {
   };
 }
 
+let hasWarnedAboutUncacheableInput = false;
+
 export function runPatternEngine(input: EngineInput): PatternEngineResult {
   const ownerId = input.profile?.id ?? null;
   const cacheKey = buildEngineInputCacheKey(input);
-  const cached = getCachedEngineResult(ownerId, cacheKey);
-  if (cached) return cached;
+  if (cacheKey === null && !hasWarnedAboutUncacheableInput) {
+    console.warn(
+      'Pattern engine cache bypassed because the input contains a non-serializable value.',
+    );
+    hasWarnedAboutUncacheableInput = true;
+  }
+  if (cacheKey !== null) {
+    const cached = getCachedEngineResult(ownerId, cacheKey);
+    if (cached) return cached;
+  }
 
-  const previous = peekCachedEngineResult(ownerId);
+  const previous = cacheKey === null ? null : peekCachedEngineResult(ownerId);
   const result = runPatternEngineInternal(input);
   const withNotices = applyInsightRecomputationNotices(result, previous, input.checkins);
-  setCachedEngineResult(ownerId, cacheKey, withNotices);
+  if (cacheKey !== null) {
+    setCachedEngineResult(ownerId, cacheKey, withNotices);
+  }
   return withNotices;
 }
 

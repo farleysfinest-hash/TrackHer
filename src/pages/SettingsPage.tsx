@@ -14,6 +14,8 @@ import { PASSWORD_MIN_LENGTH } from '../lib/constants';
 import { validators, validateFields } from '../utils/validation';
 import { getLocalDateISO, getResolvedTimezone } from '../utils/checkinHelpers';
 import type { MenopauseStage } from '../types/database';
+import { TimezoneSelect } from '../components/ui/TimezoneSelect';
+import { getActiveTimezone, isValidTimeZone } from '../utils/localDate';
 
 const DAY_OPTIONS: Array<{ label: string; value: number }> = [
   { label: 'Mon', value: 1 },
@@ -32,13 +34,17 @@ export function SettingsPage() {
 
   const [displayName, setDisplayName] = useState(profile?.display_name ?? '');
   const [menopauseStage, setMenopauseStage] = useState(profile?.menopause_stage ?? '');
-  const [hasUterus, setHasUterus] = useState(profile?.has_uterus ?? true);
+  const [hasUterus, setHasUterus] = useState<boolean | null>(profile?.has_uterus ?? null);
+  const [preferredTimezone, setPreferredTimezone] = useState(
+    profile?.timezone ?? getActiveTimezone(),
+  );
   const [dateOfBirth, setDateOfBirth] = useState(profile?.date_of_birth ?? '');
   const [checkinDay, setCheckinDay] = useState<number | null>(profile?.checkin_day ?? null);
   const [nextAppointmentDate, setNextAppointmentDate] = useState(
     profile?.next_appointment_date ?? '',
   );
   const [profileSaved, setProfileSaved] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
 
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [newPassword, setNewPassword] = useState('');
@@ -57,7 +63,8 @@ export function SettingsPage() {
     if (profile) {
       setDisplayName(profile.display_name ?? '');
       setMenopauseStage(profile.menopause_stage ?? '');
-      setHasUterus(profile.has_uterus ?? true);
+      setHasUterus(profile.has_uterus);
+      setPreferredTimezone(profile.timezone ?? getActiveTimezone());
       setDateOfBirth(profile.date_of_birth ?? '');
       setCheckinDay(profile.checkin_day ?? null);
       setNextAppointmentDate(profile.next_appointment_date ?? '');
@@ -66,11 +73,24 @@ export function SettingsPage() {
 
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (hasUterus === null) {
+      setProfileError('Please answer whether you currently have your uterus.');
+      return;
+    }
+    if (!isValidTimeZone(preferredTimezone)) {
+      setProfileError('Please select a valid time zone.');
+      return;
+    }
+    setProfileError(null);
+    const confirmedAt = new Date().toISOString();
     const result = await update({
       display_name: displayName,
       menopause_stage: (menopauseStage || undefined) as MenopauseStage | undefined,
       has_uterus: hasUterus,
-      date_of_birth: dateOfBirth || undefined,
+      has_uterus_confirmed_at: confirmedAt,
+      timezone: preferredTimezone,
+      timezone_confirmed_at: confirmedAt,
+      date_of_birth: dateOfBirth || null,
       // Backward compatibility: this stays for recall-period labels.
       checkin_frequency: 'weekly',
       // Convention: 0 = Sunday ... 6 = Saturday (matches JS Date#getDay()).
@@ -80,6 +100,8 @@ export function SettingsPage() {
     if (result.success) {
       setProfileSaved(true);
       setTimeout(() => setProfileSaved(false), 3000);
+    } else {
+      setProfileError(result.error ?? 'Could not save your profile.');
     }
   };
 
@@ -153,6 +175,7 @@ export function SettingsPage() {
             value={dateOfBirth}
             onChange={setDateOfBirth}
           />
+          <TimezoneSelect value={preferredTimezone} onChange={setPreferredTimezone} />
           <div>
             <Input
               label="Next provider appointment"
@@ -178,7 +201,7 @@ export function SettingsPage() {
                 onClick={() => setHasUterus(true)}
                 className={[
                   'rounded-lg border px-4 py-2 text-sm',
-                  hasUterus ? 'border-sage-500 bg-sage-50' : 'border-sand-200',
+                  hasUterus === true ? 'border-sage-500 bg-sage-50' : 'border-sand-200',
                 ].join(' ')}
               >
                 Yes
@@ -188,13 +211,14 @@ export function SettingsPage() {
                 onClick={() => setHasUterus(false)}
                 className={[
                   'rounded-lg border px-4 py-2 text-sm',
-                  !hasUterus ? 'border-sage-500 bg-sage-50' : 'border-sand-200',
+                  hasUterus === false ? 'border-sage-500 bg-sage-50' : 'border-sand-200',
                 ].join(' ')}
               >
                 No
               </button>
             </div>
           </div>
+          {profileError && <p className="text-sm text-danger">{profileError}</p>}
           <div className="flex items-center gap-3">
             <Button type="submit" isLoading={isUpdating} loadingText="Saving...">
               Save Profile
@@ -250,7 +274,8 @@ export function SettingsPage() {
           <div className="rounded-lg border border-sand-200 bg-sand-50 p-4">
             <h3 className="text-sm font-medium text-sage-700">Reset account</h3>
             <p className="mt-1 text-sm text-sage-500">
-              Erase all your health data and start over. Your login and email stay the same.
+              Erase all TrackHer data—including profile answers and preferences—and start over.
+              Your login and email stay the same.
             </p>
             <Button
               variant="danger"

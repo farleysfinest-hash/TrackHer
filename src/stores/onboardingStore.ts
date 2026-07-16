@@ -17,6 +17,7 @@ import { useAuthStore } from './authStore';
 import { supabase } from '../lib/supabase';
 import { SYMPTOM_CATALOG } from '../data/symptoms';
 import type { StrawStageCode } from '../lib/strawStaging';
+import { isValidTimeZone } from '../utils/localDate';
 
 export type OnboardingStep = 0 | 1 | 2 | 3 | 4 | 5;
 
@@ -25,6 +26,8 @@ export interface OnboardingFormData {
   email: string;
   dateOfBirth: string;
   hasUterus: boolean | null;
+  hasUterusConfirmed: boolean;
+  timezone: string;
   lastPeriodDate: string;
   /** Convention: 0 = Sunday ... 6 = Saturday (matches JS Date#getDay()). */
   checkinDay: number | null;
@@ -69,6 +72,8 @@ const initialFormData: OnboardingFormData = {
   email: '',
   dateOfBirth: '',
   hasUterus: null,
+  hasUterusConfirmed: false,
+  timezone: '',
   lastPeriodDate: '',
   checkinDay: null,
   staging: initialStaging,
@@ -255,28 +260,17 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
       return { success: false, error: 'Not authenticated' };
     }
 
-    const rows = formData.selectedSymptoms.map((symptomId) => ({
-      user_id: user.id,
-      symptom_id: symptomId,
-      is_watch_symptom: formData.watchSymptoms.includes(symptomId),
-    }));
+    const symptomIds = [
+      ...new Set([...formData.selectedSymptoms, ...formData.watchSymptoms]),
+    ];
+    const { error: saveError } = await supabase.rpc('save_user_symptom_selections', {
+      p_symptom_ids: symptomIds,
+      p_watch_symptom_ids: [...new Set(formData.watchSymptoms)],
+    });
 
-    const { error: deleteError } = await supabase
-      .from('user_symptom_selections')
-      .delete()
-      .eq('user_id', user.id);
-
-    if (deleteError) {
-      set({ isSubmitting: false, error: deleteError.message });
-      return { success: false, error: deleteError.message };
-    }
-
-    if (rows.length > 0) {
-      const { error } = await supabase.from('user_symptom_selections').insert(rows);
-      if (error) {
-        set({ isSubmitting: false, error: error.message });
-        return { success: false, error: error.message };
-      }
+    if (saveError) {
+      set({ isSubmitting: false, error: saveError.message });
+      return { success: false, error: saveError.message };
     }
 
     set({ isSubmitting: false });
@@ -285,12 +279,22 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
 
   submitOnboarding: async () => {
     const { formData } = get();
+    if (formData.hasUterus === null) {
+      return { success: false, error: 'Please answer whether you have your uterus' };
+    }
+    if (!isValidTimeZone(formData.timezone)) {
+      return { success: false, error: 'Please select a valid time zone' };
+    }
     set({ isSubmitting: true, error: null });
 
+    const confirmedAt = new Date().toISOString();
     const updates = {
       display_name: formData.displayName,
       date_of_birth: formData.dateOfBirth || null,
-      has_uterus: formData.hasUterus ?? true,
+      has_uterus: formData.hasUterus,
+      has_uterus_confirmed_at: confirmedAt,
+      timezone: formData.timezone,
+      timezone_confirmed_at: confirmedAt,
       checkin_frequency: 'weekly' as const,
       checkin_day: formData.checkinDay ?? null,
       onboarding_completed: true,

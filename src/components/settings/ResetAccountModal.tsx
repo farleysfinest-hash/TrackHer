@@ -17,7 +17,8 @@ const DELETED_ITEMS = [
   'Medications, doses, and lab results',
   'Symptom selections and assessments',
   'Insights and dismissed observations',
-  'Onboarding progress and staging answers',
+  'Your name, profile preferences, and onboarding answers',
+  'Your uterus answer and preferred time zone',
 ];
 
 export function ResetAccountModal({ isOpen, onClose, onReset }: ResetAccountModalProps) {
@@ -69,8 +70,8 @@ export function ResetAccountModal({ isOpen, onClose, onReset }: ResetAccountModa
             <div>
               <p className="text-lg font-semibold text-danger">This will erase your health data</p>
               <p className="mt-2 text-sm text-sage-600">
-                Resetting your account permanently deletes your tracking history. Your login stays
-                active, but you will start over as if you were a new user.
+                Resetting your account permanently deletes every piece of TrackHer data. Your login
+                and email stay active, but you will start over as if you were a new user.
               </p>
             </div>
           </div>
@@ -111,8 +112,9 @@ export function ResetAccountModal({ isOpen, onClose, onReset }: ResetAccountModa
             <AlertTriangle className="mx-auto h-12 w-12 text-danger" aria-hidden />
             <p className="mt-4 text-xl font-bold text-danger">Last chance to stop</p>
             <p className="mt-3 text-sm text-sage-700">
-              Once you reset, all your symptom history, medications, labs, and personalized
-              insights are gone forever. There is no backup and no way to recover this data.
+              Once you reset, all tracking history, medications, labs, profile answers, preferences,
+              and personalized insights are gone forever. There is no backup and no way to recover
+              this data.
             </p>
           </div>
 

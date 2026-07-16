@@ -1,14 +1,15 @@
 import type { Profile } from '../../types/database';
 import type { PeriodChanges, PeriodsStatus } from '../../lib/strawStaging';
 import { formatChartDateLong } from '../chartHelpers';
+import { daysBetweenISO, parseISODate, todayISO } from '../localDate';
 
-export function computeAge(dateOfBirth: string | null): number | null {
+export function computeAge(dateOfBirth: string | null, today = todayISO()): number | null {
   if (!dateOfBirth) return null;
-  const dob = new Date(dateOfBirth + 'T12:00:00');
-  const today = new Date();
-  let age = today.getFullYear() - dob.getFullYear();
-  const monthDiff = today.getMonth() - dob.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+  const dob = parseISODate(dateOfBirth);
+  const current = parseISODate(today);
+  let age = current.year - dob.year;
+  const monthDiff = current.month - dob.month;
+  if (monthDiff < 0 || (monthDiff === 0 && current.day < dob.day)) {
     age -= 1;
   }
   return age;
@@ -74,10 +75,7 @@ export function computeAdherence(
   );
   const actual = uniqueInRange.size;
 
-  const start = new Date(rangeStart + 'T12:00:00');
-  const end = new Date(rangeEnd + 'T12:00:00');
-  const dayMs = 24 * 60 * 60 * 1000;
-  const totalDays = Math.max(1, Math.round((end.getTime() - start.getTime()) / dayMs) + 1);
+  const totalDays = Math.max(1, daysBetweenISO(rangeStart, rangeEnd) + 1);
 
   let expected: number;
   let freqLabel: string;

@@ -1,9 +1,13 @@
+import { civilDateToUTCDate } from './localDate';
+
 export function formatDate(date: string | Date, options?: Intl.DateTimeFormatOptions): string {
-  const d = typeof date === 'string' ? new Date(date) : date;
+  const isCivilDate = typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date);
+  const d = isCivilDate ? civilDateToUTCDate(date) : typeof date === 'string' ? new Date(date) : date;
   return d.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
+    ...(isCivilDate ? { timeZone: 'UTC' } : {}),
     ...options,
   });
 }
@@ -13,11 +17,12 @@ export function formatDateLong(date: string | Date): string {
 }
 
 export function formatLoggingDate(date: string): string {
-  const d = new Date(date + 'T12:00:00');
+  const d = civilDateToUTCDate(date);
   return d.toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
+    timeZone: 'UTC',
   });
 }
 

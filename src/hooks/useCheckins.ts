@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
 import type {
@@ -98,8 +98,11 @@ function getErrorMessage(error: unknown): string {
 
 export function useCheckins() {
   const [checkins, setCheckins] = useState<SymptomCheckin[]>([]);
+  const [mrsCheckinCount, setMrsCheckinCount] = useState(0);
+  const [earliestCheckinDate, setEarliestCheckinDate] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const latestListRequest = useRef(0);
 
   const getUserId = () => useAuthStore.getState().user?.id;
   const getTimezone = () =>
@@ -108,6 +111,7 @@ export function useCheckins() {
   const fetchCheckins = useCallback(async (limit = 50) => {
     const userId = getUserId();
     if (!userId) return;
+    const requestId = ++latestListRequest.current;
 
     setIsLoading(true);
     setError(null);
@@ -119,12 +123,77 @@ export function useCheckins() {
       .order('checkin_date', { ascending: false })
       .limit(limit);
 
+    if (requestId !== latestListRequest.current) return;
     setIsLoading(false);
     if (fetchError) {
       setError(fetchError.message);
       return;
     }
     setCheckins((data as SymptomCheckin[]) ?? []);
+  }, []);
+
+  const fetchCheckinsRange = useCallback(async (start: string, end: string) => {
+    const userId = getUserId();
+    if (!userId) return;
+    const requestId = ++latestListRequest.current;
+
+    setIsLoading(true);
+    setError(null);
+
+    const [countResult, earliestResult] = await Promise.all([
+      supabase
+        .from('symptom_checkins')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('mrs_complete', true),
+      supabase
+        .from('symptom_checkins')
+        .select('checkin_date')
+        .eq('user_id', userId)
+        .order('checkin_date', { ascending: true })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+    if (countResult.error || earliestResult.error) {
+      if (requestId !== latestListRequest.current) return;
+      setIsLoading(false);
+      setError(countResult.error?.message ?? earliestResult.error?.message ?? 'Failed to load check-in summary');
+      return;
+    }
+
+    const pageSize = 500;
+    const rows: SymptomCheckin[] = [];
+    for (let offset = 0; ; offset += pageSize) {
+      const { data, error: pageError } = await supabase
+        .from('symptom_checkins')
+        .select('*')
+        .eq('user_id', userId)
+        .gte('checkin_date', start)
+        .lte('checkin_date', end)
+        .order('checkin_date', { ascending: false })
+        .range(offset, offset + pageSize - 1);
+
+      if (pageError) {
+        if (requestId !== latestListRequest.current) return;
+        setIsLoading(false);
+        setError(pageError.message);
+        return;
+      }
+
+      const page = (data as SymptomCheckin[]) ?? [];
+      rows.push(...page);
+      if (page.length < pageSize) break;
+      if (requestId !== latestListRequest.current) return;
+    }
+
+    if (requestId !== latestListRequest.current) return;
+    setMrsCheckinCount(countResult.count ?? 0);
+    setEarliestCheckinDate(
+      (earliestResult.data as { checkin_date: string } | null)?.checkin_date ?? null,
+    );
+    setCheckins(rows);
+    setIsLoading(false);
   }, []);
 
   const fetchCheckinsPage = useCallback(async (offset: number, pageSize = 10) => {
@@ -361,9 +430,12 @@ export function useCheckins() {
 
   return {
     checkins,
+    mrsCheckinCount,
+    earliestCheckinDate,
     isLoading,
     error,
     fetchCheckins,
+    fetchCheckinsRange,
     fetchCheckinsPage,
     fetchCheckinDetail,
     getTodaysCheckin,

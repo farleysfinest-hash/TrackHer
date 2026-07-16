@@ -6,14 +6,13 @@ import { addDaysISO, getMedicationChangePastLabel } from '../../utils/medication
 import { formatDate, formatDateLong } from '../../utils/formatters';
 import { Card } from '../ui/Card';
 import type { Insight } from '../../engine/types';
+import { daysBetweenISO } from '../../utils/localDate';
 
 const WINDOW_DAYS = 21;
 const SPARSE_GRACE_DAYS = 3;
 
 function daysBetween(from: string, to: string): number {
-  const a = new Date(from + 'T12:00:00');
-  const b = new Date(to + 'T12:00:00');
-  return Math.floor((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24));
+  return daysBetweenISO(from, to);
 }
 
 function sparseDismissKey(changeId: string): string {

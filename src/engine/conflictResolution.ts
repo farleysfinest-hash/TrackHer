@@ -1,4 +1,4 @@
-import { addDaysISO } from '../utils/localDate';
+import { addDaysISO, daysBetweenISO } from '../utils/localDate';
 import type { Insight, InsightSampleSize, InsightConfidence } from './types';
 import { finalizeInsightBody, INSIGHT_DISCLAIMER } from './types';
 import { confidenceSortScore } from './confidence';
@@ -6,9 +6,7 @@ import { confidenceSortScore } from './confidence';
 const CONFIDENCE_GAP_THRESHOLD = 0.25;
 
 function daysBetween(from: string, to: string): number {
-  const a = new Date(from + 'T12:00:00');
-  const b = new Date(to + 'T12:00:00');
-  return Math.floor(Math.abs(b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24));
+  return Math.abs(daysBetweenISO(from, to));
 }
 
 function windowsOverlap(a: Insight, b: Insight): boolean {

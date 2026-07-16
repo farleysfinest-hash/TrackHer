@@ -5,6 +5,7 @@ import { PDF_COLORS, drawSectionHeader } from '../pdfTheme';
 import { formatChartDateLong } from '../../chartHelpers';
 import { hasMRSData } from '../../checkinHelpers';
 import { formatMedicationDoseShort } from '../../medicationHelpers';
+import { civilDateOrdinal } from '../../localDate';
 
 function dateToX(
   date: string,
@@ -13,9 +14,9 @@ function dateToX(
   chartX: number,
   chartWidth: number,
 ): number {
-  const start = new Date(rangeStart + 'T12:00:00').getTime();
-  const end = new Date(rangeEnd + 'T12:00:00').getTime();
-  const current = new Date(date + 'T12:00:00').getTime();
+  const start = civilDateOrdinal(rangeStart);
+  const end = civilDateOrdinal(rangeEnd);
+  const current = civilDateOrdinal(date);
   const ratio = (current - start) / Math.max(end - start, 1);
   return chartX + ratio * chartWidth;
 }

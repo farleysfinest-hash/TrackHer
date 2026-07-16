@@ -93,7 +93,7 @@ export interface EngineInput {
   administrations: MedicationAdministration[];
   labResults: LabResult[];
   profile: Profile | null;
-  /** IANA timezone from profile (via getResolvedTimezone). */
+  /** Active IANA timezone from the current device, with profile preference as fallback. */
   timezone: string;
 }
 

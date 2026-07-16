@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
 import type { QuickLogEvent, QuickLogEventInsert } from '../types/database';
+import { getActiveTimezone, getEventLocalMetadata } from '../utils/localDate';
 
 export function useQuickLog() {
   const [events, setEvents] = useState<QuickLogEvent[]>([]);
@@ -40,10 +41,20 @@ export function useQuickLog() {
     async (input: QuickLogEventInsert): Promise<QuickLogEvent | null> => {
       const userId = getUserId();
       if (!userId) return null;
+      const loggedAt = input.logged_at ?? new Date().toISOString();
+      const preferredTimezone = useAuthStore.getState().profile?.timezone;
+      const metadata = getEventLocalMetadata(loggedAt, getActiveTimezone(preferredTimezone));
 
       const { data, error: insertError } = await supabase
         .from('quick_log_events')
-        .insert({ ...input, user_id: userId })
+        .insert({
+          ...input,
+          logged_at: loggedAt,
+          event_timezone: metadata.timezone,
+          local_date: metadata.localDate,
+          utc_offset_minutes: metadata.utcOffsetMinutes,
+          user_id: userId,
+        })
         .select()
         .single();
 

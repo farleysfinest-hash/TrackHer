@@ -11,6 +11,7 @@ import type {
 } from '../types/database';
 import type { DateRange } from '../stores/dashboardStore';
 import type { ProviderReportData } from '../utils/pdfReport';
+import { daysBetweenISO } from '../utils/localDate';
 
 export interface ProviderReportSnapshot {
   checkins: SymptomCheckin[];
@@ -19,18 +20,16 @@ export interface ProviderReportSnapshot {
   labResults: LabResult[];
   quickLogEvents: QuickLogEvent[];
   extendedSymptomLogs: ExtendedSymptomLog[];
-  trackedSymptomIds: string[];
-  watchSymptomIds: string[];
 }
 
 export type ProviderReportDataSource =
+  | 'provider_report_snapshot'
   | 'symptom_checkins'
   | 'medications'
   | 'medication_changes'
   | 'lab_results'
   | 'quick_log_events'
-  | 'extended_symptom_logs'
-  | 'user_symptom_selections';
+  | 'extended_symptom_logs';
 
 export const PROVIDER_REPORT_LOAD_ERROR_MESSAGE =
   'We couldn’t load all of the data needed for your provider report. No report was downloaded. Please try again.';
@@ -58,124 +57,60 @@ export class ProviderReportDataLoadError extends Error {
   }
 }
 
-type SupabaseQueryResult = { data: unknown; error: { code?: string; message: string } | null };
-
-export interface ProviderReportQueryBuilder extends PromiseLike<SupabaseQueryResult> {
-  select(columns: string): ProviderReportQueryBuilder;
-  eq(column: string, value: string): ProviderReportQueryBuilder;
-  order(column: string, options: { ascending: boolean }): ProviderReportQueryBuilder;
-  limit(count: number): PromiseLike<SupabaseQueryResult>;
+interface ProviderReportRpcPayload {
+  checkins?: SymptomCheckin[];
+  medications?: Medication[];
+  medicationChanges?: MedicationChange[];
+  labResults?: LabResult[];
+  quickLogEvents?: QuickLogEvent[];
+  extendedSymptomLogs?: ExtendedSymptomLog[];
 }
 
-export type ProviderReportSupabaseClient = {
-  from: (table: string) => ProviderReportQueryBuilder;
-};
-
-export interface LoadProviderReportSnapshotDependencies {
-  supabaseClient?: ProviderReportSupabaseClient;
+export interface ProviderReportRpcClient {
+  rpc: (
+    functionName: string,
+    params: Record<string, unknown>,
+  ) => Promise<{ data: unknown; error: { code?: string; message: string } | null }>;
 }
 
-function normalizeArray<T>(data: T[] | null | undefined): T[] {
-  return data ?? [];
-}
-
-export async function loadProviderReportSnapshot(
-  userId: string,
-  deps: LoadProviderReportSnapshotDependencies = {},
+export async function loadProviderReportSnapshotFromRpc(
+  _userId: string,
+  dateRange: DateRange,
+  timezone: string,
+  deps: { rpcClient?: ProviderReportRpcClient } = {},
 ): Promise<ProviderReportSnapshot> {
-  const client = deps.supabaseClient ?? (supabase as unknown as ProviderReportSupabaseClient);
-
-  const [
-    checkinsResult,
-    medicationsResult,
-    medicationChangesResult,
-    labResultsResult,
-    quickLogEventsResult,
-    extendedSymptomLogsResult,
-    symptomSelectionsResult,
-  ] = await Promise.all([
-    client
-      .from('symptom_checkins')
-      .select('*')
-      .eq('user_id', userId)
-      .order('checkin_date', { ascending: false })
-      .limit(200),
-    client
-      .from('medications')
-      .select('*')
-      .eq('user_id', userId)
-      .order('is_active', { ascending: false })
-      .order('start_date', { ascending: false }) as PromiseLike<SupabaseQueryResult>,
-    client
-      .from('medication_changes')
-      .select('*')
-      .eq('user_id', userId)
-      .order('change_date', { ascending: false })
-      .order('created_at', { ascending: false }) as PromiseLike<SupabaseQueryResult>,
-    client
-      .from('lab_results')
-      .select('*')
-      .eq('user_id', userId)
-      .order('draw_date', { ascending: false }) as PromiseLike<SupabaseQueryResult>,
-    client
-      .from('quick_log_events')
-      .select('*')
-      .eq('user_id', userId)
-      .order('logged_at', { ascending: false })
-      .limit(500),
-    client.from('extended_symptom_logs').select('*').eq('user_id', userId) as PromiseLike<SupabaseQueryResult>,
-    client
-      .from('user_symptom_selections')
-      .select('symptom_id, is_watch_symptom')
-      .eq('user_id', userId) as PromiseLike<SupabaseQueryResult>,
-  ]);
-
-  const results: Array<{ source: ProviderReportDataSource; result: SupabaseQueryResult }> = [
-    { source: 'symptom_checkins', result: checkinsResult },
-    { source: 'medications', result: medicationsResult },
-    { source: 'medication_changes', result: medicationChangesResult },
-    { source: 'lab_results', result: labResultsResult },
-    { source: 'quick_log_events', result: quickLogEventsResult },
-    { source: 'extended_symptom_logs', result: extendedSymptomLogsResult },
-    { source: 'user_symptom_selections', result: symptomSelectionsResult },
-  ];
-
-  const failed = results.filter(({ result }) => result.error != null);
-  if (failed.length > 0) {
-    const sourceErrors = failed.map(({ source, result }) => ({
-      source,
-      code: result.error?.code,
-      message: result.error?.message ?? 'Unknown error',
-    }));
-    const failedSources = sourceErrors.map((entry) => entry.source);
-
-    console.error('Provider report data load failed', {
-      failedSources,
-      errors: sourceErrors.map(({ source, code, message }) => ({ source, code, message })),
-    });
-
-    throw new ProviderReportDataLoadError(failedSources, sourceErrors);
+  const rangeDays = daysBetweenISO(dateRange.start, dateRange.end) + 1;
+  if (rangeDays < 1) {
+    throw new Error('Provider report start date must be on or before its end date.');
   }
 
-  const selections =
-    (symptomSelectionsResult.data as Array<{
-      symptom_id: string;
-      is_watch_symptom: boolean;
-    }> | null) ?? [];
+  const client = deps.rpcClient ?? (supabase as unknown as ProviderReportRpcClient);
+  const { data, error } = await client.rpc('get_provider_report_snapshot', {
+    p_start: dateRange.start,
+    p_end: dateRange.end,
+    p_timezone: timezone,
+  });
+  if (error || !data) {
+    throw new ProviderReportDataLoadError(
+      ['provider_report_snapshot'],
+      [
+        {
+          source: 'provider_report_snapshot',
+          code: error?.code,
+          message: error?.message ?? 'The report snapshot was empty',
+        },
+      ],
+    );
+  }
 
+  const payload = data as ProviderReportRpcPayload;
   return {
-    checkins: normalizeArray(checkinsResult.data as SymptomCheckin[] | null),
-    medications: normalizeArray(medicationsResult.data as Medication[] | null),
-    medicationChanges: normalizeArray(medicationChangesResult.data as MedicationChange[] | null),
-    labResults: normalizeArray(labResultsResult.data as LabResult[] | null),
-    quickLogEvents: normalizeArray(quickLogEventsResult.data as QuickLogEvent[] | null),
-    extendedSymptomLogs: normalizeArray(
-      extendedSymptomLogsResult.data as ExtendedSymptomLog[] | null,
-    ),
-    trackedSymptomIds: selections.map((row) => row.symptom_id),
-    watchSymptomIds: selections
-      .filter((row) => row.is_watch_symptom)
-      .map((row) => row.symptom_id),
+    checkins: payload.checkins ?? [],
+    medications: payload.medications ?? [],
+    medicationChanges: payload.medicationChanges ?? [],
+    labResults: payload.labResults ?? [],
+    quickLogEvents: payload.quickLogEvents ?? [],
+    extendedSymptomLogs: payload.extendedSymptomLogs ?? [],
   };
 }
 
@@ -188,7 +123,11 @@ export interface CreateFreshProviderReportBlobParams {
 }
 
 export interface CreateFreshProviderReportBlobDependencies {
-  loadSnapshot?: (userId: string) => Promise<ProviderReportSnapshot>;
+  loadSnapshot?: (
+    userId: string,
+    dateRange: DateRange,
+    timezone: string,
+  ) => Promise<ProviderReportSnapshot>;
   generateReport?: (data: ProviderReportData) => Promise<Blob>;
 }
 
@@ -196,10 +135,10 @@ export async function createFreshProviderReportBlob(
   params: CreateFreshProviderReportBlobParams,
   deps: CreateFreshProviderReportBlobDependencies = {},
 ): Promise<Blob> {
-  const loadSnapshot = deps.loadSnapshot ?? loadProviderReportSnapshot;
+  const loadSnapshot = deps.loadSnapshot ?? loadProviderReportSnapshotFromRpc;
   const generateReportFn = deps.generateReport ?? generateProviderReport;
 
-  const snapshot = await loadSnapshot(params.userId);
+  const snapshot = await loadSnapshot(params.userId, params.dateRange, params.timezone);
 
   return generateReportFn({
     profile: params.profile,
@@ -209,8 +148,6 @@ export async function createFreshProviderReportBlob(
     labResults: snapshot.labResults,
     extendedSymptomLogs: snapshot.extendedSymptomLogs,
     quickLogEvents: snapshot.quickLogEvents,
-    trackedSymptomIds: snapshot.trackedSymptomIds,
-    watchSymptomIds: snapshot.watchSymptomIds,
     dateRange: params.dateRange,
     timezone: params.timezone,
     includeSafeguarding: params.includeSafeguarding,

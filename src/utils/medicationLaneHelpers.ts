@@ -1,6 +1,6 @@
 import type { Medication, MedicationChange } from '../types/database';
 import { getMedLaneRamp } from './chartHelpers';
-import { todayISO } from './localDate';
+import { civilDateOrdinal, todayISO } from './localDate';
 import { formatFrequency } from './medicationHelpers';
 
 /** ~2px visual gap between dose-change segments at typical lane widths */
@@ -83,9 +83,9 @@ export function dateToCategoryPercent(date: string, domainDates: string[]): numb
     const d0 = sorted[i];
     const d1 = sorted[i + 1];
     if (date >= d0 && date <= d1) {
-      const t0 = new Date(d0 + 'T12:00:00').getTime();
-      const t1 = new Date(d1 + 'T12:00:00').getTime();
-      const tc = new Date(date + 'T12:00:00').getTime();
+      const t0 = civilDateOrdinal(d0);
+      const t1 = civilDateOrdinal(d1);
+      const tc = civilDateOrdinal(date);
       const frac = t1 === t0 ? 0 : (tc - t0) / (t1 - t0);
       return ((i + frac) / (sorted.length - 1)) * 100;
     }

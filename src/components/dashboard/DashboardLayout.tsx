@@ -5,7 +5,7 @@ import { useCheckinStatus } from '../../hooks/useCheckinStatus';
 import { useInsights } from '../../hooks/useInsights';
 import { useStageProfile } from '../../hooks/useStageProfile';
 import { getStageTrackingPhrase } from '../../engine/stageProfile';
-import { hasMRSData, getLocalDateISO, getResolvedTimezone } from '../../utils/checkinHelpers';
+import { getLocalDateISO, getResolvedTimezone } from '../../utils/checkinHelpers';
 import { useAuthStore } from '../../stores/authStore';
 import { DateRangeSelector } from './DateRangeSelector';
 import { ScoreSummaryCards } from './ScoreSummaryCards';
@@ -20,6 +20,7 @@ import { DrillDownControls } from './DrillDownControls';
 import { ActiveMedicationsSummary } from './ActiveMedicationsSummary';
 import { LabSummaryWidget } from './LabSummaryWidget';
 import { AppointmentCountdownCard } from './AppointmentCountdownCard';
+import { daysBetweenISO } from '../../utils/localDate';
 import { ProviderReportButton } from './ProviderReportButton';
 import { DashboardInsightsPanel } from '../insights/DashboardInsightsPanel';
 import { SafeguardingCard } from '../insights/SafeguardingCard';
@@ -35,6 +36,7 @@ const FULL_DASHBOARD_CHECKINS = 7;
 
 export function DashboardLayout() {
   const dateRange = useDashboardStore((s) => s.dateRange);
+  const refreshDateRange = useDashboardStore((s) => s.refreshDateRange);
   const checkinStatus = useCheckinStatus();
   const { insights, primaryInsights, moreInsights, safeguardingInsights, dismissInsight, extendedSymptoms } = useInsights();
   const {
@@ -44,7 +46,9 @@ export function DashboardLayout() {
     getLabTrendData,
     getDrillDownData,
     checkins,
-    allCheckins,
+    summaryCheckins,
+    mrsCheckinCount,
+    earliestCheckinDate,
     medications,
     changes,
     labResults,
@@ -57,6 +61,16 @@ export function DashboardLayout() {
   useEffect(() => {
     void refreshAll();
   }, [refreshAll]);
+
+  useEffect(() => {
+    const refresh = () => refreshDateRange();
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, [refreshDateRange]);
 
   useEffect(() => {
     if (labResults.length > 0) {
@@ -76,10 +90,6 @@ export function DashboardLayout() {
     [checkins],
   );
 
-  const mrsCheckinCount = useMemo(
-    () => allCheckins.filter(hasMRSData).length,
-    [allCheckins],
-  );
   const isFullDashboard = mrsCheckinCount >= FULL_DASHBOARD_CHECKINS;
 
   const timezone = getResolvedTimezone(useAuthStore((s) => s.profile?.timezone));
@@ -89,11 +99,7 @@ export function DashboardLayout() {
   const appointmentDate = useAuthStore((s) => s.profile?.next_appointment_date);
   const daysUntilAppointment =
     appointmentDate && appointmentDate >= today
-      ? Math.floor(
-          (new Date(appointmentDate + 'T12:00:00').getTime() -
-            new Date(today + 'T12:00:00').getTime()) /
-            (1000 * 60 * 60 * 24),
-        )
+      ? daysBetweenISO(today, appointmentDate)
       : null;
   const showStandaloneReport =
     isFullDashboard && (daysUntilAppointment === null || daysUntilAppointment > 7);
@@ -117,7 +123,7 @@ export function DashboardLayout() {
 
           <DateRangeSelector />
 
-          <ScoreSummaryCards checkins={allCheckins} />
+          <ScoreSummaryCards checkins={summaryCheckins} />
 
           <StrawStageCard />
 
@@ -132,7 +138,7 @@ export function DashboardLayout() {
             hasCheckedInToday={checkinStatus.hasCheckedInToday}
           />
 
-          <AppointmentCountdownCard checkins={allCheckins} />
+          <AppointmentCountdownCard earliestCheckinDate={earliestCheckinDate} />
 
           {safeguardingInsights.map((insight) => (
             <SafeguardingCard
@@ -196,7 +202,7 @@ export function DashboardLayout() {
             hasCheckedInToday={checkinStatus.hasCheckedInToday}
           />
 
-          <AppointmentCountdownCard checkins={allCheckins} />
+          <AppointmentCountdownCard earliestCheckinDate={earliestCheckinDate} />
 
           {safeguardingInsights.map((insight) => (
             <SafeguardingCard

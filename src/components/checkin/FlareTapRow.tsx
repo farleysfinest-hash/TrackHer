@@ -5,6 +5,7 @@ import { useQuickLog } from '../../hooks/useQuickLog';
 import { useAuthStore } from '../../stores/authStore';
 import { getSymptomByKey, getSymptomChipLabel } from '../../data/symptoms';
 import { getLocalDateISO, getResolvedTimezone } from '../../utils/checkinHelpers';
+import { resolveEventLocalDate } from '../../utils/localDate';
 
 export function FlareTapRow() {
   const { watchSymptomIds, isLoading: selectionsLoading } = useSymptomSelections();
@@ -21,13 +22,25 @@ export function FlareTapRow() {
     if (selectionsLoading || eventsLoading || watchSymptomIds.length === 0) return;
 
     const loggedToday = events
-      .filter((e) => e.logged_at.slice(0, 10) === today && watchSymptomIds.includes(e.symptom_id))
+      .filter(
+        (e) =>
+          resolveEventLocalDate(e.logged_at, e.local_date, e.event_timezone, timezone) === today &&
+          watchSymptomIds.includes(e.symptom_id),
+      )
       .map((e) => e.symptom_id);
 
     const uniqueLogged = [...new Set(loggedToday)];
     initFlareFromPreLogged(uniqueLogged);
     initialized.current = true;
-  }, [events, eventsLoading, watchSymptomIds, selectionsLoading, today, initFlareFromPreLogged]);
+  }, [
+    events,
+    eventsLoading,
+    watchSymptomIds,
+    selectionsLoading,
+    today,
+    timezone,
+    initFlareFromPreLogged,
+  ]);
 
   if (selectionsLoading || watchSymptomIds.length === 0) return null;
 

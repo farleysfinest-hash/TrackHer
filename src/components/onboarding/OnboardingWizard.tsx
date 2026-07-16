@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { useAuthStore } from '../../stores/authStore';
@@ -10,28 +10,47 @@ import { StepCheckinIntro } from './StepCheckinIntro';
 import { StepCheckinDay } from './StepCheckinDay';
 import { OnboardingComplete } from './OnboardingComplete';
 import { MedicalDisclaimer } from '../ui/MedicalDisclaimer';
+import { getActiveTimezone } from '../../utils/localDate';
 
 const TOTAL_STEPS = 5;
 
 export function OnboardingWizard() {
   const navigate = useNavigate();
   const { currentStep, updateFormData } = useOnboardingStore();
+  const currentUser = useAuthStore((state) => state.user);
+  const currentProfile = useAuthStore((state) => state.profile);
   const [isComplete, setIsComplete] = useState(false);
+  const hydratedProfileId = useRef<string | null>(null);
 
   useEffect(() => {
-    const currentUser = useAuthStore.getState().user;
-    const currentProfile = useAuthStore.getState().profile;
-    if (currentUser) {
-      updateFormData({
-        displayName: currentProfile?.display_name ?? currentUser.user_metadata?.display_name ?? '',
-        email: currentUser.email ?? '',
-        hasUterus: currentProfile?.has_uterus ?? null,
-        dateOfBirth: currentProfile?.date_of_birth ?? '',
-        lastPeriodDate: currentProfile?.last_period_date ?? '',
-      });
-    }
-    return () => useOnboardingStore.getState().reset();
-  }, [updateFormData]);
+    if (!currentUser) return;
+    if (!currentProfile) return;
+    if (hydratedProfileId.current === currentProfile.id) return;
+
+    hydratedProfileId.current = currentProfile.id;
+    updateFormData({
+      // The profile row is authoritative. Auth metadata can contain a stale signup name after a
+      // full reset until the session token refreshes, so it must never repopulate reset data.
+      displayName: currentProfile.display_name ?? '',
+      email: currentUser.email ?? '',
+      hasUterus: currentProfile.has_uterus_confirmed_at
+        ? currentProfile.has_uterus
+        : null,
+      hasUterusConfirmed: Boolean(currentProfile.has_uterus_confirmed_at),
+      timezone: currentProfile.timezone_confirmed_at && currentProfile.timezone
+        ? currentProfile.timezone
+        : getActiveTimezone(currentProfile.timezone),
+      dateOfBirth: currentProfile.date_of_birth ?? '',
+      lastPeriodDate: currentProfile.last_period_date ?? '',
+    });
+  }, [currentProfile, currentUser, updateFormData]);
+
+  useEffect(
+    () => () => {
+      useOnboardingStore.getState().reset();
+    },
+    [],
+  );
 
   const handleComplete = () => {
     setIsComplete(true);

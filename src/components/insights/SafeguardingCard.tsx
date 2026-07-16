@@ -3,8 +3,6 @@ import { AlertCircle } from 'lucide-react';
 import type { Insight } from '../../engine/types';
 import { formatConfidenceLine } from '../../engine/confidence';
 import { markInsightAsViewed } from '../../utils/insightReadState';
-import { useAuthStore } from '../../stores/authStore';
-import { getResolvedTimezone } from '../../utils/checkinHelpers';
 import { Button } from '../ui/Button';
 
 interface SafeguardingCardProps {
@@ -12,18 +10,7 @@ interface SafeguardingCardProps {
   onDismiss?: (insightId: string) => void;
 }
 
-function resourcesLine(timezone: string): string {
-  // TODO: A real region field on profiles is needed before non-US launch.
-  if (timezone.startsWith('America/')) {
-    return '988 (Suicide & Crisis Lifeline, call or text) or your local emergency number';
-  }
-  return 'your local crisis line or emergency number';
-}
-
 export function SafeguardingCard({ insight, onDismiss }: SafeguardingCardProps) {
-  const profileTimezone = useAuthStore((s) => s.profile?.timezone);
-  const timezone = getResolvedTimezone(profileTimezone);
-
   useEffect(() => {
     markInsightAsViewed(insight);
   }, [insight]);
@@ -38,7 +25,9 @@ export function SafeguardingCard({ insight, onDismiss }: SafeguardingCardProps) 
           <p className="mt-2 whitespace-pre-line text-sm text-sage-800">{insight.body}</p>
 
           <div className="mt-4 border-t border-sand-200 pt-3">
-            <p className="text-sm text-sage-700">{resourcesLine(timezone)}</p>
+            <p className="text-sm text-sage-700">
+              Contact your local crisis line or emergency services if you may be in immediate danger.
+            </p>
           </div>
 
           {onDismiss && (

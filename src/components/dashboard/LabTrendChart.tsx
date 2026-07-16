@@ -25,6 +25,7 @@ import {
 import type { LabTrendPoint } from '../../hooks/useChartData';
 import type { LabResult } from '../../types/database';
 import type { LabBiomarker } from '../../types/labs';
+import { daysBetweenISO } from '../../utils/localDate';
 
 interface LabTrendChartProps {
   data: LabTrendPoint[];
@@ -39,10 +40,7 @@ const LAB_DOT_RADIUS = 6;
 const LAB_VALUE_COLOR = CHART_COLORS.mrsTotal;
 
 function formatDateSpan(start: string, end: string): string {
-  const days = Math.round(
-    (new Date(end + 'T12:00:00').getTime() - new Date(start + 'T12:00:00').getTime()) /
-      (1000 * 60 * 60 * 24),
-  );
+  const days = daysBetweenISO(start, end);
   if (days < 45) return `~${days} day${days !== 1 ? 's' : ''}`;
   const months = Math.round(days / 30);
   return months === 1 ? '~1 month' : `~${months} months`;

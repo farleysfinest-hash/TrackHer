@@ -20,6 +20,11 @@ type PickerRow =
 export function AddSymptomPicker({ isOpen, onClose, excludeIds, onSelect }: AddSymptomPickerProps) {
   const [query, setQuery] = useState('');
 
+  const handleClose = () => {
+    setQuery('');
+    onClose();
+  };
+
   const results = useMemo<PickerRow[]>(() => {
     const q = query.trim();
     if (!q) return [];
@@ -41,7 +46,7 @@ export function AddSymptomPicker({ isOpen, onClose, excludeIds, onSelect }: AddS
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Add a symptom" size="md">
+    <Modal isOpen={isOpen} onClose={handleClose} title="Add a symptom" size="md">
       <div className="space-y-3">
         <input
           type="search"
@@ -55,7 +60,7 @@ export function AddSymptomPicker({ isOpen, onClose, excludeIds, onSelect }: AddS
           {results.length === 0 ? (
             <p className="px-3 py-4 text-sm text-sage-400">
               {query.trim()
-                ? 'No matching symptoms — try a different word, or check the categories below.'
+                ? 'No matching symptoms — try a different word.'
                 : 'Type to search the full catalog.'}
             </p>
           ) : (

@@ -9,7 +9,7 @@ import type { MRSSymptomKey } from '../utils/checkinHelpers';
 import { hasMRSData, getDailySignal, getTrustedMrsTotal } from '../utils/checkinHelpers';
 import { formatChartDate, filterByDateRange, meanHeatmapSeverity, recentHeatmapSeverity, sortHeatmapRows } from '../utils/chartHelpers';
 import { getEffectiveDailyDose } from '../utils/medicationHelpers';
-import { todayISO } from '../utils/localDate';
+import { addDaysISO, todayISO } from '../utils/localDate';
 import { getBiomarkerValue } from '../utils/labHelpers';
 import type { DateRange } from '../stores/dashboardStore';
 
@@ -76,7 +76,12 @@ function buildChangeLabel(change: MedicationChange, med?: Medication | null): st
 }
 
 export function useChartData(dateRange: DateRange) {
-  const { checkins, fetchCheckins } = useCheckins();
+  const {
+    checkins,
+    mrsCheckinCount,
+    earliestCheckinDate,
+    fetchCheckinsRange,
+  } = useCheckins();
   const { medications, fetchMedications } = useMedications();
   const { changes, fetchChanges } = useMedicationChanges();
   const { labResults, fetchLabResults } = useLabResults();
@@ -218,12 +223,21 @@ export function useChartData(dateRange: DateRange) {
   );
 
   const refreshAll = useCallback(async () => {
-    await Promise.all([fetchCheckins(100), fetchMedications(), fetchChanges(), fetchLabResults()]);
-  }, [fetchCheckins, fetchMedications, fetchChanges, fetchLabResults]);
+    await Promise.all([
+      // Keep one prior month in memory for the summary card's month-over-month baseline;
+      // chart series below still filter strictly to the selected range.
+      fetchCheckinsRange(addDaysISO(dateRange.start, -31), dateRange.end),
+      fetchMedications(),
+      fetchChanges(),
+      fetchLabResults(),
+    ]);
+  }, [dateRange.end, dateRange.start, fetchCheckinsRange, fetchMedications, fetchChanges, fetchLabResults]);
 
   return {
     checkins: filteredCheckins,
-    allCheckins: checkins,
+    summaryCheckins: checkins,
+    mrsCheckinCount,
+    earliestCheckinDate,
     medications,
     allMedicationChanges,
     changes: filteredChanges,

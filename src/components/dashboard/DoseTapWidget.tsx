@@ -50,7 +50,7 @@ export function DoseTapWidget() {
   };
 
   const handleChipTap = async (med: Medication) => {
-    const logged = isDoseLoggedForMed(med, administrations, today);
+    const logged = isDoseLoggedForMed(med, administrations, today, timezone);
     const latest = administrations
       .filter((a) => a.medication_id === med.id)
       .sort((a, b) => b.taken_at.localeCompare(a.taken_at))[0];
@@ -88,7 +88,7 @@ export function DoseTapWidget() {
 
       <div className="mt-4 flex flex-wrap gap-2">
         {chipMeds.map((med) => {
-          const checked = isDoseLoggedForMed(med, administrations, today);
+          const checked = isDoseLoggedForMed(med, administrations, today, timezone);
           return (
             <button
               key={med.id}

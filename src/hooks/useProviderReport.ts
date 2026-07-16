@@ -41,7 +41,7 @@ export function useProviderReport() {
         includeSafeguarding,
       });
 
-      const today = formatChartDateLong(todayISO());
+      const today = formatChartDateLong(todayISO(timezone));
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;

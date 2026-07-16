@@ -171,11 +171,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (!data) {
         const user = get().user;
         const email = user?.email ?? '';
-        const displayName = (email || 'there').split('@')[0];
 
         const { data: upserted, error: healError } = await supabase
           .from('profiles')
-          .upsert({ id: userId, email, display_name: displayName })
+          .upsert({ id: userId, email, display_name: null })
           .select()
           .maybeSingle();
 
@@ -229,7 +228,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (!user) return { success: false, error: 'Not authenticated' };
 
     set({ isLoading: true, error: null });
-    const result = await deleteUserAppData(user.id);
+    const result = await deleteUserAppData();
     if (!result.success) {
       set({ isLoading: false, error: result.error ?? 'Reset failed' });
       return result;

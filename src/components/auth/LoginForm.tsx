@@ -5,6 +5,7 @@ import { Input } from '../ui/Input';
 import { useAuth } from '../../hooks/useAuth';
 import { useAuthStore } from '../../stores/authStore';
 import { validators, validateFields } from '../../utils/validation';
+import { hasConfirmedProfileContext } from '../../utils/profileContext';
 
 export function LoginForm() {
   const navigate = useNavigate();
@@ -33,7 +34,13 @@ export function LoginForm() {
     const result = await signIn(email, password);
     if (result.success) {
       const currentProfile = useAuthStore.getState().profile;
-      navigate(currentProfile?.onboarding_completed ? '/dashboard' : '/onboarding');
+      navigate(
+        !currentProfile?.onboarding_completed
+          ? '/onboarding'
+          : hasConfirmedProfileContext(currentProfile)
+            ? '/dashboard'
+            : '/profile-confirmation',
+      );
     } else {
       setFormError(result.error ?? 'Failed to sign in');
     }

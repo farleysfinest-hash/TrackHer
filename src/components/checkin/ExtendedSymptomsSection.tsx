@@ -6,6 +6,7 @@ import type { MRSScore } from '../../types/database';
 import { WatchSymptomTapRow } from './WatchSymptomTapRow';
 import { AddSymptomPicker, KeepWatchingPrompt } from './AddSymptomPicker';
 import { Button } from '../ui/Button';
+import { isMRSCanonicalKey } from '../../utils/checkinHelpers';
 
 interface ExtendedSymptomsSectionProps {
   onNext: () => void;
@@ -22,20 +23,24 @@ export function ExtendedSymptomsSection({ onNext, onBack, onSkip }: ExtendedSymp
   const initWatchSymptomsForCheckin = useCheckinStore((s) => s.initWatchSymptomsForCheckin);
   const { watchSymptomIds, trackedSymptomIds, isLoading, saveSelections } = useSymptomSelections();
   const [pickerOpen, setPickerOpen] = useState(false);
+  const extendedWatchSymptomIds = useMemo(
+    () => watchSymptomIds.filter((id) => !isMRSCanonicalKey(id)),
+    [watchSymptomIds],
+  );
 
   useEffect(() => {
-    if (!isLoading && watchSymptomIds.length > 0 && extendedSymptoms.length === 0) {
-      initWatchSymptomsForCheckin(watchSymptomIds);
+    if (!isLoading && extendedWatchSymptomIds.length > 0 && extendedSymptoms.length === 0) {
+      initWatchSymptomsForCheckin(extendedWatchSymptomIds);
     }
-  }, [isLoading, watchSymptomIds, extendedSymptoms.length, initWatchSymptomsForCheckin]);
+  }, [isLoading, extendedWatchSymptomIds, extendedSymptoms.length, initWatchSymptomsForCheckin]);
 
   const gridSymptomIds = useMemo(() => {
-    const watchSet = new Set(watchSymptomIds);
+    const watchSet = new Set(extendedWatchSymptomIds);
     const adHoc = extendedSymptoms
       .map((s) => s.symptom_key)
-      .filter((key) => !watchSet.has(key));
-    return [...watchSymptomIds, ...adHoc];
-  }, [watchSymptomIds, extendedSymptoms]);
+      .filter((key) => !isMRSCanonicalKey(key) && !watchSet.has(key));
+    return [...extendedWatchSymptomIds, ...adHoc];
+  }, [extendedWatchSymptomIds, extendedSymptoms]);
 
   const handleScoreChange = (symptomKey: string, score: MRSScore) => {
     setExtendedScore(symptomKey, score);

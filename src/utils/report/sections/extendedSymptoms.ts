@@ -5,6 +5,12 @@ import type { DateRange } from '../../../stores/dashboardStore';
 import { getSymptomByKey } from '../../../data/symptoms';
 import type { PdfPageContext } from '../pdfTheme';
 import { PDF_COLORS, drawSectionHeader, drawSubheader, trendArrow } from '../pdfTheme';
+import {
+  daysBetweenISO,
+  hourInTimeZone,
+  isValidTimeZone,
+  resolveEventLocalDate,
+} from '../../localDate';
 
 interface ExtendedSymptomSummary {
   symptomKey: string;
@@ -15,22 +21,28 @@ interface ExtendedSymptomSummary {
 }
 
 function buildExtendedSummaries(
-  trackedKeys: string[],
   checkins: SymptomCheckin[],
   extendedLogs: ExtendedSymptomLog[],
   dateRange: DateRange,
 ): ExtendedSymptomSummary[] {
-  const inRangeCheckinIds = new Set(
+  const checkinDateById = new Map(
     checkins
       .filter((c) => c.checkin_date >= dateRange.start && c.checkin_date <= dateRange.end)
-      .map((c) => c.id),
+      .map((c) => [c.id, c.checkin_date]),
   );
+  const inRangeLogs = extendedLogs.filter((log) => checkinDateById.has(log.checkin_id));
+  const recordedKeys = [...new Set(inRangeLogs.map((log) => log.symptom_key))];
 
-  return trackedKeys.map((key) => {
+  return recordedKeys.map((key) => {
     const def = getSymptomByKey(key);
-    const logs = extendedLogs.filter(
-      (l) => l.symptom_key === key && inRangeCheckinIds.has(l.checkin_id),
-    );
+    const logs = inRangeLogs
+      .filter((log) => log.symptom_key === key)
+      .sort((a, b) => {
+        const dateComparison = (checkinDateById.get(a.checkin_id) ?? '').localeCompare(
+          checkinDateById.get(b.checkin_id) ?? '',
+        );
+        return dateComparison || a.created_at.localeCompare(b.created_at);
+      });
     const scores = logs
       .map((l) => l.severity_score)
       .filter((s) => s !== null && s !== undefined) as number[];
@@ -56,19 +68,24 @@ function buildExtendedSummaries(
 
 function buildQuickLogSummaries(
   events: QuickLogEvent[],
-  watchSymptomIds: string[],
   dateRange: DateRange,
+  timezone: string,
 ): string[] {
   const summaries: string[] = [];
-
-  for (const symptomId of watchSymptomIds) {
-    const def = getSymptomByKey(symptomId);
-    const symptomEvents = events.filter(
-      (e) =>
-        e.symptom_id === symptomId &&
-        e.logged_at.slice(0, 10) >= dateRange.start &&
-        e.logged_at.slice(0, 10) <= dateRange.end,
+  const inRangeEvents = events.filter((event) => {
+    const eventDate = resolveEventLocalDate(
+      event.logged_at,
+      event.local_date,
+      event.event_timezone,
+      timezone,
     );
+    return eventDate >= dateRange.start && eventDate <= dateRange.end;
+  });
+  const recordedSymptomIds = [...new Set(inRangeEvents.map((event) => event.symptom_id))];
+
+  for (const symptomId of recordedSymptomIds) {
+    const def = getSymptomByKey(symptomId);
+    const symptomEvents = inRangeEvents.filter((event) => event.symptom_id === symptomId);
 
     if (symptomEvents.length < 3) continue;
 
@@ -90,7 +107,10 @@ function buildQuickLogSummaries(
 
     const hourBuckets = new Map<string, number>();
     for (const e of symptomEvents) {
-      const hour = new Date(e.logged_at).getHours();
+      const hour = hourInTimeZone(
+        e.logged_at,
+        isValidTimeZone(e.event_timezone) ? e.event_timezone : timezone,
+      );
       let bucket: string;
       if (hour < 6) bucket = '12-6 AM';
       else if (hour < 12) bucket = '6 AM-12 PM';
@@ -101,14 +121,7 @@ function buildQuickLogSummaries(
     }
     const topTime = [...hourBuckets.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? '—';
 
-    const days =
-      Math.max(
-        1,
-        Math.round(
-          (new Date(dateRange.end).getTime() - new Date(dateRange.start).getTime()) /
-            (24 * 60 * 60 * 1000),
-        ) + 1,
-      );
+    const days = Math.max(1, daysBetweenISO(dateRange.start, dateRange.end) + 1);
 
     summaries.push(
       `${def?.label ?? symptomId}: ${symptomEvents.length} logged over ${days} days` +
@@ -123,12 +136,11 @@ function buildQuickLogSummaries(
 
 export function renderExtendedSymptomsPage(
   ctx: PdfPageContext,
-  trackedSymptomKeys: string[],
   checkins: SymptomCheckin[],
   extendedLogs: ExtendedSymptomLog[],
   quickLogEvents: QuickLogEvent[],
-  watchSymptomIds: string[],
   dateRange: DateRange,
+  timezone: string,
 ): void {
   const { doc } = ctx;
   let y = 18;
@@ -145,7 +157,6 @@ export function renderExtendedSymptomsPage(
   );
 
   const summaries = buildExtendedSummaries(
-    trackedSymptomKeys,
     checkins,
     extendedLogs,
     dateRange,
@@ -179,7 +190,11 @@ export function renderExtendedSymptomsPage(
     y += 8;
   }
 
-  const quickLogSummaries = buildQuickLogSummaries(quickLogEvents, watchSymptomIds, dateRange);
+  const quickLogSummaries = buildQuickLogSummaries(
+    quickLogEvents,
+    dateRange,
+    timezone,
+  );
 
   if (quickLogSummaries.length > 0) {
     y = drawSectionHeader(doc, 'Quick-Log Summary', y);

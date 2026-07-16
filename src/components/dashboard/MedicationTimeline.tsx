@@ -3,6 +3,7 @@ import { ChartCard } from '../ui/ChartCard';
 import { CHART_COLORS } from '../../utils/chartHelpers';
 import type { MedicationBar } from '../../hooks/useChartData';
 import { formatChartDate } from '../../utils/chartHelpers';
+import { civilDateOrdinal } from '../../utils/localDate';
 
 interface MedicationTimelineProps {
   bars: MedicationBar[];
@@ -40,14 +41,14 @@ export function MedicationTimeline({ bars }: MedicationTimelineProps) {
     const ends = bars.map((b) => b.endDate);
     const rangeStart = starts.sort()[0];
     const rangeEnd = ends.sort().reverse()[0];
-    const startMs = new Date(rangeStart + 'T12:00:00').getTime();
-    const endMs = new Date(rangeEnd + 'T12:00:00').getTime();
-    const span = endMs - startMs || 1;
+    const startDay = civilDateOrdinal(rangeStart);
+    const endDay = civilDateOrdinal(rangeEnd);
+    const span = endDay - startDay || 1;
 
     const timelineBars = bars.map((bar) => {
-      const barStart = new Date(bar.startDate + 'T12:00:00').getTime();
-      const barEnd = new Date(bar.endDate + 'T12:00:00').getTime();
-      const left = ((barStart - startMs) / span) * 100;
+      const barStart = civilDateOrdinal(bar.startDate);
+      const barEnd = civilDateOrdinal(bar.endDate);
+      const left = ((barStart - startDay) / span) * 100;
       const width = Math.max(((barEnd - barStart) / span) * 100, 2);
       return { ...bar, left, width };
     });

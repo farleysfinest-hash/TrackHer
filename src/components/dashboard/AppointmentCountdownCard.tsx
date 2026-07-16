@@ -4,19 +4,17 @@ import { useAuthStore } from '../../stores/authStore';
 import { getLocalDateISO, getResolvedTimezone } from '../../utils/checkinHelpers';
 import { ProviderReportButton } from './ProviderReportButton';
 import { Card } from '../ui/Card';
-import type { SymptomCheckin } from '../../types/database';
+import { daysBetweenISO } from '../../utils/localDate';
 
 function daysBetween(from: string, to: string): number {
-  const a = new Date(from + 'T12:00:00');
-  const b = new Date(to + 'T12:00:00');
-  return Math.floor((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24));
+  return daysBetweenISO(from, to);
 }
 
 interface AppointmentCountdownCardProps {
-  checkins: SymptomCheckin[];
+  earliestCheckinDate: string | null;
 }
 
-export function AppointmentCountdownCard({ checkins }: AppointmentCountdownCardProps) {
+export function AppointmentCountdownCard({ earliestCheckinDate }: AppointmentCountdownCardProps) {
   const appointmentDate = useAuthStore((s) => s.profile?.next_appointment_date);
   const timezone = getResolvedTimezone(useAuthStore((s) => s.profile?.timezone));
   const today = getLocalDateISO(timezone);
@@ -30,20 +28,12 @@ export function AppointmentCountdownCard({ checkins }: AppointmentCountdownCardP
         ? 'Your appointment is today'
         : `Your appointment is in ${daysUntil} day${daysUntil !== 1 ? 's' : ''}`;
 
-    const earliest =
-      checkins.length > 0
-        ? checkins.reduce(
-            (min, c) => (c.checkin_date < min ? c.checkin_date : min),
-            checkins[0].checkin_date,
-          )
-        : null;
-
-    const trackingText = earliest
-      ? `${Math.max(1, Math.ceil(daysBetween(earliest, appointmentDate) / 7))} weeks of tracking`
+    const trackingText = earliestCheckinDate
+      ? `${Math.max(1, Math.ceil(daysBetween(earliestCheckinDate, appointmentDate) / 7))} weeks of tracking`
       : 'your tracking so far';
 
     return { heading, trackingText, showReport: daysUntil <= 7 };
-  }, [appointmentDate, checkins, today]);
+  }, [appointmentDate, earliestCheckinDate, today]);
 
   if (!content) return null;
 

@@ -5,6 +5,7 @@ import { getLocalDateISO } from './checkinHelpers';
 import { addDaysISO, getMedicationChangeLabel } from './medicationHelpers';
 import type { MedicationChangeWithMed } from '../hooks/useMedicationChanges';
 import { formatDateLong } from './formatters';
+import { daysBetweenISO } from './localDate';
 
 const EXPERIMENT_WINDOW_DAYS = 21;
 
@@ -19,9 +20,7 @@ const DAY_NAMES = [
 ] as const;
 
 function daysBetween(from: string, to: string): number {
-  const a = new Date(from + 'T12:00:00');
-  const b = new Date(to + 'T12:00:00');
-  return Math.floor((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24));
+  return daysBetweenISO(from, to);
 }
 
 export function formatMrsDeltaLine(

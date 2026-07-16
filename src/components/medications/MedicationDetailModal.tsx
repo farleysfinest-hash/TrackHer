@@ -58,10 +58,10 @@ export function MedicationDetailModal({
   const handleSave = async () => {
     setIsSaving(true);
     const ok = await updateMedication(medication.id, {
-      notes: notes || undefined,
-      prescriber_name: prescriber || undefined,
-      pharmacy_name: pharmacy || undefined,
-      application_site: applicationSite || undefined,
+      notes: notes.trim() || null,
+      prescriber_name: prescriber.trim() || null,
+      pharmacy_name: pharmacy.trim() || null,
+      application_site: applicationSite.trim() || null,
     });
     setIsSaving(false);
     if (ok) {
@@ -121,7 +121,7 @@ export function MedicationDetailModal({
                 <dt className="text-sage-500">Start date</dt>
                 <dd>{formatDateLong(medication.start_date)}</dd>
               </div>
-              {medication.application_site && (
+              {(isEditing || medication.application_site) && (
                 <div className="flex justify-between">
                   <dt className="text-sage-500">Application site</dt>
                   <dd>
@@ -167,14 +167,14 @@ export function MedicationDetailModal({
                   )}
                 </dd>
               </div>
-              {medication.pharmacy_name && (
+              {(isEditing || medication.pharmacy_name) && (
                 <div className="flex justify-between">
                   <dt className="text-sage-500">Pharmacy</dt>
                   <dd>
                     {isEditing ? (
                       <Input value={pharmacy} onChange={(e) => setPharmacy(e.target.value)} />
                     ) : (
-                      medication.pharmacy_name
+                      medication.pharmacy_name || '—'
                     )}
                   </dd>
                 </div>

@@ -30,7 +30,7 @@ export function DoseChangeForm({
   onCancel,
   onSuccess,
 }: DoseChangeFormProps) {
-  const { changeDose, changeFrequency } = useMedications();
+  const { changeRegimen } = useMedications();
   const toast = useToast();
   const [mode, setMode] = useState<ChangeMode>('dose');
 
@@ -58,53 +58,52 @@ export function DoseChangeForm({
     e.preventDefault();
     setIsSaving(true);
 
-    let success = true;
-    let lastError: string | undefined;
-
-    if (mode === 'dose' || mode === 'both') {
-      if (schedule.dose_amount === null) {
-        setIsSaving(false);
-        return;
-      }
-      const result = await changeDose(
-        medication.id,
-        {
-          dose_amount: schedule.dose_amount,
-          dose_unit: schedule.dose_unit,
-          units_per_dose: schedule.units_per_dose,
-          frequency_details: schedule.frequency_details,
-        },
-        effectiveDate,
-        reason || undefined,
-      );
-      if (!result.ok) {
-        success = false;
-        lastError = result.error;
-      }
+    if (schedule.dose_amount === null) {
+      setIsSaving(false);
+      return;
     }
 
-    if (mode === 'frequency' || mode === 'both') {
-      const frequencyToApply = mode === 'both' ? schedule.frequency! : newFrequency;
-      const result = await changeFrequency(
-        medication.id,
-        frequencyToApply,
-        schedule.frequency_details ?? undefined,
-        effectiveDate,
-        reason || undefined,
-      );
-      if (!result.ok) {
-        success = false;
-        lastError = result.error;
-      }
-    }
+    const frequencyToApply =
+      mode === 'dose'
+        ? medication.frequency
+        : mode === 'both'
+          ? (schedule.frequency ?? medication.frequency)
+          : newFrequency;
+    const nextFrequencyDetails = schedule.frequency_details ?? null;
+    const doseChanged =
+      mode !== 'frequency' &&
+      (schedule.dose_amount !== medication.dose_amount ||
+        schedule.dose_unit !== medication.dose_unit ||
+        schedule.units_per_dose !== medication.units_per_dose);
+    const frequencyChanged =
+      mode !== 'dose'
+        ? frequencyToApply !== medication.frequency ||
+          JSON.stringify(nextFrequencyDetails) !== JSON.stringify(medication.frequency_details)
+        : JSON.stringify(nextFrequencyDetails) !== JSON.stringify(medication.frequency_details);
+
+    const result = await changeRegimen(
+      medication.id,
+      {
+        dose_amount: mode === 'frequency' ? medication.dose_amount : schedule.dose_amount,
+        dose_unit: mode === 'frequency' ? medication.dose_unit : schedule.dose_unit,
+        units_per_dose:
+          mode === 'frequency' ? medication.units_per_dose : schedule.units_per_dose,
+        frequency: frequencyToApply,
+        frequency_details: nextFrequencyDetails,
+        doseChanged,
+        frequencyChanged,
+      },
+      effectiveDate,
+      reason || undefined,
+    );
 
     setIsSaving(false);
 
-    if (success) {
+    if (result.ok) {
       toast.success('Medication updated successfully');
       onSuccess();
     } else {
-      toast.error(lastError ?? 'Failed to update medication');
+      toast.error(result.error ?? 'Failed to update medication');
     }
   };
 

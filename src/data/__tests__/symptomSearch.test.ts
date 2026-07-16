@@ -6,8 +6,8 @@ function computeRank(label: string, bodyLabel: string, q: string): number {
   const lowerLabel = label.toLowerCase();
   const lowerBody = bodyLabel.toLowerCase();
   if (lowerLabel.startsWith(q)) return 0;
-  if (lowerLabel.split(/[\s/]+/).some((word) => word.startsWith(q))) return 1;
-  if (lowerBody.startsWith(q) || lowerBody.split(/[\s/]+/).some((word) => word.startsWith(q))) {
+  if (lowerLabel.split(/[\s/\-–—]+/).some((word) => word.startsWith(q))) return 1;
+  if (lowerBody.startsWith(q) || lowerBody.split(/[\s/\-–—]+/).some((word) => word.startsWith(q))) {
     return 2;
   }
   return 3;
@@ -54,6 +54,18 @@ describe('searchSymptomCatalog', () => {
     const results = searchSymptomCatalog('vasomotor');
     expect(results.length).toBeGreaterThan(0);
     expect(results.every((s) => s.bodySystem === 'vasomotor')).toBe(true);
+  });
+
+  it('treats hyphens as word boundaries when ranking matches', () => {
+    const hyphenated = SYMPTOM_CATALOG.find((symptom) => /[-–—]/.test(symptom.label));
+    expect(hyphenated).toBeDefined();
+    if (!hyphenated) return;
+    const query = hyphenated.label.split(/[-–—]/)[1]?.trim().split(/\s+/)[0] ?? '';
+    const results = searchSymptomCatalog(query, 200);
+    expect(results).toContainEqual(hyphenated);
+    expect(
+      computeRank(hyphenated.label, SYMPTOM_BODY_SYSTEM_LABELS[hyphenated.bodySystem], query.toLowerCase()),
+    ).toBe(1);
   });
 
   it('respects the limit parameter', () => {

@@ -53,30 +53,20 @@ export function useSymptomSelections() {
       const userId = getUserId();
       if (!userId) return false;
 
-      const rows = newSelections
-        .filter((s) => !isMRSCanonicalKey(s.symptom_id))
-        .map((s) => ({
-          user_id: userId,
-          symptom_id: s.symptom_id,
-          is_watch_symptom: watchSymptoms.includes(s.symptom_id),
-        }));
+      const symptomIds = [
+        ...new Set([...newSelections.map((selection) => selection.symptom_id), ...watchSymptoms]),
+      ].filter((id) => !isMRSCanonicalKey(id));
+      const sanitizedWatchSymptoms = [...new Set(watchSymptoms)].filter(
+        (id) => !isMRSCanonicalKey(id),
+      );
+      const { error: saveError } = await supabase.rpc('save_user_symptom_selections', {
+        p_symptom_ids: symptomIds,
+        p_watch_symptom_ids: sanitizedWatchSymptoms,
+      });
 
-      const { error: deleteError } = await supabase
-        .from('user_symptom_selections')
-        .delete()
-        .eq('user_id', userId);
-
-      if (deleteError) {
-        setError(deleteError.message);
+      if (saveError) {
+        setError(saveError.message);
         return false;
-      }
-
-      if (rows.length > 0) {
-        const { error: insertError } = await supabase.from('user_symptom_selections').insert(rows);
-        if (insertError) {
-          setError(insertError.message);
-          return false;
-        }
       }
 
       await fetchSelections();

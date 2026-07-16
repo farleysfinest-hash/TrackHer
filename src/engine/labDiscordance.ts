@@ -7,6 +7,7 @@ import type { MRSSymptomKey } from '../utils/checkinHelpers';
 import { hasMRSData } from '../utils/checkinHelpers';
 import { getBiomarkerValue } from '../utils/labHelpers';
 import { computeObservationalConfidence } from './confidence';
+import { daysBetweenISO } from '../utils/localDate';
 
 interface LabDiscordanceInput {
   checkins: SymptomCheckin[];
@@ -35,10 +36,8 @@ export function analyzeLabDiscordance(input: LabDiscordanceInput): Insight[] {
 
   if (recentCheckins.length === 0) return [];
 
-  const labDate = new Date(recentLab.draw_date + 'T12:00:00');
-  const checkinDate = new Date(recentCheckins[0].checkin_date + 'T12:00:00');
   const daysBetween = Math.abs(
-    (checkinDate.getTime() - labDate.getTime()) / (1000 * 60 * 60 * 24),
+    daysBetweenISO(recentLab.draw_date, recentCheckins[0].checkin_date),
   );
   if (daysBetween > 90) return [];
 

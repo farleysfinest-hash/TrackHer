@@ -11,7 +11,6 @@ import type {
 import type { DateRange } from '../stores/dashboardStore';
 import { formatChartDateLong } from './chartHelpers';
 import { todayISO } from './localDate';
-import { isMRSCanonicalKey } from './checkinHelpers';
 import type { PdfPageContext } from './report/pdfTheme';
 import { addPageFooter, addNewPage, setTotalPages } from './report/pdfTheme';
 import { renderExecutiveSummaryPage } from './report/sections/executiveSummary';
@@ -35,8 +34,6 @@ export interface ProviderReportData {
   labResults: LabResult[];
   extendedSymptomLogs: ExtendedSymptomLog[];
   quickLogEvents: QuickLogEvent[];
-  trackedSymptomIds: string[];
-  watchSymptomIds: string[];
   dateRange: DateRange;
   timezone: string;
   includeSafeguarding: boolean;
@@ -52,7 +49,7 @@ function countReportPages(data: ProviderReportData): number {
 export async function generateProviderReport(data: ProviderReportData): Promise<Blob> {
   const doc = new jsPDF();
   const patientName = data.profile.display_name ?? 'Patient';
-  const reportDate = formatChartDateLong(todayISO());
+  const reportDate = formatChartDateLong(todayISO(data.timezone));
   const totalPages = countReportPages(data);
 
   const ctx: PdfPageContext = {
@@ -86,7 +83,14 @@ export async function generateProviderReport(data: ProviderReportData): Promise<
   addPageFooter(ctx);
 
   addNewPage(ctx);
-  renderPatientSummaryPage(ctx, data.profile, data.medications, checkinDates, data.dateRange);
+  renderPatientSummaryPage(
+    ctx,
+    data.profile,
+    data.medications,
+    checkinDates,
+    data.dateRange,
+    data.timezone,
+  );
   addPageFooter(ctx);
 
   addNewPage(ctx);
@@ -100,15 +104,13 @@ export async function generateProviderReport(data: ProviderReportData): Promise<
   addPageFooter(ctx);
 
   addNewPage(ctx);
-  const extendedKeys = data.trackedSymptomIds.filter((id) => !isMRSCanonicalKey(id));
   renderExtendedSymptomsPage(
     ctx,
-    extendedKeys,
     data.checkins,
     data.extendedSymptomLogs,
     data.quickLogEvents,
-    data.watchSymptomIds,
     data.dateRange,
+    data.timezone,
   );
   addPageFooter(ctx);
 

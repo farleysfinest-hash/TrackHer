@@ -2,6 +2,8 @@ import { useOnboardingStore } from '../../stores/onboardingStore';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { DateOfBirthInput } from '../ui/DateOfBirthInput';
+import { TimezoneSelect } from '../ui/TimezoneSelect';
+import { isValidTimeZone } from '../../utils/localDate';
 
 interface StepProfileProps {
   onNext: () => void;
@@ -10,7 +12,10 @@ interface StepProfileProps {
 export function StepProfile({ onNext }: StepProfileProps) {
   const { formData, updateFormData } = useOnboardingStore();
 
-  const canContinue = formData.displayName.trim().length > 0;
+  const canContinue =
+    formData.displayName.trim().length > 0 &&
+    formData.hasUterus !== null &&
+    isValidTimeZone(formData.timezone);
 
   return (
     <div className="space-y-6">
@@ -22,7 +27,11 @@ export function StepProfile({ onNext }: StepProfileProps) {
         </p>
       </div>
 
-      <Input label="Your Name" value={formData.displayName} readOnly className="bg-sage-50" />
+      <Input
+        label="Your Name"
+        value={formData.displayName}
+        onChange={(event) => updateFormData({ displayName: event.target.value })}
+      />
 
       <Input label="Email" type="email" value={formData.email} readOnly className="bg-sage-50" />
 
@@ -33,41 +42,55 @@ export function StepProfile({ onNext }: StepProfileProps) {
         helperText="Helps us provide age-appropriate context for your data"
       />
 
-      <div>
-        <p className="mb-3 text-sm font-medium text-sage-700">
-          Do you still have your uterus? (optional)
-        </p>
-        <p className="mb-3 text-sm text-sage-500">
-          This is clinically relevant — women with a uterus typically need progesterone alongside
-          estrogen to protect the endometrium.
-        </p>
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={() => updateFormData({ hasUterus: true })}
-            className={[
-              'flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition-colors',
-              formData.hasUterus === true
-                ? 'border-sage-500 bg-sage-50 text-sage-700'
-                : 'border-sand-200 bg-white text-sage-600 hover:border-sage-300',
-            ].join(' ')}
-          >
-            Yes
-          </button>
-          <button
-            type="button"
-            onClick={() => updateFormData({ hasUterus: false })}
-            className={[
-              'flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition-colors',
-              formData.hasUterus === false
-                ? 'border-sage-500 bg-sage-50 text-sage-700'
-                : 'border-sand-200 bg-white text-sage-600 hover:border-sage-300',
-            ].join(' ')}
-          >
-            No
-          </button>
+      {formData.hasUterusConfirmed ? (
+        <div className="rounded-lg border border-sand-200 bg-sand-50 p-4">
+          <p className="text-sm font-medium text-sage-700">
+            Uterus status: {formData.hasUterus ? 'Yes' : 'No'}
+          </p>
+          <p className="mt-1 text-xs text-sage-500">You can change this later in Settings.</p>
         </div>
-      </div>
+      ) : (
+        <div>
+          <p className="mb-3 text-sm font-medium text-sage-700">
+            Do you currently have your uterus? (required)
+          </p>
+          <p className="mb-3 text-sm text-sage-500">
+            This is clinically relevant — women with a uterus typically need progesterone alongside
+            estrogen to protect the endometrium.
+          </p>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => updateFormData({ hasUterus: true })}
+              className={[
+                'flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition-colors',
+                formData.hasUterus === true
+                  ? 'border-sage-500 bg-sage-50 text-sage-700'
+                  : 'border-sand-200 bg-white text-sage-600 hover:border-sage-300',
+              ].join(' ')}
+            >
+              Yes
+            </button>
+            <button
+              type="button"
+              onClick={() => updateFormData({ hasUterus: false })}
+              className={[
+                'flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition-colors',
+                formData.hasUterus === false
+                  ? 'border-sage-500 bg-sage-50 text-sage-700'
+                  : 'border-sand-200 bg-white text-sage-600 hover:border-sage-300',
+              ].join(' ')}
+            >
+              No
+            </button>
+          </div>
+        </div>
+      )}
+
+      <TimezoneSelect
+        value={formData.timezone}
+        onChange={(timezone) => updateFormData({ timezone })}
+      />
 
       <Button fullWidth disabled={!canContinue} onClick={onNext}>
         Continue

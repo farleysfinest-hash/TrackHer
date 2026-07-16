@@ -1267,9 +1267,9 @@ export function searchSymptomCatalog(query: string, limit = 20): SymptomDefiniti
     let rank: number;
     if (label.startsWith(q)) {
       rank = 0; // label starts with query
-    } else if (label.split(/[\s/]+/).some((word) => word.startsWith(q))) {
+    } else if (label.split(/[\s/\-–—]+/).some((word) => word.startsWith(q))) {
       rank = 1; // a word inside the label starts with query
-    } else if (bodyLabel.startsWith(q) || bodyLabel.split(/[\s/]+/).some((word) => word.startsWith(q))) {
+    } else if (bodyLabel.startsWith(q) || bodyLabel.split(/[\s/\-–—]+/).some((word) => word.startsWith(q))) {
       rank = 2; // body system matches
     } else {
       rank = 3; // substring anywhere

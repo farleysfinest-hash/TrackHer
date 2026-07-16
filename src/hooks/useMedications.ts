@@ -5,6 +5,7 @@ import type {
   Medication,
   MedicationInsert,
   MedicationFrequency,
+  MedicationUpdate,
 } from '../types/database';
 import { getEffectiveDailyDose, todayISO } from '../utils/medicationHelpers';
 
@@ -13,6 +14,12 @@ export interface MedicationDoseUpdate {
   dose_unit?: string;
   units_per_dose?: number;
   frequency_details?: Record<string, unknown> | null;
+}
+
+export interface MedicationRegimenUpdate extends MedicationDoseUpdate {
+  frequency?: MedicationFrequency;
+  doseChanged: boolean;
+  frequencyChanged: boolean;
 }
 
 export interface AddMedicationResult {
@@ -96,13 +103,17 @@ export function useMedications() {
 
     setError(null);
     try {
-      // Two-step save: medication row, then its 'started' change event. Partial failure must
-      // never report total failure — the retry would duplicate the medication.
-      const { data: inserted, error: insertError } = await supabase
-        .from('medications')
-        .insert({ ...data, user_id: userId, is_active: data.is_active ?? true })
-        .select()
-        .single();
+      const { data: inserted, error: insertError } = await supabase.rpc(
+        'save_medication_command',
+        {
+          p_action: 'add',
+          p_medication_id: null,
+          p_payload: { ...data, is_active: data.is_active ?? true },
+          p_change_date: null,
+          p_notes: null,
+          p_expected_updated_at: null,
+        },
+      );
 
       if (insertError) {
         setError(insertError.message);
@@ -110,21 +121,6 @@ export function useMedications() {
       }
 
       const medication = inserted as Medication;
-
-      const { error: changeError } = await supabase.from('medication_changes').insert({
-        user_id: userId,
-        medication_id: medication.id,
-        change_type: 'started',
-        new_dose: medication.dose_amount,
-        change_date: medication.start_date,
-        notes: null,
-      });
-
-      if (changeError) {
-        console.error('Failed to insert started medication change:', changeError.message);
-        await fetchMedications();
-        return { medication, changeEventFailed: true };
-      }
 
       await fetchMedications();
       return { medication };
@@ -138,7 +134,7 @@ export function useMedications() {
 
   const updateMedication = async (
     id: string,
-    updates: Partial<MedicationInsert>,
+    updates: MedicationUpdate,
   ): Promise<boolean> => {
     const { error: updateError } = await supabase.from('medications').update(updates).eq('id', id);
 
@@ -151,10 +147,10 @@ export function useMedications() {
     return true;
   };
 
-  const changeDose = async (
+  const changeRegimen = async (
     id: string,
-    update: MedicationDoseUpdate,
-    effectiveDate?: string,
+    update: MedicationRegimenUpdate,
+    effectiveDate = todayISO(),
     notes?: string,
   ): Promise<MedicationMutationResult> => {
     const userId = getUserId();
@@ -171,58 +167,65 @@ export function useMedications() {
       return { ok: false, error: message };
     }
 
-    const changeDate = effectiveDate ?? todayISO();
     const previousEffective = getEffectiveDailyDose(currentMed);
     const nextMed: Medication = {
       ...currentMed,
       dose_amount: update.dose_amount,
       dose_unit: update.dose_unit ?? currentMed.dose_unit,
       units_per_dose: update.units_per_dose ?? currentMed.units_per_dose ?? 1,
+      frequency: update.frequency ?? currentMed.frequency,
       frequency_details:
         update.frequency_details !== undefined
           ? update.frequency_details
           : currentMed.frequency_details,
     };
     const nextEffective = getEffectiveDailyDose(nextMed);
-    const changeType = nextEffective > previousEffective ? 'dose_increased' : 'dose_decreased';
-
-    const updatePayload: Partial<MedicationInsert> = {
-      dose_amount: update.dose_amount,
-      units_per_dose: update.units_per_dose ?? currentMed.units_per_dose ?? 1,
+    const payload: Record<string, unknown> = {
+      dose_changed: update.doseChanged,
+      frequency_changed: update.frequencyChanged,
+      previous_effective_dose: previousEffective,
+      new_effective_dose: nextEffective,
     };
-    if (update.dose_unit) updatePayload.dose_unit = update.dose_unit;
+    if (update.doseChanged) {
+      payload.dose_amount = update.dose_amount;
+      payload.dose_unit = update.dose_unit ?? currentMed.dose_unit;
+      payload.units_per_dose = update.units_per_dose ?? currentMed.units_per_dose ?? 1;
+    }
+    if (update.frequencyChanged && update.frequency) payload.frequency = update.frequency;
     if (update.frequency_details !== undefined) {
-      updatePayload.frequency_details = update.frequency_details ?? undefined;
+      payload.frequency_details = update.frequency_details;
     }
 
-    const { error: updateError } = await supabase
-      .from('medications')
-      .update(updatePayload)
-      .eq('id', id);
-
-    if (updateError) {
-      setError(updateError.message);
-      return { ok: false, error: updateError.message };
-    }
-
-    const { error: changeError } = await supabase.from('medication_changes').insert({
-      user_id: userId,
-      medication_id: id,
-      change_type: changeType,
-      previous_dose: previousEffective,
-      new_dose: nextEffective,
-      change_date: changeDate,
-      notes: notes ?? null,
+    const { error: commandError } = await supabase.rpc('save_medication_command', {
+      p_action: 'regimen',
+      p_medication_id: id,
+      p_payload: payload,
+      p_change_date: effectiveDate,
+      p_notes: notes ?? null,
+      p_expected_updated_at: currentMed.updated_at,
     });
 
-    if (changeError) {
-      setError(changeError.message);
-      return { ok: false, error: changeError.message };
+    if (commandError) {
+      setError(commandError.message);
+      return { ok: false, error: commandError.message };
     }
 
     await fetchMedications();
     return { ok: true };
   };
+
+  const changeDose = async (
+    id: string,
+    update: MedicationDoseUpdate,
+    effectiveDate?: string,
+    notes?: string,
+  ): Promise<MedicationMutationResult> =>
+    changeRegimen(
+      id,
+      { ...update, doseChanged: true, frequencyChanged: false },
+      effectiveDate,
+      notes,
+    );
 
   const changeFrequency = async (
     id: string,
@@ -231,43 +234,26 @@ export function useMedications() {
     effectiveDate?: string,
     notes?: string,
   ): Promise<MedicationMutationResult> => {
-    const userId = getUserId();
-    if (!userId) {
-      const message = 'Not authenticated';
+    const currentMed = await fetchMedicationById(id);
+    if (!currentMed) {
+      const message = 'Medication not found';
       setError(message);
       return { ok: false, error: message };
     }
-
-    const changeDate = effectiveDate ?? todayISO();
-
-    const { error: updateError } = await supabase
-      .from('medications')
-      .update({
+    return changeRegimen(
+      id,
+      {
+        dose_amount: currentMed.dose_amount,
+        dose_unit: currentMed.dose_unit,
+        units_per_dose: currentMed.units_per_dose,
         frequency: newFrequency,
         frequency_details: frequencyDetails ?? null,
-      })
-      .eq('id', id);
-
-    if (updateError) {
-      setError(updateError.message);
-      return { ok: false, error: updateError.message };
-    }
-
-    const { error: changeError } = await supabase.from('medication_changes').insert({
-      user_id: userId,
-      medication_id: id,
-      change_type: 'frequency_changed',
-      change_date: changeDate,
-      notes: notes ?? null,
-    });
-
-    if (changeError) {
-      setError(changeError.message);
-      return { ok: false, error: changeError.message };
-    }
-
-    await fetchMedications();
-    return { ok: true };
+        doseChanged: false,
+        frequencyChanged: true,
+      },
+      effectiveDate,
+      notes,
+    );
   };
 
   const discontinueMedication = async (
@@ -282,27 +268,18 @@ export function useMedications() {
       return { ok: false, error: message };
     }
 
-    const { error: updateError } = await supabase
-      .from('medications')
-      .update({ end_date: endDate, is_active: false })
-      .eq('id', id);
-
-    if (updateError) {
-      setError(updateError.message);
-      return { ok: false, error: updateError.message };
-    }
-
-    const { error: changeError } = await supabase.from('medication_changes').insert({
-      user_id: userId,
-      medication_id: id,
-      change_type: 'stopped',
-      change_date: endDate,
-      notes: reason ?? null,
+    const { error: commandError } = await supabase.rpc('save_medication_command', {
+      p_action: 'discontinue',
+      p_medication_id: id,
+      p_payload: {},
+      p_change_date: endDate,
+      p_notes: reason ?? null,
+      p_expected_updated_at: null,
     });
 
-    if (changeError) {
-      setError(changeError.message);
-      return { ok: false, error: changeError.message };
+    if (commandError) {
+      setError(commandError.message);
+      return { ok: false, error: commandError.message };
     }
 
     await fetchMedications();
@@ -315,26 +292,17 @@ export function useMedications() {
 
     const today = todayISO();
 
-    const { error: updateError } = await supabase
-      .from('medications')
-      .update({ end_date: null, is_active: true })
-      .eq('id', id);
-
-    if (updateError) {
-      setError(updateError.message);
-      return false;
-    }
-
-    const { error: changeError } = await supabase.from('medication_changes').insert({
-      user_id: userId,
-      medication_id: id,
-      change_type: 'started',
-      change_date: today,
-      notes: 'Reactivated',
+    const { error: commandError } = await supabase.rpc('save_medication_command', {
+      p_action: 'reactivate',
+      p_medication_id: id,
+      p_payload: {},
+      p_change_date: today,
+      p_notes: 'Reactivated',
+      p_expected_updated_at: null,
     });
 
-    if (changeError) {
-      setError(changeError.message);
+    if (commandError) {
+      setError(commandError.message);
       return false;
     }
 
@@ -343,20 +311,17 @@ export function useMedications() {
   };
 
   const deleteMedication = async (id: string): Promise<boolean> => {
-    const { error: changesError } = await supabase
-      .from('medication_changes')
-      .delete()
-      .eq('medication_id', id);
+    const { error: commandError } = await supabase.rpc('save_medication_command', {
+      p_action: 'delete',
+      p_medication_id: id,
+      p_payload: {},
+      p_change_date: null,
+      p_notes: null,
+      p_expected_updated_at: null,
+    });
 
-    if (changesError) {
-      setError(changesError.message);
-      return false;
-    }
-
-    const { error: deleteError } = await supabase.from('medications').delete().eq('id', id);
-
-    if (deleteError) {
-      setError(deleteError.message);
+    if (commandError) {
+      setError(commandError.message);
       return false;
     }
 
@@ -374,6 +339,7 @@ export function useMedications() {
     updateMedication,
     changeDose,
     changeFrequency,
+    changeRegimen,
     discontinueMedication,
     reactivateMedication,
     deleteMedication,

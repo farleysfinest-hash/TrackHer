@@ -13,6 +13,7 @@ import { runPatternEngine } from '../../../engine/patternEngine';
 import { MENTAL_HEALTH_CATEGORIES } from '../../../engine/types';
 import type { Insight, InsightSampleSize } from '../../../engine/types';
 import type { PdfPageContext } from '../pdfTheme';
+import { dateISOInTimeZone } from '../../localDate';
 import { PDF_COLORS, drawSectionHeader, drawSubheader } from '../pdfTheme';
 import { formatChartDateLong } from '../../chartHelpers';
 import { formatReportDateRange } from '../reportData';
@@ -37,8 +38,8 @@ function formatSampleSizeForDataLine(sampleSize: InsightSampleSize): string {
   return `${sampleSize.before} before, ${sampleSize.after} after`;
 }
 
-function formatGeneratedDate(iso: string): string {
-  const datePart = iso.slice(0, 10);
+function formatGeneratedDate(iso: string, timezone: string): string {
+  const datePart = dateISOInTimeZone(iso, timezone);
   return formatChartDateLong(datePart);
 }
 
@@ -56,7 +57,7 @@ function wellbeingSafetyInsights(result: ReturnType<typeof runPatternEngine>): I
   return result.all.filter((insight) => isWellbeingSafetyInsight(insight));
 }
 
-function renderInsightBlock(doc: jsPDF, insight: Insight, y: number): number {
+function renderInsightBlock(doc: jsPDF, insight: Insight, y: number, timezone: string): number {
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...PDF_COLORS.text);
@@ -74,7 +75,7 @@ function renderInsightBlock(doc: jsPDF, insight: Insight, y: number): number {
 
   doc.setFontSize(7);
   doc.setTextColor(...PDF_COLORS.textMuted);
-  const dataLine = `n = ${formatSampleSizeForDataLine(insight.sampleSize)}, generated ${formatGeneratedDate(insight.generatedAt)}`;
+  const dataLine = `n = ${formatSampleSizeForDataLine(insight.sampleSize)}, generated ${formatGeneratedDate(insight.generatedAt, timezone)}`;
   doc.text(dataLine, 14, y);
   y += 8;
 
@@ -138,7 +139,7 @@ export function renderExecutiveSummaryPage(
     y += 10;
   } else {
     for (const insight of mainInsights) {
-      y = renderInsightBlock(doc, insight, y);
+      y = renderInsightBlock(doc, insight, y, input.timezone);
     }
   }
 
@@ -157,7 +158,7 @@ export function renderExecutiveSummaryPage(
     y += 2;
 
     for (const insight of wellbeingInsights) {
-      y = renderInsightBlock(doc, insight, y);
+      y = renderInsightBlock(doc, insight, y, input.timezone);
     }
   }
 }

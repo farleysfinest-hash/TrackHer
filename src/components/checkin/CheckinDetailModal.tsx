@@ -31,22 +31,24 @@ export function CheckinDetailModal({
   const [extended, setExtended] = useState<ExtendedSymptomLog[]>([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const checkinId = checkin?.id;
 
   useEffect(() => {
-    if (!checkin || !isOpen) {
-      setExtended([]);
+    setExtended([]);
+    setShowDeleteConfirm(false);
+    if (!checkinId || !isOpen) {
       return;
     }
 
     let cancelled = false;
-    void fetchCheckinDetail(checkin.id).then((detail) => {
+    void fetchCheckinDetail(checkinId).then((detail) => {
       if (!cancelled && detail) setExtended(detail.extendedSymptoms);
     });
 
     return () => {
       cancelled = true;
     };
-  }, [checkin?.id, isOpen, fetchCheckinDetail]);
+  }, [checkinId, isOpen, fetchCheckinDetail]);
 
   if (!checkin) return null;
 
