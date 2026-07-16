@@ -53,11 +53,13 @@ export function useSymptomSelections() {
       const userId = getUserId();
       if (!userId) return false;
 
-      const rows = newSelections.map((s) => ({
-        user_id: userId,
-        symptom_id: s.symptom_id,
-        is_watch_symptom: watchSymptoms.includes(s.symptom_id),
-      }));
+      const rows = newSelections
+        .filter((s) => !isMRSCanonicalKey(s.symptom_id))
+        .map((s) => ({
+          user_id: userId,
+          symptom_id: s.symptom_id,
+          is_watch_symptom: watchSymptoms.includes(s.symptom_id),
+        }));
 
       const { error: deleteError } = await supabase
         .from('user_symptom_selections')
@@ -89,7 +91,8 @@ export function useSymptomSelections() {
 
   const watchSymptomIds = selections
     .filter((s) => s.is_watch_symptom)
-    .map((s) => s.symptom_id);
+    .map((s) => s.symptom_id)
+    .filter((id) => !isMRSCanonicalKey(id));
 
   return {
     selections,
