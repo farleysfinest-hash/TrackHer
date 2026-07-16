@@ -24,9 +24,11 @@ export async function saveAssessmentResult(
     assessed_at: assessedAt,
   };
 
-  const { error } = await supabase.from('assessment_results').insert(payload);
+  const { error } = await supabase
+    .from('assessment_results')
+    .upsert(payload, { onConflict: 'checkin_id,instrument_id' });
   if (error) {
-    console.error('Failed to save assessment result:', error.message);
+    throw new Error(`Failed to save assessment result: ${error.message}`);
   }
 }
 

@@ -14,7 +14,11 @@ import {
   LEGACY_MRS_EXTRA_KEYS,
 } from '../utils/checkinHelpers';
 import type { MRSSymptomKey } from '../utils/checkinHelpers';
-import { buildAssessmentScore, saveAssessmentResult } from './assessmentPersistence';
+import { buildAssessmentScore } from './assessmentPersistence';
+import {
+  persistCheckinBundle,
+  type CheckinBundleAssessment,
+} from './checkinPersistence';
 import { isInstrumentComplete } from '../data/instruments/scoring';
 import { MRS_INSTRUMENT } from '../data/instruments/mrs';
 import { addDaysISO, addMonthsISO } from '../utils/localDate';
@@ -31,14 +35,13 @@ export interface CheckinInput {
   checkinType?: CheckinType;
 }
 
-function buildCheckinPayload(data: CheckinInput, userId: string, timezone: string) {
+function buildCheckinPayload(data: CheckinInput, timezone: string) {
   const checkinType = data.checkinType ?? 'full';
   const isPulse = checkinType === 'pulse';
   const checkinDate = data.checkinDate ?? getLocalDateISO(timezone);
   const today = getLocalDateISO(timezone);
 
   const payload: Record<string, unknown> = {
-    user_id: userId,
     checkin_date: checkinDate,
     energy_level: data.energyLevel,
     mood_level: data.moodLevel,
@@ -62,6 +65,35 @@ function buildCheckinPayload(data: CheckinInput, userId: string, timezone: strin
   }
 
   return payload;
+}
+
+function buildAssessmentPayload(
+  data: CheckinInput,
+  checkinDate: string,
+): CheckinBundleAssessment | null {
+  if (data.checkinType === 'pulse') return null;
+
+  const instrumentId = data.instrumentId ?? 'mrs';
+  const score = buildAssessmentScore(data.mrsScores, instrumentId, checkinDate);
+  if (
+    !score?.isComplete ||
+    score.total === null ||
+    score.totalSeverity === null
+  ) {
+    return null;
+  }
+
+  return {
+    instrument_id: score.instrumentId,
+    total_score: score.total,
+    total_severity: score.totalSeverity,
+    subscale_scores: score.subscales,
+    item_responses: score.itemResponses,
+  };
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Failed to save check-in';
 }
 
 export function useCheckins() {
@@ -200,109 +232,59 @@ export function useCheckins() {
 
     const payload = buildCheckinPayload(
       { ...data, checkinDate: data.checkinDate ?? getLocalDateISO(getTimezone()) },
-      userId,
       getTimezone(),
     );
+    const checkinDate = payload.checkin_date as string;
 
-    const { data: inserted, error: insertError } = await supabase
-      .from('symptom_checkins')
-      .insert(payload)
-      .select()
-      .single();
+    try {
+      setError(null);
+      const checkin = await persistCheckinBundle({
+        checkinId: null,
+        checkinDate,
+        checkinPayload: payload,
+        extendedSymptoms: data.extendedSymptoms.map((symptom) => ({
+          symptom_key: symptom.symptom_key,
+          severity_score: symptom.severity,
+        })),
+        assessment: buildAssessmentPayload(data, checkinDate),
+      });
 
-    if (insertError) {
-      setError(insertError.message);
+      await fetchCheckins();
+      return checkin;
+    } catch (saveError) {
+      setError(getErrorMessage(saveError));
       return null;
     }
-
-    const checkin = inserted as SymptomCheckin;
-
-    if (data.extendedSymptoms.length > 0) {
-      const { error: extError } = await supabase.from('extended_symptom_logs').insert(
-        data.extendedSymptoms.map((s) => ({
-          user_id: userId,
-          checkin_id: checkin.id,
-          symptom_key: s.symptom_key,
-          severity_score: s.severity,
-        })),
-      );
-      if (extError) {
-        setError(extError.message);
-        return null;
-      }
-    }
-
-    if (data.checkinType !== 'pulse') {
-      const instrumentId = data.instrumentId ?? 'mrs';
-      const assessmentScore = buildAssessmentScore(data.mrsScores, instrumentId, checkin.checkin_date);
-      if (assessmentScore?.isComplete) {
-        await saveAssessmentResult(
-          userId,
-          assessmentScore,
-          checkin.id,
-          `${checkin.checkin_date}T12:00:00.000Z`,
-        );
-      }
-    }
-
-    await fetchCheckins();
-    return checkin;
   };
 
   const updateCheckin = async (id: string, data: CheckinInput): Promise<boolean> => {
     const userId = getUserId();
     if (!userId) return false;
 
-    const payload = buildCheckinPayload(data, userId, getTimezone());
-    delete payload.user_id;
-    delete payload.checkin_date;
-
-    const { error: updateError } = await supabase
-      .from('symptom_checkins')
-      .update(payload)
-      .eq('id', id);
-
-    if (updateError) {
-      setError(updateError.message);
-      return false;
-    }
-
-    await supabase.from('extended_symptom_logs').delete().eq('checkin_id', id);
-
-    if (data.extendedSymptoms.length > 0) {
-      const { error: extError } = await supabase.from('extended_symptom_logs').insert(
-        data.extendedSymptoms.map((s) => ({
-          user_id: userId,
-          checkin_id: id,
-          symptom_key: s.symptom_key,
-          severity_score: s.severity,
-        })),
-      );
-      if (extError) {
-        setError(extError.message);
-        return false;
-      }
-    }
-
+    const payload = buildCheckinPayload(data, getTimezone());
     const existingCheckin = checkins.find((c) => c.id === id);
     const checkinDate =
       existingCheckin?.checkin_date ?? data.checkinDate ?? getLocalDateISO(getTimezone());
 
-    const instrumentId = data.instrumentId ?? 'mrs';
-    if (data.checkinType !== 'pulse') {
-      const assessmentScore = buildAssessmentScore(data.mrsScores, instrumentId, checkinDate);
-      if (assessmentScore?.isComplete) {
-        await saveAssessmentResult(
-          userId,
-          assessmentScore,
-          id,
-          `${checkinDate}T12:00:00.000Z`,
-        );
-      }
-    }
+    try {
+      setError(null);
+      await persistCheckinBundle({
+        checkinId: id,
+        checkinDate,
+        checkinPayload: payload,
+        extendedSymptoms: data.extendedSymptoms.map((symptom) => ({
+          symptom_key: symptom.symptom_key,
+          severity_score: symptom.severity,
+        })),
+        assessment: buildAssessmentPayload(data, checkinDate),
+      });
 
-    await fetchCheckins();
-    return true;
+      await fetchCheckins();
+      return true;
+    } catch (saveError) {
+      setError(getErrorMessage(saveError));
+      return false;
+    }
   };
 
   const deleteCheckin = async (id: string): Promise<boolean> => {

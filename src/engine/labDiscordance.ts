@@ -60,22 +60,21 @@ export function analyzeLabDiscordance(input: LabDiscordanceInput): Insight[] {
       let isLabContradicting = false;
       let contradiction = '';
 
+      const conventionalRange = biomarker.conventionalRange;
+      if (
+        !conventionalRange ||
+        labValue < conventionalRange.min ||
+        labValue > conventionalRange.max
+      ) {
+        continue;
+      }
+
       if (labRef.expectedDirection === 'low') {
-        if (
-          biomarker.conventionalRange &&
-          labValue >= biomarker.conventionalRange.min
-        ) {
-          isLabContradicting = true;
-          contradiction = `Your ${biomarker.label} is ${labValue} ${biomarker.unit}, which falls within the conventional reference range (${biomarker.conventionalRange.min}-${biomarker.conventionalRange.max}). Your logged symptoms remain elevated alongside this lab value.`;
-        }
+        isLabContradicting = true;
+        contradiction = `Your ${biomarker.label} is ${labValue} ${biomarker.unit}, which falls within the conventional reference range (${conventionalRange.min}-${conventionalRange.max}). Your logged symptoms remain elevated alongside this lab value.`;
       } else if (labRef.expectedDirection === 'high') {
-        if (
-          biomarker.conventionalRange &&
-          labValue <= biomarker.conventionalRange.max
-        ) {
-          isLabContradicting = true;
-          contradiction = `Your ${biomarker.label} is ${labValue} ${biomarker.unit}, within conventional range, while your logged symptom pattern remains consistent with excess for you. Individual sensitivity varies.`;
-        }
+        isLabContradicting = true;
+        contradiction = `Your ${biomarker.label} is ${labValue} ${biomarker.unit}, within conventional range, while your logged symptom pattern remains consistent with excess for you. Individual sensitivity varies.`;
       }
 
       if (isLabContradicting) {

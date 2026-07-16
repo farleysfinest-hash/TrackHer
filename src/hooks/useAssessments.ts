@@ -63,19 +63,33 @@ export function useAssessments() {
         assessed_at: assessedAt ?? score.completedAt,
       };
 
-      const { data, error: insertError } = await supabase
-        .from('assessment_results')
-        .insert(payload)
-        .select()
-        .maybeSingle();
+      const mutation = checkinId
+        ? supabase
+            .from('assessment_results')
+            .upsert(payload, { onConflict: 'checkin_id,instrument_id' })
+        : supabase.from('assessment_results').insert(payload);
+      const { data, error: insertError } = await mutation.select().maybeSingle();
 
       if (insertError) {
         setError(insertError.message);
         return null;
       }
 
+      if (!data) {
+        setError('Assessment save returned no result');
+        return null;
+      }
+
       const created = data as AssessmentResult;
-      setAssessments((prev) => [created, ...prev]);
+      setAssessments((prev) => [
+        created,
+        ...prev.filter(
+          (assessment) =>
+            !checkinId ||
+            assessment.checkin_id !== checkinId ||
+            assessment.instrument_id !== score.instrumentId,
+        ),
+      ]);
       return created;
     },
     [],

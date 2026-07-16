@@ -332,6 +332,54 @@ describe('engine guard fixtures', () => {
   });
 });
 
+describe('lab discordance conventional range boundaries', () => {
+  const lowPatternCheckin = makeCheckin({
+    hot_flashes: 3,
+    vaginal_dryness: 3,
+    sleep_problems: 3,
+  });
+
+  it.each([
+    { value: -1, expectedCount: 0, label: 'below the minimum' },
+    { value: 0, expectedCount: 1, label: 'at the minimum' },
+    { value: 15, expectedCount: 1, label: 'inside the range' },
+    { value: 30, expectedCount: 1, label: 'at the maximum' },
+    { value: 31, expectedCount: 0, label: 'above the maximum' },
+  ])(
+    'handles an expected-low lab value $label',
+    ({ value, expectedCount }) => {
+      const insights = analyzeLabDiscordance({
+        checkins: [lowPatternCheckin],
+        labResults: [makeLab({ estradiol: value })],
+      });
+      expect(insights).toHaveLength(expectedCount);
+    },
+  );
+
+  const highPatternCheckin = makeCheckin({
+    anxiety: 3,
+    sleep_problems: 3,
+    exhaustion: 3,
+  });
+
+  it.each([
+    { value: 5, expectedCount: 0, label: 'below the minimum' },
+    { value: 6, expectedCount: 1, label: 'at the minimum' },
+    { value: 14, expectedCount: 1, label: 'inside the range' },
+    { value: 23, expectedCount: 1, label: 'at the maximum' },
+    { value: 24, expectedCount: 0, label: 'above the maximum' },
+  ])(
+    'handles an expected-high lab value $label',
+    ({ value, expectedCount }) => {
+      const insights = analyzeLabDiscordance({
+        checkins: [highPatternCheckin],
+        labResults: [makeLab({ estradiol: null, cortisol_am: value })],
+      });
+      expect(insights).toHaveLength(expectedCount);
+    },
+  );
+});
+
 describe('F1 — null total_score never reaches arithmetic', () => {
   const today = todayISO(TZ);
   const totalsOldestToNewest = [14, 13, 12, 9, 8, 7];
