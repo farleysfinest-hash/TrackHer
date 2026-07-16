@@ -25,12 +25,12 @@ export function AddSymptomPicker({ isOpen, onClose, excludeIds, onSelect }: AddS
     if (!q) return [];
     const exclude = new Set(excludeIds);
     return searchSymptomCatalog(q, 30)
-      .filter((s) => !exclude.has(s.key))
       .map<PickerRow>((s) =>
         s.isMRSCore || isMRSCanonicalKey(s.key)
           ? { kind: 'core', def: s }
           : { kind: 'select', def: s },
       )
+      .filter((row) => row.kind === 'core' || !exclude.has(row.def.key))
       .slice(0, 8);
   }, [query, excludeIds]);
 
