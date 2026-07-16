@@ -14,7 +14,7 @@ const sizeClasses = {
 export function Logo({ size = 'md', className = '' }: LogoProps) {
   return (
     <span
-      className={['font-display font-semibold tracking-tight text-sage-700', sizeClasses[size], className]
+      className={['shrink-0 font-display font-semibold tracking-tight text-sage-700', sizeClasses[size], className]
         .filter(Boolean)
         .join(' ')}
       style={{ letterSpacing: '-0.02em' }}

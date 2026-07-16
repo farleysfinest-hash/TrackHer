@@ -4,6 +4,7 @@ import { Settings, LogOut, ChevronDown } from 'lucide-react';
 import { Logo } from '../ui/Logo';
 import { useAuth } from '../../hooks/useAuth';
 import { getInitials } from '../../utils/formatters';
+import logoMark from '../../assets/logo-mark.png';
 
 export function Header() {
   const navigate = useNavigate();
@@ -34,8 +35,15 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-20 flex items-center justify-between border-b border-sand-200 bg-white/95 px-6 py-4 backdrop-blur-sm md:px-8">
-      <div className="md:hidden">
+      <div className="flex items-center gap-2 md:hidden">
         <Logo size="sm" />
+        <img
+          src={logoMark}
+          alt=""
+          width={36}
+          height={36}
+          className="block h-9 w-9 shrink-0 object-contain"
+        />
       </div>
       <div className="hidden md:block" />
 
