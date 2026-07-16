@@ -1254,8 +1254,30 @@ export function getSymptomChipLabel(symptom: SymptomDefinition | undefined): str
 export function searchSymptomCatalog(query: string, limit = 20): SymptomDefinition[] {
   const q = query.toLowerCase().trim();
   if (!q) return [];
-  return SYMPTOM_CATALOG.filter((s) => {
-    const bodyLabel = SYMPTOM_BODY_SYSTEM_LABELS[s.bodySystem];
-    return `${s.label} ${bodyLabel}`.toLowerCase().includes(q);
-  }).slice(0, limit);
+
+  const matches: { def: SymptomDefinition; rank: number }[] = [];
+
+  for (const s of SYMPTOM_CATALOG) {
+    const label = s.label.toLowerCase();
+    const bodyLabel = SYMPTOM_BODY_SYSTEM_LABELS[s.bodySystem].toLowerCase();
+    const combined = `${label} ${bodyLabel}`;
+
+    if (!combined.includes(q)) continue;
+
+    let rank: number;
+    if (label.startsWith(q)) {
+      rank = 0; // label starts with query
+    } else if (label.split(/[\s/]+/).some((word) => word.startsWith(q))) {
+      rank = 1; // a word inside the label starts with query
+    } else if (bodyLabel.startsWith(q) || bodyLabel.split(/[\s/]+/).some((word) => word.startsWith(q))) {
+      rank = 2; // body system matches
+    } else {
+      rank = 3; // substring anywhere
+    }
+
+    matches.push({ def: s, rank });
+  }
+
+  matches.sort((a, b) => a.rank - b.rank);
+  return matches.slice(0, limit).map((m) => m.def);
 }

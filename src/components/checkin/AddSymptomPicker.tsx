@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import { searchSymptomCatalog, getSymptomByKey } from '../../data/symptoms';
+import type { SymptomDefinition } from '../../types/symptoms';
 import { SYMPTOM_BODY_SYSTEM_LABELS } from '../../types/symptoms';
 import { isMRSCanonicalKey } from '../../utils/checkinHelpers';
 import { Modal } from '../ui/Modal';
@@ -12,15 +13,24 @@ interface AddSymptomPickerProps {
   onSelect: (symptomId: string) => void;
 }
 
+type PickerRow =
+  | { kind: 'select'; def: SymptomDefinition }
+  | { kind: 'core'; def: SymptomDefinition };
+
 export function AddSymptomPicker({ isOpen, onClose, excludeIds, onSelect }: AddSymptomPickerProps) {
   const [query, setQuery] = useState('');
 
-  const results = useMemo(() => {
+  const results = useMemo<PickerRow[]>(() => {
     const q = query.trim();
     if (!q) return [];
     const exclude = new Set(excludeIds);
     return searchSymptomCatalog(q, 30)
-      .filter((s) => !s.isMRSCore && !isMRSCanonicalKey(s.key) && !exclude.has(s.key))
+      .filter((s) => !exclude.has(s.key))
+      .map<PickerRow>((s) =>
+        s.isMRSCore || isMRSCanonicalKey(s.key)
+          ? { kind: 'core', def: s }
+          : { kind: 'select', def: s },
+      )
       .slice(0, 8);
   }, [query, excludeIds]);
 
@@ -44,32 +54,48 @@ export function AddSymptomPicker({ isOpen, onClose, excludeIds, onSelect }: AddS
         <div className="max-h-64 overflow-y-auto rounded-lg border border-sand-200">
           {results.length === 0 ? (
             <p className="px-3 py-4 text-sm text-sage-400">
-              {query.trim() ? 'No symptoms match.' : 'Type to search the full catalog.'}
+              {query.trim()
+                ? 'No matching symptoms — try a different word, or check the categories below.'
+                : 'Type to search the full catalog.'}
             </p>
           ) : (
             <ul>
-              {results.map((s) => (
-                <li key={s.key}>
-                  <button
-                    type="button"
-                    onClick={() => handleSelect(s.key)}
-                    className="flex w-full flex-col items-start px-3 py-2.5 text-left text-sm hover:bg-sand-50"
-                  >
-                    <span className="font-medium text-sage-800">{s.label}</span>
-                    <span className="text-xs text-sage-400">
-                      {SYMPTOM_BODY_SYSTEM_LABELS[s.bodySystem]}
-                    </span>
-                  </button>
-                </li>
-              ))}
+              {results.map((row) =>
+                row.kind === 'select' ? (
+                  <li key={row.def.key}>
+                    <button
+                      type="button"
+                      onClick={() => handleSelect(row.def.key)}
+                      className="flex w-full flex-col items-start px-3 py-2.5 text-left text-sm hover:bg-sand-50"
+                    >
+                      <span className="font-medium text-sage-800">{row.def.label}</span>
+                      <span className="text-xs text-sage-400">
+                        {SYMPTOM_BODY_SYSTEM_LABELS[row.def.bodySystem]}
+                      </span>
+                    </button>
+                  </li>
+                ) : (
+                  <li key={row.def.key}>
+                    <div
+                      aria-disabled="true"
+                      className="flex w-full cursor-default flex-col items-start px-3 py-2.5 text-sm"
+                    >
+                      <div className="flex w-full items-center justify-between gap-2">
+                        <span className="font-medium text-sage-500">{row.def.label}</span>
+                        <span className="whitespace-nowrap rounded-full bg-sand-100 px-2 py-0.5 text-xs text-sage-500">
+                          In your check-in
+                        </span>
+                      </div>
+                      <span className="text-xs text-sage-400">
+                        {SYMPTOM_BODY_SYSTEM_LABELS[row.def.bodySystem]}
+                      </span>
+                    </div>
+                  </li>
+                ),
+              )}
             </ul>
           )}
         </div>
-        {query.trim() && (
-          <p className="text-xs text-sage-400">
-            MRS items are rated in the previous step — only extended symptoms appear here.
-          </p>
-        )}
       </div>
     </Modal>
   );
