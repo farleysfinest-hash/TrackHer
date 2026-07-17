@@ -71,6 +71,18 @@ const FILTER_GROUPS: Record<InsightFilterGroup, InsightCategory[] | null> = {
   positive: ['positive_trend'],
 };
 
+export const FILTER_EMPTY_DESCRIPTIONS: Record<Exclude<InsightFilterGroup, 'all'>, string> = {
+  correlations: 'No correlation insights in your data so far.',
+  wellbeing: 'No daily energy insights in your data so far.',
+  patterns: 'No symptom pattern insights in your data so far.',
+  trends: 'No trend insights in your data so far.',
+  labs: 'No lab insights in your data so far.',
+  positive: 'No positive trend insights in your data so far.',
+};
+
+export const FILTER_EMPTY_FOLLOWUP =
+  'These update as you keep logging — when one appears in this category, you\'ll see it here.';
+
 export function filterInsightsByGroup(
   insights: Insight[],
   group: InsightFilterGroup,

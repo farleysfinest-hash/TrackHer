@@ -11,6 +11,8 @@ interface InsightsListProps {
   compact?: boolean;
   onDismiss?: (insightId: string) => void;
   stageProfile?: StageProfile | null;
+  emptyTitle?: string;
+  emptyDescription?: string;
 }
 
 export function InsightsList({
@@ -19,6 +21,8 @@ export function InsightsList({
   compact = false,
   onDismiss,
   stageProfile,
+  emptyTitle = 'No insights yet',
+  emptyDescription = 'Your first check-in unlocks your baseline reading.',
 }: InsightsListProps) {
   if (isLoading) {
     return (
@@ -32,8 +36,8 @@ export function InsightsList({
     return (
       <EmptyState
         icon={Lightbulb}
-        title="No insights yet"
-        description="Your first check-in unlocks your baseline reading."
+        title={emptyTitle}
+        description={emptyDescription}
       />
     );
   }

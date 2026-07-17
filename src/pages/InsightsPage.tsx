@@ -7,6 +7,8 @@ import { InsightsList } from '../components/insights/InsightsList';
 import { Button } from '../components/ui/Button';
 import {
   filterInsightsByGroup,
+  FILTER_EMPTY_DESCRIPTIONS,
+  FILTER_EMPTY_FOLLOWUP,
   type InsightFilterGroup,
   INSIGHT_FILTER_OPTIONS,
 } from '../utils/insightHelpers';
@@ -35,6 +37,14 @@ export function InsightsPage() {
     return result;
   }, [insights]);
 
+  const filteredEmptyCopy =
+    activeFilter !== 'all' && insights.length > 0
+      ? {
+          title: 'Nothing here yet',
+          description: `${FILTER_EMPTY_DESCRIPTIONS[activeFilter]} ${FILTER_EMPTY_FOLLOWUP}`,
+        }
+      : null;
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
@@ -57,6 +67,8 @@ export function InsightsPage() {
         isLoading={isLoading}
         onDismiss={dismissInsight}
         stageProfile={stageProfile}
+        emptyTitle={filteredEmptyCopy?.title}
+        emptyDescription={filteredEmptyCopy?.description}
       />
 
       {!isLoading && filteredMore.length > 0 && (
