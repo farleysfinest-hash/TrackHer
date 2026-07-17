@@ -8,13 +8,20 @@ import { useLabResults } from './useLabResults';
 import { useAuthStore } from '../stores/authStore';
 import { getResolvedTimezone } from '../utils/checkinHelpers';
 import { supabase } from '../lib/supabase';
-import type { ExtendedSymptomLog, MedicationAdministration } from '../types/database';
+import type {
+  ExtendedSymptomLog,
+  MedicationAdministration,
+  SymptomCheckin,
+} from '../types/database';
 import type { DismissalRecord } from '../utils/insightHelpers';
 import { filterDismissedInsights } from '../utils/insightHelpers';
 
 const EXTENDED_LOGS_DAYS = 120;
 const EXTENDED_LOGS_LIMIT = 500;
 const ADMINISTRATIONS_DAYS = 90;
+/** Daily pulse can crowd out weekly MRS in a mixed limit — keep a dedicated MRS lane. */
+const MIXED_CHECKIN_FETCH_LIMIT = 400;
+const MRS_CHECKIN_FETCH_LIMIT = 120;
 
 export function useInsights() {
   const profile = useAuthStore((s) => s.profile);
@@ -24,6 +31,8 @@ export function useInsights() {
   const { medications, fetchMedications, isLoading: medsLoading } = useMedications();
   const { changes, fetchChanges, isLoading: changesLoading } = useMedicationChanges();
   const { labResults, fetchLabResults, isLoading: labsLoading } = useLabResults();
+  const [mrsCheckins, setMrsCheckins] = useState<SymptomCheckin[]>([]);
+  const [mrsLoading, setMrsLoading] = useState(true);
   const [extendedSymptoms, setExtendedSymptoms] = useState<ExtendedSymptomLog[]>([]);
   const [administrations, setAdministrations] = useState<MedicationAdministration[]>([]);
   const [extendedLoading, setExtendedLoading] = useState(true);
@@ -32,13 +41,42 @@ export function useInsights() {
   const [dismissalsLoading, setDismissalsLoading] = useState(true);
 
   useEffect(() => {
-    // 100 check-ins ≈ 100 days of pulse data — safeguarding windows need up to 41 days lookback.
-    void fetchCheckins(100);
+    // Pulse needs recent daily rows; Patterns/Trends need a deep MRS history that a
+    // mixed 100-row limit would starve once daily pulse fills the window.
+    void fetchCheckins(MIXED_CHECKIN_FETCH_LIMIT);
     void fetchMedications();
     void fetchChanges();
     void fetchLabResults();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!userId) {
+      setMrsCheckins([]);
+      setMrsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setMrsLoading(true);
+
+    void supabase
+      .from('symptom_checkins')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('mrs_complete', true)
+      .order('checkin_date', { ascending: false })
+      .limit(MRS_CHECKIN_FETCH_LIMIT)
+      .then(({ data }) => {
+        if (cancelled) return;
+        setMrsCheckins((data as SymptomCheckin[]) ?? []);
+        setMrsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   useEffect(() => {
     if (!userId) {
@@ -135,8 +173,15 @@ export function useInsights() {
     [changes],
   );
 
+  const engineCheckins = useMemo(() => {
+    const byId = new Map<string, SymptomCheckin>();
+    for (const row of checkins) byId.set(row.id, row);
+    for (const row of mrsCheckins) byId.set(row.id, row);
+    return [...byId.values()].sort((a, b) => b.checkin_date.localeCompare(a.checkin_date));
+  }, [checkins, mrsCheckins]);
+
   const engineResult = useMemo(() => {
-    if (!profile || checkins.length === 0) {
+    if (!profile || engineCheckins.length === 0) {
       return {
         primary: [] as Insight[],
         more: [] as Insight[],
@@ -146,7 +191,7 @@ export function useInsights() {
     }
 
     return runPatternEngine({
-      checkins,
+      checkins: engineCheckins,
       extendedSymptoms,
       medications,
       medicationChanges,
@@ -155,7 +200,16 @@ export function useInsights() {
       profile,
       timezone,
     });
-  }, [checkins, extendedSymptoms, medications, medicationChanges, administrations, labResults, profile, timezone]);
+  }, [
+    engineCheckins,
+    extendedSymptoms,
+    medications,
+    medicationChanges,
+    administrations,
+    labResults,
+    profile,
+    timezone,
+  ]);
 
   const { insights, primaryInsights, moreInsights, safeguardingInsights } = useMemo(() => {
     const all = filterDismissedInsights(engineResult.all, dismissals);
@@ -205,6 +259,7 @@ export function useInsights() {
 
   const isLoading =
     checkinsLoading ||
+    mrsLoading ||
     medsLoading ||
     changesLoading ||
     labsLoading ||

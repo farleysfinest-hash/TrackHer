@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analyzeLabDiscordance } from '../labDiscordance';
+import { analyzeLabDiscordance, analyzeLabRangeFlags } from '../labDiscordance';
 import { analyzeSafeguarding } from '../safeguarding';
 import { analyzeTrends } from '../trendDetector';
 import { analyzeWellbeingSignal } from '../wellbeingSignal';
@@ -380,6 +380,25 @@ describe('lab discordance conventional range boundaries', () => {
       expect(insights).toHaveLength(expectedCount);
     },
   );
+});
+
+describe('lab range flags for out-of-range values', () => {
+  it('flags estradiol above the conventional maximum', () => {
+    const insights = analyzeLabRangeFlags([makeLab({ estradiol: 350 })]);
+    expect(insights.some((i) => i.id === 'lab-range-estradiol')).toBe(true);
+    expect(insights.find((i) => i.id === 'lab-range-estradiol')?.category).toBe(
+      'lab_discordance',
+    );
+  });
+
+  it('does not flag estradiol inside the optimal HRT band', () => {
+    const insights = analyzeLabRangeFlags([makeLab({ estradiol: 80 })]);
+    expect(insights.some((i) => i.id === 'lab-range-estradiol')).toBe(false);
+  });
+
+  it('returns no flags when there are no labs', () => {
+    expect(analyzeLabRangeFlags([])).toEqual([]);
+  });
 });
 
 describe('F1 — null total_score never reaches arithmetic', () => {

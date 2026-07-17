@@ -66,7 +66,9 @@ const FILTER_GROUPS: Record<InsightFilterGroup, InsightCategory[] | null> = {
   correlations: ['dose_correlation', 'mixed_signals'],
   wellbeing: ['wellbeing_signal'],
   patterns: ['symptom_cluster'],
-  trends: ['trend_alert', 'new_symptom', 'medication_note'],
+  // Improving scores are positive_trend (also on Positive); include them so Trends
+  // is not empty when the only directional signal is improvement.
+  trends: ['trend_alert', 'positive_trend', 'new_symptom', 'medication_note'],
   labs: ['lab_discordance', 'lab_due'],
   positive: ['positive_trend'],
 };

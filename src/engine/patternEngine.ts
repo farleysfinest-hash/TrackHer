@@ -1,6 +1,6 @@
 import { analyzeDoseCorrelations } from './doseCorrelation';
 import { analyzeSymptomClusters } from './clusterMatcher';
-import { analyzeLabDiscordance } from './labDiscordance';
+import { analyzeLabDiscordance, analyzeLabRangeFlags } from './labDiscordance';
 import { analyzeTrends } from './trendDetector';
 import { analyzeEarlyObservations } from './earlyObservations';
 import { analyzeWellbeingSignal } from './wellbeingSignal';
@@ -83,10 +83,13 @@ function runPatternEngineInternal(input: EngineInput): PatternEngineResult {
     timezone,
   });
 
-  const labInsights = analyzeLabDiscordance({
-    checkins: input.checkins,
-    labResults: input.labResults,
-  });
+  const labInsights = [
+    ...analyzeLabDiscordance({
+      checkins: input.checkins,
+      labResults: input.labResults,
+    }),
+    ...analyzeLabRangeFlags(input.labResults),
+  ];
 
   const trendInsights = analyzeTrends({
     checkins: input.checkins,
