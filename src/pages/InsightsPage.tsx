@@ -4,7 +4,6 @@ import { useStageProfile } from '../hooks/useStageProfile';
 import { MedicalDisclaimer } from '../components/ui/MedicalDisclaimer';
 import { InsightCategoryFilter } from '../components/insights/InsightCategoryFilter';
 import { InsightsList } from '../components/insights/InsightsList';
-import { Button } from '../components/ui/Button';
 import {
   filterInsightsByGroup,
   FILTER_EMPTY_DESCRIPTIONS,
@@ -14,18 +13,13 @@ import {
 } from '../utils/insightHelpers';
 
 export function InsightsPage() {
-  const { primaryInsights, moreInsights, insights, isLoading, dismissInsight } = useInsights();
+  const { insights, isLoading, dismissInsight } = useInsights();
   const stageProfile = useStageProfile();
   const [activeFilter, setActiveFilter] = useState<InsightFilterGroup>('all');
-  const [showMore, setShowMore] = useState(false);
 
-  const filteredPrimary = useMemo(
-    () => filterInsightsByGroup(primaryInsights, activeFilter),
-    [primaryInsights, activeFilter],
-  );
-  const filteredMore = useMemo(
-    () => filterInsightsByGroup(moreInsights, activeFilter),
-    [moreInsights, activeFilter],
+  const filtered = useMemo(
+    () => filterInsightsByGroup(insights, activeFilter),
+    [insights, activeFilter],
   );
 
   const counts = useMemo(() => {
@@ -37,8 +31,9 @@ export function InsightsPage() {
     return result;
   }, [insights]);
 
+  // Empty category copy only when this tab has zero matches but other insights exist.
   const filteredEmptyCopy =
-    activeFilter !== 'all' && insights.length > 0
+    activeFilter !== 'all' && insights.length > 0 && filtered.length === 0
       ? {
           title: 'Nothing here yet',
           description: `${FILTER_EMPTY_DESCRIPTIONS[activeFilter]} ${FILTER_EMPTY_FOLLOWUP}`,
@@ -63,29 +58,13 @@ export function InsightsPage() {
       />
 
       <InsightsList
-        insights={filteredPrimary}
+        insights={filtered}
         isLoading={isLoading}
         onDismiss={dismissInsight}
         stageProfile={stageProfile}
         emptyTitle={filteredEmptyCopy?.title}
         emptyDescription={filteredEmptyCopy?.description}
       />
-
-      {!isLoading && filteredMore.length > 0 && (
-        <div className="space-y-4">
-          <Button variant="ghost" size="sm" className="px-0" onClick={() => setShowMore((v) => !v)}>
-            {showMore ? 'Hide' : 'Show'} {filteredMore.length} more insight
-            {filteredMore.length === 1 ? '' : 's'}
-          </Button>
-          {showMore && (
-            <InsightsList
-              insights={filteredMore}
-              onDismiss={dismissInsight}
-              stageProfile={stageProfile}
-            />
-          )}
-        </div>
-      )}
     </div>
   );
 }
