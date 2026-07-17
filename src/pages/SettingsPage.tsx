@@ -16,6 +16,7 @@ import { getLocalDateISO, getResolvedTimezone } from '../utils/checkinHelpers';
 import type { MenopauseStage } from '../types/database';
 import { TimezoneSelect } from '../components/ui/TimezoneSelect';
 import { getActiveTimezone, isValidTimeZone } from '../utils/localDate';
+import { deriveUterusAnswer, uterusAnswerToValue, type UterusAnswer } from '../utils/uterusAnswer';
 
 const DAY_OPTIONS: Array<{ label: string; value: number }> = [
   { label: 'Mon', value: 1 },
@@ -34,7 +35,9 @@ export function SettingsPage() {
 
   const [displayName, setDisplayName] = useState(profile?.display_name ?? '');
   const [menopauseStage, setMenopauseStage] = useState(profile?.menopause_stage ?? '');
-  const [hasUterus, setHasUterus] = useState<boolean | null>(profile?.has_uterus ?? null);
+  const [uterusAnswer, setUterusAnswer] = useState<UterusAnswer | null>(
+    deriveUterusAnswer(profile),
+  );
   const [preferredTimezone, setPreferredTimezone] = useState(
     profile?.timezone ?? getActiveTimezone(),
   );
@@ -63,7 +66,7 @@ export function SettingsPage() {
     if (profile) {
       setDisplayName(profile.display_name ?? '');
       setMenopauseStage(profile.menopause_stage ?? '');
-      setHasUterus(profile.has_uterus);
+      setUterusAnswer(deriveUterusAnswer(profile));
       setPreferredTimezone(profile.timezone ?? getActiveTimezone());
       setDateOfBirth(profile.date_of_birth ?? '');
       setCheckinDay(profile.checkin_day ?? null);
@@ -73,8 +76,8 @@ export function SettingsPage() {
 
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (hasUterus === null) {
-      setProfileError('Please answer whether you currently have your uterus.');
+    if (uterusAnswer === null) {
+      setProfileError('Please answer the uterus question — not sure is a valid answer.');
       return;
     }
     if (!isValidTimeZone(preferredTimezone)) {
@@ -86,7 +89,7 @@ export function SettingsPage() {
     const result = await update({
       display_name: displayName,
       menopause_stage: (menopauseStage || undefined) as MenopauseStage | undefined,
-      has_uterus: hasUterus,
+      has_uterus: uterusAnswerToValue(uterusAnswer),
       has_uterus_confirmed_at: confirmedAt,
       timezone: preferredTimezone,
       timezone_confirmed_at: confirmedAt,
@@ -198,23 +201,33 @@ export function SettingsPage() {
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={() => setHasUterus(true)}
+                onClick={() => setUterusAnswer('yes')}
                 className={[
                   'rounded-lg border px-4 py-2 text-sm',
-                  hasUterus === true ? 'border-sage-500 bg-sage-50' : 'border-sand-200',
+                  uterusAnswer === 'yes' ? 'border-sage-500 bg-sage-50' : 'border-sand-200',
                 ].join(' ')}
               >
                 Yes
               </button>
               <button
                 type="button"
-                onClick={() => setHasUterus(false)}
+                onClick={() => setUterusAnswer('no')}
                 className={[
                   'rounded-lg border px-4 py-2 text-sm',
-                  hasUterus === false ? 'border-sage-500 bg-sage-50' : 'border-sand-200',
+                  uterusAnswer === 'no' ? 'border-sage-500 bg-sage-50' : 'border-sand-200',
                 ].join(' ')}
               >
                 No
+              </button>
+              <button
+                type="button"
+                onClick={() => setUterusAnswer('unsure')}
+                className={[
+                  'rounded-lg border px-4 py-2 text-sm',
+                  uterusAnswer === 'unsure' ? 'border-sage-500 bg-sage-50' : 'border-sand-200',
+                ].join(' ')}
+              >
+                I&apos;m not sure
               </button>
             </div>
           </div>

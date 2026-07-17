@@ -62,10 +62,12 @@ export function OnboardingComplete({ onGoToDashboard }: OnboardingCompleteProps)
             <dt className="text-sage-500">Weekly check-in day</dt>
             <dd className="font-medium text-sage-800">{checkinDayLabel}</dd>
           </div>
-          {formData.hasUterus !== null && (
+          {formData.hasUterusConfirmed && (
             <div className="flex justify-between">
-              <dt className="text-sage-500">Has uterus</dt>
-              <dd className="font-medium text-sage-800">{formData.hasUterus ? 'Yes' : 'No'}</dd>
+              <dt className="text-sage-500">Uterus</dt>
+              <dd className="font-medium text-sage-800">
+                {formData.hasUterus === true ? 'Yes' : formData.hasUterus === false ? 'No' : 'Not sure yet'}
+              </dd>
             </div>
           )}
         </dl>

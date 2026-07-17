@@ -16,7 +16,6 @@ import { InsightsPage } from './pages/InsightsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
 import { TermsOfServicePage } from './pages/TermsOfServicePage';
-import { ProfileConfirmationPage } from './pages/ProfileConfirmationPage';
 
 export function App() {
   return (
@@ -36,15 +35,6 @@ export function App() {
             element={
               <ProtectedRoute requireOnboarding={false}>
                 <OnboardingPage />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/profile-confirmation"
-            element={
-              <ProtectedRoute requireOnboarding={false}>
-                <ProfileConfirmationPage />
               </ProtectedRoute>
             }
           />

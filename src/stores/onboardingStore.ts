@@ -279,8 +279,8 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
 
   submitOnboarding: async () => {
     const { formData } = get();
-    if (formData.hasUterus === null) {
-      return { success: false, error: 'Please answer whether you have your uterus' };
+    if (!formData.hasUterusConfirmed) {
+      return { success: false, error: 'Please answer the uterus question — not sure is a valid answer' };
     }
     if (!isValidTimeZone(formData.timezone)) {
       return { success: false, error: 'Please select a valid time zone' };

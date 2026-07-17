@@ -266,12 +266,6 @@ BEGIN
   DELETE FROM public.dismissed_insights WHERE user_id = v_user_id;
   DELETE FROM public.checkin_drafts WHERE user_id = v_user_id;
 
-  -- The signup display name is duplicated in auth metadata. It is app-owned profile data, not
-  -- part of the login identity, so a full reset removes it while preserving email and providers.
-  UPDATE auth.users
-  SET raw_user_meta_data = COALESCE(raw_user_meta_data, '{}'::JSONB) - 'display_name'
-  WHERE id = v_user_id;
-
   UPDATE public.profiles SET
     display_name = NULL,
     onboarding_completed = FALSE,

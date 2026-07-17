@@ -7,13 +7,15 @@ ALTER TABLE profiles
   ADD COLUMN has_uterus_confirmed_at TIMESTAMPTZ,
   ADD COLUMN timezone_confirmed_at TIMESTAMPTZ;
 
+-- A completed profile must have an ANSWERED uterus question and a confirmed timezone.
+-- has_uterus may be NULL when answered: NULL plus has_uterus_confirmed_at means the user
+-- honestly answered "I'm not sure". The constraint requires the answer event, not a boolean.
 ALTER TABLE profiles
   ADD CONSTRAINT profiles_completed_require_confirmed_context
   CHECK (
     onboarding_completed IS NOT TRUE
     OR (
-      has_uterus IS NOT NULL
-      AND has_uterus_confirmed_at IS NOT NULL
+      has_uterus_confirmed_at IS NOT NULL
       AND NULLIF(BTRIM(timezone), '') IS NOT NULL
       AND timezone_confirmed_at IS NOT NULL
     )
