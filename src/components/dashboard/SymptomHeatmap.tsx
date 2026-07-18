@@ -30,7 +30,7 @@ function SymptomHeatmapComponent({ rows }: SymptomHeatmapProps) {
       minHeight="320px"
     >
       {!isEmpty && (
-        <div>
+        <div className="overflow-x-auto">
           <div className="w-full">
             <div
               className="grid gap-px"
@@ -74,7 +74,11 @@ function SymptomHeatmapComponent({ rows }: SymptomHeatmapProps) {
                           key={`${row.symptomKey}-${cell.date}`}
                           className={[
                             'flex h-8 min-w-[32px] items-center justify-center rounded-sm text-[10px]',
-                            cell.score !== null && cell.score >= 3 ? 'text-white' : 'text-sage-600',
+                            cell.score === null
+                              ? 'text-sage-300'
+                              : cell.score >= 3
+                                ? 'text-white'
+                                : 'text-sage-600',
                           ].join(' ')}
                           style={{ backgroundColor: bg }}
                           title={tip}
