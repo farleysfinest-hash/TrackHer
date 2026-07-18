@@ -38,6 +38,11 @@ export interface SymptomBandRow {
   [key: string]: string | number | null | undefined;
 }
 
+interface DoseMarker {
+  id: string;
+  leftPercent: number;
+}
+
 interface SymptomBandProps {
   name: string;
   dataKey: string;
@@ -46,6 +51,7 @@ interface SymptomBandProps {
   domainMax: number;
   syncId: string;
   tooltipMode?: SymptomBandTooltipMode;
+  markers?: DoseMarker[];
 }
 
 function latestValue(rows: SymptomBandRow[], dataKey: string): number | null {
@@ -112,6 +118,7 @@ export function SymptomBand({
   domainMax,
   syncId,
   tooltipMode = 'plain',
+  markers,
 }: SymptomBandProps) {
   const now = latestValue(data, dataKey);
   const nowLabel =
@@ -127,14 +134,18 @@ export function SymptomBand({
         {name}
         <span className="text-[#b896a3]"> · now {nowLabel}</span>
       </p>
-      <ResponsiveContainer width="100%" height={BAND_CHART_HEIGHT}>
-        <ComposedChart data={data} margin={BAND_CHART_MARGIN} syncId={syncId}>
+      <div className="relative">
+        {markers && markers.length > 0 && (
+          <BandDoseMarkerOverlay markers={markers} height={BAND_CHART_HEIGHT} />
+        )}
+        <ResponsiveContainer width="100%" height={BAND_CHART_HEIGHT}>
+          <ComposedChart data={data} margin={BAND_CHART_MARGIN} syncId={syncId}>
           <ReferenceLine y={0} stroke={BAND_INK.baseline} strokeWidth={1} />
           {segmentKeys.map((segmentKey) => (
             <Area
               key={`area-${segmentKey}`}
               dataKey={segmentKey}
-              type="monotone"
+              type="linear"
               stroke="none"
               fill={BAND_INK.fill}
               fillOpacity={0.12}
@@ -148,7 +159,7 @@ export function SymptomBand({
               key={`line-${segmentKey}`}
               dataKey={segmentKey}
               name={index === 0 ? name : undefined}
-              type="monotone"
+              type="linear"
               stroke={BAND_INK.line}
               strokeWidth={1.8}
               connectNulls
@@ -179,8 +190,9 @@ export function SymptomBand({
               />
             }
           />
-        </ComposedChart>
-      </ResponsiveContainer>
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }
@@ -207,19 +219,26 @@ export function BandXAxis({ data }: BandXAxisProps) {
 }
 
 interface BandDoseMarkerOverlayProps {
-  markers: Array<{ id: string; leftPercent: number }>;
+  markers: DoseMarker[];
   height: number;
+  insetLeft?: number;
+  insetRight?: number;
 }
 
-export function BandDoseMarkerOverlay({ markers, height }: BandDoseMarkerOverlayProps) {
+export function BandDoseMarkerOverlay({
+  markers,
+  height,
+  insetLeft = BAND_CHART_MARGIN.left,
+  insetRight = BAND_CHART_MARGIN.right,
+}: BandDoseMarkerOverlayProps) {
   if (markers.length === 0) return null;
 
   return (
     <div
       className="pointer-events-none absolute top-0"
       style={{
-        left: BAND_CHART_MARGIN.left,
-        right: BAND_CHART_MARGIN.right,
+        left: insetLeft,
+        right: insetRight,
         height,
       }}
       aria-hidden

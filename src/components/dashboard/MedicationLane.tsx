@@ -1,6 +1,12 @@
 import { memo, useCallback, useState } from 'react';
 import { formatChartDate, formatChartDateLong } from '../../utils/chartHelpers';
 import type { MedicationLaneRow, MedicationLaneSegment } from '../../utils/medicationLaneHelpers';
+import { BandDoseMarkerOverlay } from './SymptomBand';
+
+interface DoseMarker {
+  id: string;
+  leftPercent: number;
+}
 
 interface LaneTooltipState {
   row: MedicationLaneRow;
@@ -11,6 +17,7 @@ interface LaneTooltipState {
 
 interface MedicationLaneProps {
   rows: MedicationLaneRow[];
+  markers?: DoseMarker[];
 }
 
 function LaneTooltip({ state }: { state: LaneTooltipState }) {
@@ -29,7 +36,7 @@ function LaneTooltip({ state }: { state: LaneTooltipState }) {
   );
 }
 
-function MedicationLaneComponent({ rows }: MedicationLaneProps) {
+function MedicationLaneComponent({ rows, markers }: MedicationLaneProps) {
   const [tooltip, setTooltip] = useState<LaneTooltipState | null>(null);
 
   const showTooltip = useCallback(
@@ -56,6 +63,14 @@ function MedicationLaneComponent({ rows }: MedicationLaneProps) {
           <div key={row.medicationId} className="space-y-0.5">
             <p className="truncate text-[9px] text-sage-500">{row.rowLabel}</p>
             <div className="relative h-[10px] rounded-[3px] bg-sand-50/50">
+              {markers && markers.length > 0 && (
+                <BandDoseMarkerOverlay
+                  markers={markers}
+                  height={10}
+                  insetLeft={0}
+                  insetRight={0}
+                />
+              )}
               {row.segments.map((segment) => (
                 <button
                   key={segment.id}

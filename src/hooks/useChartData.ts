@@ -8,8 +8,7 @@ import { MRS_CANONICAL_SYMPTOMS } from '../data/symptoms';
 import type { MRSSymptomKey } from '../utils/checkinHelpers';
 import { hasMRSData, getDailySignal, getTrustedMrsTotal } from '../utils/checkinHelpers';
 import { formatChartDate, filterByDateRange, meanHeatmapSeverity, recentHeatmapSeverity, sortHeatmapRows } from '../utils/chartHelpers';
-import { getEffectiveDailyDose } from '../utils/medicationHelpers';
-import { addDaysISO, todayISO } from '../utils/localDate';
+import { addDaysISO } from '../utils/localDate';
 import { getBiomarkerValue } from '../utils/labHelpers';
 import type { DateRange } from '../stores/dashboardStore';
 
@@ -31,16 +30,6 @@ export interface ChangeMarker {
   label: string;
   change: MedicationChange;
   medicationName?: string;
-}
-
-export interface MedicationBar {
-  id: string;
-  name: string;
-  hormoneCategory: string;
-  startDate: string;
-  endDate: string;
-  dose: number;
-  doseUnit: string;
 }
 
 export interface HeatmapRow {
@@ -149,21 +138,6 @@ export function useChartData(dateRange: DateRange) {
     }));
   }, [filteredChanges, medications]);
 
-  const getMedicationTimelineData = useCallback((): MedicationBar[] => {
-    const today = todayISO();
-    return medications
-      .filter((m) => m.start_date <= dateRange.end && (m.end_date ?? today) >= dateRange.start)
-      .map((m) => ({
-        id: m.id,
-        name: m.medication_name,
-        hormoneCategory: m.hormone_category,
-        startDate: m.start_date,
-        endDate: m.end_date ?? today,
-        dose: getEffectiveDailyDose(m),
-        doseUnit: m.dose_unit,
-      }));
-  }, [medications, dateRange]);
-
   /** The heatmap is a "right now" instrument: it shows the most recent check-ins only,
    *  and it ranks on exactly the columns it displays. Do not widen this to the global
    *  date range — a ranking computed from off-screen data is what broke this surface. */
@@ -245,7 +219,6 @@ export function useChartData(dateRange: DateRange) {
     allLabResults: labResults,
     getSymptomTrendData,
     getMedicationChangeMarkers,
-    getMedicationTimelineData,
     getHeatmapData,
     getLabTrendData,
     getDrillDownData,

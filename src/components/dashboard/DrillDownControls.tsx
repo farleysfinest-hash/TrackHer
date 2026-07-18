@@ -9,7 +9,6 @@ import {
 } from '../../utils/medicationLaneHelpers';
 import {
   BAND_CHART_MARGIN,
-  BandDoseMarkerOverlay,
   BandXAxis,
   SymptomBand,
   type SymptomBandRow,
@@ -38,8 +37,6 @@ const MAX_SYMPTOMS = 3;
 const MAX_MEDS = 3;
 const DOMAIN_MAX = 4;
 const SYNC_ID = 'compare-symptoms-medications';
-const BAND_BLOCK_HEIGHT = 58;
-const LANE_ROW_HEIGHT = 28;
 
 export function DrillDownControls({
   checkinDates,
@@ -116,10 +113,6 @@ export function DrillDownControls({
     return doseChangeMarkerPercents(selectedChanges, domainDates, window.start, window.end);
   }, [changeMarkers, selectedMeds, domainDates, window]);
 
-  const overlayHeight =
-    drillData.symptomLines.length * BAND_BLOCK_HEIGHT +
-    (laneRows.length > 0 ? laneRows.length * LANE_ROW_HEIGHT + 8 : 0);
-
   const toggleSymptom = useCallback((key: string) => {
     setSelectedSymptoms((prev) => {
       if (prev.includes(key)) return prev.filter((k) => k !== key);
@@ -186,7 +179,7 @@ export function DrillDownControls({
             ))}
           </div>
 
-          <div className="relative space-y-0">
+          <div className="space-y-0">
             {drillData.symptomLines.map((line) => (
               <SymptomBand
                 key={line.key}
@@ -197,6 +190,7 @@ export function DrillDownControls({
                 domainMax={DOMAIN_MAX}
                 syncId={SYNC_ID}
                 tooltipMode="severity"
+                markers={markerLines}
               />
             ))}
 
@@ -207,11 +201,9 @@ export function DrillDownControls({
                   marginRight: BAND_CHART_MARGIN.right,
                 }}
               >
-                <MedicationLane rows={laneRows} />
+                <MedicationLane rows={laneRows} markers={markerLines} />
               </div>
             )}
-
-            <BandDoseMarkerOverlay markers={markerLines} height={overlayHeight} />
           </div>
 
           <BandXAxis data={chartData.dailyRows} />
