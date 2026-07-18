@@ -7,10 +7,10 @@ export function AppShell() {
   return (
     <div className="flex min-h-screen bg-sand-50">
       <Sidebar />
-      <div className="flex flex-1 flex-col md:ml-[240px]">
+      <div className="flex min-w-0 flex-1 flex-col md:ml-[240px]">
         <Header />
-        <main className="flex-1 px-6 py-6 pb-24 md:px-8 md:py-8 md:pb-8 lg:px-12">
-          <div className="mx-auto max-w-[1200px]">
+        <main className="min-w-0 flex-1 px-6 py-6 pb-24 md:px-8 md:py-8 md:pb-8 lg:px-12">
+          <div className="mx-auto min-w-0 max-w-[1200px]">
             <Outlet />
           </div>
         </main>
