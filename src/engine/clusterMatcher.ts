@@ -16,8 +16,14 @@ interface ClusterMatchInput {
 const MIN_TOTAL_MRS_CHECKINS = 10;
 const MIN_SPAN_DAYS = 21;
 const WINDOW_DAYS = 30;
-/** Weekly MRS cadence: three complete check-ins in ~30 days is a full month of data. */
-const MIN_WINDOW_CHECKINS = 3;
+/**
+ * Weekly MRS cadence: require 4 complete check-ins in the 30-day window so the
+ * before/after halves each average two check-ins. Verified no-false-positive at 4
+ * (Monte Carlo sandbox test, July 17 2026). At 3 the later half degenerates to a
+ * single check-in and noise-firing roughly doubles — do not lower without rerunning
+ * that test and getting explicit approval.
+ */
+const MIN_WINDOW_CHECKINS = 4;
 
 interface PatternMatchResult {
   pattern: HormonePattern;

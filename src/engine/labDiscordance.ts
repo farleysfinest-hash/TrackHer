@@ -88,7 +88,7 @@ export function analyzeLabDiscordance(input: LabDiscordanceInput): Insight[] {
           priority: 'medium',
           title: `${biomarker.label} is within the conventional range while your symptoms remain elevated`,
           body: finalizeInsightBody(
-            `${contradiction} ${biomarker.optimalRange ? `Some practitioners target an optimal range of ${biomarker.optimalRange.min}-${biomarker.optimalRange.max} ${biomarker.unit} for symptom relief, which differs from the conventional lab range.` : ''} This is worth discussing with your provider — "normal" on paper does not always match how you feel.`,
+            `${contradiction} This is worth discussing with your provider — "normal" on paper does not always match how you feel.`,
             labSample,
             true,
           ),
@@ -151,24 +151,17 @@ export function analyzeLabRangeFlags(labResults: LabResult[]): Insight[] {
     const { min, max } = biomarker.conventionalRange;
     const isHigh = labValue > max;
     const direction = isHigh ? 'above' : 'below';
-    const warning = isHigh ? biomarker.warningHigh : biomarker.warningLow;
     const sampleSize = { n: 1 };
 
     insights.push({
       id: `lab-range-${key}`,
       category: 'lab_discordance',
-      priority: 'medium',
+      priority: 'low',
       title: `${biomarker.label} is ${direction} the conventional reference range`,
       body: finalizeInsightBody(
-        `Your most recent ${biomarker.label} was ${labValue} ${biomarker.unit} (conventional range ${min}–${max} ${biomarker.unit}).${
-          warning ? ` ${warning}` : ''
-        }${
-          biomarker.optimalRange
-            ? ` Some practitioners target ${biomarker.optimalRange.min}–${biomarker.optimalRange.max} ${biomarker.unit} for symptom relief.`
-            : ''
-        } Worth reviewing with your provider in context of your symptoms and HRT.`,
+        `Your most recent ${biomarker.label} was ${labValue} ${biomarker.unit}. The conventional reference range — based on people not using hormone therapy — is ${min}–${max} ${biomarker.unit}. On HRT, values outside this range can be intentional and expected. Only your provider can say what's right for you.`,
         sampleSize,
-        true,
+        false,
       ),
       sampleSize,
       confidence: computeObservationalConfidence({
