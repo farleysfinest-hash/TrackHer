@@ -35,32 +35,6 @@ export function ChartTooltipContent(props: ChartTooltipProps) {
   const { active, payload, label } = props;
   if (!active || !payload?.length) return null;
 
-  const displayEntries = payload.filter(
-    (item) => typeof item.dataKey === 'string' && item.dataKey.startsWith('__display_'),
-  );
-
-  if (displayEntries.length > 0) {
-    const point = displayEntries[0]?.payload;
-    const gapNotice = typeof point?.gapNotice === 'string' ? point.gapNotice : null;
-
-    return (
-      <div className="rounded-lg border border-sand-200 bg-white px-4 py-3 text-sm shadow-lg">
-        <p className="font-medium text-sage-800">{label}</p>
-        {gapNotice && <p className="mt-1 text-sage-600">{gapNotice}</p>}
-        {displayEntries.map((item) => {
-          const trueKey = (item.dataKey as string).slice('__display_'.length);
-          const value = item.payload?.[trueKey];
-          if (value === null || value === undefined) return null;
-          return (
-            <p key={trueKey} className="mt-1 text-sage-700" style={{ color: item.color }}>
-              {item.name}: <strong>{String(value)}</strong>
-            </p>
-          );
-        })}
-      </div>
-    );
-  }
-
   const point = payload[0]?.payload as SymptomTrendPoint & { gapNotice?: string } | undefined;
   if (!point) return null;
 
