@@ -10,9 +10,15 @@ import {
   ReferenceLine,
 } from 'recharts';
 import { ChartCard } from '../ui/ChartCard';
+import { ChartTooltipContent } from './ChartTooltipContent';
 import { MRS_CORE_SYMPTOMS, getSymptomChipLabel } from '../../data/symptoms';
 import { DRILL_DOWN_COLORS, CHART_COLORS, formatChartDate } from '../../utils/chartHelpers';
 import { buildDailyIndexedWeeklyChart, weeklyChartWindow } from '../../utils/weeklyChartSeries';
+import {
+  assignRenderOffsets,
+  buildDisplayRows,
+  displayDataKey,
+} from '../../utils/chartOverlap';
 import { WeeklySegmentLines } from './WeeklySegmentLines';
 import type { ChangeMarker } from '../../hooks/useChartData';
 import type { Medication } from '../../types/database';
@@ -35,6 +41,7 @@ interface DrillDownControlsProps {
 
 const MAX_SYMPTOMS = 3;
 const MAX_MEDS = 3;
+const DOMAIN_SPAN = 4;
 
 export function DrillDownControls({
   checkinDates,
@@ -67,13 +74,16 @@ export function DrillDownControls({
       return point;
     });
 
-    const window = weeklyChartWindow(checkinDates, checkinDates[0], checkinDates[checkinDates.length - 1]);
     const valueKeys = drillData.symptomLines.map((line) => line.key);
+    const offsets = assignRenderOffsets(valueKeys, sparse, DOMAIN_SPAN);
+    const displaySparse = buildDisplayRows(sparse, valueKeys, offsets);
+    const displayKeys = valueKeys.map(displayDataKey);
+    const window = weeklyChartWindow(checkinDates, checkinDates[0], checkinDates[checkinDates.length - 1]);
     const { dailyRows, weeklySegmentKeys } = buildDailyIndexedWeeklyChart(
-      sparse as Array<{ date: string }>,
+      displaySparse as unknown as Array<{ date: string }>,
       window.start,
       window.end,
-      valueKeys,
+      displayKeys,
     );
     return { dailyRows, segmentKeysByLine: weeklySegmentKeys };
   }, [checkinDates, drillData.symptomLines]);
@@ -153,20 +163,15 @@ export function DrillDownControls({
               <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
               <XAxis dataKey="dateLabel" tick={{ fontSize: 11, fill: CHART_COLORS.axisText }} />
               <YAxis domain={[0, 4]} tick={{ fontSize: 11, fill: CHART_COLORS.axisText }} width={24} />
-              <Tooltip
-                contentStyle={{
-                  borderRadius: 8,
-                  border: '1px solid var(--color-sand-200)',
-                  fontSize: 12,
-                }}
-              />
+              <Tooltip content={<ChartTooltipContent />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               {drillData.symptomLines.map((line, i) => {
                 const color = DRILL_DOWN_COLORS[i % DRILL_DOWN_COLORS.length];
+                const displayKey = displayDataKey(line.key);
                 return (
                   <WeeklySegmentLines
                     key={line.key}
-                    segmentKeys={chartData.segmentKeysByLine[line.key] ?? []}
+                    segmentKeys={chartData.segmentKeysByLine[displayKey] ?? []}
                     name={line.label}
                     stroke={color}
                   />

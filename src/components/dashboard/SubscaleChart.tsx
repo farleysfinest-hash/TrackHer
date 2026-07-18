@@ -14,6 +14,11 @@ import { WeeklySegmentLines } from './WeeklySegmentLines';
 import { CHART_COLORS } from '../../utils/chartHelpers';
 import { weeklySeriesProps } from '../../utils/chartStyle';
 import { buildDailyIndexedWeeklyChart, weeklyChartWindow } from '../../utils/weeklyChartSeries';
+import {
+  assignRenderOffsets,
+  buildDisplayRows,
+  displayDataKey,
+} from '../../utils/chartOverlap';
 import { MRS_SUBSCALES, MRS_SUBSCALE_DESCRIPTION } from '../../data/mrsSubscales';
 import type { SymptomTrendPoint } from '../../hooks/useChartData';
 
@@ -37,6 +42,7 @@ function subscaleSeriesProps(
 }
 
 const SUBSCALE_VALUE_KEYS = MRS_SUBSCALES.map((s) => s.dataKey);
+const DOMAIN_SPAN = 16;
 
 function SubscaleChartComponent({ data }: SubscaleChartProps) {
   const isEmpty = data.length < 2;
@@ -45,9 +51,23 @@ function SubscaleChartComponent({ data }: SubscaleChartProps) {
     if (data.length < 2) {
       return { dailyRows: [], weeklySegmentKeys: {} as Record<string, string[]> };
     }
+
+    const sparseRows = data.map((point) => ({ ...point })) as unknown as Array<
+      Record<string, string | number | null>
+    >;
+
+    const offsets = assignRenderOffsets(SUBSCALE_VALUE_KEYS, sparseRows, DOMAIN_SPAN);
+    const displayRows = buildDisplayRows(sparseRows, SUBSCALE_VALUE_KEYS, offsets);
+    const displayKeys = SUBSCALE_VALUE_KEYS.map(displayDataKey);
+
     const dates = data.map((d) => d.date);
     const window = weeklyChartWindow(dates, dates[0], dates[dates.length - 1]);
-    return buildDailyIndexedWeeklyChart(data, window.start, window.end, SUBSCALE_VALUE_KEYS);
+    return buildDailyIndexedWeeklyChart(
+      displayRows as unknown as Array<{ date: string }>,
+      window.start,
+      window.end,
+      displayKeys,
+    );
   }, [data]);
 
   return (
@@ -66,21 +86,24 @@ function SubscaleChartComponent({ data }: SubscaleChartProps) {
             <YAxis domain={[0, 16]} tick={{ fontSize: 11, fill: CHART_COLORS.axisText }} width={28} />
             <Tooltip content={<ChartTooltipContent />} />
             <Legend wrapperStyle={{ fontSize: 12 }} />
-            {MRS_SUBSCALES.map((subscale) => (
-              <WeeklySegmentLines
-                key={subscale.dataKey}
-                segmentKeys={weeklySegmentKeys[subscale.dataKey] ?? []}
-                name={subscale.plainLabel}
-                stroke={subscale.color}
-                dotColor={subscale.dotFill}
-                seriesProps={subscaleSeriesProps(
-                  subscale.color,
-                  subscale.dotFill,
-                  subscale.dotStroke,
-                  subscale.dotStrokeWidth,
-                )}
-              />
-            ))}
+            {MRS_SUBSCALES.map((subscale) => {
+              const displayKey = displayDataKey(subscale.dataKey);
+              return (
+                <WeeklySegmentLines
+                  key={subscale.dataKey}
+                  segmentKeys={weeklySegmentKeys[displayKey] ?? []}
+                  name={subscale.plainLabel}
+                  stroke={subscale.color}
+                  dotColor={subscale.dotFill}
+                  seriesProps={subscaleSeriesProps(
+                    subscale.color,
+                    subscale.dotFill,
+                    subscale.dotStroke,
+                    subscale.dotStrokeWidth,
+                  )}
+                />
+              );
+            })}
           </LineChart>
         </ResponsiveContainer>
       )}

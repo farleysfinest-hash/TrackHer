@@ -13,6 +13,11 @@ import { useSymptomSelections } from '../../hooks/useSymptomSelections';
 import { getSymptomByKey } from '../../data/symptoms';
 import { CHART_COLORS, DRILL_DOWN_COLORS, formatChartDate } from '../../utils/chartHelpers';
 import { buildDailyIndexedWeeklyChart, weeklyChartWindow } from '../../utils/weeklyChartSeries';
+import {
+  assignRenderOffsets,
+  buildDisplayRows,
+  displayDataKey,
+} from '../../utils/chartOverlap';
 import { WeeklySegmentLines } from './WeeklySegmentLines';
 import type { SymptomCheckin, ExtendedSymptomLog } from '../../types/database';
 
@@ -21,11 +26,7 @@ interface PersonalSymptomTrendsProps {
   extendedLogs: ExtendedSymptomLog[];
 }
 
-const RENDER_OFFSET_STEP = 0.06;
-
-function displayDataKey(symptomKey: string): string {
-  return `__display_${symptomKey}`;
-}
+const DOMAIN_SPAN = 4;
 
 function extendedSeverity(log: ExtendedSymptomLog): number {
   if (log.severity_score !== null && log.severity_score !== undefined) {
@@ -35,36 +36,6 @@ function extendedSeverity(log: ExtendedSymptomLog): number {
   if (log.severity === 'moderate') return 2;
   if (log.severity === 'severe') return 3;
   return 0;
-}
-
-function seriesMatch(
-  points: Array<Record<string, string | number | null>>,
-  keyA: string,
-  keyB: string,
-): boolean {
-  for (const point of points) {
-    const a = point[keyA];
-    const b = point[keyB];
-    if (a === null && b === null) continue;
-    if (a !== b) return false;
-  }
-  return true;
-}
-
-function assignRenderOffsets(keys: string[], points: Array<Record<string, string | number | null>>) {
-  const offsets = new Map<string, number>();
-  for (let i = 0; i < keys.length; i++) {
-    const key = keys[i];
-    let offset = 0;
-    for (let j = 0; j < i; j++) {
-      if (seriesMatch(points, key, keys[j])) {
-        offset = (offsets.get(keys[j]) ?? 0) + 1;
-        break;
-      }
-    }
-    offsets.set(key, offset);
-  }
-  return offsets;
 }
 
 interface PersonalTrendTooltipProps {
@@ -95,8 +66,7 @@ function PersonalTrendTooltip({ active, payload, label }: PersonalTrendTooltipPr
       {gapNotice && <p className="mt-1 text-sage-600">{gapNotice}</p>}
       {entries.map((item) => {
         const symptomKey = (item.dataKey as string).slice('__display_'.length);
-        const displayKey = displayDataKey(symptomKey);
-        const value = item.payload?.[displayKey] ?? item.payload?.[symptomKey];
+        const value = item.payload?.[symptomKey] ?? null;
         if (value === null || value === undefined) return null;
         return (
           <p key={symptomKey} className="mt-1 text-sage-700" style={{ color: item.color }}>
@@ -140,23 +110,14 @@ export function PersonalSymptomTrends({ checkins, extendedLogs }: PersonalSympto
       return { points: [], keys: [] as string[], segmentKeysByDisplay: {} };
     }
 
-    const offsets = assignRenderOffsets(keys, rawPoints);
-    const displaySparse = rawPoints.map((row) => {
-      const displayRow = { ...row };
-      for (const key of keys) {
-        const value = row[key];
-        const offset = offsets.get(key) ?? 0;
-        displayRow[displayDataKey(key)] =
-          value !== null && value !== undefined ? Number(value) + offset * RENDER_OFFSET_STEP : null;
-      }
-      return displayRow;
-    });
+    const offsets = assignRenderOffsets(keys, rawPoints, DOMAIN_SPAN);
+    const displaySparse = buildDisplayRows(rawPoints, keys, offsets);
 
     const dates = sorted.map((c) => c.checkin_date);
     const window = weeklyChartWindow(dates, dates[0], dates[dates.length - 1]);
     const displayKeys = keys.map(displayDataKey);
     const { dailyRows, weeklySegmentKeys } = buildDailyIndexedWeeklyChart(
-      displaySparse as Array<{ date: string }>,
+      displaySparse as unknown as Array<{ date: string }>,
       window.start,
       window.end,
       displayKeys,
