@@ -189,8 +189,9 @@ function LabTrendChartComponent({
             )}
           </div>
 
-          <ResponsiveContainer width="100%" height={250}>
-            <ComposedChart data={data} margin={{ top: 20, right: 12, left: 0, bottom: 0 }}>
+          <div className="max-w-[440px]">
+            <ResponsiveContainer width="100%" height={160}>
+              <ComposedChart data={data} margin={{ top: 20, right: 12, left: 0, bottom: 0 }}>
               {referenceContext.bands.map((band) => (
                 <ReferenceArea
                   key={band.label}
@@ -214,7 +215,7 @@ function LabTrendChartComponent({
                     y1={area.y1}
                     y2={area.y2}
                     fill={edge.fill}
-                    fillOpacity={0.22}
+                    fillOpacity={0.28}
                     label={{
                       value: edge.label,
                       position: edge.edge === 'top' ? 'insideTopRight' : 'insideBottomRight',
@@ -246,6 +247,7 @@ function LabTrendChartComponent({
               />
             </ComposedChart>
           </ResponsiveContainer>
+          </div>
 
           <p className="text-xs text-sage-400">
             Each dot is a blood draw. Levels between draws are not measured.

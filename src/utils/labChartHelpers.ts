@@ -3,7 +3,7 @@ import { formatRange } from './labHelpers';
 
 const DOMAIN_PADDING_RATIO = 0.35;
 const MIN_SPAN_RATIO = 0.5;
-const EDGE_BAND_FRACTION = 0.06;
+const EDGE_BAND_FRACTION = 0.20;
 
 export interface LabYDomain {
   min: number;
