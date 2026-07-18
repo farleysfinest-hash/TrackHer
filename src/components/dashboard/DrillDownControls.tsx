@@ -1,25 +1,20 @@
 import { useCallback, useMemo, useState } from 'react';
-import {
-  ResponsiveContainer,
-  LineChart,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ReferenceLine,
-} from 'recharts';
 import { ChartCard } from '../ui/ChartCard';
-import { ChartTooltipContent } from './ChartTooltipContent';
 import { MRS_CORE_SYMPTOMS, getSymptomChipLabel } from '../../data/symptoms';
-import { DRILL_DOWN_COLORS, CHART_COLORS, formatChartDate } from '../../utils/chartHelpers';
+import { formatChartDate } from '../../utils/chartHelpers';
 import { buildDailyIndexedWeeklyChart, weeklyChartWindow } from '../../utils/weeklyChartSeries';
 import {
-  assignRenderOffsets,
-  buildDisplayRows,
-  displayDataKey,
-} from '../../utils/chartOverlap';
-import { WeeklySegmentLines } from './WeeklySegmentLines';
+  buildMedicationLaneRows,
+  doseChangeMarkerPercents,
+} from '../../utils/medicationLaneHelpers';
+import {
+  BAND_CHART_MARGIN,
+  BandDoseMarkerOverlay,
+  BandXAxis,
+  SymptomBand,
+  type SymptomBandRow,
+} from './SymptomBand';
+import { MedicationLane } from './MedicationLane';
 import type { ChangeMarker } from '../../hooks/useChartData';
 import type { Medication } from '../../types/database';
 
@@ -41,7 +36,10 @@ interface DrillDownControlsProps {
 
 const MAX_SYMPTOMS = 3;
 const MAX_MEDS = 3;
-const DOMAIN_SPAN = 4;
+const DOMAIN_MAX = 4;
+const SYNC_ID = 'compare-symptoms-medications';
+const BAND_BLOCK_HEIGHT = 58;
+const LANE_ROW_HEIGHT = 28;
 
 export function DrillDownControls({
   checkinDates,
@@ -60,10 +58,12 @@ export function DrillDownControls({
   );
 
   const chartData = useMemo(() => {
-    if (checkinDates.length < 2) return { dailyRows: [], segmentKeysByLine: {} as Record<string, string[]> };
+    if (checkinDates.length < 2) {
+      return { dailyRows: [] as SymptomBandRow[], segmentKeysByLine: {} as Record<string, string[]> };
+    }
 
-    const sparse = checkinDates.map((date) => {
-      const point: Record<string, string | number | null> = {
+    const sparse: SymptomBandRow[] = checkinDates.map((date) => {
+      const point: SymptomBandRow = {
         date,
         dateLabel: formatChartDate(date),
       };
@@ -75,22 +75,50 @@ export function DrillDownControls({
     });
 
     const valueKeys = drillData.symptomLines.map((line) => line.key);
-    const offsets = assignRenderOffsets(valueKeys, sparse, DOMAIN_SPAN);
-    const displaySparse = buildDisplayRows(sparse, valueKeys, offsets);
-    const displayKeys = valueKeys.map(displayDataKey);
     const window = weeklyChartWindow(checkinDates, checkinDates[0], checkinDates[checkinDates.length - 1]);
     const { dailyRows, weeklySegmentKeys } = buildDailyIndexedWeeklyChart(
-      displaySparse as unknown as Array<{ date: string }>,
+      sparse,
       window.start,
       window.end,
-      displayKeys,
+      valueKeys,
     );
-    return { dailyRows, segmentKeysByLine: weeklySegmentKeys };
+    return { dailyRows: dailyRows as SymptomBandRow[], segmentKeysByLine: weeklySegmentKeys };
   }, [checkinDates, drillData.symptomLines]);
 
-  const medMarkers = changeMarkers.filter(
-    (m) => m.change.medication_id && selectedMeds.includes(m.change.medication_id),
+  const window = useMemo(() => {
+    if (checkinDates.length < 2) return null;
+    return weeklyChartWindow(checkinDates, checkinDates[0], checkinDates[checkinDates.length - 1]);
+  }, [checkinDates]);
+
+  const domainDates = useMemo(() => chartData.dailyRows.map((d) => d.date), [chartData.dailyRows]);
+
+  const selectedMedications = useMemo(
+    () => medications.filter((m) => selectedMeds.includes(m.id)),
+    [medications, selectedMeds],
   );
+
+  const laneRows = useMemo(() => {
+    if (!window || domainDates.length === 0) return [];
+    return buildMedicationLaneRows(
+      selectedMedications,
+      changeMarkers.map((m) => m.change),
+      domainDates,
+      window.start,
+      window.end,
+    );
+  }, [selectedMedications, changeMarkers, domainDates, window]);
+
+  const markerLines = useMemo(() => {
+    if (!window || domainDates.length === 0) return [];
+    const selectedChanges = changeMarkers
+      .filter((m) => m.change.medication_id && selectedMeds.includes(m.change.medication_id))
+      .map((m) => m.change);
+    return doseChangeMarkerPercents(selectedChanges, domainDates, window.start, window.end);
+  }, [changeMarkers, selectedMeds, domainDates, window]);
+
+  const overlayHeight =
+    drillData.symptomLines.length * BAND_BLOCK_HEIGHT +
+    (laneRows.length > 0 ? laneRows.length * LANE_ROW_HEIGHT + 8 : 0);
 
   const toggleSymptom = useCallback((key: string) => {
     setSelectedSymptoms((prev) => {
@@ -158,36 +186,35 @@ export function DrillDownControls({
             ))}
           </div>
 
-          <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={chartData.dailyRows} margin={{ top: 20, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
-              <XAxis dataKey="dateLabel" tick={{ fontSize: 11, fill: CHART_COLORS.axisText }} />
-              <YAxis domain={[0, 4]} tick={{ fontSize: 11, fill: CHART_COLORS.axisText }} width={24} />
-              <Tooltip content={<ChartTooltipContent />} />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
-              {drillData.symptomLines.map((line, i) => {
-                const color = DRILL_DOWN_COLORS[i % DRILL_DOWN_COLORS.length];
-                const displayKey = displayDataKey(line.key);
-                return (
-                  <WeeklySegmentLines
-                    key={line.key}
-                    segmentKeys={chartData.segmentKeysByLine[displayKey] ?? []}
-                    name={line.label}
-                    stroke={color}
-                  />
-                );
-              })}
-              {medMarkers.map((marker) => (
-                <ReferenceLine
-                  key={marker.id}
-                  x={marker.dateLabel}
-                  stroke={CHART_COLORS.changeLine}
-                  strokeDasharray="4 4"
-                  label={{ value: marker.label, position: 'top', fontSize: 9 }}
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
+          <div className="relative space-y-0">
+            {drillData.symptomLines.map((line) => (
+              <SymptomBand
+                key={line.key}
+                name={line.label}
+                dataKey={line.key}
+                data={chartData.dailyRows}
+                segmentKeys={chartData.segmentKeysByLine[line.key] ?? []}
+                domainMax={DOMAIN_MAX}
+                syncId={SYNC_ID}
+                tooltipMode="severity"
+              />
+            ))}
+
+            {laneRows.length > 0 && (
+              <div
+                style={{
+                  marginLeft: BAND_CHART_MARGIN.left,
+                  marginRight: BAND_CHART_MARGIN.right,
+                }}
+              >
+                <MedicationLane rows={laneRows} />
+              </div>
+            )}
+
+            <BandDoseMarkerOverlay markers={markerLines} height={overlayHeight} />
+          </div>
+
+          <BandXAxis data={chartData.dailyRows} />
         </div>
       )}
     </ChartCard>
