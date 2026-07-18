@@ -32,10 +32,10 @@ import type { SymptomTrendPoint } from '../../hooks/useChartData';
 import type { Medication, MedicationChange } from '../../types/database';
 import type { Insight } from '../../engine/types';
 
-const PANEL_MRS_HEIGHT = 200;
-const PANEL_PULSE_HEIGHT = 170;
+const PANEL_MRS_HEIGHT = 80;
+const PANEL_PULSE_HEIGHT = 64;
 const X_AXIS_HEIGHT = 28;
-const LANE_ROW_HEIGHT = 50;
+const LANE_ROW_HEIGHT = 28;
 const SYNC_ID = 'story-column';
 
 const INK = {
@@ -59,6 +59,32 @@ interface StoryColumnProps {
   windowStart: string;
   windowEnd: string;
   insights: Insight[];
+}
+
+const PULSE_AXIS_LABELS: Record<PulseChannel, { high: string; low: string }> = {
+  energy: { high: 'Energized', low: 'Drained' },
+  mood: { high: 'Great', low: 'Rough' },
+  sleep: { high: 'Great', low: 'Rough' },
+};
+
+interface PulseAxisTickProps {
+  x?: number | string;
+  y?: number | string;
+  payload?: { value?: number };
+  channel: PulseChannel;
+}
+
+function PulseAxisTick({ x = 0, y = 0, payload, channel }: PulseAxisTickProps) {
+  const labels = PULSE_AXIS_LABELS[channel];
+  const value = payload?.value;
+  const text = value === 5 ? labels.high : value === 1 ? labels.low : '';
+  if (!text) return null;
+
+  return (
+    <text x={Number(x)} y={Number(y)} dy={4} textAnchor="end" fill="#b896a3" fontSize={9} dx={-4}>
+      {text}
+    </text>
+  );
 }
 
 interface PulseTooltipProps {
@@ -108,7 +134,7 @@ function StoryColumnComponent({
   const pulseHeader =
     pulseChannel === null
       ? pulseDefaults.header
-      : `${PULSE_CHANNELS.find((c) => c.id === activeChannel)?.label} · daily pulse · 1–5`;
+      : `${PULSE_CHANNELS.find((c) => c.id === activeChannel)?.label} · daily pulse`;
 
   const { chartData, mrsSegmentKeys } = useMemo(() => {
     const rawValues = data.map((d) => getPulseChannelValue(d.checkin, activeChannel));
@@ -145,7 +171,6 @@ function StoryColumnComponent({
   const laneHeight = laneRows.length > 0 ? laneRows.length * LANE_ROW_HEIGHT + 8 : 0;
 
   const mrsTicks = [0, 22, 44];
-  const pulseTicks = [1, 2, 3, 4, 5];
 
   return (
     <ChartCard
@@ -172,7 +197,7 @@ function StoryColumnComponent({
                 <YAxis
                   domain={[0, 44]}
                   ticks={mrsTicks}
-                  tick={{ fontSize: 11, fill: CHART_COLORS.axisText }}
+                  tick={{ fontSize: 10, fill: CHART_COLORS.axisText }}
                   width={CHART_MARGIN_LEFT}
                   axisLine={false}
                   tickLine={false}
@@ -183,7 +208,10 @@ function StoryColumnComponent({
                   name="MRS Score"
                   stroke={INK.mrsStroke}
                   dotColor={INK.mrsDot}
-                  seriesProps={{ strokeWidth: 2.5 }}
+                  seriesProps={{
+                    strokeWidth: 2,
+                    dot: { r: 3.5, fill: '#a64d79', stroke: '#a64d79', strokeWidth: 0 },
+                  }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -214,8 +242,8 @@ function StoryColumnComponent({
                   <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} vertical={false} />
                   <YAxis
                     domain={[1, 5]}
-                    ticks={pulseTicks}
-                    tick={{ fontSize: 11, fill: CHART_COLORS.axisText }}
+                    ticks={[1, 5]}
+                    tick={(props) => <PulseAxisTick {...props} channel={activeChannel} />}
                     width={CHART_MARGIN_LEFT}
                     axisLine={false}
                     tickLine={false}

@@ -51,16 +51,16 @@ function MedicationLaneComponent({ rows }: MedicationLaneProps) {
 
   return (
     <>
-      <div className="mt-1 space-y-2 pb-3 pt-1">
+      <div className="mt-0.5 space-y-1 pb-1 pt-0">
         {rows.map((row) => (
-          <div key={row.medicationId} className="space-y-1">
-            <p className="truncate text-[10px] text-sage-500">{row.rowLabel}</p>
-            <div className="relative h-[12px] rounded-[3px] bg-sand-50/50">
+          <div key={row.medicationId} className="space-y-0.5">
+            <p className="truncate text-[9px] text-sage-500">{row.rowLabel}</p>
+            <div className="relative h-[10px] rounded-[3px] bg-sand-50/50">
               {row.segments.map((segment) => (
                 <button
                   key={segment.id}
                   type="button"
-                  className="absolute top-0 h-[12px] rounded-[3px] transition-opacity hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sage-400"
+                  className="absolute top-0 h-[10px] rounded-[3px] transition-opacity hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sage-400"
                   style={{
                     left: `${segment.leftPercent}%`,
                     width: `${segment.widthPercent}%`,
@@ -78,7 +78,7 @@ function MedicationLaneComponent({ rows }: MedicationLaneProps) {
               {row.boundaries.map((boundary) => (
                 <span
                   key={boundary.id}
-                  className="pointer-events-none absolute top-full mt-1 max-w-[7rem] -translate-x-1/2 truncate whitespace-nowrap text-[9px] leading-tight text-sage-500"
+                  className="pointer-events-none absolute top-full mt-1 max-w-[7rem] -translate-x-1/2 truncate whitespace-nowrap text-[8px] leading-tight text-sage-500"
                   style={{ left: `${boundary.leftPercent}%` }}
                 >
                   {boundary.label}

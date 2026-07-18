@@ -6,7 +6,7 @@ import { formatFrequency } from './medicationHelpers';
 /** ~2px visual gap between dose-change segments at typical lane widths */
 export const MED_LANE_SEGMENT_GAP_PCT = 0.35;
 
-export const CHART_MARGIN_LEFT = 36;
+export const CHART_MARGIN_LEFT = 52;
 export const CHART_MARGIN_RIGHT = 28;
 
 export interface MedicationLaneSegment {

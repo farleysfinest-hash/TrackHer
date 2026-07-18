@@ -98,7 +98,7 @@ export function resolvePulsePanelDefaults(
 
   return {
     channel: 'energy',
-    header: 'Energy · daily pulse · 1–5',
+    header: 'Energy · daily pulse',
   };
 }
 
