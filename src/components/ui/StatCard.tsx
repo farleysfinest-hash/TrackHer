@@ -21,7 +21,7 @@ export function StatCard({ label, value, subtext, trend, color }: StatCardProps)
     <div className="rounded-xl border border-sand-200 bg-white p-4 shadow-sm">
       <p className="text-xs font-medium uppercase tracking-wide text-sage-400">{label}</p>
       <p
-        className="mt-1 font-display text-3xl font-semibold text-sage-800"
+        className="mt-1 select-none font-display text-3xl font-semibold text-sage-800"
         style={color ? { color } : undefined}
       >
         {value}
