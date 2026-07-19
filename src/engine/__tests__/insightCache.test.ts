@@ -200,6 +200,7 @@ function makeProfile(overrides: Partial<Profile> = {}): Profile {
     onboarding_completed: true,
     timezone: TZ,
     timezone_confirmed_at: '2026-01-01T00:00:00Z',
+    ui_state: {},
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-06-01T00:00:00Z',
     ...overrides,
