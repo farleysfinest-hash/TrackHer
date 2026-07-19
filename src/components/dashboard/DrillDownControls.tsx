@@ -11,6 +11,7 @@ import {
   BAND_CHART_MARGIN,
   BandXAxis,
   SymptomBand,
+  type BandTooltipSeries,
   type SymptomBandRow,
 } from './SymptomBand';
 import { MedicationLane } from './MedicationLane';
@@ -131,6 +132,16 @@ export function DrillDownControls({
 
   const isEmpty = checkinDates.length < 2;
 
+  const tooltipSeries: BandTooltipSeries[] = useMemo(
+    () =>
+      drillData.symptomLines.map((line) => ({
+        name: line.label,
+        dataKey: line.key,
+        domainMax: DOMAIN_MAX,
+      })),
+    [drillData.symptomLines],
+  );
+
   return (
     <ChartCard
       title="Compare Symptoms & Medications"
@@ -180,7 +191,7 @@ export function DrillDownControls({
           </div>
 
           <div className="space-y-0">
-            {drillData.symptomLines.map((line) => (
+            {drillData.symptomLines.map((line, index) => (
               <SymptomBand
                 key={line.key}
                 name={line.label}
@@ -190,6 +201,8 @@ export function DrillDownControls({
                 domainMax={DOMAIN_MAX}
                 syncId={SYNC_ID}
                 tooltipMode="severity"
+                tooltipSeries={tooltipSeries}
+                isTooltipHost={index === 0}
                 markers={markerLines}
               />
             ))}

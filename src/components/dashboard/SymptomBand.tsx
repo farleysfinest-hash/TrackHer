@@ -38,6 +38,12 @@ export interface SymptomBandRow {
   [key: string]: string | number | null | undefined;
 }
 
+export interface BandTooltipSeries {
+  name: string;
+  dataKey: string;
+  domainMax: number;
+}
+
 interface DoseMarker {
   id: string;
   leftPercent: number;
@@ -51,6 +57,12 @@ interface SymptomBandProps {
   domainMax: number;
   syncId: string;
   tooltipMode?: SymptomBandTooltipMode;
+  /** All series in this card — used by the host tooltip for a single combined readout. */
+  tooltipSeries?: BandTooltipSeries[];
+  /** Only the host band renders tooltip content; others keep an empty Tooltip for syncId. */
+  isTooltipHost?: boolean;
+  /** When true (subscale charts), host tooltip appends MRS total / 44. */
+  showMrsTotal?: boolean;
   markers?: DoseMarker[];
 }
 
@@ -62,50 +74,74 @@ function latestValue(rows: SymptomBandRow[], dataKey: string): number | null {
   return null;
 }
 
+function formatBandValue(
+  value: number,
+  domainMax: number,
+  tooltipMode: SymptomBandTooltipMode,
+): string {
+  if (tooltipMode === 'severity' && value >= 0 && value < SEVERITY_LABELS.length) {
+    return `${value} (${SEVERITY_LABELS[value]})`;
+  }
+  if (tooltipMode === 'subscale') {
+    return `${value} / ${domainMax}`;
+  }
+  return String(value);
+}
+
 interface SymptomBandTooltipProps {
   active?: boolean;
   payload?: Array<{ payload?: SymptomBandRow }>;
-  label?: string | number;
-  name: string;
-  dataKey: string;
-  domainMax: number;
+  tooltipSeries: BandTooltipSeries[];
   tooltipMode: SymptomBandTooltipMode;
+  showMrsTotal?: boolean;
 }
 
 function SymptomBandTooltip({
   active,
   payload,
-  label,
-  name,
-  dataKey,
-  domainMax,
+  tooltipSeries,
   tooltipMode,
+  showMrsTotal = false,
 }: SymptomBandTooltipProps) {
   if (!active || !payload?.length) return null;
 
   const point = payload[0]?.payload;
   if (!point) return null;
 
-  const raw = point[dataKey];
-  if (raw === null || raw === undefined) return null;
+  const lines = tooltipSeries
+    .map((series) => {
+      const raw = point[series.dataKey];
+      if (raw === null || raw === undefined) return null;
+      const value = Number(raw);
+      return {
+        name: series.name,
+        label: formatBandValue(value, series.domainMax, tooltipMode),
+        value,
+      };
+    })
+    .filter((line): line is { name: string; label: string; value: number } => line !== null);
 
-  const value = Number(raw);
+  if (lines.length === 0) return null;
+
   const gapNotice = point.gapNotice;
-
-  let valueLabel = String(value);
-  if (tooltipMode === 'severity' && value >= 0 && value < SEVERITY_LABELS.length) {
-    valueLabel = `${value} (${SEVERITY_LABELS[value]})`;
-  } else if (tooltipMode === 'subscale') {
-    valueLabel = `${value} of ${domainMax}`;
-  }
+  const mrsTotal = showMrsTotal ? lines.reduce((sum, line) => sum + line.value, 0) : null;
 
   return (
-    <div className="rounded-lg border border-sand-200 bg-white px-4 py-3 text-sm shadow-lg">
-      <p className="font-medium text-sage-800">{label}</p>
-      {gapNotice && <p className="mt-1 text-sage-600">{gapNotice}</p>}
-      <p className="mt-1 text-sage-700">
-        {name}: <strong>{valueLabel}</strong>
-      </p>
+    <div className="rounded-md border border-sand-200 bg-white px-2.5 py-1.5 text-[11px] shadow-md">
+      <p className="font-medium text-sage-800">{point.dateLabel}</p>
+      {gapNotice && <p className="mt-0.5 text-sage-600">{gapNotice}</p>}
+      <div className="mt-0.5 space-y-0.5">
+        {lines.map((line) => (
+          <p key={line.name} className="text-sage-700">
+            {line.name} · <strong>{line.label}</strong>
+          </p>
+        ))}
+      </div>
+      {mrsTotal !== null && (
+        <p className="mt-1 border-t border-sand-100 pt-1 text-sage-700">
+          MRS total · <strong>{mrsTotal} / 44</strong>
+        </p>
+      )}
     </div>
   );
 }
@@ -118,21 +154,28 @@ export function SymptomBand({
   domainMax,
   syncId,
   tooltipMode = 'plain',
+  tooltipSeries,
+  isTooltipHost = false,
+  showMrsTotal = false,
   markers,
 }: SymptomBandProps) {
-  const now = latestValue(data, dataKey);
-  const nowLabel =
-    now === null
+  const latest = latestValue(data, dataKey);
+  const latestLabel =
+    latest === null
       ? '—'
       : tooltipMode === 'subscale'
-        ? `${now} of ${domainMax}`
-        : String(now);
+        ? `${latest} / ${domainMax}`
+        : String(latest);
+
+  const seriesForTooltip: BandTooltipSeries[] = tooltipSeries ?? [
+    { name, dataKey, domainMax },
+  ];
 
   return (
     <div>
       <p className="text-[10px] text-sage-700">
         {name}
-        <span className="text-[#b896a3]"> · now {nowLabel}</span>
+        <span className="text-[#b896a3]"> · latest {latestLabel}</span>
       </p>
       <div className="relative">
         {markers && markers.length > 0 && (
@@ -140,56 +183,59 @@ export function SymptomBand({
         )}
         <ResponsiveContainer width="100%" height={BAND_CHART_HEIGHT}>
           <ComposedChart data={data} margin={BAND_CHART_MARGIN} syncId={syncId}>
-          <ReferenceLine y={0} stroke={BAND_INK.baseline} strokeWidth={1} />
-          {segmentKeys.map((segmentKey) => (
-            <Area
-              key={`area-${segmentKey}`}
-              dataKey={segmentKey}
-              type="linear"
-              stroke="none"
-              fill={BAND_INK.fill}
-              fillOpacity={0.12}
-              connectNulls
-              isAnimationActive={false}
-              legendType="none"
-            />
-          ))}
-          {segmentKeys.map((segmentKey, index) => (
-            <Line
-              key={`line-${segmentKey}`}
-              dataKey={segmentKey}
-              name={index === 0 ? name : undefined}
-              type="linear"
-              stroke={BAND_INK.line}
-              strokeWidth={1.8}
-              connectNulls
-              isAnimationActive={false}
-              legendType="none"
-              dot={{
-                r: 2.6,
-                fill: BAND_INK.dot,
-                stroke: '#ffffff',
-                strokeWidth: 0.8,
-              }}
-              activeDot={{
-                r: 4,
-                fill: BAND_INK.dot,
-                stroke: '#ffffff',
-                strokeWidth: 0.8,
-              }}
-            />
-          ))}
-          <YAxis hide domain={[0, domainMax]} />
-          <Tooltip
-            content={
-              <SymptomBandTooltip
-                name={name}
-                dataKey={dataKey}
-                domainMax={domainMax}
-                tooltipMode={tooltipMode}
+            <ReferenceLine y={0} stroke={BAND_INK.baseline} strokeWidth={1} />
+            {segmentKeys.map((segmentKey) => (
+              <Area
+                key={`area-${segmentKey}`}
+                dataKey={segmentKey}
+                type="linear"
+                stroke="none"
+                fill={BAND_INK.fill}
+                fillOpacity={0.12}
+                connectNulls
+                isAnimationActive={false}
+                legendType="none"
               />
-            }
-          />
+            ))}
+            {segmentKeys.map((segmentKey, index) => (
+              <Line
+                key={`line-${segmentKey}`}
+                dataKey={segmentKey}
+                name={index === 0 ? name : undefined}
+                type="linear"
+                stroke={BAND_INK.line}
+                strokeWidth={1.8}
+                connectNulls
+                isAnimationActive={false}
+                legendType="none"
+                dot={{
+                  r: 2.6,
+                  fill: BAND_INK.dot,
+                  stroke: '#ffffff',
+                  strokeWidth: 0.8,
+                }}
+                activeDot={{
+                  r: 4,
+                  fill: BAND_INK.dot,
+                  stroke: '#ffffff',
+                  strokeWidth: 0.8,
+                }}
+              />
+            ))}
+            <YAxis hide domain={[0, domainMax]} />
+            <Tooltip
+              content={
+                isTooltipHost ? (
+                  <SymptomBandTooltip
+                    tooltipSeries={seriesForTooltip}
+                    tooltipMode={tooltipMode}
+                    showMrsTotal={showMrsTotal}
+                  />
+                ) : (
+                  () => null
+                )
+              }
+            />
           </ComposedChart>
         </ResponsiveContainer>
       </div>

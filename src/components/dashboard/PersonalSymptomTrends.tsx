@@ -4,7 +4,12 @@ import { useSymptomSelections } from '../../hooks/useSymptomSelections';
 import { getSymptomByKey } from '../../data/symptoms';
 import { formatChartDate } from '../../utils/chartHelpers';
 import { buildDailyIndexedWeeklyChart, weeklyChartWindow } from '../../utils/weeklyChartSeries';
-import { BandXAxis, SymptomBand, type SymptomBandRow } from './SymptomBand';
+import {
+  BandXAxis,
+  SymptomBand,
+  type BandTooltipSeries,
+  type SymptomBandRow,
+} from './SymptomBand';
 import type { SymptomCheckin, ExtendedSymptomLog } from '../../types/database';
 
 interface PersonalSymptomTrendsProps {
@@ -71,6 +76,16 @@ export function PersonalSymptomTrends({ checkins, extendedLogs }: PersonalSympto
 
   const isEmpty = chartData.points.length < 2 || chartData.keys.length === 0;
 
+  const tooltipSeries: BandTooltipSeries[] = useMemo(
+    () =>
+      chartData.keys.map((seriesKey) => ({
+        name: getSymptomByKey(seriesKey)?.label ?? seriesKey,
+        dataKey: seriesKey,
+        domainMax: DOMAIN_MAX,
+      })),
+    [chartData.keys],
+  );
+
   return (
     <ChartCard
       title="Personal symptom trends"
@@ -83,7 +98,7 @@ export function PersonalSymptomTrends({ checkins, extendedLogs }: PersonalSympto
     >
       {!isEmpty && (
         <div className="space-y-0">
-          {chartData.keys.map((key) => (
+          {chartData.keys.map((key, index) => (
             <SymptomBand
               key={key}
               name={getSymptomByKey(key)?.label ?? key}
@@ -93,6 +108,8 @@ export function PersonalSymptomTrends({ checkins, extendedLogs }: PersonalSympto
               domainMax={DOMAIN_MAX}
               syncId={SYNC_ID}
               tooltipMode="severity"
+              tooltipSeries={tooltipSeries}
+              isTooltipHost={index === 0}
             />
           ))}
           <BandXAxis data={chartData.points} />

@@ -36,6 +36,8 @@ const PANEL_MRS_HEIGHT = 80;
 const PANEL_PULSE_HEIGHT = 64;
 const X_AXIS_HEIGHT = 28;
 const LANE_ROW_HEIGHT = 28;
+/** Clearance under the last med lane for hanging dose-change labels before the date axis. */
+const LANE_AXIS_CLEARANCE = 18;
 const SYNC_ID = 'story-column';
 
 const INK = {
@@ -270,6 +272,7 @@ function StoryColumnComponent({
               style={{
                 marginLeft: CHART_MARGIN_LEFT,
                 marginRight: CHART_MARGIN_RIGHT,
+                paddingBottom: laneRows.length > 0 ? LANE_AXIS_CLEARANCE : 0,
               }}
             >
               <MedicationLane rows={laneRows} />

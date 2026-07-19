@@ -6,11 +6,13 @@ export const MRS_SUBSCALE_COLORS = {
   urogenitalDotOutline: '#a64d79',
 } as const;
 
+/** Per-subscale ceilings from MRS (4+4+3 items × 0–4 → 16+16+12 = 44). */
 export const MRS_SUBSCALES = [
   {
     dataKey: 'psychological' as const,
     plainLabel: 'Mood & sleep',
     clinicalLabel: 'Psychological',
+    maxScore: 16,
     color: MRS_SUBSCALE_COLORS.psychological,
     dotFill: MRS_SUBSCALE_COLORS.psychological,
     dotStroke: MRS_SUBSCALE_COLORS.psychological,
@@ -20,6 +22,7 @@ export const MRS_SUBSCALES = [
     dataKey: 'somatic' as const,
     plainLabel: 'Body & hot flashes',
     clinicalLabel: 'Vasomotor',
+    maxScore: 16,
     color: MRS_SUBSCALE_COLORS.somatic,
     dotFill: MRS_SUBSCALE_COLORS.somatic,
     dotStroke: MRS_SUBSCALE_COLORS.somatic,
@@ -29,6 +32,7 @@ export const MRS_SUBSCALES = [
     dataKey: 'urogenital' as const,
     plainLabel: 'Bladder & intimacy',
     clinicalLabel: 'Urogenital',
+    maxScore: 12,
     color: MRS_SUBSCALE_COLORS.urogenital,
     dotFill: MRS_SUBSCALE_COLORS.urogenital,
     dotStroke: MRS_SUBSCALE_COLORS.urogenitalDotOutline,

@@ -2,7 +2,12 @@ import { memo, useMemo } from 'react';
 import { ChartCard } from '../ui/ChartCard';
 import { buildDailyIndexedWeeklyChart, weeklyChartWindow } from '../../utils/weeklyChartSeries';
 import { MRS_SUBSCALES } from '../../data/mrsSubscales';
-import { BandXAxis, SymptomBand, type SymptomBandRow } from './SymptomBand';
+import {
+  BandXAxis,
+  SymptomBand,
+  type BandTooltipSeries,
+  type SymptomBandRow,
+} from './SymptomBand';
 import type { SymptomTrendPoint } from '../../hooks/useChartData';
 
 interface SubscaleChartProps {
@@ -10,8 +15,13 @@ interface SubscaleChartProps {
 }
 
 const SUBSCALE_VALUE_KEYS = MRS_SUBSCALES.map((s) => s.dataKey);
-const DOMAIN_MAX = 16;
 const SYNC_ID = 'subscale-breakdown';
+
+const TOOLTIP_SERIES: BandTooltipSeries[] = MRS_SUBSCALES.map((s) => ({
+  name: s.plainLabel,
+  dataKey: s.dataKey,
+  domainMax: s.maxScore,
+}));
 
 function SubscaleChartComponent({ data }: SubscaleChartProps) {
   const isEmpty = data.length < 2;
@@ -41,23 +51,26 @@ function SubscaleChartComponent({ data }: SubscaleChartProps) {
   return (
     <ChartCard
       title="MRS Subscale Breakdown"
-      description="Where your score comes from"
+      description="Three parts of your MRS score (total 0–44)"
       isEmpty={isEmpty}
       emptyState={{ message: 'Need at least 2 check-ins to show subscale trends.' }}
       minHeight="210px"
     >
       {!isEmpty && (
         <div className="space-y-0">
-          {MRS_SUBSCALES.map((subscale) => (
+          {MRS_SUBSCALES.map((subscale, index) => (
             <SymptomBand
               key={subscale.dataKey}
               name={subscale.plainLabel}
               dataKey={subscale.dataKey}
               data={dailyRows}
               segmentKeys={weeklySegmentKeys[subscale.dataKey] ?? []}
-              domainMax={DOMAIN_MAX}
+              domainMax={subscale.maxScore}
               syncId={SYNC_ID}
               tooltipMode="subscale"
+              tooltipSeries={TOOLTIP_SERIES}
+              isTooltipHost={index === 0}
+              showMrsTotal
             />
           ))}
           <BandXAxis data={dailyRows} />
