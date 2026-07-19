@@ -13,7 +13,7 @@ interface SafeguardingCardProps {
 export function SafeguardingCard({ insight, onDismiss }: SafeguardingCardProps) {
   useEffect(() => {
     markInsightAsViewed(insight);
-  }, [insight]);
+  }, [insight.id, insight.title, insight.body]);
 
   return (
     <div className="rounded-xl border border-alert-700/20 border-l-[3px] border-l-alert-700 bg-sand-50 p-5 shadow-sm">

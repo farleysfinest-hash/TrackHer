@@ -30,18 +30,27 @@ export function getUiValue<T>(key: string): T | undefined {
 }
 
 /**
- * Optimistically updates the store (instant UI response), then persists
- * via the merge RPC. Persistence failures are logged, not surfaced —
- * the worst case is a banner reappearing next session.
+ * Optimistically updates the module cache, optionally mirrors into the auth
+ * store (for reactive UI flags), then persists via the merge RPC.
+ *
+ * Pass `mirrorToProfile: false` for high-churn keys (e.g. viewed_insights) that
+ * must not invalidate profile-dependent memos like useInsights on every write.
  */
-export function setUiValue(key: string, value: unknown): void {
+export function setUiValue(
+  key: string,
+  value: unknown,
+  opts?: { mirrorToProfile?: boolean },
+): void {
   cachedState = { ...cachedState, [key]: value };
 
-  const { profile } = useAuthStore.getState();
-  if (profile) {
-    useAuthStore.setState({
-      profile: { ...profile, ui_state: { ...cachedState } },
-    });
+  const mirrorToProfile = opts?.mirrorToProfile ?? true;
+  if (mirrorToProfile) {
+    const { profile } = useAuthStore.getState();
+    if (profile) {
+      useAuthStore.setState({
+        profile: { ...profile, ui_state: { ...cachedState } },
+      });
+    }
   }
 
   void supabase

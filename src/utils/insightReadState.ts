@@ -15,12 +15,25 @@ function loadViewed(): Record<string, ViewedInsightRecord> {
 
 export function markInsightAsViewed(insight: Insight): void {
   const viewed = { ...loadViewed() };
+  const existing = viewed[insight.id];
+  // Idempotent: same title/body already recorded — do not bump viewedAt or
+  // re-persist. Re-firing would thrash merge_ui_state and (if mirrored) the
+  // auth store → useInsights → new Insight identities → this effect again.
+  if (
+    existing &&
+    existing.title === insight.title &&
+    existing.body === insight.body
+  ) {
+    return;
+  }
   viewed[insight.id] = {
     title: insight.title,
     body: insight.body,
     viewedAt: new Date().toISOString(),
   };
-  setUiValue(UI_STATE_KEY, viewed);
+  // Cache + RPC only. Mirroring into profile.ui_state would recreate every
+  // Insight object and re-enter InsightCard's mark-as-viewed effect.
+  setUiValue(UI_STATE_KEY, viewed, { mirrorToProfile: false });
 }
 
 export function getViewedInsightIds(): Set<string> {

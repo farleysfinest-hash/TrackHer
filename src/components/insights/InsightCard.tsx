@@ -29,7 +29,9 @@ export function InsightCard({ insight, compact = false, onDismiss, stageProfile 
 
   useEffect(() => {
     markInsightAsViewed(insight);
-  }, [insight]);
+    // Depend on identity/content, not object identity — useInsights rebuilds
+    // Insight objects whenever profile-backed memos invalidate.
+  }, [insight.id, insight.title, insight.body]);
 
   if (insight.category === 'safeguarding') {
     return <SafeguardingCard insight={insight} onDismiss={onDismiss} />;
