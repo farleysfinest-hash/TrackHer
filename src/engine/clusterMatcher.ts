@@ -169,9 +169,9 @@ export function analyzeSymptomClusters(input: ClusterMatchInput): Insight[] {
       id: `cluster-${pattern.key}`,
       category: 'symptom_cluster',
       priority: confidence >= 0.7 ? 'high' : 'medium',
-      title: `Your recent symptoms align with a ${pattern.label.toLowerCase()} pattern`,
+      title: `Your recent symptoms align with a ${pattern.label.toLowerCase()}`,
       body: finalizeInsightBody(
-        `Over the past month, your symptom profile has matched a ${pattern.label.toLowerCase()} pattern. ${pattern.description} You are experiencing ${matchedLabels.join(', ')} at moderate or higher severity on average — ${primaryMatches.length} of ${pattern.primarySymptoms.length} hallmark symptoms of this pattern.`,
+        `Over the past month, your symptom profile has matched a ${pattern.label.toLowerCase()}. ${pattern.description} You are experiencing ${matchedLabels.join(', ')} at moderate or higher severity on average — ${primaryMatches.length} of ${pattern.primarySymptoms.length} hallmark symptoms of this pattern.`,
         { n: windowCheckins.length },
         true,
       ),
