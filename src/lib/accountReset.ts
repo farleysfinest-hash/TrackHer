@@ -22,3 +22,19 @@ export async function deleteUserAppData(): Promise<{ success: boolean; error?: s
   window.dispatchEvent(new CustomEvent('trackher:account-reset'));
   return { success: true };
 }
+
+/** Permanently delete the user's account, all app data, and their auth identity. */
+export async function deleteUserAccount(): Promise<{ success: boolean; error?: string }> {
+  const { error } = await supabase.rpc('delete_user_account');
+  if (error) return { success: false, error: error.message };
+
+  clearEngineResultCache();
+  clearTrackHerLocalStorage();
+
+  // The auth.users row is gone, but the JWT is still valid until it expires.
+  // Sign out locally so the client doesn't hold a zombie session.
+  await supabase.auth.signOut({ scope: 'local' });
+
+  window.dispatchEvent(new CustomEvent('trackher:account-deleted'));
+  return { success: true };
+}

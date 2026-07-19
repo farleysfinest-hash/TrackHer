@@ -7,6 +7,7 @@ import { Select } from '../components/ui/Select';
 import { Card } from '../components/ui/Card';
 import { MedicalDisclaimer } from '../components/ui/MedicalDisclaimer';
 import { ResetAccountModal } from '../components/settings/ResetAccountModal';
+import { DeleteAccountModal } from '../components/settings/DeleteAccountModal';
 import { useAuth } from '../hooks/useAuth';
 import { useProfile } from '../hooks/useProfile';
 import { MENOPAUSE_STAGES, APP_VERSION } from '../lib/constants';
@@ -31,7 +32,7 @@ const DAY_OPTIONS: Array<{ label: string; value: number }> = [
 
 export function SettingsPage() {
   const navigate = useNavigate();
-  const { user, signOut, updatePassword, resetAccount } = useAuth();
+  const { user, signOut, updatePassword, resetAccount, deleteAccount } = useAuth();
   const { profile, update, isUpdating } = useProfile();
 
   const [displayName, setDisplayName] = useState(profile?.display_name ?? '');
@@ -359,25 +360,11 @@ export function SettingsPage() {
         onReset={resetAccount}
       />
 
-      {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6">
-          <Card className="max-w-md">
-            <h3 className="font-display text-xl text-sage-800">Delete Account?</h3>
-            <p className="mt-2 text-sm text-sage-500">
-              This action cannot be undone. All your data will be permanently deleted. Please
-              contact support to request account deletion.
-            </p>
-            <div className="mt-6 flex gap-3">
-              <Button variant="danger" onClick={() => setShowDeleteModal(false)}>
-                I Understand
-              </Button>
-              <Button variant="secondary" onClick={() => setShowDeleteModal(false)}>
-                Cancel
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
+      <DeleteAccountModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onDelete={deleteAccount}
+      />
     </div>
   );
 }

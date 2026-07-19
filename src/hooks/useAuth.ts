@@ -15,6 +15,7 @@ export function useAuth() {
     updatePassword,
     updateProfile,
     resetAccount,
+    deleteAccount,
     fetchProfile,
     clearError,
   } = useAuthStore();
@@ -33,6 +34,7 @@ export function useAuth() {
     updatePassword,
     updateProfile,
     resetAccount,
+    deleteAccount,
     fetchProfile,
     clearError,
   };

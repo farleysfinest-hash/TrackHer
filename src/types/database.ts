@@ -5,6 +5,7 @@ import type {
   LastPeriodTimeframe,
   MenopauseCause,
 } from '../lib/strawStaging';
+import type { AssessmentResult } from './instruments';
 
 export type MenopauseStage = 'perimenopause' | 'menopause' | 'postmenopause' | 'surgical' | 'unknown';
 export type CheckinFrequency = 'daily' | 'weekly' | 'monthly';
@@ -534,6 +535,15 @@ export type Database = {
           updated_at?: string;
         };
         Update: Partial<Omit<CheckinDraft, 'id' | 'user_id'>>;
+        Relationships: [];
+      };
+      assessment_results: {
+        Row: AssessmentResult;
+        Insert: Omit<AssessmentResult, 'id' | 'created_at'> & {
+          assessed_at?: string;
+          created_at?: string;
+        };
+        Update: Partial<Omit<AssessmentResult, 'id' | 'user_id' | 'created_at'>>;
         Relationships: [];
       };
     };

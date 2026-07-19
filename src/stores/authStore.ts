@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { User, Session, AuthChangeEvent } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import { deleteUserAppData } from '../lib/accountReset';
+import { deleteUserAppData, deleteUserAccount } from '../lib/accountReset';
 import { getAuthErrorMessage } from '../lib/constants';
 import type { Profile, ProfileUpdate } from '../types/database';
 
@@ -27,6 +27,7 @@ interface AuthState {
   fetchProfile: (userId: string) => Promise<void>;
   updateProfile: (updates: ProfileUpdate) => Promise<{ success: boolean; error?: string }>;
   resetAccount: () => Promise<{ success: boolean; error?: string }>;
+  deleteAccount: () => Promise<{ success: boolean; error?: string }>;
   clearError: () => void;
 }
 
@@ -220,6 +221,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return { success: true };
     }
     set({ profile: data as Profile });
+    return { success: true };
+  },
+
+  deleteAccount: async () => {
+    const { user } = get();
+    if (!user) return { success: false, error: 'Not authenticated' };
+
+    set({ isLoading: true, error: null });
+    const result = await deleteUserAccount();
+    if (!result.success) {
+      set({ isLoading: false, error: result.error ?? 'Deletion failed' });
+      return result;
+    }
+    // Auth identity is gone and local session is cleared — wipe store state.
+    set({ user: null, profile: null, isAuthenticated: false, isLoading: false });
     return { success: true };
   },
 
