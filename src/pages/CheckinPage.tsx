@@ -45,6 +45,7 @@ export function CheckinPage() {
   const [pendingDraft, setPendingDraft] = useState<CheckinDraft | null>(null);
   const [pendingStartMode, setPendingStartMode] = useState<'full' | 'quick'>('full');
   const [pendingStartDate, setPendingStartDate] = useState(todayStr);
+  const [historyReloadToken, setHistoryReloadToken] = useState(0);
 
   const backdateValid = isValidCalendarDate(backdateValue) && backdateValue <= todayStr;
   const resolveTargetDate = () => (backdateValid ? backdateValue : todayStr);
@@ -276,14 +277,17 @@ export function CheckinPage() {
         )
       )}
 
-      <CheckinHistory onViewDetails={setDetailCheckin} />
+      <CheckinHistory onViewDetails={setDetailCheckin} reloadToken={historyReloadToken} />
 
       <CheckinDetailModal
         checkin={detailCheckin}
         isOpen={!!detailCheckin}
         onClose={() => setDetailCheckin(null)}
         onEdit={handleEditFromDetail}
-        onDeleted={() => void refresh()}
+        onDeleted={() => {
+          setHistoryReloadToken((t) => t + 1);
+          void refresh();
+        }}
       />
 
       <Modal

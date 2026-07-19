@@ -10,11 +10,13 @@ import { Button } from '../ui/Button';
 
 interface CheckinHistoryProps {
   onViewDetails: (checkin: SymptomCheckin) => void;
+  /** Bump to force a from-scratch reload (e.g. after a delete elsewhere on the page). */
+  reloadToken?: number;
 }
 
 type DateRange = '7' | '30' | '90' | 'all';
 
-export function CheckinHistory({ onViewDetails }: CheckinHistoryProps) {
+export function CheckinHistory({ onViewDetails, reloadToken }: CheckinHistoryProps) {
   const { fetchCheckinsPage } = useCheckins();
   const timezone = getResolvedTimezone(useAuthStore((s) => s.profile?.timezone));
   const [items, setItems] = useState<SymptomCheckin[]>([]);
@@ -49,7 +51,7 @@ export function CheckinHistory({ onViewDetails }: CheckinHistoryProps) {
 
   useEffect(() => {
     void load(true);
-  }, [load]);
+  }, [load, reloadToken]);
 
   return (
     <div className="space-y-4">
