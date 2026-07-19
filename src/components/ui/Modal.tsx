@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom';
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { X } from 'lucide-react';
 
 type ModalSize = 'sm' | 'md' | 'lg' | 'full';
@@ -15,11 +15,14 @@ interface ModalProps {
 }
 
 const sizeClasses: Record<ModalSize, string> = {
-  sm: 'max-w-[400px]',
-  md: 'max-w-[560px]',
-  lg: 'max-w-[720px]',
+  sm: 'max-w-[400px] max-h-[85dvh]',
+  md: 'max-w-[560px] max-h-[85dvh]',
+  lg: 'max-w-[720px] max-h-[85dvh]',
   full: 'max-w-[90vw] max-h-[90vh]',
 };
+
+const FOCUSABLE =
+  'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
 
 export function Modal({
   isOpen,
@@ -31,12 +34,44 @@ export function Modal({
   closeOnBackdrop = true,
 }: ModalProps) {
   const contentRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const titleId = useId();
 
   useEffect(() => {
     if (!isOpen) return;
 
+    previousFocusRef.current = document.activeElement as HTMLElement | null;
+
+    // Move focus into the dialog: first focusable element, else the panel itself.
+    const panel = contentRef.current;
+    const firstFocusable = panel?.querySelector<HTMLElement>(FOCUSABLE);
+    (firstFocusable ?? panel)?.focus();
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key !== 'Tab' || !contentRef.current) return;
+
+      // Trap Tab inside the dialog.
+      const focusables = Array.from(
+        contentRef.current.querySelectorAll<HTMLElement>(FOCUSABLE),
+      );
+      if (focusables.length === 0) {
+        e.preventDefault();
+        return;
+      }
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement;
+      if (e.shiftKey && (active === first || active === contentRef.current)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
 
     document.body.style.overflow = 'hidden';
@@ -45,6 +80,7 @@ export function Modal({
     return () => {
       document.body.style.overflow = '';
       document.removeEventListener('keydown', handleKeyDown);
+      previousFocusRef.current?.focus?.();
     };
   }, [isOpen, onClose]);
 
@@ -61,16 +97,17 @@ export function Modal({
         ref={contentRef}
         role="dialog"
         aria-modal="true"
-        aria-labelledby={title ? 'modal-title' : undefined}
+        aria-labelledby={title ? titleId : undefined}
+        tabIndex={-1}
         className={[
-          'relative z-10 w-full overflow-y-auto rounded-xl border border-sand-200 bg-white shadow-xl',
+          'relative z-10 flex w-full flex-col overflow-hidden rounded-xl border border-sand-200 bg-white shadow-xl outline-none',
           sizeClasses[size],
         ].join(' ')}
       >
         {(title || showCloseButton) && (
-          <div className="flex items-center justify-between border-b border-sand-200 px-6 py-4">
+          <div className="flex shrink-0 items-center justify-between border-b border-sand-200 px-6 py-4">
             {title && (
-              <h2 id="modal-title" className="font-display text-xl text-sage-800">
+              <h2 id={titleId} className="font-display text-xl text-sage-800">
                 {title}
               </h2>
             )}
@@ -86,7 +123,7 @@ export function Modal({
             )}
           </div>
         )}
-        <div className="p-6">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-6">{children}</div>
       </div>
     </div>,
     document.body,
