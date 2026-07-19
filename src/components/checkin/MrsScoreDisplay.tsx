@@ -45,5 +45,8 @@ export function MrsScoreDisplay({
     );
   }
 
+  if (checkin.checkin_type === 'full') {
+    return <span className="text-sm text-sage-500">Incomplete check-in</span>;
+  }
   return <span className="text-sm text-sage-500">Pulse</span>;
 }
