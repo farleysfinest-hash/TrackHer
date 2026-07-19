@@ -9,6 +9,7 @@ import type { AssessmentResult } from './instruments';
 
 export type MenopauseStage = 'perimenopause' | 'menopause' | 'postmenopause' | 'surgical' | 'unknown';
 export type CheckinFrequency = 'daily' | 'weekly' | 'monthly';
+export type BleedingFlow = 'none' | 'spotting' | 'light' | 'moderate' | 'heavy';
 
 export type HormoneCategory =
   | 'estrogen'
@@ -220,9 +221,11 @@ export interface CheckinDraftPayload {
   energyLevel: number | null;
   moodLevel: number | null;
   sleepQuality: number | null;
+  bleedingFlow: BleedingFlow | null;
   energyComplete: boolean;
   moodComplete: boolean;
   sleepComplete: boolean;
+  bleedingComplete: boolean;
   flareSelected: string[];
   flarePreLogged: string[];
   mrsScores: Record<string, number | null>;
@@ -271,6 +274,7 @@ export interface SymptomCheckin {
   energy_level: number | null;
   mood_level: number | null;
   sleep_quality: number | null;
+  bleeding_flow: BleedingFlow | null;
   notes: string | null;
   is_backdated: boolean;
   created_at: string;

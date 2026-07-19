@@ -5,7 +5,7 @@ import { ChannelDots } from './ChannelDots';
 interface DailyChannelsDisplayProps {
   checkin: Pick<
     SymptomCheckin,
-    'energy_level' | 'mood_level' | 'sleep_quality' | 'overall_wellbeing'
+    'energy_level' | 'mood_level' | 'sleep_quality' | 'overall_wellbeing' | 'bleeding_flow'
   >;
   /** Horizontal wrap for tight spaces (history rows). */
   compact?: boolean;
@@ -25,7 +25,12 @@ export function DailyChannelsDisplay({ checkin, compact = false }: DailyChannels
   ];
 
   const answered = channels.filter((c) => c.value != null);
-  if (answered.length === 0) return null;
+  const showBleeding =
+    checkin.bleeding_flow !== null &&
+    checkin.bleeding_flow !== undefined &&
+    checkin.bleeding_flow !== 'none';
+
+  if (answered.length === 0 && !showBleeding) return null;
 
   return (
     <div className={compact ? 'flex flex-wrap items-center gap-x-4 gap-y-1.5' : 'space-y-2'}>
@@ -35,6 +40,12 @@ export function DailyChannelsDisplay({ checkin, compact = false }: DailyChannels
           <ChannelDots value={channel.value} label={channel.label} />
         </div>
       ))}
+      {showBleeding && (
+        <div className={compact ? 'flex items-center gap-2' : 'flex items-center gap-2'}>
+          <span className="w-12 shrink-0 text-sm text-sage-500">Bleeding</span>
+          <span className="text-sm capitalize text-sage-700">{checkin.bleeding_flow}</span>
+        </div>
+      )}
     </div>
   );
 }

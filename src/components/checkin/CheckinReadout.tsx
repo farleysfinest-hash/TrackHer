@@ -39,7 +39,10 @@ interface CheckinReadoutProps {
   dateLabel: string;
   instrument: InstrumentDefinition;
   instrumentScore: InstrumentScore;
-  previewCheckin: Pick<SymptomCheckin, 'energy_level' | 'mood_level' | 'sleep_quality' | 'overall_wellbeing'>;
+  previewCheckin: Pick<
+    SymptomCheckin,
+    'energy_level' | 'mood_level' | 'sleep_quality' | 'overall_wellbeing' | 'bleeding_flow'
+  >;
   ratedExtended: Array<{ symptom_key: string; severity: MRSScore }>;
   notes: string;
   onDone: () => void;

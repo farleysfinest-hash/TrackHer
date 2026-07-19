@@ -6,6 +6,7 @@ import type {
   ExtendedSymptomLog,
   MRSScore,
   CheckinType,
+  BleedingFlow,
 } from '../types/database';
 import {
   getLocalDateISO,
@@ -27,6 +28,7 @@ export interface CheckinInput {
   energyLevel: number | null;
   moodLevel: number | null;
   sleepQuality: number | null;
+  bleedingFlow?: BleedingFlow | null;
   mrsScores: Record<string, MRSScore | null>;
   extendedSymptoms: Array<{ symptom_key: string; severity: MRSScore }>;
   notes: string;
@@ -46,6 +48,7 @@ function buildCheckinPayload(data: CheckinInput, timezone: string) {
     energy_level: data.energyLevel,
     mood_level: data.moodLevel,
     sleep_quality: data.sleepQuality ?? null,
+    bleeding_flow: data.bleedingFlow ?? null,
     notes: isPulse ? null : data.notes || null,
     checkin_type: checkinType,
     is_backdated: checkinDate !== today,

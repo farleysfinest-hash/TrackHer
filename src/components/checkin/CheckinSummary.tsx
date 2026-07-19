@@ -32,6 +32,7 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
   const energyLevel = useCheckinStore((s) => s.energyLevel);
   const moodLevel = useCheckinStore((s) => s.moodLevel);
   const sleepQuality = useCheckinStore((s) => s.sleepQuality);
+  const bleedingFlow = useCheckinStore((s) => s.bleedingFlow);
   const flareSelected = useCheckinStore((s) => s.flareSelected);
   const flarePreLogged = useCheckinStore((s) => s.flarePreLogged);
   const extendedSymptoms = useCheckinStore((s) => s.extendedSymptoms);
@@ -73,6 +74,7 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
       energyLevel,
       moodLevel,
       sleepQuality,
+      bleedingFlow,
       mrsScores: isPulse ? { ...INITIAL_MRS_SCORES } : mrsScores,
       extendedSymptoms: isPulse
         ? []
@@ -124,8 +126,12 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
     energy_level: energyLevel,
     mood_level: moodLevel,
     sleep_quality: sleepQuality,
+    bleeding_flow: bleedingFlow,
     overall_wellbeing: null,
-  } as Pick<SymptomCheckin, 'energy_level' | 'mood_level' | 'sleep_quality' | 'overall_wellbeing'>;
+  } as Pick<
+    SymptomCheckin,
+    'energy_level' | 'mood_level' | 'sleep_quality' | 'overall_wellbeing' | 'bleeding_flow'
+  >;
 
   if (saveComplete && !isPulse) {
     return (

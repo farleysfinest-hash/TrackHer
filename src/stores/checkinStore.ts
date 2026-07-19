@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { MRSScore, SymptomCheckin, ExtendedSymptomLog, CheckinDraftPayload } from '../types/database';
+import type { MRSScore, SymptomCheckin, ExtendedSymptomLog, CheckinDraftPayload, BleedingFlow } from '../types/database';
 import type { InstrumentDefinition } from '../types/instruments';
 import { getPrimaryInstrument } from '../data/instruments/registry';
 import {
@@ -35,9 +35,11 @@ interface CheckinState {
   energyLevel: number | null;
   moodLevel: number | null;
   sleepQuality: number | null;
+  bleedingFlow: BleedingFlow | null;
   energyComplete: boolean;
   moodComplete: boolean;
   sleepComplete: boolean;
+  bleedingComplete: boolean;
   flareSelected: string[];
   flarePreLogged: string[];
   mrsScores: MRSScoresMap;
@@ -53,6 +55,8 @@ interface CheckinState {
   skipMood: () => void;
   setSleepQuality: (score: number) => void;
   skipSleepQuality: () => void;
+  setBleedingFlow: (flow: BleedingFlow) => void;
+  skipBleeding: () => void;
   initFlareFromPreLogged: (ids: string[]) => void;
   toggleFlareSymptom: (id: string) => void;
   setMRSScore: (symptom: MRSSymptomKey, score: MRSScore) => void;
@@ -114,9 +118,11 @@ const initialState = {
   energyLevel: null as number | null,
   moodLevel: null as number | null,
   sleepQuality: null as number | null,
+  bleedingFlow: null as BleedingFlow | null,
   energyComplete: false,
   moodComplete: false,
   sleepComplete: false,
+  bleedingComplete: false,
   flareSelected: [] as string[],
   flarePreLogged: [] as string[],
   mrsScores: { ...INITIAL_MRS_SCORES },
@@ -145,6 +151,9 @@ export const useCheckinStore = create<CheckinState>((set, get) => ({
   setSleepQuality: (score) => set({ sleepQuality: score, sleepComplete: true }),
 
   skipSleepQuality: () => set({ sleepQuality: null, sleepComplete: true }),
+
+  setBleedingFlow: (flow) => set({ bleedingFlow: flow, bleedingComplete: true }),
+  skipBleeding: () => set({ bleedingFlow: null, bleedingComplete: true }),
 
   initFlareFromPreLogged: (ids) =>
     set({ flarePreLogged: ids, flareSelected: [...ids] }),
@@ -259,9 +268,11 @@ export const useCheckinStore = create<CheckinState>((set, get) => ({
       energyLevel: checkin.energy_level ?? null,
       moodLevel: checkin.mood_level ?? null,
       sleepQuality: checkin.sleep_quality ?? null,
+      bleedingFlow: checkin.bleeding_flow ?? null,
       energyComplete: true,
       moodComplete: true,
       sleepComplete: true,
+      bleedingComplete: checkin.bleeding_flow !== undefined,
       flareSelected: [],
       flarePreLogged: [],
       mrsScores,
@@ -294,9 +305,11 @@ export const useCheckinStore = create<CheckinState>((set, get) => ({
       energyLevel: payload.energyLevel,
       moodLevel: payload.moodLevel,
       sleepQuality: payload.sleepQuality,
+      bleedingFlow: payload.bleedingFlow ?? null,
       energyComplete: payload.energyComplete,
       moodComplete: payload.moodComplete,
       sleepComplete: payload.sleepComplete,
+      bleedingComplete: payload.bleedingComplete ?? false,
       flareSelected: [...payload.flareSelected],
       flarePreLogged: [...payload.flarePreLogged],
       mrsScores,

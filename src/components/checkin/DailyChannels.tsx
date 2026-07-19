@@ -1,6 +1,9 @@
-// PULSE CEILING: three fixed channels + flare row. Never add fixed questions to the pulse — weekly dimensions belong in the MRS.
+// PULSE CEILING: three fixed channels + optional bleeding + flare row. Never add fixed MRS questions to the pulse.
 
+import { useState } from 'react';
 import { useCheckinStore } from '../../stores/checkinStore';
+import { useProfile } from '../../hooks/useProfile';
+import type { BleedingFlow } from '../../types/database';
 import { Button } from '../ui/Button';
 import { FlareTapRow } from './FlareTapRow';
 
@@ -18,6 +21,14 @@ interface ChannelRowProps {
   onSkip: () => void;
   ariaPrefix: string;
 }
+
+const BLEEDING_OPTIONS: Array<{ value: BleedingFlow; label: string }> = [
+  { value: 'none', label: 'None' },
+  { value: 'spotting', label: 'Spotting' },
+  { value: 'light', label: 'Light' },
+  { value: 'moderate', label: 'Moderate' },
+  { value: 'heavy', label: 'Heavy' },
+];
 
 function ChannelRow({
   title,
@@ -78,6 +89,8 @@ export function DailyChannels({ onNext }: DailyChannelsProps) {
   const energyLevel = useCheckinStore((s) => s.energyLevel);
   const moodLevel = useCheckinStore((s) => s.moodLevel);
   const sleepQuality = useCheckinStore((s) => s.sleepQuality);
+  const bleedingFlow = useCheckinStore((s) => s.bleedingFlow);
+  const bleedingComplete = useCheckinStore((s) => s.bleedingComplete);
   const energyComplete = useCheckinStore((s) => s.energyComplete);
   const moodComplete = useCheckinStore((s) => s.moodComplete);
   const sleepComplete = useCheckinStore((s) => s.sleepComplete);
@@ -87,7 +100,14 @@ export function DailyChannels({ onNext }: DailyChannelsProps) {
   const skipMood = useCheckinStore((s) => s.skipMood);
   const setSleepQuality = useCheckinStore((s) => s.setSleepQuality);
   const skipSleepQuality = useCheckinStore((s) => s.skipSleepQuality);
+  const setBleedingFlow = useCheckinStore((s) => s.setBleedingFlow);
+  const skipBleeding = useCheckinStore((s) => s.skipBleeding);
   const allChannelsComplete = useCheckinStore((s) => s.allChannelsComplete);
+  const { profile } = useProfile();
+  const [bleedingExpanded, setBleedingExpanded] = useState(false);
+
+  const bleedingDefaultOpen = profile?.has_uterus !== false;
+  const showBleedingOptions = bleedingDefaultOpen || bleedingExpanded || bleedingComplete;
 
   const canContinue = allChannelsComplete();
 
@@ -131,6 +151,56 @@ export function DailyChannels({ onNext }: DailyChannelsProps) {
           onSkip={skipSleepQuality}
           ariaPrefix="Sleep quality"
         />
+
+        {showBleedingOptions ? (
+          <div className="space-y-3 border-b border-sand-100 pb-6">
+            <h3 className="font-display text-lg text-sage-800">Any bleeding today?</h3>
+            <div className="flex flex-wrap justify-center gap-2">
+              {BLEEDING_OPTIONS.map((opt) => {
+                const isSelected = bleedingFlow === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setBleedingFlow(opt.value)}
+                    className={[
+                      'rounded-full px-4 py-2 text-sm font-medium transition-all duration-150',
+                      isSelected
+                        ? 'scale-110 bg-sage-500 text-white shadow-md'
+                        : 'bg-sand-100 text-sage-600 hover:bg-sage-100',
+                    ].join(' ')}
+                    aria-label={`Bleeding: ${opt.label}`}
+                    aria-pressed={isSelected}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+            {!bleedingComplete && (
+              <button
+                type="button"
+                onClick={skipBleeding}
+                className="text-sm text-sage-500 underline hover:text-sage-700"
+              >
+                Skip
+              </button>
+            )}
+            {bleedingComplete && bleedingFlow === null && (
+              <p className="text-sm text-sage-400">Skipped</p>
+            )}
+          </div>
+        ) : (
+          <div className="border-b border-sand-100 pb-6">
+            <button
+              type="button"
+              onClick={() => setBleedingExpanded(true)}
+              className="text-sm text-sage-500 underline hover:text-sage-700"
+            >
+              Report bleeding
+            </button>
+          </div>
+        )}
       </div>
 
       <FlareTapRow />
