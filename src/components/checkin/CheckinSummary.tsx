@@ -98,8 +98,17 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
 
     if (ok) {
       const newFlares = flareSelected.filter((id) => !flarePreLogged.includes(id));
+      // Backdated check-ins stamp their flares at local noon of the target day,
+      // not "now" — otherwise a December check-in writes July flare events.
+      const flareLoggedAt = isBackdated
+        ? new Date(`${targetDate}T12:00:00`).toISOString()
+        : undefined;
       for (const symptomId of newFlares) {
-        await createEvent({ symptom_id: symptomId, severity: 0 });
+        await createEvent({
+          symptom_id: symptomId,
+          severity: 0,
+          ...(flareLoggedAt !== undefined ? { logged_at: flareLoggedAt } : {}),
+        });
       }
     }
 
