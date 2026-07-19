@@ -11,7 +11,7 @@ interface DeleteAccountModalProps {
 }
 
 export function DeleteAccountModal({ isOpen, onClose, onDelete }: DeleteAccountModalProps) {
-  const [step, setStep] = useState<'warning' | 'confirm' | null>(null);
+  const [step, setStep] = useState<'warning' | 'confirm' | 'deleted' | null>(null);
   const [confirmText, setConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,10 +21,10 @@ export function DeleteAccountModal({ isOpen, onClose, onDelete }: DeleteAccountM
       setStep('warning');
       setConfirmText('');
       setError(null);
-    } else {
+    } else if (step !== 'deleted') {
       setStep(null);
     }
-  }, [isOpen]);
+  }, [isOpen, step]);
 
   const handleClose = () => {
     setConfirmText('');
@@ -38,10 +38,14 @@ export function DeleteAccountModal({ isOpen, onClose, onDelete }: DeleteAccountM
     const result = await onDelete();
     setIsDeleting(false);
     if (result.success) {
-      window.location.href = '/login';
+      setStep('deleted');
       return;
     }
     setError(result.error ?? 'Deletion failed. Please try again.');
+  };
+
+  const goToLogin = () => {
+    window.location.href = '/login';
   };
 
   return (
@@ -141,6 +145,23 @@ export function DeleteAccountModal({ isOpen, onClose, onDelete }: DeleteAccountM
               Permanently delete my account
             </Button>
           </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={step === 'deleted'}
+        onClose={goToLogin}
+        title="Account deleted"
+        size="md"
+        closeOnBackdrop={false}
+      >
+        <div className="space-y-5 text-center">
+          <p className="text-sage-700">
+            Your account and all associated data have been permanently removed.
+          </p>
+          <Button variant="secondary" fullWidth onClick={goToLogin}>
+            Go to login
+          </Button>
         </div>
       </Modal>
     </>
