@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&display=swap');
+@import '@fontsource-variable/fraunces';
+@import '@fontsource-variable/fraunces/wght-italic.css';
 @import "tailwindcss";
 
 @theme {
@@ -46,8 +47,8 @@
   --color-info: #8a6a7a;
 
   /* Typography */
-  --font-display: 'Fraunces', 'Georgia', serif;
-  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Fraunces Variable', 'Fraunces', 'Georgia', serif;
+  --font-body: system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
 }
 
