@@ -63,7 +63,7 @@ export function SignupForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-5" noValidate>
       <div>
         <h1 className="font-display text-2xl text-sage-800">Create your account</h1>
         <p className="mt-1 text-sage-500">Start tracking your HRT journey with confidence.</p>

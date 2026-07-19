@@ -40,7 +40,7 @@ export function LoginForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-5" noValidate>
       <div>
         <h1 className="font-display text-2xl text-sage-800">Welcome back</h1>
         <p className="mt-1 text-sage-500">Sign in to continue tracking your wellness journey.</p>
