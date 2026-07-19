@@ -21,8 +21,9 @@ const DURATION_LABELS: Record<number, string> = {
 };
 
 export function RecentLogs() {
-  const { events, isLoading } = useQuickLog();
+  const { events, isLoading, deleteEvent } = useQuickLog();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
   const recent = events.slice(0, 7);
 
@@ -88,6 +89,35 @@ export function RecentLogs() {
                     <p>Trigger: {capitalize(event.trigger_tag.replace(/_/g, ' '))}</p>
                   )}
                   {event.notes && <p className="mt-1 italic">&ldquo;{event.notes}&rdquo;</p>}
+                  <div className="mt-2 border-t border-sand-200 pt-2">
+                    {confirmingId === event.id ? (
+                      <span className="flex items-center gap-3">
+                        <span className="text-sage-600">Remove this entry?</span>
+                        <button
+                          type="button"
+                          onClick={() => void deleteEvent(event.id)}
+                          className="font-medium text-danger underline hover:opacity-80"
+                        >
+                          Remove
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmingId(null)}
+                          className="text-sage-500 underline hover:text-sage-700"
+                        >
+                          Keep it
+                        </button>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmingId(event.id)}
+                        className="text-sage-500 underline hover:text-sage-700"
+                      >
+                        Remove entry
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
             </li>
