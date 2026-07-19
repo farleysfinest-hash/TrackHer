@@ -1,19 +1,16 @@
-import { useState } from 'react';
 import { X, Sparkles } from 'lucide-react';
 import { Card } from '../ui/Card';
-
-const DISMISSED_KEY = 'trackher_full_dashboard_seen';
+import { useAuthStore } from '../../stores/authStore';
+import { hasUiFlag, setUiFlag } from '../../lib/uiState';
 
 export function FullDashboardUnlockCard() {
-  const [dismissed, setDismissed] = useState(
-    () => localStorage.getItem(DISMISSED_KEY) === 'true',
-  );
+  const profile = useAuthStore((s) => s.profile);
 
-  if (dismissed) return null;
+  if (!profile) return null;
+  if (hasUiFlag(profile, 'full_dashboard_seen')) return null;
 
   const handleDismiss = () => {
-    localStorage.setItem(DISMISSED_KEY, 'true');
-    setDismissed(true);
+    setUiFlag('full_dashboard_seen');
   };
 
   return (

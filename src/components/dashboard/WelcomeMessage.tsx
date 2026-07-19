@@ -1,19 +1,18 @@
-import { useState } from 'react';
 import { X, Heart } from 'lucide-react';
 import { Card } from '../ui/Card';
-
-const DISMISSED_KEY = 'trackher_welcome_dismissed';
+import { useAuthStore } from '../../stores/authStore';
+import { hasUiFlag, setUiFlag } from '../../lib/uiState';
 
 export function WelcomeMessage() {
-  const [dismissed, setDismissed] = useState(
-    () => localStorage.getItem(DISMISSED_KEY) === 'true',
-  );
+  const profile = useAuthStore((s) => s.profile);
 
-  if (dismissed) return null;
+  // Wait for the profile before deciding — prevents a flash of the
+  // banner for users who already dismissed it.
+  if (!profile) return null;
+  if (hasUiFlag(profile, 'welcome_dismissed')) return null;
 
   const handleDismiss = () => {
-    localStorage.setItem(DISMISSED_KEY, 'true');
-    setDismissed(true);
+    setUiFlag('welcome_dismissed');
   };
 
   return (

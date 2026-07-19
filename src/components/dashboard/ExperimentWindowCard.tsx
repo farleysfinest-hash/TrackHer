@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useMedicationChanges, type MedicationChangeWithMed } from '../../hooks/useMedicationChanges';
 import { useAuthStore } from '../../stores/authStore';
+import { hasUiFlag, setUiFlag } from '../../lib/uiState';
 import { getLocalDateISO, getResolvedTimezone } from '../../utils/checkinHelpers';
 import { addDaysISO, getMedicationChangePastLabel } from '../../utils/medicationHelpers';
 import { formatDate, formatDateLong } from '../../utils/formatters';
@@ -16,7 +17,7 @@ function daysBetween(from: string, to: string): number {
 }
 
 function sparseDismissKey(changeId: string): string {
-  return `trackher_experiment_sparse_${changeId}`;
+  return `experiment_sparse_${changeId}`;
 }
 
 function hasReadoutForChange(change: MedicationChangeWithMed, insights: Insight[]): boolean {
@@ -40,7 +41,8 @@ interface ExperimentWindowCardProps {
 
 export function ExperimentWindowCard({ insights, hasCheckedInToday }: ExperimentWindowCardProps) {
   const { changes, fetchChanges } = useMedicationChanges();
-  const timezone = getResolvedTimezone(useAuthStore((s) => s.profile?.timezone));
+  const profile = useAuthStore((s) => s.profile);
+  const timezone = getResolvedTimezone(profile?.timezone);
   const today = getLocalDateISO(timezone);
 
   const [sparseDismissed, setSparseDismissed] = useState<Record<string, boolean>>({});
@@ -78,7 +80,7 @@ export function ExperimentWindowCard({ insights, hasCheckedInToday }: Experiment
       const sparseDay = elapsed - WINDOW_DAYS;
       if (sparseDay >= SPARSE_GRACE_DAYS) return null;
 
-      const dismissed = localStorage.getItem(sparseDismissKey(activeChange.id)) === 'true';
+      const dismissed = hasUiFlag(profile, sparseDismissKey(activeChange.id));
       if (dismissed || sparseDismissed[activeChange.id]) return null;
 
       return {
@@ -99,12 +101,12 @@ export function ExperimentWindowCard({ insights, hasCheckedInToday }: Experiment
       readoutDate,
       progress: Math.min((dayN / WINDOW_DAYS) * 100, 100),
     };
-  }, [activeChange, today, insights, sparseDismissed]);
+  }, [activeChange, today, insights, sparseDismissed, profile]);
 
   if (!view) return null;
 
   const dismissSparse = () => {
-    localStorage.setItem(sparseDismissKey(view.change.id), 'true');
+    setUiFlag(sparseDismissKey(view.change.id));
     setSparseDismissed((prev) => ({ ...prev, [view.change.id]: true }));
   };
 

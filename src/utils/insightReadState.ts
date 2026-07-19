@@ -1,6 +1,7 @@
 import type { Insight } from '../engine/types';
+import { getUiValue, setUiValue } from '../lib/uiState';
 
-const STORAGE_KEY = 'trackher-viewed-insights';
+const UI_STATE_KEY = 'viewed_insights';
 
 interface ViewedInsightRecord {
   title: string;
@@ -9,31 +10,17 @@ interface ViewedInsightRecord {
 }
 
 function loadViewed(): Record<string, ViewedInsightRecord> {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return {};
-    return JSON.parse(raw) as Record<string, ViewedInsightRecord>;
-  } catch {
-    return {};
-  }
-}
-
-function saveViewed(viewed: Record<string, ViewedInsightRecord>): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(viewed));
-  } catch {
-    // ignore quota errors
-  }
+  return getUiValue<Record<string, ViewedInsightRecord>>(UI_STATE_KEY) ?? {};
 }
 
 export function markInsightAsViewed(insight: Insight): void {
-  const viewed = loadViewed();
+  const viewed = { ...loadViewed() };
   viewed[insight.id] = {
     title: insight.title,
     body: insight.body,
     viewedAt: new Date().toISOString(),
   };
-  saveViewed(viewed);
+  setUiValue(UI_STATE_KEY, viewed);
 }
 
 export function getViewedInsightIds(): Set<string> {

@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { X } from 'lucide-react';
 import { useCheckinStore } from '../../stores/checkinStore';
 import { useAuthStore } from '../../stores/authStore';
+import { hasUiFlag, setUiFlag } from '../../lib/uiState';
 import type { MRSScore } from '../../types/database';
 import type { InstrumentDefinition } from '../../types/instruments';
 import {
@@ -13,9 +14,6 @@ import { SeveritySlider } from './SeveritySlider';
 import { InstrumentScoreBadge } from './InstrumentScoreBadge';
 import { Button } from '../ui/Button';
 import { UROGENITAL_NORMALIZATION_COPY } from '../../utils/echoHelpers';
-
-const INSTRUMENT_TOOLTIP_KEY = 'predicther_instrument_tooltip_dismissed';
-const FIRST_CHECKIN_DONE_KEY = 'trackher_first_checkin_done';
 
 const SUBSCALE_DISPLAY_LABELS: Record<string, string> = {
   psychological: 'Mood & mind',
@@ -33,14 +31,13 @@ export function InstrumentSection({ instrument, onNext, onBack }: InstrumentSect
   const mrsScores = useCheckinStore((s) => s.mrsScores);
   const setMRSScore = useCheckinStore((s) => s.setMRSScore);
   const getInstrumentScore = useCheckinStore((s) => s.getInstrumentScore);
-  const frequency = useAuthStore((s) => s.profile?.checkin_frequency);
-  const [showTooltip, setShowTooltip] = useState(
-    () => localStorage.getItem(INSTRUMENT_TOOLTIP_KEY) !== 'true',
-  );
+  const profile = useAuthStore((s) => s.profile);
+  const frequency = profile?.checkin_frequency;
+  const showTooltip = !hasUiFlag(profile, 'instrument_tooltip_seen');
   const [dismissedNudge, setDismissedNudge] = useState(false);
 
   const ratedCount = countRatedInstrumentItems(mrsScores, instrument);
-  const isReturningCheckinUser = localStorage.getItem(FIRST_CHECKIN_DONE_KEY) === 'true';
+  const isReturningCheckinUser = hasUiFlag(profile, 'first_checkin_done');
   const showNudge =
     isReturningCheckinUser &&
     ratedCount < Math.ceil(instrument.items.length * 0.7) &&
@@ -64,8 +61,7 @@ export function InstrumentSection({ instrument, onNext, onBack }: InstrumentSect
   );
 
   const dismissTooltip = () => {
-    localStorage.setItem(INSTRUMENT_TOOLTIP_KEY, 'true');
-    setShowTooltip(false);
+    setUiFlag('instrument_tooltip_seen');
   };
 
   return (

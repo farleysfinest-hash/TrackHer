@@ -1,14 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Pill } from 'lucide-react';
 import { useMedications } from '../../hooks/useMedications';
 import { useMedicationAdministrations } from '../../hooks/useMedicationAdministrations';
 import { useAuthStore } from '../../stores/authStore';
 import { useToast } from '../../stores/toastStore';
+import { hasUiFlag, setUiFlag } from '../../lib/uiState';
 import { getLocalDateISO, getResolvedTimezone } from '../../utils/checkinHelpers';
 import { showDoseChip, isDoseLoggedForMed } from '../../utils/medicationHelpers';
 import type { Medication } from '../../types/database';
 
-const EXPLAINER_KEY = 'trackher_dose_tap_explainer_seen';
 const UNDO_WINDOW_MS = 10 * 60 * 1000;
 
 function formatLogTime(iso: string, timezone: string): string {
@@ -28,12 +28,10 @@ export function DoseTapWidget() {
     undoLast,
     isLoading: adminsLoading,
   } = useMedicationAdministrations();
-  const timezone = getResolvedTimezone(useAuthStore((s) => s.profile?.timezone));
+  const profile = useAuthStore((s) => s.profile);
+  const timezone = getResolvedTimezone(profile?.timezone);
   const today = getLocalDateISO(timezone);
-
-  const [showExplainer, setShowExplainer] = useState(
-    () => localStorage.getItem(EXPLAINER_KEY) !== 'true',
-  );
+  const showExplainer = !hasUiFlag(profile, 'dose_tap_explainer_seen');
 
   useEffect(() => {
     void fetchActiveMedications();
@@ -45,8 +43,7 @@ export function DoseTapWidget() {
   );
 
   const dismissExplainer = () => {
-    localStorage.setItem(EXPLAINER_KEY, 'true');
-    setShowExplainer(false);
+    setUiFlag('dose_tap_explainer_seen');
   };
 
   const handleChipTap = async (med: Medication) => {

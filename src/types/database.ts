@@ -99,6 +99,8 @@ export interface Profile {
   period_changes: PeriodChanges | null;
   staging_completed_at: string | null;
   welcome_seen: boolean | null;
+  /** Dismissed banners, seen tooltips, viewed insights. Merged via merge_ui_state RPC. */
+  ui_state: Record<string, unknown> | null;
   /** Null only while the required onboarding/legacy-confirmation question is unanswered. */
   has_uterus: boolean | null;
   has_uterus_confirmed_at: string | null;
