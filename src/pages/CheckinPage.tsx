@@ -15,6 +15,7 @@ import { Input } from '../components/ui/Input';
 import { getLocalDateISO, getResolvedTimezone } from '../utils/checkinHelpers';
 import { DailyChannelsDisplay } from '../components/ui/DailyChannelsDisplay';
 import { formatLoggingDate } from '../utils/formatters';
+import { isValidCalendarDate } from '../utils/localDate';
 import type { SymptomCheckin, CheckinDraft } from '../types/database';
 import { clearCheckinDraft, loadCheckinDraft } from '../lib/checkinDraft';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -45,7 +46,8 @@ export function CheckinPage() {
   const [pendingStartMode, setPendingStartMode] = useState<'full' | 'quick'>('full');
   const [pendingStartDate, setPendingStartDate] = useState(todayStr);
 
-  const resolveTargetDate = () => (backdateValue && backdateValue <= todayStr ? backdateValue : todayStr);
+  const backdateValid = isValidCalendarDate(backdateValue) && backdateValue <= todayStr;
+  const resolveTargetDate = () => (backdateValid ? backdateValue : todayStr);
 
   const startFullFromPulse = async (existing: SymptomCheckin) => {
     const detail = await fetchCheckinDetail(existing.id);
@@ -163,7 +165,7 @@ export function CheckinPage() {
   }
 
   const todaysIsPulse = todaysCheckin?.checkin_type === 'pulse';
-  const loggingForPastDay = backdateValue && backdateValue < todayStr;
+  const loggingForPastDay = backdateValid && backdateValue < todayStr;
 
   return (
     <div className="space-y-10">
@@ -215,7 +217,8 @@ export function CheckinPage() {
               <button
                 type="button"
                 onClick={() => void startCheckin('full')}
-                className="rounded-xl border border-sand-200 bg-white p-4 text-left transition hover:border-sage-300 hover:bg-sage-50/50"
+                disabled={showBackdate && !backdateValid}
+                className="rounded-xl border border-sand-200 bg-white p-4 text-left transition hover:border-sage-300 hover:bg-sage-50/50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <p className="font-display text-lg text-sage-800">Full check-in (~2 min)</p>
                 <p className="mt-1 text-sm text-sage-500">
@@ -225,7 +228,8 @@ export function CheckinPage() {
               <button
                 type="button"
                 onClick={() => void startCheckin('quick')}
-                className="rounded-xl border border-sand-200 bg-white p-4 text-left transition hover:border-sage-300 hover:bg-sage-50/50"
+                disabled={showBackdate && !backdateValid}
+                className="rounded-xl border border-sand-200 bg-white p-4 text-left transition hover:border-sage-300 hover:bg-sage-50/50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <p className="font-display text-lg text-sage-800">Quick pulse (~10 sec)</p>
                 <p className="mt-1 text-sm text-sage-500">Just log how you feel overall today</p>
@@ -249,6 +253,12 @@ export function CheckinPage() {
                     max={todayStr}
                     onChange={(e) => setBackdateValue(e.target.value)}
                   />
+                  {!backdateValid && (
+                    <p className="mt-2 text-sm text-amber-700">
+                      Finish picking a date, or go back to today — check-ins started now
+                      would be logged for today.
+                    </p>
+                  )}
                   <button
                     type="button"
                     onClick={() => {

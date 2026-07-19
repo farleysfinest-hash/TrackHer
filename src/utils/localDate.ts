@@ -38,6 +38,22 @@ export function parseISODate(dateStr: string): CivilDateParts {
   return { year, month, day };
 }
 
+/**
+ * True when the string is a complete, real YYYY-MM-DD calendar date. Never throws —
+ * safe to call in render on raw <input type="date"> values, which pass through
+ * intermediate states (empty string, or year-in-progress values like "0002-12-15")
+ * while the user types. parseISODate's century check rejects those intermediates.
+ */
+export function isValidCalendarDate(dateStr: string | null | undefined): dateStr is string {
+  if (!dateStr) return false;
+  try {
+    parseISODate(dateStr);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function formatISODateParts({ year, month, day }: CivilDateParts): string {
   return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
