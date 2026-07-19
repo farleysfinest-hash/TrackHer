@@ -14,6 +14,7 @@ import { ChartCard } from '../ui/ChartCard';
 import { LabTooltipContent } from './ChartTooltipContent';
 import { LabTrendSelector } from './LabTrendSelector';
 import { CHART_COLORS, formatChartDate, formatChartDateLong } from '../../utils/chartHelpers';
+import { CHART_TOOLTIP_WRAPPER_STYLE } from '../../utils/chartStyle';
 import { getBiomarkerByKey } from '../../data/labRanges';
 import { getTrendDirection, getValueStatus, type LabValueStatus } from '../../utils/labHelpers';
 import {
@@ -234,6 +235,8 @@ function LabTrendChartComponent({
                 tickFormatter={(v) => formatLabChartValue(Number(v))}
               />
               <Tooltip
+                isAnimationActive={false}
+                wrapperStyle={CHART_TOOLTIP_WRAPPER_STYLE}
                 content={
                   <LabTooltipContent biomarkerLabel={biomarker.label} unit={biomarker.unit} />
                 }

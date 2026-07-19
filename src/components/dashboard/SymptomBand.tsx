@@ -9,6 +9,10 @@ import {
   YAxis,
 } from 'recharts';
 import { CHART_COLORS } from '../../utils/chartHelpers';
+import {
+  CHART_TOOLTIP_SURFACE_STYLE,
+  CHART_TOOLTIP_WRAPPER_STYLE,
+} from '../../utils/chartStyle';
 import { SEVERITY_LABELS } from '../../utils/checkinHelpers';
 
 export const BAND_CHART_HEIGHT = 44;
@@ -127,7 +131,10 @@ function SymptomBandTooltip({
   const mrsTotal = showMrsTotal ? lines.reduce((sum, line) => sum + line.value, 0) : null;
 
   return (
-    <div className="rounded-md border border-sand-200 bg-white px-2.5 py-1.5 text-[11px] shadow-md">
+    <div
+      className="rounded-md border border-sand-200 px-2.5 py-1.5 text-[11px] shadow-md"
+      style={CHART_TOOLTIP_SURFACE_STYLE}
+    >
       <p className="font-medium text-sage-800">{point.dateLabel}</p>
       {gapNotice && <p className="mt-0.5 text-sage-600">{gapNotice}</p>}
       <div className="mt-0.5 space-y-0.5">
@@ -224,6 +231,8 @@ export function SymptomBand({
             ))}
             <YAxis hide domain={[0, domainMax]} />
             <Tooltip
+              isAnimationActive={false}
+              wrapperStyle={CHART_TOOLTIP_WRAPPER_STYLE}
               content={
                 isTooltipHost ? (
                   <SymptomBandTooltip

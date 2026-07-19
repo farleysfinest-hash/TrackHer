@@ -14,6 +14,10 @@ import { ChartTooltipContent } from './ChartTooltipContent';
 import { MedicationLane } from './MedicationLane';
 import { CHART_COLORS } from '../../utils/chartHelpers';
 import { formatChartDateLong } from '../../utils/chartHelpers';
+import {
+  CHART_TOOLTIP_SURFACE_STYLE,
+  CHART_TOOLTIP_WRAPPER_STYLE,
+} from '../../utils/chartStyle';
 import { buildDailyIndexedWeeklyChart } from '../../utils/weeklyChartSeries';
 import { WeeklySegmentLines } from './WeeklySegmentLines';
 import {
@@ -105,7 +109,10 @@ function PulseTooltip({ active, payload, label, channel }: PulseTooltipProps) {
   const dateStr = point.date ?? (typeof label === 'string' ? label : '');
 
   return (
-    <div className="rounded-lg border border-sand-200 bg-white px-4 py-3 text-sm shadow-lg">
+    <div
+      className="rounded-lg border border-sand-200 px-4 py-3 text-sm shadow-lg"
+      style={CHART_TOOLTIP_SURFACE_STYLE}
+    >
       <p className="font-medium text-sage-800">
         {dateStr.includes('-') ? formatChartDateLong(dateStr) : label}
       </p>
@@ -204,7 +211,11 @@ function StoryColumnComponent({
                   axisLine={false}
                   tickLine={false}
                 />
-                <Tooltip content={<ChartTooltipContent />} />
+                <Tooltip
+                  isAnimationActive={false}
+                  wrapperStyle={CHART_TOOLTIP_WRAPPER_STYLE}
+                  content={<ChartTooltipContent />}
+                />
                 <WeeklySegmentLines
                   segmentKeys={mrsSegmentKeys}
                   name="MRS Score"
@@ -250,7 +261,11 @@ function StoryColumnComponent({
                     axisLine={false}
                     tickLine={false}
                   />
-                  <Tooltip content={<PulseTooltip channel={activeChannel} />} />
+                  <Tooltip
+                    isAnimationActive={false}
+                    wrapperStyle={CHART_TOOLTIP_WRAPPER_STYLE}
+                    content={<PulseTooltip channel={activeChannel} />}
+                  />
                   <Area
                     dataKey="pulseRaw"
                     type="monotone"

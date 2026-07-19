@@ -9,6 +9,7 @@ import {
 } from '../../utils/checkinHelpers';
 import type { SymptomCheckin } from '../../types/database';
 import { formatChartDateLong, severityLabel } from '../../utils/chartHelpers';
+import { CHART_TOOLTIP_SURFACE_STYLE } from '../../utils/chartStyle';
 import type { SymptomTrendPoint } from '../../hooks/useChartData';
 
 interface ChartTooltipProps {
@@ -55,7 +56,10 @@ export function ChartTooltipContent(props: ChartTooltipProps) {
     checkin && hasMRSData(checkin) ? getTopConcerns(checkinToScores(checkin), 3) : [];
 
   return (
-    <div className="rounded-lg border border-sand-200 bg-white px-4 py-3 text-sm shadow-lg">
+    <div
+      className="rounded-lg border border-sand-200 px-4 py-3 text-sm shadow-lg"
+      style={CHART_TOOLTIP_SURFACE_STYLE}
+    >
       <p className="font-medium text-sage-800">
         {dateStr.includes('-') ? formatChartDateLong(dateStr) : label}
       </p>
@@ -91,7 +95,10 @@ export function LabTooltipContent(
   if (!active || !payload?.length) return null;
   const value = payload[0]?.value;
   return (
-    <div className="rounded-lg border border-sand-200 bg-white px-4 py-3 text-sm shadow-lg">
+    <div
+      className="rounded-lg border border-sand-200 px-4 py-3 text-sm shadow-lg"
+      style={CHART_TOOLTIP_SURFACE_STYLE}
+    >
       <p className="font-medium text-sage-800">{label}</p>
       <p className="mt-1 text-sage-700">
         {biomarkerLabel}: <strong>{value}</strong> {unit}

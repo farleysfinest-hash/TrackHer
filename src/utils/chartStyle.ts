@@ -4,6 +4,24 @@
  * Never put strokeDasharray on data series (dots inherit it and render as broken arcs).
  */
 
+import type { CSSProperties } from 'react';
+import { LIGHT_SERIES_INKS, LIGHT_SERIES_OUTLINE } from './chartHelpers';
+
+/**
+ * Recharts applies animated opacity on the tooltip wrapper; without this, chart ink
+ * shows through even when the custom content uses solid white.
+ */
+export const CHART_TOOLTIP_WRAPPER_STYLE: CSSProperties = {
+  outline: 'none',
+  opacity: 1,
+  zIndex: 40,
+  pointerEvents: 'none',
+};
+
+export const CHART_TOOLTIP_SURFACE_STYLE: CSSProperties = {
+  backgroundColor: '#ffffff',
+};
+
 export interface SeriesLineProps {
   type: 'monotone' | 'linear';
   strokeWidth: number;
@@ -25,8 +43,6 @@ export interface SeriesLineProps {
   };
   strokeOpacity?: number;
 }
-
-import { LIGHT_SERIES_INKS, LIGHT_SERIES_OUTLINE } from './chartHelpers';
 
 /** Weekly measurements (MRS, subscales, symptom trends): linear segments + round dots; connectNulls bridges structural daily nulls. */
 export function weeklySeriesProps(stroke: string, dotColor: string = stroke): SeriesLineProps {
