@@ -49,7 +49,12 @@ export function MedicationEntryWizard({ isOpen, onClose, onComplete }: Medicatio
   const displayStep = isCustomEntry && currentStep >= 4 ? 4 : currentStep;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-sand-50">
+    <div
+      className="fixed inset-0 z-50 flex flex-col bg-sand-50"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Add medication"
+    >
       <header className="flex items-center justify-between border-b border-sand-200 bg-white px-6 py-4">
         <h1 className="font-display text-xl text-sage-800">Add Medication</h1>
         <button

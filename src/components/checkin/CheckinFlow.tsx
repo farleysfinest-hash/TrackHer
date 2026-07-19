@@ -168,7 +168,12 @@ export function CheckinFlow({ onClose, onComplete }: CheckinFlowProps) {
   const saveLine = saveIndicatorCopy(saveState);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-sand-50">
+    <div
+      className="fixed inset-0 z-50 flex flex-col bg-sand-50"
+      role="dialog"
+      aria-modal="true"
+      aria-label={mode === 'quick' ? 'Quick pulse' : 'Full check-in'}
+    >
       <header className="flex items-center justify-between border-b border-sand-200 bg-white px-6 py-4">
         <div>
           <h1 className="font-display text-xl text-sage-800">
