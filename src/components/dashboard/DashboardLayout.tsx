@@ -238,7 +238,7 @@ export function DashboardLayout() {
 
           <ActiveMedicationsSummary medications={medications} />
         </>
-      )}
+      ) : null}
     </div>
   );
 }
