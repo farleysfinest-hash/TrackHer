@@ -17,6 +17,7 @@ import type { MenopauseStage } from '../types/database';
 import { TimezoneSelect } from '../components/ui/TimezoneSelect';
 import { getActiveTimezone, isValidTimeZone } from '../utils/localDate';
 import { deriveUterusAnswer, uterusAnswerToValue, type UterusAnswer } from '../utils/uterusAnswer';
+import { downloadJson, exportUserData } from '../utils/dataExport';
 
 const DAY_OPTIONS: Array<{ label: string; value: number }> = [
   { label: 'Mon', value: 1 },
@@ -56,6 +57,8 @@ export function SettingsPage() {
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const timezone = getResolvedTimezone(profile?.timezone);
   const todayStr = getLocalDateISO(timezone);
@@ -105,6 +108,20 @@ export function SettingsPage() {
       setTimeout(() => setProfileSaved(false), 3000);
     } else {
       setProfileError(result.error ?? 'Could not save your profile.');
+    }
+  };
+
+  const handleExportData = async () => {
+    setIsExporting(true);
+    setExportError(null);
+    try {
+      const data = await exportUserData();
+      const dateStr = new Date().toISOString().slice(0, 10);
+      downloadJson(data, `trackher-export-${dateStr}.json`);
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : 'Export failed. Please try again.');
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -279,10 +296,20 @@ export function SettingsPage() {
       <Card>
         <h2 className="font-display text-xl text-sage-800">Data</h2>
         <div className="mt-4 space-y-4">
-          <Button variant="secondary" disabled title="Coming soon">
-            Export My Data
-          </Button>
-          <p className="text-xs text-sage-400">Data export coming in a future update.</p>
+          <div>
+            <Button
+              variant="secondary"
+              onClick={handleExportData}
+              isLoading={isExporting}
+              loadingText="Exporting..."
+            >
+              Export My Data
+            </Button>
+            <p className="mt-1 text-xs text-sage-500">
+              Downloads all your TrackHer data as a JSON file.
+            </p>
+            {exportError && <p className="mt-1 text-sm text-danger">{exportError}</p>}
+          </div>
 
           <div className="rounded-lg border border-sand-200 bg-sand-50 p-4">
             <h3 className="text-sm font-medium text-sage-700">Reset account</h3>
