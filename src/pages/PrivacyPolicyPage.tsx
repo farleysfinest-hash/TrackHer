@@ -5,7 +5,7 @@ export function PrivacyPolicyPage() {
   return (
     <LegalPageLayout>
       <h1 className="font-display text-3xl font-semibold text-sage-800">Privacy Policy</h1>
-      <p className="mt-2 text-sm text-sage-400">Effective Date: July 6, 2026 · Last Updated: July 6, 2026</p>
+      <p className="mt-2 text-sm text-sage-400">Effective Date: July 6, 2026 · Last Updated: July 19, 2026</p>
 
       <div className="mt-8 space-y-8 text-sage-700 text-[15px] leading-relaxed">
 
@@ -13,15 +13,17 @@ export function PrivacyPolicyPage() {
         <section>
           <h2 className="font-display text-xl font-semibold text-sage-800 mb-3">Introduction</h2>
           <p>
-            TrackHer ("we," "us," or "our") operates the TrackHer web application (the "App"), a personal
-            wellness tool designed to help individuals track symptoms, medications, and lab results
-            related to menopause, perimenopause, and hormone replacement therapy (HRT/BHRT).
+            TrackHer ("we," "us," or "our") operates the TrackHer application (the "App"), available
+            as a web application. (An iOS app is planned; this policy will apply to it equally when it ships.)
+            TrackHer is a personal wellness tool designed to help individuals track symptoms,
+            medications, and lab results related to menopause, perimenopause, and hormone replacement
+            therapy (HRT/BHRT).
           </p>
           <p className="mt-3">
             We understand that the health information you enter into TrackHer is deeply personal.
             Protecting your privacy is not just a legal obligation — it is foundational to our mission.
             This Privacy Policy explains what information we collect, how we use and protect it,
-            and what rights you have over your data.
+            and what rights you have over your data. It applies to every platform the App ships on.
           </p>
           <p className="mt-3">
             By creating an account or using the App, you agree to the practices described in this policy.
@@ -33,10 +35,10 @@ export function PrivacyPolicyPage() {
         <section>
           <h2 className="font-display text-xl font-semibold text-sage-800 mb-3">Scope of This Policy</h2>
           <p>
-            This policy applies to all information collected through the TrackHer web application.
-            TrackHer is a direct-to-consumer wellness application. We are not a healthcare provider,
-            health plan, or healthcare clearinghouse, and we do not operate as a HIPAA-covered entity
-            or business associate. However, we recognize that the information you share with us is
+            This policy applies to all information collected through the TrackHer application on any
+            platform. TrackHer is a direct-to-consumer wellness application. We are not a healthcare
+            provider, health plan, or healthcare clearinghouse, and we do not operate as a HIPAA-covered
+            entity or business associate. However, we recognize that the information you share with us is
             health-related and sensitive, and we treat it with the care and security that such data demands.
           </p>
           <p className="mt-3">
@@ -95,20 +97,22 @@ export function PrivacyPolicyPage() {
           <p className="mt-3">
             All health and wellness data is entered voluntarily by you. We do not collect data from
             wearable devices, electronic health records, pharmacies, or any other external source.
-            You are the sole source of your health data in TrackHer.
+            The App does not read from or write to Apple HealthKit. You are the sole source of
+            your health data in TrackHer.
           </p>
 
           <h3 className="font-display text-lg font-medium text-sage-700 mt-4 mb-2">Automatically Collected Information</h3>
           <p>
-            When you use the App, our hosting provider (Vercel) and infrastructure provider (Supabase)
+            When you use the App, our hosting provider (Cloudflare) and infrastructure provider (Supabase)
             may automatically collect standard server log information including your IP address, browser
-            type, device type, and pages visited. This data is used solely for security monitoring,
+            or device type, and pages visited. This data is used solely for security monitoring,
             error diagnosis, and service reliability.
           </p>
           <p className="mt-3">
             We do not use cookies for advertising or tracking purposes. We do not use any third-party
             analytics services. We do not embed social media widgets, advertising pixels, or
-            retargeting scripts.
+            retargeting scripts. The App does not and will not use Apple's App Tracking Transparency framework
+            because we do not track you across apps or websites — there is nothing to ask permission for.
           </p>
         </section>
 
@@ -119,14 +123,16 @@ export function PrivacyPolicyPage() {
           <ul className="mt-2 ml-4 list-disc space-y-1 text-sage-600">
             <li>To authenticate your account and maintain your session.</li>
             <li>To store and display the health data you enter so you can track patterns over time.</li>
-            <li>To calculate symptom scores, generate trend charts, and surface correlations between your medications, symptoms, and lab results.</li>
+            <li>To calculate symptom scores, generate trend charts, and surface correlations between your medications, symptoms, and lab results. All pattern analysis runs inside the App itself — your health data is never sent to any external analysis or artificial-intelligence service.</li>
             <li>To generate provider-ready PDF reports from your own data, which you control and share at your discretion.</li>
-            <li>To send you optional check-in reminders if you enable them.</li>
+            <li>If we add optional check-in reminders, they will be scheduled locally on your device and never sent through an external notification service.</li>
             <li>To respond to your support requests.</li>
           </ul>
           <p className="mt-3 font-medium text-sage-800">
             We do not use your health data for advertising, marketing, profiling, research, or any
-            purpose other than providing the App's core functionality to you.
+            purpose other than providing the App's core functionality to you. This commitment is
+            consistent with Apple's App Store guidelines for apps handling health data, which we
+            fully support.
           </p>
         </section>
 
@@ -149,10 +155,16 @@ export function PrivacyPolicyPage() {
               runs on Amazon Web Services (AWS). Data is encrypted in transit (TLS) and at rest (AES-256).
             </li>
             <li>
-              <span className="font-medium text-sage-700">Vercel</span> (hosting): The App's frontend
-              is hosted on Vercel. Vercel processes standard web request data (IP addresses, headers)
-              to serve the App but does not have access to your health data, which is stored directly
-              in Supabase.
+              <span className="font-medium text-sage-700">Cloudflare</span> (hosting): The App's web
+              frontend is served by Cloudflare. Cloudflare processes standard web request data
+              (IP addresses, headers) to serve the App but does not have access to your health data,
+              which is stored directly in Supabase.
+            </li>
+            <li>
+              <span className="font-medium text-sage-700">Apple</span> (iOS distribution): When the iOS App is available: The iOS App
+              is distributed through the Apple App Store. Apple processes your App Store account
+              activity under its own privacy policy. Apple does not receive any of the health data
+              you enter into TrackHer.
             </li>
           </ul>
           <p className="mt-3">
@@ -183,9 +195,11 @@ export function PrivacyPolicyPage() {
               flows use time-limited, single-use tokens sent to your verified email.
             </li>
             <li>
-              <span className="font-medium text-sage-700">No client-side storage of health data:</span> Your
-              health data is not stored in browser local storage, cookies, or on your device. It
-              resides only in the secured database.
+              <span className="font-medium text-sage-700">Minimal on-device storage:</span> Your
+              health records reside in the secured database, not on your device. The App keeps only
+              a small amount of local data on your device: your session token (so you stay
+              signed in — standard for web applications; protect your device as you would any signed-in account) and temporary display caches, which are cleared when you sign out or delete
+              your account. Exported reports you save to your device are under your control.
             </li>
           </ul>
           <p className="mt-3">
@@ -204,10 +218,11 @@ export function PrivacyPolicyPage() {
             is central to TrackHer's purpose.
           </p>
           <p className="mt-3">
-            You may delete your account at any time through the App's Settings page. When you delete
-            your account, all associated data — including your profile, symptom check-ins, medication
-            records, lab results, assessment scores, and any other data you have entered — is
-            permanently deleted from our database. This deletion is cascading and irreversible.
+            You may delete your account at any time through the App's Settings page — no email,
+            phone call, or support request required. When you delete your account, all associated
+            data — including your profile, symptom check-ins, medication records, lab results,
+            assessment scores, and any other data you have entered — is permanently deleted from
+            our database, along with your login credentials. This deletion is cascading and irreversible.
           </p>
           <p className="mt-3">
             Residual copies may persist in encrypted database backups for a limited period consistent
@@ -236,8 +251,9 @@ export function PrivacyPolicyPage() {
               account and all associated data through the Settings page.
             </li>
             <li>
-              <span className="font-medium text-sage-700">Portability:</span> You can generate and
-              download a PDF report of your data at any time through the provider report feature.
+              <span className="font-medium text-sage-700">Portability:</span> You can export a
+              complete, machine-readable copy of your data (JSON format) and generate a provider-ready
+              PDF report at any time through the App — both are self-service and free.
             </li>
             <li>
               <span className="font-medium text-sage-700">No sale of data:</span> We do not sell
@@ -295,10 +311,10 @@ export function PrivacyPolicyPage() {
         <section>
           <h2 className="font-display text-xl font-semibold text-sage-800 mb-3">International Users</h2>
           <p>
-            TrackHer is operated from the United States. If you access the App from outside the
-            United States, your data will be transferred to and processed in the United States.
-            By using the App, you consent to this transfer. The United States may not provide the
-            same level of data protection as your home country.
+            TrackHer is operated from the United States. If you access the App from outside the United States, your data
+            will be transferred to and processed in the United States. By using the App, you consent
+            to this transfer. The United States may not provide the same level of data protection as
+            your home country.
           </p>
         </section>
 
