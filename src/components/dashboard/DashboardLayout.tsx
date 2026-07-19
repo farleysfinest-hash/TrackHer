@@ -169,9 +169,13 @@ export function DashboardLayout() {
 
           <PersonalSymptomTrends checkins={checkins} extendedLogs={extendedSymptoms} />
 
-          <div className="grid gap-6 lg:grid-cols-2">
-            <SubscaleChart data={symptomTrend} />
-            <SymptomHeatmap rows={heatmapRows} />
+          <div className="grid min-w-0 gap-6 lg:grid-cols-2">
+            <div className="min-w-0">
+              <SubscaleChart data={symptomTrend} />
+            </div>
+            <div className="min-w-0">
+              <SymptomHeatmap rows={heatmapRows} />
+            </div>
           </div>
 
           <LabTrendChart

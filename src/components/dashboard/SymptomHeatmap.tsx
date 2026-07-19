@@ -30,67 +30,64 @@ function SymptomHeatmapComponent({ rows }: SymptomHeatmapProps) {
       minHeight="320px"
     >
       {!isEmpty && (
-        <div className="overflow-x-auto">
-          <div className="w-full">
-            <div
-              className="grid gap-px"
-              style={{
-                gridTemplateColumns: `${LABEL_COLUMN_WIDTH} repeat(${dates.length}, minmax(0, 1fr))`,
-              }}
-            >
-              <div className="sticky left-0 z-10 bg-white p-2 text-xs font-medium text-sage-500">
-                Symptom
+        <div className="min-w-0 w-full overflow-hidden">
+          <div
+            className="grid min-w-0 gap-px"
+            style={{
+              gridTemplateColumns: `${LABEL_COLUMN_WIDTH} repeat(${dates.length}, minmax(0, 1fr))`,
+            }}
+          >
+            <div className="bg-white p-2 text-xs font-medium text-sage-500">Symptom</div>
+            {dates.map((d) => (
+              <div
+                key={d.date}
+                className="truncate p-1 text-center text-[10px] leading-tight text-sage-400"
+                title={d.dateLabel}
+              >
+                {d.dateLabel}
               </div>
-              {dates.map((d) => (
-                <div
-                  key={d.date}
-                  className="p-1 text-center text-[10px] text-sage-400"
-                >
-                  {d.dateLabel}
-                </div>
-              ))}
+            ))}
 
-              {rows.map((row) => {
-                const displayLabel = heatmapDisplayLabel(row.symptomKey, row.label);
+            {rows.map((row) => {
+              const displayLabel = heatmapDisplayLabel(row.symptomKey, row.label);
 
-                return (
-                  <Fragment key={row.symptomKey}>
-                    <div
-                      className="sticky left-0 z-10 flex h-8 items-center overflow-hidden bg-white pr-2 text-xs text-sage-700"
-                      title={row.label}
-                    >
-                      <span className="truncate whitespace-nowrap">{displayLabel}</span>
-                    </div>
-                    {row.cells.map((cell) => {
-                      const bg =
-                        cell.score === null
-                          ? '#f5ebef'
-                          : HEATMAP_COLORS[cell.score as 0 | 1 | 2 | 3 | 4] ?? '#f5ebef';
-                      const tip = `${row.label} · ${cell.dateLabel}: ${
-                        cell.score === null ? 'Not rated' : SEVERITY_LABELS[cell.score]
-                      }`;
-                      return (
-                        <div
-                          key={`${row.symptomKey}-${cell.date}`}
-                          className={[
-                            'flex h-8 min-w-[32px] items-center justify-center rounded-sm text-[10px]',
-                            cell.score === null
-                              ? 'text-sage-300'
-                              : cell.score >= 3
-                                ? 'text-white'
-                                : 'text-sage-600',
-                          ].join(' ')}
-                          style={{ backgroundColor: bg }}
-                          title={tip}
-                        >
-                          {cell.score === null ? '—' : cell.score}
-                        </div>
-                      );
-                    })}
-                  </Fragment>
-                );
-              })}
-            </div>
+              return (
+                <Fragment key={row.symptomKey}>
+                  <div
+                    className="flex h-8 min-w-0 items-center overflow-hidden bg-white pr-2 text-xs text-sage-700"
+                    title={row.label}
+                  >
+                    <span className="truncate whitespace-nowrap">{displayLabel}</span>
+                  </div>
+                  {row.cells.map((cell) => {
+                    const bg =
+                      cell.score === null
+                        ? '#f5ebef'
+                        : HEATMAP_COLORS[cell.score as 0 | 1 | 2 | 3 | 4] ?? '#f5ebef';
+                    const tip = `${row.label} · ${cell.dateLabel}: ${
+                      cell.score === null ? 'Not rated' : SEVERITY_LABELS[cell.score]
+                    }`;
+                    return (
+                      <div
+                        key={`${row.symptomKey}-${cell.date}`}
+                        className={[
+                          'flex h-8 min-w-0 items-center justify-center rounded-sm text-[10px]',
+                          cell.score === null
+                            ? 'text-sage-300'
+                            : cell.score >= 3
+                              ? 'text-white'
+                              : 'text-sage-600',
+                        ].join(' ')}
+                        style={{ backgroundColor: bg }}
+                        title={tip}
+                      >
+                        {cell.score === null ? '—' : cell.score}
+                      </div>
+                    );
+                  })}
+                </Fragment>
+              );
+            })}
           </div>
         </div>
       )}
