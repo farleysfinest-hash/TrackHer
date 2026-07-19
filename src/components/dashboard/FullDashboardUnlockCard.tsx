@@ -7,6 +7,7 @@ export function FullDashboardUnlockCard() {
   const profile = useAuthStore((s) => s.profile);
 
   if (!profile) return null;
+  if (profile.ui_state == null) return null;
   if (hasUiFlag(profile, 'full_dashboard_seen')) return null;
 
   const handleDismiss = () => {

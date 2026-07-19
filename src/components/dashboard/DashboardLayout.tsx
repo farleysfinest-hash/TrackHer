@@ -49,6 +49,7 @@ export function DashboardLayout() {
     summaryCheckins,
     mrsCheckinCount,
     earliestCheckinDate,
+    checkinsLoading,
     medications,
     changes,
     labResults,
@@ -90,7 +91,10 @@ export function DashboardLayout() {
     [checkins],
   );
 
-  const isFullDashboard = mrsCheckinCount >= FULL_DASHBOARD_CHECKINS;
+  // mrsCheckinCount starts at 0 before the first fetch — don't pick a branch
+  // (or mount WelcomeMessage) until we know whether this is the early or full dashboard.
+  const isFullDashboard = !checkinsLoading && mrsCheckinCount >= FULL_DASHBOARD_CHECKINS;
+  const isEarlyDashboard = !checkinsLoading && mrsCheckinCount < FULL_DASHBOARD_CHECKINS;
 
   const timezone = getResolvedTimezone(useAuthStore((s) => s.profile?.timezone));
   const stageProfile = useStageProfile();
@@ -191,7 +195,7 @@ export function DashboardLayout() {
 
           {showStandaloneReport && <ProviderReportButton />}
         </>
-      ) : (
+      ) : isEarlyDashboard ? (
         <>
           <WelcomeMessage />
 

@@ -9,6 +9,9 @@ export function WelcomeMessage() {
   // Wait for the profile before deciding — prevents a flash of the
   // banner for users who already dismissed it.
   if (!profile) return null;
+  // ui_state may be missing from the row briefly (schema cache / partial
+  // selects). Treat that as "not ready" rather than "not dismissed".
+  if (profile.ui_state == null) return null;
   if (hasUiFlag(profile, 'welcome_dismissed')) return null;
 
   const handleDismiss = () => {

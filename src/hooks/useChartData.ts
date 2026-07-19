@@ -70,6 +70,7 @@ export function useChartData(dateRange: DateRange) {
     mrsCheckinCount,
     earliestCheckinDate,
     fetchCheckinsRange,
+    isLoading: checkinsLoading,
   } = useCheckins();
   const { medications, fetchMedications } = useMedications();
   const { changes, fetchChanges } = useMedicationChanges();
@@ -212,6 +213,7 @@ export function useChartData(dateRange: DateRange) {
     summaryCheckins: checkins,
     mrsCheckinCount,
     earliestCheckinDate,
+    checkinsLoading,
     medications,
     allMedicationChanges,
     changes: filteredChanges,
