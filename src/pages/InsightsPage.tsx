@@ -6,8 +6,7 @@ import { InsightCategoryFilter } from '../components/insights/InsightCategoryFil
 import { InsightsList } from '../components/insights/InsightsList';
 import {
   filterInsightsByGroup,
-  FILTER_EMPTY_DESCRIPTIONS,
-  FILTER_EMPTY_FOLLOWUP,
+  getFilterEmptyDescription,
   type InsightFilterGroup,
   INSIGHT_FILTER_OPTIONS,
 } from '../utils/insightHelpers';
@@ -36,7 +35,7 @@ export function InsightsPage() {
     activeFilter !== 'all' && insights.length > 0 && filtered.length === 0
       ? {
           title: 'Nothing here yet',
-          description: `${FILTER_EMPTY_DESCRIPTIONS[activeFilter]} ${FILTER_EMPTY_FOLLOWUP}`,
+          description: getFilterEmptyDescription(activeFilter),
         }
       : null;
 

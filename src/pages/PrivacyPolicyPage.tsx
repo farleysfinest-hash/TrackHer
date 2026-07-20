@@ -109,9 +109,10 @@ export function PrivacyPolicyPage() {
             error diagnosis, and service reliability.
           </p>
           <p className="mt-3">
-            We do not use cookies for advertising or tracking purposes. We do not use any third-party
-            analytics services. We do not embed social media widgets, advertising pixels, or
-            retargeting scripts. The App does not and will not use Apple's App Tracking Transparency framework
+            We do not use cookies for advertising or tracking purposes. We use Cloudflare Web
+            Analytics, a cookieless, aggregate service that does not track you across sites and
+            cannot identify individual visitors. No other third-party analytics services are used.
+            We do not embed social media widgets, advertising pixels, or retargeting scripts. The App does not and will not use Apple's App Tracking Transparency framework
             because we do not track you across apps or websites — there is nothing to ask permission for.
           </p>
         </section>

@@ -76,7 +76,8 @@ const FILTER_GROUPS: Record<InsightFilterGroup, InsightCategory[] | null> = {
 export const FILTER_EMPTY_DESCRIPTIONS: Record<Exclude<InsightFilterGroup, 'all'>, string> = {
   correlations: 'No correlation insights in your data so far.',
   wellbeing: 'No daily energy insights in your data so far.',
-  patterns: 'No symptom pattern insights in your data so far.',
+  patterns:
+    'No symptom pattern match in your recent check-ins yet. These need at least four complete weekly check-ins in the last month — enough data to see how symptoms cluster over time, not just on one day.',
   trends: 'No trend insights in your data so far.',
   labs: 'No lab insights in your data so far.',
   positive: 'No positive trend insights in your data so far.',
@@ -84,6 +85,20 @@ export const FILTER_EMPTY_DESCRIPTIONS: Record<Exclude<InsightFilterGroup, 'all'
 
 export const FILTER_EMPTY_FOLLOWUP =
   'These update as you keep logging — when one appears in this category, you\'ll see it here.';
+
+const FILTER_EMPTY_FOLLOWUPS: Partial<
+  Record<Exclude<InsightFilterGroup, 'all'>, string>
+> = {
+  patterns:
+    'A day or two late is fine; a skipped week is usually what pauses this. When a pattern appears, you\'ll see it here.',
+};
+
+export function getFilterEmptyDescription(
+  filter: Exclude<InsightFilterGroup, 'all'>,
+): string {
+  const followup = FILTER_EMPTY_FOLLOWUPS[filter] ?? FILTER_EMPTY_FOLLOWUP;
+  return `${FILTER_EMPTY_DESCRIPTIONS[filter]} ${followup}`;
+}
 
 export function filterInsightsByGroup(
   insights: Insight[],

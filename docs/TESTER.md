@@ -58,6 +58,31 @@ Send feedback to the project owner via whatever channel they prefer (text, email
 
 ---
 
+## Maintainer: seed the Patterns test fixture
+
+The one-off history fixture defaults to a safe dry run and never stores credentials in source. It
+rebuilds weekly MRS assessments and realistic personal-symptom histories, including sparse and
+zero-severity observations for chart edge-case coverage.
+Put these variable names in `.env.local`:
+
+```dotenv
+SUPABASE_URL=...
+SUPABASE_SERVICE_ROLE_KEY=...
+SEED_USER_EMAIL=...
+```
+
+Then run:
+
+```bash
+npx tsx scripts/seed-pattern-history.ts --dry-run
+npx tsx scripts/seed-pattern-history.ts --apply
+```
+
+Optional configuration: `SEED_DAYS` (default `180`). Keep service-role credentials only in
+`.env.local` or the invoking process environment; never commit them.
+
+---
+
 ## Medical note
 
 TrackHer is for personal tracking and education only. It is not medical advice. Always consult your healthcare provider about hormone therapy decisions.
