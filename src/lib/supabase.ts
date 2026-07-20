@@ -9,6 +9,14 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
+if (supabaseUrl.includes('your-project') || supabaseAnonKey.includes('your-anon-key')) {
+  throw new Error(
+    'Supabase credentials are still the placeholders from .env.example. ' +
+      'Put your real project URL and publishable key in .env, then rebuild ' +
+      '(npm run build) and, for iOS, re-sync (npx cap sync ios).',
+  );
+}
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
