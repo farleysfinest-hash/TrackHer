@@ -1,60 +1,16 @@
-import { useState, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
-import { useAuthStore } from '../stores/authStore';
-import type { MedicationChange, Medication } from '../types/database';
+import { useMedicationChangesStore } from '../stores/medicationChangesStore';
 
-export interface MedicationChangeWithMed extends MedicationChange {
-  medication?: Medication | null;
-}
+export type { MedicationChangeWithMed } from '../stores/medicationChangesStore';
 
+/**
+ * Shared across the meds page, dashboard cards, and insights — state lives in
+ * `useMedicationChangesStore` so it's fetched once per session, not once per consumer.
+ */
 export function useMedicationChanges() {
-  const [changes, setChanges] = useState<MedicationChangeWithMed[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const getUserId = () => useAuthStore.getState().user?.id;
-
-  const fetchChanges = useCallback(async (medicationId?: string) => {
-    const userId = getUserId();
-    if (!userId) return;
-
-    setIsLoading(true);
-    setError(null);
-
-    let query = supabase
-      .from('medication_changes')
-      .select('*')
-      .eq('user_id', userId)
-      .order('change_date', { ascending: false })
-      .order('created_at', { ascending: false });
-
-    if (medicationId) {
-      query = query.eq('medication_id', medicationId);
-    }
-
-    const { data: changesData, error: fetchError } = await query;
-
-    if (fetchError) {
-      setIsLoading(false);
-      setError(fetchError.message);
-      return;
-    }
-
-    const { data: medsData } = await supabase
-      .from('medications')
-      .select('*')
-      .eq('user_id', userId);
-
-    const medMap = new Map((medsData as Medication[] | null)?.map((m) => [m.id, m]) ?? []);
-
-    const enriched = ((changesData as MedicationChange[]) ?? []).map((change) => ({
-      ...change,
-      medication: change.medication_id ? medMap.get(change.medication_id) ?? null : null,
-    }));
-
-    setChanges(enriched);
-    setIsLoading(false);
-  }, []);
+  const changes = useMedicationChangesStore((s) => s.changes);
+  const isLoading = useMedicationChangesStore((s) => s.isLoading);
+  const error = useMedicationChangesStore((s) => s.error);
+  const fetchChanges = useMedicationChangesStore((s) => s.fetchChanges);
 
   return {
     changes,

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Medication } from '../../types/database';
 import { useMedications } from '../../hooks/useMedications';
 import { useMedicationChanges } from '../../hooks/useMedicationChanges';
@@ -33,6 +33,10 @@ export function MedicationDetailModal({
   const { updateMedication } = useMedications();
   const { changes, fetchChanges } = useMedicationChanges();
   const toast = useToast();
+  const medChanges = useMemo(
+    () => (medication ? changes.filter((c) => c.medication_id === medication.id) : []),
+    [changes, medication],
+  );
   const [isEditing, setIsEditing] = useState(false);
   const [showDoseChange, setShowDoseChange] = useState(false);
   const [notes, setNotes] = useState('');
@@ -47,7 +51,7 @@ export function MedicationDetailModal({
       setPrescriber(medication.prescriber_name ?? '');
       setPharmacy(medication.pharmacy_name ?? '');
       setApplicationSite(medication.application_site ?? '');
-      void fetchChanges(medication.id);
+      void fetchChanges();
     }
   }, [medication, isOpen, fetchChanges]);
 
@@ -73,7 +77,7 @@ export function MedicationDetailModal({
     }
   };
 
-  const formatChangeEntry = (change: (typeof changes)[0]) => {
+  const formatChangeEntry = (change: (typeof medChanges)[0]) => {
     const date = formatDateLong(change.change_date);
     const medName = medication.medication_name;
 
@@ -110,7 +114,7 @@ export function MedicationDetailModal({
             onCancel={() => setShowDoseChange(false)}
             onSuccess={() => {
               setShowDoseChange(false);
-              void fetchChanges(medication.id);
+              void fetchChanges({ force: true });
               onRefresh();
             }}
           />
@@ -221,11 +225,11 @@ export function MedicationDetailModal({
 
         <div className="border-t border-sand-200 pt-4">
           <h3 className="mb-3 font-display text-lg text-sage-800">Change History</h3>
-          {changes.length === 0 ? (
+          {medChanges.length === 0 ? (
             <p className="text-sm text-sage-400">No changes recorded yet.</p>
           ) : (
             <ul className="space-y-2">
-              {changes.map((change) => (
+              {medChanges.map((change) => (
                 <li key={change.id} className="text-sm text-sage-600">
                   {formatChangeEntry(change)}
                 </li>

@@ -57,6 +57,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }, 0);
       } else if (event === 'SIGNED_OUT') {
         set({ user: null, profile: null, isAuthenticated: false, isLoading: false });
+        setTimeout(() => {
+          void import('../lib/prefetchCoreData').then(({ clearCoreDataCaches }) => {
+            clearCoreDataCaches();
+          });
+        }, 0);
       } else if (event === 'TOKEN_REFRESHED' && session?.user) {
         set({ user: session.user, isAuthenticated: true });
       } else if (event === 'PASSWORD_RECOVERY') {
@@ -127,6 +132,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isLoading: false,
         isInitialized: true,
       });
+      const { clearCoreDataCaches } = await import('../lib/prefetchCoreData');
+      clearCoreDataCaches();
     }
   },
 

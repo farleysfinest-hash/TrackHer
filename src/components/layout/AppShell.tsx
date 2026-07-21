@@ -6,6 +6,17 @@ import { Sidebar } from './Sidebar';
 import { MobileNav } from './MobileNav';
 import { Header } from './Header';
 import { useReminderSync } from '../../hooks/useReminderSync';
+import { useAuthStore } from '../../stores/authStore';
+import { prefetchCoreData } from '../../lib/prefetchCoreData';
+
+function useCoreDataPrefetch() {
+  const userId = useAuthStore((s) => s.user?.id);
+
+  useEffect(() => {
+    if (!userId) return;
+    void prefetchCoreData();
+  }, [userId]);
+}
 
 function useNotificationNavigation() {
   const navigate = useNavigate();
@@ -33,6 +44,7 @@ export function AppShell() {
   const { pathname } = useLocation();
   useReminderSync();
   useNotificationNavigation();
+  useCoreDataPrefetch();
 
   useEffect(() => {
     window.scrollTo(0, 0);

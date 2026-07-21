@@ -5,6 +5,9 @@ import { AppShell } from './components/layout/AppShell';
 import { ToastContainer } from './components/ui/Toast';
 import { ErrorBoundary, RouteErrorBoundary } from './components/ui/ErrorBoundary';
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
+// Default tab + heaviest chunk: load eagerly so tab-switch-back does not
+// re-parse ~900KB of Recharts/dashboard code on every visit.
+import { DashboardPage } from './pages/DashboardPage';
 
 const LoginPage = lazy(() =>
   import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })),
@@ -20,9 +23,6 @@ const ResetPasswordPage = lazy(() =>
 );
 const OnboardingPage = lazy(() =>
   import('./pages/OnboardingPage').then((m) => ({ default: m.OnboardingPage })),
-);
-const DashboardPage = lazy(() =>
-  import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })),
 );
 const MedicationsPage = lazy(() =>
   import('./pages/MedicationsPage').then((m) => ({ default: m.MedicationsPage })),

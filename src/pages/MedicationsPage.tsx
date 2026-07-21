@@ -36,8 +36,10 @@ export function MedicationsPage() {
   }, [medications.length, changes.length]);
 
   const handleRefresh = useCallback(() => {
-    void fetchMedications();
-    void fetchChanges();
+    // Called after mutations (add/discontinue/dose change) that also write
+    // medication_changes rows, so force past the cache to pick those up.
+    void fetchMedications({ force: true });
+    void fetchChanges({ force: true });
   }, [fetchMedications, fetchChanges]);
 
   return (

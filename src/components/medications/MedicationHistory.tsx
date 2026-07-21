@@ -68,7 +68,7 @@ export function MedicationHistory({ isExpanded }: MedicationHistoryProps) {
 
     if (ok) {
       setPendingConfirmId(null);
-      await fetchChanges();
+      await fetchChanges({ force: true });
     } else {
       toast.error(error ?? 'Failed to delete medication');
     }
