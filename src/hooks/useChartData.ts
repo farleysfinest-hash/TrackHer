@@ -210,6 +210,7 @@ export function useChartData(dateRange: DateRange) {
 
   return {
     checkins: filteredCheckins,
+    /** Includes a short pre-range lookback so summary MoM trends still resolve. */
     summaryCheckins: checkins,
     mrsCheckinCount,
     earliestCheckinDate,
