@@ -59,8 +59,6 @@
     -moz-osx-font-smoothing: grayscale;
     -webkit-tap-highlight-color: transparent;
     background-color: #ffffff;
-    /* Prefer white overscroll glow over the native black WKWebView default. */
-    overscroll-behavior-y: none;
   }
 
   body {
