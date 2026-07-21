@@ -34,9 +34,9 @@ export function Header() {
     : emailInitial;
 
   return (
-    <header className="safe-area-top sticky top-0 z-20 flex items-center justify-between border-b border-sand-200 bg-white/95 px-6 pb-4 backdrop-blur-sm md:px-8">
-      <div className="flex items-center gap-2 md:hidden">
-        <Logo size="sm" />
+    <header className="safe-area-top sticky top-0 z-20 flex min-w-0 items-center justify-between gap-3 overflow-x-hidden border-b border-sand-200 bg-white/95 px-4 pb-4 backdrop-blur-sm sm:px-6 md:px-8">
+      <div className="flex min-w-0 items-center gap-2 md:hidden">
+        <Logo size="sm" className="truncate" />
         <img
           src={logoMark}
           alt=""
@@ -47,7 +47,7 @@ export function Header() {
       </div>
       <div className="hidden md:block" />
 
-      <div className="relative" ref={menuRef}>
+      <div className="relative shrink-0" ref={menuRef}>
         <button
           type="button"
           onClick={() => setMenuOpen(!menuOpen)}

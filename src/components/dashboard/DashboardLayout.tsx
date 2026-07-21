@@ -11,7 +11,10 @@ import { useAuthStore } from '../../stores/authStore';
 import { DateRangeSelector } from './DateRangeSelector';
 import { ScoreSummaryCards } from './ScoreSummaryCards';
 import { WelcomeMessage } from './WelcomeMessage';
-import { CheckinPromptWidget } from '../checkin/CheckinPromptWidget';
+import {
+  PulsePromptCard,
+  WeeklyCheckinPromptCard,
+} from '../checkin/CheckinPromptWidget';
 import { StoryColumn } from './StoryColumn';
 import { SubscaleChart } from './SubscaleChart';
 import { SymptomHeatmap } from './SymptomHeatmap';
@@ -26,6 +29,7 @@ import { ProviderReportButton } from './ProviderReportButton';
 import { DashboardInsightsPanel } from '../insights/DashboardInsightsPanel';
 import { SafeguardingCard } from '../insights/SafeguardingCard';
 import { QuickLogWidget } from './QuickLogWidget';
+import { RecentLogs } from './RecentLogs';
 import { DoseTapWidget } from './DoseTapWidget';
 import { ExperimentWindowCard } from './ExperimentWindowCard';
 import { PersonalSymptomTrends } from './PersonalSymptomTrends';
@@ -34,6 +38,8 @@ import { UnlockProgress } from './UnlockProgress';
 import { FullDashboardUnlockCard } from './FullDashboardUnlockCard';
 
 const FULL_DASHBOARD_CHECKINS = 7;
+
+type DashboardMode = 'full' | 'early';
 
 export function DashboardLayout() {
   const dateRange = useDashboardStore((s) => s.dateRange);
@@ -59,6 +65,9 @@ export function DashboardLayout() {
   } = useChartData(dateRange);
 
   const [biomarkerKey, setBiomarkerKey] = useState('estradiol');
+  // Stick the early/full branch after first resolve so date-range refetches
+  // don't unmount the page (and reset scroll) while isLoading flips true.
+  const [dashboardMode, setDashboardMode] = useState<DashboardMode | null>(null);
 
   useEffect(() => {
     void refreshAll();
@@ -80,6 +89,11 @@ export function DashboardLayout() {
     }
   }, [labResults]);
 
+  useEffect(() => {
+    if (checkinsLoading) return;
+    setDashboardMode(mrsCheckinCount >= FULL_DASHBOARD_CHECKINS ? 'full' : 'early');
+  }, [checkinsLoading, mrsCheckinCount]);
+
   const symptomTrend = useMemo(() => getSymptomTrendData(), [getSymptomTrendData]);
   const changeMarkers = useMemo(() => getMedicationChangeMarkers(), [getMedicationChangeMarkers]);
   const heatmapRows = useMemo(() => getHeatmapData(), [getHeatmapData]);
@@ -92,10 +106,8 @@ export function DashboardLayout() {
     [checkins],
   );
 
-  // mrsCheckinCount starts at 0 before the first fetch — don't pick a branch
-  // (or mount WelcomeMessage) until we know whether this is the early or full dashboard.
-  const isFullDashboard = !checkinsLoading && mrsCheckinCount >= FULL_DASHBOARD_CHECKINS;
-  const isEarlyDashboard = !checkinsLoading && mrsCheckinCount < FULL_DASHBOARD_CHECKINS;
+  const isFullDashboard = dashboardMode === 'full';
+  const isEarlyDashboard = dashboardMode === 'early';
 
   const timezone = getResolvedTimezone(useAuthStore((s) => s.profile?.timezone));
   const stageProfile = useStageProfile();
@@ -108,6 +120,35 @@ export function DashboardLayout() {
       : null;
   const showStandaloneReport =
     isFullDashboard && (daysUntilAppointment === null || daysUntilAppointment > 7);
+
+  const safeguardingCards = safeguardingInsights.map((insight) => (
+    <SafeguardingCard
+      key={insight.id}
+      insight={insight}
+      onDismiss={dismissInsight}
+    />
+  ));
+
+  const pulseCard = (
+    <PulsePromptCard
+      hasCheckedInToday={checkinStatus.hasCheckedInToday}
+      hasPulseToday={checkinStatus.hasPulseToday}
+      hasFullMrsToday={checkinStatus.hasFullMrsToday}
+      todaysCheckin={checkinStatus.todaysCheckin}
+      isLoading={checkinStatus.isLoading}
+    />
+  );
+
+  const weeklyCard = (
+    <WeeklyCheckinPromptCard
+      hasFullMrsToday={checkinStatus.hasFullMrsToday}
+      weeklyMinimumMet={checkinStatus.weeklyMinimumMet}
+      isDue={checkinStatus.isDue}
+      todaysCheckin={checkinStatus.todaysCheckin}
+      daysSinceLastCheckin={checkinStatus.daysSinceLastCheckin}
+      isLoading={checkinStatus.isLoading}
+    />
+  );
 
   return (
     <div className="mx-auto min-w-0 max-w-6xl space-y-6">
@@ -124,19 +165,17 @@ export function DashboardLayout() {
 
       {isFullDashboard ? (
         <>
-          <FullDashboardUnlockCard />
-
-          <DateRangeSelector />
-
-          <ScoreSummaryCards checkins={summaryCheckins} dateRange={dateRange} />
-
-          <StrawStageCard />
-
-          <DoseTapWidget />
+          {safeguardingCards}
 
           <QuickLogWidget />
 
-          <CheckinPromptWidget {...checkinStatus} />
+          {pulseCard}
+
+          <DoseTapWidget />
+
+          {weeklyCard}
+
+          <FullDashboardUnlockCard />
 
           <ExperimentWindowCard
             insights={insights}
@@ -145,19 +184,19 @@ export function DashboardLayout() {
 
           <AppointmentCountdownCard earliestCheckinDate={earliestCheckinDate} />
 
-          {safeguardingInsights.map((insight) => (
-            <SafeguardingCard
-              key={insight.id}
-              insight={insight}
-              onDismiss={dismissInsight}
-            />
-          ))}
+          <DateRangeSelector />
+
+          <ScoreSummaryCards checkins={summaryCheckins} dateRange={dateRange} />
+
+          <RecentLogs />
 
           <DashboardInsightsPanel
             primaryInsights={primaryInsights}
             moreInsights={moreInsights}
             onDismiss={dismissInsight}
           />
+
+          <StrawStageCard />
 
           <StoryColumn
             data={symptomTrend}
@@ -202,9 +241,17 @@ export function DashboardLayout() {
         </>
       ) : isEarlyDashboard ? (
         <>
-          <WelcomeMessage />
+          {safeguardingCards}
 
-          <CheckinPromptWidget {...checkinStatus} />
+          <QuickLogWidget />
+
+          {pulseCard}
+
+          <DoseTapWidget />
+
+          {weeklyCard}
+
+          <WelcomeMessage />
 
           <ExperimentWindowCard
             insights={insights}
@@ -213,21 +260,9 @@ export function DashboardLayout() {
 
           <AppointmentCountdownCard earliestCheckinDate={earliestCheckinDate} />
 
-          {safeguardingInsights.map((insight) => (
-            <SafeguardingCard
-              key={insight.id}
-              insight={insight}
-              onDismiss={dismissInsight}
-            />
-          ))}
-
-          <StrawStageCard />
-
-          <DoseTapWidget />
-
-          <QuickLogWidget />
-
           <UnlockProgress checkinCount={mrsCheckinCount} />
+
+          <RecentLogs />
 
           {(primaryInsights.length > 0 || moreInsights.length > 0) && (
             <DashboardInsightsPanel
@@ -236,6 +271,8 @@ export function DashboardLayout() {
               onDismiss={dismissInsight}
             />
           )}
+
+          <StrawStageCard />
 
           <ActiveMedicationsSummary medications={medications} />
         </>

@@ -9,6 +9,8 @@ import { hasUiFlag, setUiFlag } from '../../lib/uiState';
 import { getResolvedTimezone } from '../../utils/checkinHelpers';
 import { showDoseChip, isDoseLoggedForMed, getDoseCycleDays } from '../../utils/medicationHelpers';
 import type { Medication } from '../../types/database';
+import { Card } from '../ui/Card';
+import { DashboardCardHeader } from './DashboardCardHeader';
 
 function formatLogTime(iso: string, timezone: string): string {
   return new Date(iso).toLocaleTimeString('en-US', {
@@ -16,6 +18,11 @@ function formatLogTime(iso: string, timezone: string): string {
     minute: '2-digit',
     timeZone: timezone,
   });
+}
+
+function shortMedName(name: string): string {
+  if (name.length <= 18) return name;
+  return `${name.slice(0, 16)}…`;
 }
 
 export function DoseTapWidget() {
@@ -79,11 +86,13 @@ export function DoseTapWidget() {
   if (chipMeds.length === 0) return null;
 
   return (
-    <section className="rounded-xl border border-sand-200 bg-white p-5">
-      <h2 className="font-display text-lg text-sage-800">Dose log</h2>
-      <p className="mt-1 text-sm text-sage-500">
-        Tap when you take your dose. Tap again to undo.
-      </p>
+    <Card variant="elevated">
+      <DashboardCardHeader
+        icon={Pill}
+        eyebrow="Dose log"
+        title="Tap when you take your dose"
+        description="Tap again to undo."
+      />
 
       <div className="mt-4 flex flex-wrap gap-2">
         {chipMeds.map((med) => {
@@ -93,16 +102,16 @@ export function DoseTapWidget() {
               key={med.id}
               type="button"
               onClick={() => void handleChipTap(med)}
+              title={med.medication_name}
               className={[
-                'inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-medium transition-colors active:scale-[0.98]',
+                'inline-flex max-w-full items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors active:scale-[0.98]',
                 checked
                   ? 'border-success/40 bg-success/10 text-success'
                   : 'border-sage-200 bg-sage-50 text-sage-700 hover:border-sage-400 hover:bg-sage-100',
               ].join(' ')}
             >
-              <Pill className="h-4 w-4" aria-hidden />
-              {med.medication_name}
-              {checked && <span aria-hidden> ✓</span>}
+              <span className="truncate">{shortMedName(med.medication_name)}</span>
+              {checked && <span aria-hidden>✓</span>}
             </button>
           );
         })}
@@ -114,6 +123,6 @@ export function DoseTapWidget() {
           Tapping again removes that log.
         </p>
       )}
-    </section>
+    </Card>
   );
 }

@@ -23,7 +23,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 export function CheckinPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { hasCheckedInToday, todaysCheckin, refresh, isLoading } = useCheckinStatus();
+  const { hasCheckedInToday, todaysCheckin, weeklyMinimumMet, refresh, isLoading } =
+    useCheckinStatus();
   const { fetchCheckinDetail, getCheckinForDate } = useCheckins();
   const setMode = useCheckinStore((s) => s.setMode);
   const setTargetDate = useCheckinStore((s) => s.setTargetDate);
@@ -169,10 +170,13 @@ export function CheckinPage() {
   const loggingForPastDay = backdateValid && backdateValue < todayStr;
 
   return (
-    <div className="space-y-10">
-      <div>
+    <div className="min-w-0 space-y-10 overflow-x-hidden">
+      <div className="min-w-0">
         <h1 className="font-display text-3xl text-sage-800">Check In</h1>
-        <p className="mt-1 text-sage-500">Track your symptoms and daily pulse over time.</p>
+        <p className="mt-1 text-sage-500">
+          Daily pulse keeps the day alive. Weekly check-in is the clinical symptom scale — once a
+          week is the minimum; more is better.
+        </p>
       </div>
 
       {!isLoading && hasCheckedInToday && todaysCheckin && !loggingForPastDay ? (
@@ -182,8 +186,14 @@ export function CheckinPage() {
               <CheckCircle2 className="h-6 w-6 shrink-0 text-success" />
               <div>
                 <h2 className="font-display text-lg text-sage-800">
-                  {todaysIsPulse ? 'Pulse logged today' : "You've already checked in today"}
+                  {todaysIsPulse ? 'Pulse logged today' : "You've checked in today"}
                 </h2>
+                {!todaysIsPulse && weeklyMinimumMet && (
+                  <p className="mt-1 text-sm text-sage-500">
+                    This week&apos;s minimum is met. Log again on another day anytime — more data
+                    sharpens your trends.
+                  </p>
+                )}
                 <div className="mt-2 flex flex-wrap items-center gap-4 text-sm">
                   <DailyChannelsDisplay checkin={todaysCheckin} />
                   <MrsScoreDisplay checkin={todaysCheckin} compact showDot />
@@ -207,21 +217,31 @@ export function CheckinPage() {
         </Card>
       ) : (
         !isLoading && (
-          <Card variant="elevated" padding="lg">
+          <Card variant="elevated">
             <h2 className="font-display text-xl text-sage-800">How are you feeling?</h2>
             {loggingForPastDay && (
               <p className="mt-2 text-sm text-sage-600">
                 Logging for {formatLoggingDate(backdateValue)}
               </p>
             )}
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            {weeklyMinimumMet && !loggingForPastDay && (
+              <p className="mt-2 text-sm text-sage-500">
+                This week&apos;s check-in minimum is already met. Extra entries are welcome.
+              </p>
+            )}
+            <div className="mt-6 grid grid-cols-1 gap-3">
               <button
                 type="button"
                 onClick={() => void startCheckin('full')}
                 disabled={showBackdate && !backdateValid}
                 className="rounded-xl border border-sand-200 bg-white p-4 text-left transition hover:border-sage-300 hover:bg-sage-50/50 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <p className="font-display text-lg text-sage-800">Full check-in (~2 min)</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-sage-500">
+                  Weekly check-in
+                </p>
+                <p className="mt-1 font-display text-lg text-sage-800">
+                  {weeklyMinimumMet ? 'Another check-in (~2 min)' : 'Full check-in (~2 min)'}
+                </p>
                 <p className="mt-1 text-sm text-sage-500">
                   Rate your symptoms on the clinical scale
                 </p>
@@ -232,7 +252,10 @@ export function CheckinPage() {
                 disabled={showBackdate && !backdateValid}
                 className="rounded-xl border border-sand-200 bg-white p-4 text-left transition hover:border-sage-300 hover:bg-sage-50/50 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <p className="font-display text-lg text-sage-800">Quick pulse (~10 sec)</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-sage-500">
+                  Daily pulse
+                </p>
+                <p className="mt-1 font-display text-lg text-sage-800">Quick pulse (~10 sec)</p>
                 <p className="mt-1 text-sm text-sage-500">Just log how you feel overall today</p>
               </button>
             </div>

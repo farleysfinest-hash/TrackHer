@@ -1,5 +1,4 @@
 import { hasMRSData, hasPartialMRSData, getDailySignal } from '../../utils/checkinHelpers';
-import { addDaysISO } from '../../utils/localDate';
 import type { SymptomCheckin } from '../../types/database';
 import type { DateRange, DateRangePreset } from '../../stores/dashboardStore';
 
@@ -29,9 +28,18 @@ export interface ScoreSummary {
   daysLogged: number;
 }
 
+function average(nums: number[]): number | null {
+  if (nums.length === 0) return null;
+  return nums.reduce((sum, n) => sum + n, 0) / nums.length;
+}
+
+function formatAvg(n: number): string {
+  return Number.isInteger(n) ? String(n) : n.toFixed(1);
+}
+
 /**
- * Build dashboard summary stats for the selected timeline.
- * `checkins` may include a short pre-range lookback used only for month-ago burden.
+ * Period-aware dashboard summary.
+ * Trends compare the start and end of the selected window — not a fixed "month ago".
  */
 export function buildScoreSummary(
   checkins: SymptomCheckin[],
@@ -41,43 +49,49 @@ export function buildScoreSummary(
     .filter((c) => c.checkin_date >= dateRange.start && c.checkin_date <= dateRange.end)
     .sort((a, b) => b.checkin_date.localeCompare(a.checkin_date));
 
-  const mrsCheckinsInRange = inRange.filter(hasMRSData);
-  const latestMrs = mrsCheckinsInRange[0];
+  const mrsNewestFirst = inRange.filter(hasMRSData);
+  const mrsOldestFirst = [...mrsNewestFirst].sort((a, b) =>
+    a.checkin_date.localeCompare(b.checkin_date),
+  );
+  const latestMrs = mrsNewestFirst[0];
+  const earliestMrs = mrsOldestFirst[0];
   const latestPartialMrs = inRange.find((c) => hasPartialMRSData(c) && !hasMRSData(c));
   const latest = inRange[0];
+
+  const mrsAverage = average(mrsNewestFirst.map((c) => c.total_score));
 
   let burdenHeadline = '—';
   let burdenDetail: string | undefined;
   let burdenImproving = false;
 
-  if (latestMrs) {
-    const baselineCutoff = addDaysISO(latestMrs.checkin_date, -30);
-    const older = [...checkins]
-      .filter(hasMRSData)
-      .filter((c) => c.checkin_date <= baselineCutoff)
-      .sort((a, b) => b.checkin_date.localeCompare(a.checkin_date))[0];
-    if (older) {
-      const diff = latestMrs.total_score - older.total_score;
-      if (diff === 0) {
-        burdenHeadline = 'No change';
-        burdenDetail = 'same as a month ago';
-      } else {
-        burdenImproving = diff < 0;
-        burdenHeadline = burdenImproving ? 'Easing' : 'Worth watching';
-        burdenDetail = `${burdenImproving ? '↓' : '↑'} ${Math.abs(diff)} pts vs. a month ago`;
-      }
+  if (earliestMrs && latestMrs && earliestMrs.id !== latestMrs.id) {
+    const diff = latestMrs.total_score - earliestMrs.total_score;
+    if (diff === 0) {
+      burdenHeadline = 'No change';
+      burdenDetail = 'same from start to end of this period';
+    } else {
+      burdenImproving = diff < 0;
+      burdenHeadline = burdenImproving ? 'Easing' : 'Worth watching';
+      burdenDetail = `${burdenImproving ? '↓' : '↑'} ${Math.abs(diff)} pts over this period`;
     }
+  } else if (latestMrs) {
+    burdenHeadline = 'Getting started';
+    burdenDetail = 'Need another MRS in this period to see a trend';
   }
 
-  const energySignal = latest ? getDailySignal(latest) : null;
-  const channelSubtext = latest
+  const energySignals = inRange
+    .map((c) => getDailySignal(c))
+    .filter((n): n is number => n != null);
+  const energyAverage = average(energySignals);
+
+  const latestChannelSubtext = latest
     ? [
         latest.mood_level != null ? `Mood ${latest.mood_level}` : null,
         latest.sleep_quality != null ? `Sleep ${latest.sleep_quality}/5` : null,
       ]
         .filter(Boolean)
-        .join(' · ') || undefined
-    : undefined;
+        .join(' · ')
+    : '';
 
   return {
     mrsValue: latestMrs
@@ -86,12 +100,17 @@ export function buildScoreSummary(
         ? 'Incomplete check-in'
         : '—',
     mrsSubtext: latestMrs
-      ? `/44 · Psych ${latestMrs.psychological_score ?? '—'} · Som ${latestMrs.somatic_score ?? '—'} · Uro ${latestMrs.urogenital_score ?? '—'}`
+      ? mrsAverage != null
+        ? `avg ${formatAvg(mrsAverage)} this period · Psych ${latestMrs.psychological_score ?? '—'} · Som ${latestMrs.somatic_score ?? '—'} · Uro ${latestMrs.urogenital_score ?? '—'}`
+        : `/44 · Psych ${latestMrs.psychological_score ?? '—'} · Som ${latestMrs.somatic_score ?? '—'} · Uro ${latestMrs.urogenital_score ?? '—'}`
       : latestPartialMrs
         ? 'Finish your check-in to see a score'
         : '/44',
-    energyValue: energySignal ?? '—',
-    energySubtext: channelSubtext ?? '/5',
+    energyValue: energyAverage != null ? formatAvg(energyAverage) : '—',
+    energySubtext:
+      energySignals.length > 1
+        ? `avg over this period${latestChannelSubtext ? ` · latest ${latestChannelSubtext}` : ''}`
+        : latestChannelSubtext || '/5',
     burdenHeadline,
     burdenDetail,
     burdenImproving,

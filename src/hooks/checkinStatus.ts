@@ -12,9 +12,19 @@ export interface CheckinStatusSnapshot {
 
 export interface CheckinStatus {
   hasCheckedInToday: boolean;
+  /** True when today's row is a pulse (not a full MRS). */
+  hasPulseToday: boolean;
+  /** True when today's row has complete MRS data. */
+  hasFullMrsToday: boolean;
+  /**
+   * True when at least one complete MRS check-in exists in the last 7 days
+   * (including today). The weekly minimum is met; more full check-ins are welcome.
+   */
+  weeklyMinimumMet: boolean;
   todaysCheckin: SymptomCheckin | null;
   lastCheckinDate: string | null;
   daysSinceLastCheckin: number | null;
+  /** True when the weekly check-in is still owed (schedule + missing MRS). */
   isDue: boolean;
   daysLoggedThisMonth: number | null;
   totalDaysLogged: number | null;
@@ -22,6 +32,9 @@ export interface CheckinStatus {
 
 export const EMPTY_CHECKIN_STATUS: CheckinStatus = {
   hasCheckedInToday: false,
+  hasPulseToday: false,
+  hasFullMrsToday: false,
+  weeklyMinimumMet: false,
   todaysCheckin: null,
   lastCheckinDate: null,
   daysSinceLastCheckin: null,
@@ -56,10 +69,13 @@ export function computeCheckinStatus(
     ? daysBetweenISO(latestCheckin.checkin_date, todayStr)
     : null;
 
+  const weeklyMinimumMet = hasRecentFullMrsCheckin(snapshot.recentCheckins, todayStr);
+  const hasFullMrsToday = todaysCheckin !== null && hasMRSData(todaysCheckin);
+  const hasPulseToday =
+    todaysCheckin !== null && todaysCheckin.checkin_type === 'pulse' && !hasFullMrsToday;
+
   let isDue = false;
-  if (todaysCheckin && hasMRSData(todaysCheckin)) {
-    isDue = false;
-  } else if (hasRecentFullMrsCheckin(snapshot.recentCheckins, todayStr)) {
+  if (hasFullMrsToday || weeklyMinimumMet) {
     isDue = false;
   } else if (checkinDay === null) {
     isDue = true;
@@ -69,6 +85,9 @@ export function computeCheckinStatus(
 
   return {
     hasCheckedInToday: todaysCheckin !== null,
+    hasPulseToday,
+    hasFullMrsToday,
+    weeklyMinimumMet,
     todaysCheckin,
     lastCheckinDate,
     daysSinceLastCheckin,

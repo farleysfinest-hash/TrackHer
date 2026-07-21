@@ -49,21 +49,31 @@ describe('buildScoreSummary', () => {
 
     expect(summary.mrsValue).toBe(24);
     expect(summary.daysLogged).toBe(2);
-    expect(summary.energyValue).toBe(3);
+    expect(summary.energyValue).toBe('3.5');
   });
 
-  it('switches latest MRS when the visible window excludes newer check-ins', () => {
+  it('changes period trend when the window includes an earlier MRS', () => {
     const checkins = [
-      makeCheckin('2026-07-01', { total_score: 30 }),
-      makeCheckin('2026-01-15', { total_score: 8 }),
+      makeCheckin('2026-07-20', { id: 'late', total_score: 24, energy_level: 3 }),
+      makeCheckin('2026-07-01', { id: 'mid', total_score: 20, energy_level: 3 }),
+      makeCheckin('2026-05-01', { id: 'early', total_score: 10, energy_level: 5 }),
     ];
 
-    expect(
-      buildScoreSummary(checkins, { start: '2026-06-01', end: '2026-07-21' }).mrsValue,
-    ).toBe(30);
+    const last30 = buildScoreSummary(checkins, {
+      start: '2026-06-21',
+      end: '2026-07-20',
+    });
+    // 20 → 24 within 30d window
+    expect(last30.burdenHeadline).toBe('Worth watching');
+    expect(last30.burdenDetail).toContain('over this period');
+    expect(last30.mrsSubtext).toContain('avg 22');
 
-    expect(
-      buildScoreSummary(checkins, { start: '2026-01-01', end: '2026-01-31' }).mrsValue,
-    ).toBe(8);
+    const last90 = buildScoreSummary(checkins, {
+      start: '2026-04-22',
+      end: '2026-07-20',
+    });
+    // 10 → 24 within 90d window — different delta
+    expect(last90.burdenDetail).toContain('14 pts');
+    expect(last90.energyValue).toBe('3.7');
   });
 });

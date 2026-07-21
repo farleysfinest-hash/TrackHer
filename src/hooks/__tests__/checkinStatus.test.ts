@@ -226,6 +226,9 @@ describe('computeCheckinStatus', () => {
   it('returns due when there are no rows and checkinDay is null', () => {
     const status = computeCheckinStatus(emptySnapshot(), TODAY, null);
     expect(status.isDue).toBe(true);
+    expect(status.weeklyMinimumMet).toBe(false);
+    expect(status.hasPulseToday).toBe(false);
+    expect(status.hasFullMrsToday).toBe(false);
     expect(status).toEqual(EMPTY_CHECKIN_STATUS);
   });
 
@@ -241,6 +244,9 @@ describe('computeCheckinStatus', () => {
     );
     expect(status.isDue).toBe(false);
     expect(status.hasCheckedInToday).toBe(true);
+    expect(status.hasFullMrsToday).toBe(true);
+    expect(status.hasPulseToday).toBe(false);
+    expect(status.weeklyMinimumMet).toBe(true);
     expect(status.todaysCheckin).toBe(todayFull);
   });
 
@@ -255,6 +261,9 @@ describe('computeCheckinStatus', () => {
       null,
     );
     expect(status.hasCheckedInToday).toBe(true);
+    expect(status.hasPulseToday).toBe(true);
+    expect(status.hasFullMrsToday).toBe(false);
+    expect(status.weeklyMinimumMet).toBe(false);
     expect(status.todaysCheckin).toBe(pulseToday);
   });
 
@@ -269,6 +278,7 @@ describe('computeCheckinStatus', () => {
       null,
     );
     expect(status.isDue).toBe(true);
+    expect(status.weeklyMinimumMet).toBe(false);
   });
 
   it('returns not due when a pulse today is paired with a full MRS row one to six days earlier', () => {
@@ -284,6 +294,9 @@ describe('computeCheckinStatus', () => {
     );
     expect(status.isDue).toBe(false);
     expect(status.hasCheckedInToday).toBe(true);
+    expect(status.hasPulseToday).toBe(true);
+    expect(status.hasFullMrsToday).toBe(false);
+    expect(status.weeklyMinimumMet).toBe(true);
   });
 
   it('treats a full MRS row six days earlier as recent', () => {
@@ -294,6 +307,7 @@ describe('computeCheckinStatus', () => {
       4,
     );
     expect(status.isDue).toBe(false);
+    expect(status.weeklyMinimumMet).toBe(true);
   });
 
   it('does not treat a full MRS row exactly seven days earlier as recent', () => {
@@ -304,6 +318,7 @@ describe('computeCheckinStatus', () => {
       null,
     );
     expect(status.isDue).toBe(true);
+    expect(status.weeklyMinimumMet).toBe(false);
   });
 
   it('does not suppress due state for an incomplete MRS row within six days', () => {

@@ -11,8 +11,9 @@ import { useQuickLogStore } from '../../stores/quickLogStore';
 import { useSymptomSelections } from '../../hooks/useSymptomSelections';
 import { getSymptomByKey, getSymptomChipLabel } from '../../data/symptoms';
 import type { SymptomBodySystem } from '../../types/symptoms';
+import { Card } from '../ui/Card';
+import { DashboardCardHeader } from './DashboardCardHeader';
 import { QuickLogSheet } from './QuickLogSheet';
-import { RecentLogs } from './RecentLogs';
 
 const ICON_BY_SYSTEM: Partial<Record<SymptomBodySystem, LucideIcon>> = {
   vasomotor: Flame,
@@ -36,11 +37,13 @@ export function QuickLogWidget() {
   if (watchSymptomIds.length === 0) return null;
 
   return (
-    <section className="rounded-xl border border-sand-200 bg-white p-5">
-      <h2 className="font-display text-lg text-sage-800">Quick log</h2>
-      <p className="mt-1 text-sm text-sage-500">
-        Log a watch symptom in the moment — takes about 5 seconds.
-      </p>
+    <Card variant="elevated">
+      <DashboardCardHeader
+        icon={Zap}
+        eyebrow="Quick log"
+        title="Log a symptom"
+        description="In the moment — about 5 seconds."
+      />
 
       <div className="mt-4 flex flex-wrap gap-2">
         {watchSymptomIds.map((id) => {
@@ -51,7 +54,7 @@ export function QuickLogWidget() {
               key={id}
               type="button"
               onClick={() => openSheet(id)}
-              className="inline-flex items-center gap-2 rounded-full border border-sage-200 bg-sage-50 px-4 py-2.5 text-sm font-medium text-sage-700 transition-colors hover:border-sage-400 hover:bg-sage-100 active:scale-[0.98]"
+              className="inline-flex items-center gap-2 rounded-full border border-sage-200 bg-sage-50 px-3 py-1.5 text-sm font-medium text-sage-700 transition-colors hover:border-sage-400 hover:bg-sage-100 active:scale-[0.98]"
             >
               <SymptomIcon bodySystem={def.bodySystem} />
               {getSymptomChipLabel(def)}
@@ -60,8 +63,7 @@ export function QuickLogWidget() {
         })}
       </div>
 
-      <RecentLogs />
       <QuickLogSheet />
-    </section>
+    </Card>
   );
 }

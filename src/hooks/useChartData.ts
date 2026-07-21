@@ -8,7 +8,6 @@ import { MRS_CANONICAL_SYMPTOMS } from '../data/symptoms';
 import type { MRSSymptomKey } from '../utils/checkinHelpers';
 import { hasMRSData, getDailySignal, getTrustedMrsTotal } from '../utils/checkinHelpers';
 import { formatChartDate, filterByDateRange, meanHeatmapSeverity, recentHeatmapSeverity, sortHeatmapRows } from '../utils/chartHelpers';
-import { addDaysISO } from '../utils/localDate';
 import { getBiomarkerValue } from '../utils/labHelpers';
 import type { DateRange } from '../stores/dashboardStore';
 
@@ -199,9 +198,9 @@ export function useChartData(dateRange: DateRange) {
 
   const refreshAll = useCallback(async () => {
     await Promise.all([
-      // Keep one prior month in memory for the summary card's month-over-month baseline;
-      // chart series below still filter strictly to the selected range.
-      fetchCheckinsRange(addDaysISO(dateRange.start, -31), dateRange.end),
+      // Chart series filter to the selected range; summary cards compute period
+      // start→end trends from the same fetched window.
+      fetchCheckinsRange(dateRange.start, dateRange.end),
       fetchMedications(),
       fetchChanges(),
       fetchLabResults(),
@@ -210,7 +209,7 @@ export function useChartData(dateRange: DateRange) {
 
   return {
     checkins: filteredCheckins,
-    /** Includes a short pre-range lookback so summary MoM trends still resolve. */
+    /** Same fetch window as the selected timeline; cards derive period trends from it. */
     summaryCheckins: checkins,
     mrsCheckinCount,
     earliestCheckinDate,

@@ -237,9 +237,7 @@ export function QuickLogSheet() {
                           : 'border-sage-200 bg-sage-50 text-sage-700 hover:border-sage-400',
                       ].join(' ')}
                     >
-                      <span className={isSelected ? 'rounded-full ring-1 ring-white' : undefined}>
-                        {identityDot(def.bodySystem)}
-                      </span>
+                      {identityDot(def.bodySystem)}
                       {getSymptomChipLabel(def)}
                     </button>
                   );

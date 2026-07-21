@@ -24,9 +24,9 @@ function CheckinHistoryCardComponent({ checkin, onViewDetails }: CheckinHistoryC
   const top = getTopConcerns(scores, 2);
 
   return (
-    <div className="rounded-xl border border-sand-200 bg-white p-5 shadow-sm">
-      <div className="flex items-start justify-between gap-4">
-        <div>
+    <div className="min-w-0 rounded-xl border border-sand-200 bg-white p-5 shadow-sm">
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <p className="font-medium text-sage-800">
             {formatDateLong(checkin.checkin_date)}
             {checkin.is_backdated && (
@@ -35,11 +35,11 @@ function CheckinHistoryCardComponent({ checkin, onViewDetails }: CheckinHistoryC
               </span>
             )}
           </p>
-          <div className="mt-2">
+          <div className="mt-2 min-w-0">
             <MrsScoreDisplay checkin={checkin} compact showDot />
           </div>
         </div>
-        <div className="flex shrink-0 flex-col items-end text-right">
+        <div className="min-w-0 shrink">
           <DailyChannelsDisplay checkin={checkin} compact />
         </div>
       </div>

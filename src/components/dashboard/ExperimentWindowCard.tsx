@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Activity } from 'lucide-react';
 import { useMedicationChanges, type MedicationChangeWithMed } from '../../hooks/useMedicationChanges';
 import { useAuthStore } from '../../stores/authStore';
 import { hasUiFlag, setUiFlag } from '../../lib/uiState';
@@ -6,6 +7,7 @@ import { getLocalDateISO, getResolvedTimezone } from '../../utils/checkinHelpers
 import { addDaysISO, getMedicationChangePastLabel } from '../../utils/medicationHelpers';
 import { formatDate, formatDateLong } from '../../utils/formatters';
 import { Card } from '../ui/Card';
+import { DashboardCardHeader } from './DashboardCardHeader';
 import type { Insight } from '../../engine/types';
 import { daysBetweenISO } from '../../utils/localDate';
 
@@ -113,12 +115,12 @@ export function ExperimentWindowCard({ insights, hasCheckedInToday }: Experiment
   if (view.mode === 'sparse') {
     return (
       <Card variant="elevated">
-        <p className="text-xs font-medium uppercase tracking-wide text-sage-500">Dose-change window</p>
-        <h2 className="mt-1 font-display text-lg text-sage-800">Window complete</h2>
-        <p className="mt-2 text-sm leading-relaxed text-sage-600">
-          We didn&apos;t have enough daily logs to spot a clear pattern this time. That&apos;s okay — when
-          your next dose changes, the window starts fresh.
-        </p>
+        <DashboardCardHeader
+          icon={Activity}
+          eyebrow="Dose-change window"
+          title="Window complete"
+          description="Not enough daily logs for a clear pattern this time. Your next dose change starts a fresh window."
+        />
         <button
           type="button"
           onClick={dismissSparse}
@@ -132,22 +134,12 @@ export function ExperimentWindowCard({ insights, hasCheckedInToday }: Experiment
 
   return (
     <Card variant="elevated">
-      <p className="text-xs font-medium uppercase tracking-wide text-sage-500">Dose-change window</p>
-      <h2 className="mt-1 font-display text-lg text-sage-800">
-        {view.changeLabel} on {view.changeDate} — day {view.dayN}
-      </h2>
-      <p className="mt-2 text-sm leading-relaxed text-sage-600">
-        When a medication changes, your body takes time to respond. We watch the 21 days after a
-        change for patterns in your energy, mood, and sleep.{' '}
-        {view.dayN <= 7
-          ? 'Log your daily pulse as often as you can — even a few entries help.'
-          : view.dayN <= 14
-            ? 'Your early logs are building a picture. Keep going.'
-            : 'Almost there. Every pulse you log sharpens your readout.'}
-      </p>
-      <p className="mt-1 text-sm text-sage-500">
-        Your readout arrives {formatDateLong(view.readoutDate)}.
-      </p>
+      <DashboardCardHeader
+        icon={Activity}
+        eyebrow="Dose-change window"
+        title={`${view.changeLabel} on ${view.changeDate} — day ${view.dayN}`}
+        description={`Readout arrives ${formatDateLong(view.readoutDate)}.`}
+      />
 
       <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-sand-100">
         <div

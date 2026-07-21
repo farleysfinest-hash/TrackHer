@@ -1,5 +1,8 @@
+import { CalendarRange } from 'lucide-react';
 import { useDashboardStore, type DateRangePreset } from '../../stores/dashboardStore';
 import { formatChartDateLong } from '../../utils/chartHelpers';
+import { Card } from '../ui/Card';
+import { DashboardCardHeader } from './DashboardCardHeader';
 
 const PRESETS: { key: DateRangePreset; label: string }[] = [
   { key: '30d', label: '30 days' },
@@ -15,11 +18,15 @@ export function DateRangeSelector() {
   const setDatePreset = useDashboardStore((s) => s.setDatePreset);
 
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-sm text-sage-500">
-        Showing: {formatChartDateLong(dateRange.start)} – {formatChartDateLong(dateRange.end)}
-      </p>
-      <div className="flex flex-wrap gap-1 rounded-lg border border-sand-200 bg-white p-1">
+    <Card variant="elevated">
+      <DashboardCardHeader
+        icon={CalendarRange}
+        eyebrow="Date range"
+        title={`${formatChartDateLong(dateRange.start)} – ${formatChartDateLong(dateRange.end)}`}
+        description="Scopes your averages and charts below."
+      />
+
+      <div className="mt-4 flex flex-wrap gap-1 rounded-lg border border-sand-200 bg-sand-50/80 p-1">
         {PRESETS.map(({ key, label }) => (
           <button
             key={key}
@@ -29,14 +36,14 @@ export function DateRangeSelector() {
               'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
               datePreset === key
                 ? 'bg-sage-500 text-white'
-                : 'text-sage-600 hover:bg-sage-50',
+                : 'text-sage-600 hover:bg-white',
             ].join(' ')}
           >
             {label}
           </button>
         ))}
       </div>
-    </div>
+    </Card>
   );
 }
 
