@@ -1,11 +1,38 @@
 import { useEffect } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
+import { LocalNotifications } from '@capacitor/local-notifications';
 import { Sidebar } from './Sidebar';
 import { MobileNav } from './MobileNav';
 import { Header } from './Header';
+import { useReminderSync } from '../../hooks/useReminderSync';
+
+function useNotificationNavigation() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    let handle: { remove: () => Promise<void> } | undefined;
+    void LocalNotifications.addListener('localNotificationActionPerformed', (event) => {
+      const path = event.notification.extra?.path;
+      if (typeof path === 'string' && path.startsWith('/')) {
+        navigate(path);
+      }
+    }).then((listener) => {
+      handle = listener;
+    });
+
+    return () => {
+      void handle?.remove();
+    };
+  }, [navigate]);
+}
 
 export function AppShell() {
   const { pathname } = useLocation();
+  useReminderSync();
+  useNotificationNavigation();
 
   useEffect(() => {
     window.scrollTo(0, 0);

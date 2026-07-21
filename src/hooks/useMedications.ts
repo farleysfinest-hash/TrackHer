@@ -40,6 +40,10 @@ async function fetchMedicationById(id: string): Promise<Medication | null> {
   return data as Medication;
 }
 
+function notifyMedicationsChanged() {
+  window.dispatchEvent(new CustomEvent('trackher:medications-changed'));
+}
+
 export function useMedications() {
   const [medications, setMedications] = useState<Medication[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -123,6 +127,7 @@ export function useMedications() {
       const medication = inserted as Medication;
 
       await fetchMedications();
+      notifyMedicationsChanged();
       return { medication };
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Failed to add medication';
@@ -144,6 +149,7 @@ export function useMedications() {
     }
 
     await fetchMedications();
+    notifyMedicationsChanged();
     return true;
   };
 
@@ -211,6 +217,7 @@ export function useMedications() {
     }
 
     await fetchMedications();
+    notifyMedicationsChanged();
     return { ok: true };
   };
 
@@ -283,6 +290,7 @@ export function useMedications() {
     }
 
     await fetchMedications();
+    notifyMedicationsChanged();
     return { ok: true };
   };
 
@@ -307,6 +315,7 @@ export function useMedications() {
     }
 
     await fetchMedications();
+    notifyMedicationsChanged();
     return true;
   };
 
@@ -326,6 +335,7 @@ export function useMedications() {
     }
 
     await fetchMedications();
+    notifyMedicationsChanged();
     return true;
   };
 

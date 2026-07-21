@@ -4,6 +4,8 @@ import { Button } from '../ui/Button';
 import { useProviderReport } from '../../hooks/useProviderReport';
 import { useDashboardStore } from '../../stores/dashboardStore';
 import { Card } from '../ui/Card';
+import { PaywallModal } from '../subscription/PaywallModal';
+import { useProGate } from '../../hooks/useProGate';
 
 interface ProviderReportButtonProps {
   compact?: boolean;
@@ -13,19 +15,26 @@ export function ProviderReportButton({ compact = false }: ProviderReportButtonPr
   const { generateReport, isGenerating, error } = useProviderReport();
   const dateRange = useDashboardStore((s) => s.dateRange);
   const [includeSafety, setIncludeSafety] = useState(false);
+  const { requirePro, paywallOpen, paywallReason, closePaywall } = useProGate();
+
+  const onGenerate = (withSafety: boolean) => {
+    requirePro(
+      () => {
+        void generateReport(dateRange, withSafety);
+      },
+      'Provider reports are part of TrackHer Pro—bring a clear before-and-after story to your appointment.',
+    );
+  };
 
   if (compact) {
     return (
       <div>
         {error && <p className="mb-2 text-sm text-danger">{error}</p>}
-        <Button
-          variant="primary"
-          onClick={() => void generateReport(dateRange, false)}
-          disabled={isGenerating}
-        >
+        <Button variant="primary" onClick={() => onGenerate(false)} disabled={isGenerating}>
           <FileText className="mr-2 h-4 w-4" />
           {isGenerating ? 'Generating…' : 'Generate Provider Report'}
         </Button>
+        <PaywallModal isOpen={paywallOpen} onClose={closePaywall} reason={paywallReason} />
       </div>
     );
   }
@@ -44,7 +53,7 @@ export function ProviderReportButton({ compact = false }: ProviderReportButtonPr
 
         <Button
           variant="primary"
-          onClick={() => void generateReport(dateRange, includeSafety)}
+          onClick={() => onGenerate(includeSafety)}
           disabled={isGenerating}
           className="mx-auto"
         >
@@ -70,6 +79,7 @@ export function ProviderReportButton({ compact = false }: ProviderReportButtonPr
           </span>
         </label>
       </div>
+      <PaywallModal isOpen={paywallOpen} onClose={closePaywall} reason={paywallReason} />
     </Card>
   );
 }

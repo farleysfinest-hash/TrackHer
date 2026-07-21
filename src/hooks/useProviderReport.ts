@@ -8,6 +8,7 @@ import {
 import { formatChartDateLong } from '../utils/chartHelpers';
 import { getResolvedTimezone } from '../utils/checkinHelpers';
 import { todayISO } from '../utils/localDate';
+import { saveOrShareBlob } from '../utils/nativeExport';
 import type { DateRange } from '../stores/dashboardStore';
 
 export function useProviderReport() {
@@ -42,12 +43,10 @@ export function useProviderReport() {
       });
 
       const today = formatChartDateLong(todayISO(timezone));
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `TrackHer-Report-${today.replace(/,/g, '').replace(/ /g, '-')}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
+      await saveOrShareBlob(
+        blob,
+        `TrackHer-Report-${today.replace(/,/g, '').replace(/ /g, '-')}.pdf`,
+      );
     } catch (err) {
       if (err instanceof ProviderReportDataLoadError) {
         setError(PROVIDER_REPORT_LOAD_ERROR_MESSAGE);

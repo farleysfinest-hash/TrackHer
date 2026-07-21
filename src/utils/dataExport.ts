@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { saveOrShareBlob } from './nativeExport';
 
 /** PostgREST default max is 1000; page below that and walk until a short page. */
 const PAGE_SIZE = 500;
@@ -104,14 +105,7 @@ export async function exportUserData(): Promise<ExportBundle> {
   };
 }
 
-export function downloadJson(data: ExportBundle, filename: string): void {
+export async function downloadJson(data: ExportBundle, filename: string): Promise<void> {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  await saveOrShareBlob(blob, filename);
 }

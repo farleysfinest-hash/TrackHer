@@ -109,6 +109,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signOut: async () => {
     set({ isLoading: true });
     try {
+      const { logOutSubscriber } = await import('../lib/subscriptions');
+      const { cancelAllReminders } = await import('../lib/localNotifications');
+      await Promise.allSettled([logOutSubscriber(), cancelAllReminders()]);
       await Promise.race([
         supabase.auth.signOut({ scope: 'local' }),
         new Promise((resolve) => setTimeout(resolve, 3500)),
@@ -129,8 +132,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   resetPassword: async (email) => {
     set({ isLoading: true, error: null });
+    const { getPasswordResetRedirectUrl } = await import('../lib/appUrl');
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: getPasswordResetRedirectUrl(),
     });
     set({ isLoading: false });
     if (error) {

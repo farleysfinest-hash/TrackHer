@@ -41,7 +41,15 @@ export function setUiValue(
   value: unknown,
   opts?: { mirrorToProfile?: boolean },
 ): void {
-  cachedState = { ...cachedState, [key]: value };
+  setUiValues({ [key]: value }, opts);
+}
+
+/** Persist multiple ui_state keys in one merge RPC. */
+export function setUiValues(
+  patch: Record<string, unknown>,
+  opts?: { mirrorToProfile?: boolean },
+): void {
+  cachedState = { ...cachedState, ...patch };
 
   const mirrorToProfile = opts?.mirrorToProfile ?? true;
   if (mirrorToProfile) {
@@ -53,11 +61,9 @@ export function setUiValue(
     }
   }
 
-  void supabase
-    .rpc('merge_ui_state', { p_patch: { [key]: value } })
-    .then(({ error }) => {
-      if (error) console.error(`Failed to persist ui_state.${key}:`, error.message);
-    });
+  void supabase.rpc('merge_ui_state', { p_patch: patch }).then(({ error }) => {
+    if (error) console.error('Failed to persist ui_state patch:', error.message);
+  });
 }
 
 export function setUiFlag(key: string): void {

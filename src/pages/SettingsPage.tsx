@@ -8,6 +8,8 @@ import { Card } from '../components/ui/Card';
 import { MedicalDisclaimer } from '../components/ui/MedicalDisclaimer';
 import { ResetAccountModal } from '../components/settings/ResetAccountModal';
 import { DeleteAccountModal } from '../components/settings/DeleteAccountModal';
+import { RemindersSettingsCard } from '../components/settings/RemindersSettingsCard';
+import { SubscriptionSettingsCard } from '../components/settings/SubscriptionSettingsCard';
 import { useAuth } from '../hooks/useAuth';
 import { useProfile } from '../hooks/useProfile';
 import { MENOPAUSE_STAGES, APP_VERSION } from '../lib/constants';
@@ -118,7 +120,7 @@ export function SettingsPage() {
     try {
       const data = await exportUserData();
       const dateStr = new Date().toISOString().slice(0, 10);
-      downloadJson(data, `trackher-export-${dateStr}.json`);
+      await downloadJson(data, `trackher-export-${dateStr}.json`);
     } catch (err) {
       setExportError(err instanceof Error ? err.message : 'Export failed. Please try again.');
     } finally {
@@ -258,6 +260,10 @@ export function SettingsPage() {
           </div>
         </form>
       </Card>
+
+      <RemindersSettingsCard />
+
+      <SubscriptionSettingsCard />
 
       <Card>
         <h2 className="font-display text-xl text-sage-800">Account</h2>

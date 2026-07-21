@@ -1,104 +1,143 @@
+import { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { AppShell } from './components/layout/AppShell';
 import { ToastContainer } from './components/ui/Toast';
 import { ErrorBoundary, RouteErrorBoundary } from './components/ui/ErrorBoundary';
-import { LoginPage } from './pages/LoginPage';
-import { SignupPage } from './pages/SignupPage';
-import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
-import { ResetPasswordPage } from './pages/ResetPasswordPage';
-import { OnboardingPage } from './pages/OnboardingPage';
-import { DashboardPage } from './pages/DashboardPage';
-import { MedicationsPage } from './pages/MedicationsPage';
-import { CheckinPage } from './pages/CheckinPage';
-import { LabsPage } from './pages/LabsPage';
-import { InsightsPage } from './pages/InsightsPage';
-import { SettingsPage } from './pages/SettingsPage';
-import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
-import { TermsOfServicePage } from './pages/TermsOfServicePage';
+import { LoadingSpinner } from './components/ui/LoadingSpinner';
+
+const LoginPage = lazy(() =>
+  import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })),
+);
+const SignupPage = lazy(() =>
+  import('./pages/SignupPage').then((m) => ({ default: m.SignupPage })),
+);
+const ForgotPasswordPage = lazy(() =>
+  import('./pages/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage })),
+);
+const ResetPasswordPage = lazy(() =>
+  import('./pages/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })),
+);
+const OnboardingPage = lazy(() =>
+  import('./pages/OnboardingPage').then((m) => ({ default: m.OnboardingPage })),
+);
+const DashboardPage = lazy(() =>
+  import('./pages/DashboardPage').then((m) => ({ default: m.DashboardPage })),
+);
+const MedicationsPage = lazy(() =>
+  import('./pages/MedicationsPage').then((m) => ({ default: m.MedicationsPage })),
+);
+const CheckinPage = lazy(() =>
+  import('./pages/CheckinPage').then((m) => ({ default: m.CheckinPage })),
+);
+const LabsPage = lazy(() =>
+  import('./pages/LabsPage').then((m) => ({ default: m.LabsPage })),
+);
+const InsightsPage = lazy(() =>
+  import('./pages/InsightsPage').then((m) => ({ default: m.InsightsPage })),
+);
+const SettingsPage = lazy(() =>
+  import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })),
+);
+const PrivacyPolicyPage = lazy(() =>
+  import('./pages/PrivacyPolicyPage').then((m) => ({ default: m.PrivacyPolicyPage })),
+);
+const TermsOfServicePage = lazy(() =>
+  import('./pages/TermsOfServicePage').then((m) => ({ default: m.TermsOfServicePage })),
+);
+
+function RouteFallback() {
+  return (
+    <div className="flex min-h-[40vh] items-center justify-center">
+      <LoadingSpinner />
+    </div>
+  );
+}
 
 export function App() {
   return (
     <BrowserRouter>
       <ToastContainer />
       <ErrorBoundary>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-          <Route path="/privacy" element={<PrivacyPolicyPage />} />
-          <Route path="/terms" element={<TermsOfServicePage />} />
+        <Suspense fallback={<RouteFallback />}>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/privacy" element={<PrivacyPolicyPage />} />
+            <Route path="/terms" element={<TermsOfServicePage />} />
 
-          <Route
-            path="/onboarding"
-            element={
-              <ProtectedRoute requireOnboarding={false}>
-                <OnboardingPage />
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/onboarding"
+              element={
+                <ProtectedRoute requireOnboarding={false}>
+                  <OnboardingPage />
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            element={
-              <ProtectedRoute>
-                <AppShell />
-              </ProtectedRoute>
-            }
-          >
             <Route
-              path="/dashboard"
               element={
-                <RouteErrorBoundary>
-                  <DashboardPage />
-                </RouteErrorBoundary>
+                <ProtectedRoute>
+                  <AppShell />
+                </ProtectedRoute>
               }
-            />
-            <Route
-              path="/medications"
-              element={
-                <RouteErrorBoundary>
-                  <MedicationsPage />
-                </RouteErrorBoundary>
-              }
-            />
-            <Route
-              path="/checkin"
-              element={
-                <RouteErrorBoundary>
-                  <CheckinPage />
-                </RouteErrorBoundary>
-              }
-            />
-            <Route
-              path="/labs"
-              element={
-                <RouteErrorBoundary>
-                  <LabsPage />
-                </RouteErrorBoundary>
-              }
-            />
-            <Route
-              path="/insights"
-              element={
-                <RouteErrorBoundary>
-                  <InsightsPage />
-                </RouteErrorBoundary>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <RouteErrorBoundary>
-                  <SettingsPage />
-                </RouteErrorBoundary>
-              }
-            />
-          </Route>
+            >
+              <Route
+                path="/dashboard"
+                element={
+                  <RouteErrorBoundary>
+                    <DashboardPage />
+                  </RouteErrorBoundary>
+                }
+              />
+              <Route
+                path="/medications"
+                element={
+                  <RouteErrorBoundary>
+                    <MedicationsPage />
+                  </RouteErrorBoundary>
+                }
+              />
+              <Route
+                path="/checkin"
+                element={
+                  <RouteErrorBoundary>
+                    <CheckinPage />
+                  </RouteErrorBoundary>
+                }
+              />
+              <Route
+                path="/labs"
+                element={
+                  <RouteErrorBoundary>
+                    <LabsPage />
+                  </RouteErrorBoundary>
+                }
+              />
+              <Route
+                path="/insights"
+                element={
+                  <RouteErrorBoundary>
+                    <InsightsPage />
+                  </RouteErrorBoundary>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <RouteErrorBoundary>
+                    <SettingsPage />
+                  </RouteErrorBoundary>
+                }
+              />
+            </Route>
 
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </Suspense>
       </ErrorBoundary>
     </BrowserRouter>
   );
