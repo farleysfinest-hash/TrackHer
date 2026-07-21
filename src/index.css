@@ -58,12 +58,17 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     -webkit-tap-highlight-color: transparent;
+    background-color: #ffffff;
+    /* Prefer white overscroll glow over the native black WKWebView default. */
+    overscroll-behavior-y: none;
   }
 
   body {
     @apply bg-white text-sage-800 text-base leading-relaxed;
     margin: 0;
     min-height: 100vh;
+    min-height: 100dvh;
+    background-color: #ffffff;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -85,6 +90,8 @@
 
   #root {
     min-height: 100vh;
+    min-height: 100dvh;
+    background-color: #ffffff;
   }
 }
 

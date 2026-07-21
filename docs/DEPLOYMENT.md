@@ -48,10 +48,12 @@ Supabase → **Authentication → URL Configuration**:
 
 | Setting | Local dev | Deployed URL |
 |---------|-----------|--------------|
-| Site URL | `http://localhost:5173` | `https://YOUR-APP.pages.dev` |
-| Redirect URLs | `http://localhost:5173/reset-password` | `https://YOUR-APP.pages.dev/reset-password` |
+| Site URL | `http://localhost:5173` | `https://trackher.app` (or your Pages URL) |
+| Redirect URLs | `http://localhost:5173/reset-password` | `https://trackher.app/reset-password` |
 
 Add **both** local and deployed URLs so you and your tester can use either.
+
+The iOS app never uses `capacitor://localhost` for reset emails. It reads `VITE_APP_URL` (baked in at build time) via `getPasswordResetRedirectUrl()` in `src/lib/appUrl.ts`.
 
 ### 5. Set hosting environment variables
 
@@ -59,8 +61,9 @@ Add **both** local and deployed URLs so you and your tester can use either.
 |------|-------|--------------|
 | `VITE_SUPABASE_URL` | your test project URL | Production |
 | `VITE_SUPABASE_ANON_KEY` | your anon key | Production |
+| `VITE_APP_URL` | `https://trackher.app` | Production + local `.env` |
 
-Redeploy after changing env vars.
+Redeploy after changing env vars. Rebuild the Capacitor app (`npm run cap:sync`) after changing local `.env` so the native binary picks up the new redirect origin.
 
 Each tester creates their own account (or uses the seeded test account). Row Level Security keeps data separate per user.
 

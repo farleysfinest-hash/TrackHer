@@ -5,7 +5,10 @@ const config: CapacitorConfig = {
   appName: 'TrackHer',
   webDir: 'dist',
   ios: {
-    contentInset: 'automatic',
+    // CSS env(safe-area-inset-*) + viewport-fit=cover own the insets.
+    // 'automatic' leaves a native strip that flashes black on rubber-band overscroll.
+    contentInset: 'never',
+    backgroundColor: '#ffffff',
   },
 };
 
