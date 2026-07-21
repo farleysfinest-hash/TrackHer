@@ -67,6 +67,19 @@ export function getOptimalBandLabel(biomarker: LabBiomarker): string {
   return `Optimal range ${formatRange(biomarker.optimalRange)} ${biomarker.unit}`;
 }
 
+/** Compact one-line legend for chart chrome (avoids overlapping in-plot ReferenceArea labels). */
+export function getReferenceLegendLine(biomarker: LabBiomarker): string | null {
+  const parts: string[] = [];
+  if (biomarker.conventionalRange) {
+    parts.push(`Typical ${formatRange(biomarker.conventionalRange)}`);
+  }
+  if (biomarker.optimalRange) {
+    parts.push(`Optimal ${formatRange(biomarker.optimalRange)}`);
+  }
+  if (parts.length === 0) return null;
+  return `${parts.join(' · ')} ${biomarker.unit}`;
+}
+
 export function resolveReferenceBands(
   biomarker: LabBiomarker,
   domain: LabYDomain,

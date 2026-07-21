@@ -61,7 +61,18 @@ function MedicationLaneComponent({ rows, markers }: MedicationLaneProps) {
       <div className="mt-0.5 space-y-1 pb-1 pt-0">
         {rows.map((row) => (
           <div key={row.medicationId} className="space-y-0.5">
-            <p className="truncate text-[9px] text-sage-500">{row.rowLabel}</p>
+            <p
+              className="truncate text-[9px] text-sage-500 md:hidden"
+              title={row.rowLabel}
+            >
+              {row.medicationName}
+            </p>
+            <p
+              className="hidden truncate text-[9px] text-sage-500 md:block"
+              title={row.rowLabel}
+            >
+              {row.rowLabel}
+            </p>
             <div className="relative h-[10px] rounded-[3px] bg-sand-50/50">
               {markers && markers.length > 0 && (
                 <BandDoseMarkerOverlay
@@ -93,8 +104,9 @@ function MedicationLaneComponent({ rows, markers }: MedicationLaneProps) {
               {row.boundaries.map((boundary) => (
                 <span
                   key={boundary.id}
-                  className="pointer-events-none absolute top-full mt-1 max-w-[7rem] -translate-x-1/2 truncate whitespace-nowrap text-[8px] leading-tight text-sage-500"
+                  className="pointer-events-none absolute top-full mt-1 max-w-[9rem] -translate-x-1/2 whitespace-nowrap text-[8px] leading-tight text-sage-500"
                   style={{ left: `${boundary.leftPercent}%` }}
+                  title={boundary.label}
                 >
                   {boundary.label}
                 </span>

@@ -1,6 +1,6 @@
 import { Fragment, memo, useMemo } from 'react';
 import { formatChartDate, HEATMAP_COLORS } from '../../utils/chartHelpers';
-import { parseISODate } from '../../utils/localDate';
+import { civilDateToUTCDate, parseISODate } from '../../utils/localDate';
 import { getSymptomByKey } from '../../data/symptoms';
 import type { HeatmapRow } from '../../hooks/useChartData';
 import { ChartCard } from '../ui/ChartCard';
@@ -17,6 +17,28 @@ function heatmapDisplayLabel(symptomKey: string, fallbackLabel: string): string 
   const symptom = getSymptomByKey(symptomKey);
   if (symptom?.shortLabel) return symptom.shortLabel;
   return fallbackLabel;
+}
+
+function monthTickLabel(dateStr: string): string {
+  return civilDateToUTCDate(dateStr).toLocaleDateString('en-US', {
+    month: 'short',
+    timeZone: 'UTC',
+  });
+}
+
+/** Month label only when the calendar month changes (first column always). */
+function monthLabelAt(dates: Array<{ date: string }>, index: number): string | null {
+  const current = dates[index]?.date;
+  if (!current) return null;
+  if (index === 0) return monthTickLabel(current);
+  const prev = dates[index - 1]?.date;
+  if (!prev) return monthTickLabel(current);
+  const curParts = parseISODate(current);
+  const prevParts = parseISODate(prev);
+  if (curParts.year !== prevParts.year || curParts.month !== prevParts.month) {
+    return monthTickLabel(current);
+  }
+  return null;
 }
 
 function SymptomHeatmapComponent({ rows }: SymptomHeatmapProps) {
@@ -51,13 +73,29 @@ function SymptomHeatmapComponent({ rows }: SymptomHeatmapProps) {
               gridTemplateColumns: `${LABEL_COLUMN_WIDTH} repeat(${dates.length}, minmax(0, 1fr))`,
             }}
           >
-            <div className="bg-white px-1 py-2 text-xs font-medium text-sage-500">Symptom</div>
+            <div className="bg-white px-1 pb-0 pt-2 text-[9px] font-medium leading-none text-sage-500">
+              {/* spacer aligned with month row */}
+            </div>
+            {dates.map((d, i) => {
+              const month = monthLabelAt(dates, i);
+              return (
+                <div
+                  key={`m-${d.date}`}
+                  className="overflow-hidden px-0.5 pt-2 text-center text-[9px] font-medium leading-none text-sage-500"
+                  title={month ? formatChartDate(d.date) : undefined}
+                >
+                  {month ?? '\u00a0'}
+                </div>
+              );
+            })}
+
+            <div className="bg-white px-1 pb-1 pt-1 text-xs font-medium text-sage-500">Symptom</div>
             {dates.map((d) => {
               const day = parseISODate(d.date).day;
               return (
                 <div
                   key={d.date}
-                  className="flex items-end justify-center overflow-hidden px-0.5 pb-1 pt-2 text-center text-[10px] tabular-nums leading-none text-sage-400"
+                  className="flex items-end justify-center overflow-hidden px-0.5 pb-1 pt-0.5 text-center text-[10px] tabular-nums leading-none text-sage-400"
                   title={formatChartDate(d.date)}
                 >
                   {day}

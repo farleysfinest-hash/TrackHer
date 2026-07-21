@@ -20,6 +20,7 @@ import { getTrendDirection, getValueStatus, type LabValueStatus } from '../../ut
 import {
   computeLabYDomain,
   formatLabChartValue,
+  getReferenceLegendLine,
   referenceEdgeArea,
   resolveReferenceBands,
 } from '../../utils/labChartHelpers';
@@ -147,6 +148,7 @@ function LabTrendChartComponent({
   }, [biomarker, yDomain]);
 
   const trendSummary = biomarker ? buildTrendSummary(data, biomarker.unit, biomarker) : null;
+  const referenceLegend = biomarker ? getReferenceLegendLine(biomarker) : null;
 
   if (!hasAnyLabData) return null;
 
@@ -188,9 +190,14 @@ function LabTrendChartComponent({
                 <p className="mt-0.5 text-sm text-sage-500">{trendSummary.detail}</p>
               </div>
             )}
+            {referenceLegend && (
+              <p className="mt-1.5 text-[11px] leading-snug text-sage-400">
+                {referenceLegend}
+              </p>
+            )}
           </div>
 
-          <div className="max-w-[440px]">
+          <div className="min-w-0 w-full max-w-none sm:max-w-[440px]">
             <ResponsiveContainer width="100%" height={160}>
               <ComposedChart data={data} margin={{ top: 20, right: 12, left: 0, bottom: 0 }}>
               {referenceContext.bands.map((band) => (
@@ -200,12 +207,6 @@ function LabTrendChartComponent({
                   y2={band.y2}
                   fill={band.fill}
                   fillOpacity={band.fillOpacity}
-                  label={{
-                    value: band.label,
-                    position: 'insideTopLeft',
-                    fontSize: 10,
-                    fill: CHART_COLORS.axisText,
-                  }}
                 />
               ))}
               {referenceContext.edges.map((edge) => {
@@ -217,12 +218,6 @@ function LabTrendChartComponent({
                     y2={area.y2}
                     fill={edge.fill}
                     fillOpacity={0.28}
-                    label={{
-                      value: edge.label,
-                      position: edge.edge === 'top' ? 'insideTopRight' : 'insideBottomRight',
-                      fontSize: 10,
-                      fill: CHART_COLORS.axisText,
-                    }}
                   />
                 );
               })}
