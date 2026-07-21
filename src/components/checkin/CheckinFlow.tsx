@@ -174,7 +174,7 @@ export function CheckinFlow({ onClose, onComplete }: CheckinFlowProps) {
       aria-modal="true"
       aria-label={mode === 'quick' ? 'Quick pulse' : 'Full check-in'}
     >
-      <header className="flex items-center justify-between border-b border-sand-200 bg-white px-6 py-4">
+      <header className="safe-area-top flex items-center justify-between border-b border-sand-200 bg-white px-6 pb-4">
         <div>
           <h1 className="font-display text-xl text-sage-800">
             {mode === 'quick' ? 'Quick pulse' : 'Full Check-in'}
@@ -195,7 +195,7 @@ export function CheckinFlow({ onClose, onComplete }: CheckinFlowProps) {
         </button>
       </header>
 
-      <div className="flex-1 overflow-y-auto px-6 py-8">
+      <div className="safe-area-bottom flex-1 overflow-y-auto px-6 py-8">
         <div className="mx-auto max-w-[640px]">
           <StepIndicator
             currentStep={currentStep}

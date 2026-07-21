@@ -6,6 +6,7 @@ import {
   dayOfWeekISO,
   daysBetweenISO,
   getEventLocalMetadata,
+  msUntilNextLocalMidnight,
   parseISODate,
   todayISO,
 } from '../localDate';
@@ -62,5 +63,16 @@ describe('instant conversion', () => {
     const now = new Date(instant);
     expect(todayISO('Europe/Berlin', now)).toBe('2026-07-16');
     expect(todayISO('America/Los_Angeles', now)).toBe('2026-07-15');
+  });
+
+  it('schedules the next local midnight from current zoned clock time', () => {
+    const MS_DAY = 86_400_000;
+    const justAfterMidnight = new Date('2026-07-16T07:00:00.500Z'); // 00:00:00.500 in LA PDT
+    const ms = msUntilNextLocalMidnight('America/Los_Angeles', justAfterMidnight);
+    expect(ms).toBeGreaterThan(MS_DAY - 2000);
+    expect(ms).toBeLessThanOrEqual(MS_DAY);
+
+    const nearMidnight = new Date('2026-07-16T06:59:00Z'); // 23:59:00 in LA PDT
+    expect(msUntilNextLocalMidnight('America/Los_Angeles', nearMidnight)).toBe(60_000);
   });
 });

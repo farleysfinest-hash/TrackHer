@@ -9,6 +9,7 @@ import {
 } from '../../utils/checkinHelpers';
 import type { SymptomCheckin } from '../../types/database';
 import { formatChartDateLong, severityLabel } from '../../utils/chartHelpers';
+import { formatLabChartValue } from '../../utils/labChartHelpers';
 import { CHART_TOOLTIP_SURFACE_STYLE } from '../../utils/chartStyle';
 import type { SymptomTrendPoint } from '../../hooks/useChartData';
 
@@ -93,16 +94,28 @@ export function LabTooltipContent(
 ) {
   const { active, payload, label, biomarkerLabel, unit } = props;
   if (!active || !payload?.length) return null;
-  const value = payload[0]?.value;
+
+  const point = payload[0]?.payload as { date?: string; dateLabel?: string; value?: number } | undefined;
+  const rawValue = point?.value ?? payload[0]?.value;
+  const numericValue = typeof rawValue === 'number' ? rawValue : Number(rawValue);
+  if (!Number.isFinite(numericValue)) return null;
+
+  const dateHeading =
+    (typeof point?.date === 'string' && point.date.includes('-')
+      ? formatChartDateLong(point.date)
+      : null) ??
+    (typeof label === 'string' ? label : point?.dateLabel ?? '');
+
   return (
     <div
       className="rounded-lg border border-sand-200 px-4 py-3 text-sm shadow-lg"
       style={CHART_TOOLTIP_SURFACE_STYLE}
     >
-      <p className="font-medium text-sage-800">{label}</p>
+      <p className="font-medium text-sage-800">{dateHeading}</p>
       <p className="mt-1 text-sage-700">
-        {biomarkerLabel}: <strong>{value}</strong> {unit}
+        {biomarkerLabel}: <strong>{formatLabChartValue(numericValue)}</strong> {unit}
       </p>
+      <p className="mt-2 text-[11px] text-sage-400">Tap the chart again to dismiss</p>
     </div>
   );
 }

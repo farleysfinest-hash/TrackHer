@@ -98,7 +98,7 @@ export function LabEntryForm({ onClose, onSuccess }: LabEntryFormProps) {
       aria-modal="true"
       aria-label={isEditing ? 'Edit lab results' : 'Add lab results'}
     >
-      <header className="flex items-center justify-between border-b border-sand-200 bg-white px-6 py-4">
+      <header className="safe-area-top flex items-center justify-between border-b border-sand-200 bg-white px-6 pb-4">
         <h1 className="font-display text-xl text-sage-800">
           {isEditing ? 'Edit Lab Results' : 'Add Lab Results'}
         </h1>
@@ -112,7 +112,7 @@ export function LabEntryForm({ onClose, onSuccess }: LabEntryFormProps) {
         </button>
       </header>
 
-      <div className="flex-1 overflow-y-auto px-6 py-8">
+      <div className="safe-area-bottom flex-1 overflow-y-auto px-6 py-8">
         <div className="mx-auto max-w-[640px] space-y-8">
           <div className="rounded-xl border border-sand-200 bg-white p-6 space-y-4">
             <div>

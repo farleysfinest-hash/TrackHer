@@ -6,11 +6,13 @@ import {
   loadCheckinStatusSnapshot,
   type CheckinStatus,
 } from './checkinStatus';
-import { getLocalDateISO, getResolvedTimezone } from '../utils/checkinHelpers';
+import { getResolvedTimezone } from '../utils/checkinHelpers';
+import { useLocalToday } from './useLocalToday';
 
 export function useCheckinStatus() {
   const userId = useAuthStore((s) => s.user?.id);
   const timezone = getResolvedTimezone(useAuthStore((s) => s.profile?.timezone));
+  const todayStr = useLocalToday(timezone);
   const checkinDay = useAuthStore((s) => s.profile?.checkin_day ?? null);
 
   const [status, setStatus] = useState<CheckinStatus>(EMPTY_CHECKIN_STATUS);
@@ -33,8 +35,6 @@ export function useCheckinStatus() {
         setStatus(EMPTY_CHECKIN_STATUS);
       }
 
-      const todayStr = getLocalDateISO(timezone);
-
       try {
         const snapshot = await loadCheckinStatusSnapshot(userId, todayStr);
         if (loadId !== loadIdRef.current) return;
@@ -53,7 +53,7 @@ export function useCheckinStatus() {
         }
       }
     },
-    [userId, timezone, checkinDay],
+    [userId, todayStr, checkinDay],
   );
 
   const refresh = useCallback(async () => {

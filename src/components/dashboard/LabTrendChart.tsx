@@ -235,6 +235,7 @@ function LabTrendChartComponent({
                 tickFormatter={(v) => formatLabChartValue(Number(v))}
               />
               <Tooltip
+                trigger="click"
                 isAnimationActive={false}
                 wrapperStyle={CHART_TOOLTIP_WRAPPER_STYLE}
                 content={

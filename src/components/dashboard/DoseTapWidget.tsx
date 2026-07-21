@@ -2,14 +2,13 @@ import { useEffect, useMemo } from 'react';
 import { Pill } from 'lucide-react';
 import { useMedications } from '../../hooks/useMedications';
 import { useMedicationAdministrations } from '../../hooks/useMedicationAdministrations';
+import { useLocalToday } from '../../hooks/useLocalToday';
 import { useAuthStore } from '../../stores/authStore';
 import { useToast } from '../../stores/toastStore';
 import { hasUiFlag, setUiFlag } from '../../lib/uiState';
-import { getLocalDateISO, getResolvedTimezone } from '../../utils/checkinHelpers';
-import { showDoseChip, isDoseLoggedForMed } from '../../utils/medicationHelpers';
+import { getResolvedTimezone } from '../../utils/checkinHelpers';
+import { showDoseChip, isDoseLoggedForMed, getDoseCycleDays } from '../../utils/medicationHelpers';
 import type { Medication } from '../../types/database';
-
-const UNDO_WINDOW_MS = 10 * 60 * 1000;
 
 function formatLogTime(iso: string, timezone: string): string {
   return new Date(iso).toLocaleTimeString('en-US', {
@@ -30,7 +29,7 @@ export function DoseTapWidget() {
   } = useMedicationAdministrations();
   const profile = useAuthStore((s) => s.profile);
   const timezone = getResolvedTimezone(profile?.timezone);
-  const today = getLocalDateISO(timezone);
+  const today = useLocalToday(timezone);
   const showExplainer = !hasUiFlag(profile, 'dose_tap_explainer_seen');
 
   useEffect(() => {
@@ -53,15 +52,11 @@ export function DoseTapWidget() {
       .sort((a, b) => b.taken_at.localeCompare(a.taken_at))[0];
 
     if (logged && latest) {
-      const elapsed = Date.now() - new Date(latest.taken_at).getTime();
-      if (elapsed <= UNDO_WINDOW_MS) {
-        toast.success(`Logged — ${formatLogTime(latest.taken_at, timezone)}`, {
-          label: 'Undo',
-          onClick: () => {
-            void undoLast(med.id);
-          },
-        });
-        return;
+      const removed = await undoLast(med.id);
+      if (removed) {
+        toast.success(`Removed dose · ${formatLogTime(latest.taken_at, timezone)}`);
+      } else {
+        toast.error('Could not undo dose');
       }
       return;
     }
@@ -69,7 +64,12 @@ export function DoseTapWidget() {
     dismissExplainer();
     const created = await logAdministration(med.id);
     if (created) {
-      toast.success(`Logged — ${formatLogTime(created.taken_at, timezone)}`);
+      const cycleDays = getDoseCycleDays(med);
+      toast.success(
+        cycleDays
+          ? `Logged — ${formatLogTime(created.taken_at, timezone)} · stays checked for this ${cycleDays}-day cycle`
+          : `Logged — ${formatLogTime(created.taken_at, timezone)}`,
+      );
     } else {
       toast.error('Could not log dose');
     }
@@ -81,7 +81,9 @@ export function DoseTapWidget() {
   return (
     <section className="rounded-xl border border-sand-200 bg-white p-5">
       <h2 className="font-display text-lg text-sage-800">Dose log</h2>
-      <p className="mt-1 text-sm text-sage-500">Tap when you take your dose.</p>
+      <p className="mt-1 text-sm text-sage-500">
+        Tap when you take your dose. Tap again to undo.
+      </p>
 
       <div className="mt-4 flex flex-wrap gap-2">
         {chipMeds.map((med) => {
@@ -108,8 +110,8 @@ export function DoseTapWidget() {
 
       {showExplainer && (
         <p className="mt-3 text-xs leading-relaxed text-sage-500">
-          Tapping when you take your dose builds the timing data that makes patterns like
-          end-of-cycle dips visible.
+          Weekly patches stay checked for the full dose cycle after you log — not just today.
+          Tapping again removes that log.
         </p>
       )}
     </section>

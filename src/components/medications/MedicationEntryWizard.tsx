@@ -55,7 +55,7 @@ export function MedicationEntryWizard({ isOpen, onClose, onComplete }: Medicatio
       aria-modal="true"
       aria-label="Add medication"
     >
-      <header className="flex items-center justify-between border-b border-sand-200 bg-white px-6 py-4">
+      <header className="safe-area-top flex items-center justify-between border-b border-sand-200 bg-white px-6 pb-4">
         <h1 className="font-display text-xl text-sage-800">Add Medication</h1>
         <button
           type="button"
@@ -67,7 +67,7 @@ export function MedicationEntryWizard({ isOpen, onClose, onComplete }: Medicatio
         </button>
       </header>
 
-      <div className="flex-1 overflow-y-auto px-6 py-8">
+      <div className="safe-area-bottom flex-1 overflow-y-auto px-6 py-8">
         <div className="mx-auto max-w-[640px]">
           {currentStep < 5 && (
             <StepIndicator currentStep={displayStep} totalSteps={totalSteps} />

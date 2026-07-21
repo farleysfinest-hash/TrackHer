@@ -5,7 +5,7 @@ import { Card } from '../ui/Card';
 
 export function AuthLayout({ children }: { children?: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-sand-50 px-6 py-12">
+    <div className="safe-area-page flex min-h-screen flex-col items-center justify-center bg-sand-50 px-6">
       <div className="mb-8">
         <Logo size="lg" />
       </div>

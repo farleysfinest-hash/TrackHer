@@ -4,8 +4,9 @@ import { useChartData } from '../../hooks/useChartData';
 import { useCheckinStatus } from '../../hooks/useCheckinStatus';
 import { useInsights } from '../../hooks/useInsights';
 import { useStageProfile } from '../../hooks/useStageProfile';
+import { useLocalToday } from '../../hooks/useLocalToday';
 import { getStageTrackingPhrase } from '../../engine/stageProfile';
-import { getLocalDateISO, getResolvedTimezone } from '../../utils/checkinHelpers';
+import { getResolvedTimezone } from '../../utils/checkinHelpers';
 import { useAuthStore } from '../../stores/authStore';
 import { DateRangeSelector } from './DateRangeSelector';
 import { ScoreSummaryCards } from './ScoreSummaryCards';
@@ -99,7 +100,7 @@ export function DashboardLayout() {
   const timezone = getResolvedTimezone(useAuthStore((s) => s.profile?.timezone));
   const stageProfile = useStageProfile();
   const stageTrackingPhrase = getStageTrackingPhrase(stageProfile);
-  const today = getLocalDateISO(timezone);
+  const today = useLocalToday(timezone);
   const appointmentDate = useAuthStore((s) => s.profile?.next_appointment_date);
   const daysUntilAppointment =
     appointmentDate && appointmentDate >= today

@@ -196,6 +196,19 @@ export function todayISO(timezone = getActiveTimezone(), now = new Date()): stri
   return dateISOInTimeZone(now, timezone);
 }
 
+/**
+ * Milliseconds until the next civil midnight in `timezone`.
+ * Used to roll "today" over without waiting for a remount.
+ */
+export function msUntilNextLocalMidnight(timezone: string, now = new Date()): number {
+  const parts = zonedParts(now, timezone);
+  const msIntoDay =
+    ((parts.hour * 60 + parts.minute) * 60 + parts.second) * 1000 + (now.getMilliseconds() % 1000);
+  const remaining = MS_PER_DAY - msIntoDay;
+  // Always schedule at least 1s ahead so a zero/negative never spins the timer.
+  return Math.max(1000, remaining);
+}
+
 /** Shift a YYYY-MM-DD civil date by whole calendar days. */
 export function addDaysISO(dateStr: string, delta: number): string {
   const date = civilDateToUTCDate(dateStr);

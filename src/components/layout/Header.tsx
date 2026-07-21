@@ -34,7 +34,7 @@ export function Header() {
     : emailInitial;
 
   return (
-    <header className="sticky top-0 z-20 flex items-center justify-between border-b border-sand-200 bg-white/95 px-6 py-4 backdrop-blur-sm md:px-8">
+    <header className="safe-area-top sticky top-0 z-20 flex items-center justify-between border-b border-sand-200 bg-white/95 px-6 pb-4 backdrop-blur-sm md:px-8">
       <div className="flex items-center gap-2 md:hidden">
         <Logo size="sm" />
         <img

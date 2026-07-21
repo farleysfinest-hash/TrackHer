@@ -1,5 +1,5 @@
 import type { MRSScore } from '../types/database';
-import { civilDateToUTCDate } from './localDate';
+import { civilDateToUTCDate, parseISODate } from './localDate';
 
 /** Chart palette — aligned with soft blush theme (#BE739A) */
 export const CHART_COLORS = {
@@ -78,6 +78,12 @@ export function getWellbeingHex(score: number): string {
 export function formatChartDate(dateStr: string): string {
   const d = civilDateToUTCDate(dateStr);
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+}
+
+/** Compact civil date for narrow columns (iPhone mini heatmap): `6/10`. */
+export function formatChartDateCompact(dateStr: string): string {
+  const { month, day } = parseISODate(dateStr);
+  return `${month}/${day}`;
 }
 
 export function formatChartDateLong(dateStr: string): string {

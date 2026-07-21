@@ -16,7 +16,7 @@ export function AppShell() {
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col md:ml-[240px]">
         <Header />
-        <main className="min-w-0 flex-1 px-6 py-6 pb-24 md:px-8 md:py-8 md:pb-8 lg:px-12">
+        <main className="min-w-0 flex-1 px-4 py-6 pb-24 md:px-8 md:py-8 md:pb-8 lg:px-12">
           <div className="mx-auto min-w-0 max-w-[1200px]">
             <Outlet />
           </div>
