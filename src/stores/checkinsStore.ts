@@ -139,8 +139,14 @@ interface CheckinsState {
   reset: () => void;
 }
 
-/** Guards against a slower, superseded request overwriting a newer one's result. */
+/**
+ * Separate generation counters so prefetch / insights `fetchCheckins` and
+ * dashboard `fetchCheckinsRange` cannot cancel each other. Sharing one counter
+ * left mrsCheckinCount stuck at 0 (early dashboard / welcome / unlock) whenever
+ * a list fetch finished after the range fetch had been superseded.
+ */
 let latestListRequest = 0;
+let latestRangeRequest = 0;
 const inFlightByKey = new Map<string, Promise<void>>();
 
 export const useCheckinsStore = create<CheckinsState>((set, get) => ({
@@ -154,6 +160,7 @@ export const useCheckinsStore = create<CheckinsState>((set, get) => ({
 
   reset: () => {
     latestListRequest += 1;
+    latestRangeRequest += 1;
     inFlightByKey.clear();
     set({
       checkins: [],
@@ -185,23 +192,31 @@ export const useCheckinsStore = create<CheckinsState>((set, get) => ({
       const requestId = ++latestListRequest;
       set({ isLoading: true, error: null });
 
-      const { data, error: fetchError } = await supabase
-        .from('symptom_checkins')
-        .select('*')
-        .eq('user_id', userId)
-        .order('checkin_date', { ascending: false })
-        .limit(limit);
+      const [listResult, countResult] = await Promise.all([
+        supabase
+          .from('symptom_checkins')
+          .select('*')
+          .eq('user_id', userId)
+          .order('checkin_date', { ascending: false })
+          .limit(limit),
+        supabase
+          .from('symptom_checkins')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .eq('mrs_complete', true),
+      ]);
 
       if (requestId !== latestListRequest) return;
-      if (fetchError) {
-        set({ isLoading: false, error: fetchError.message });
+      if (listResult.error) {
+        set({ isLoading: false, error: listResult.error.message });
         return;
       }
       set({
-        checkins: (data as SymptomCheckin[]) ?? [],
+        checkins: (listResult.data as SymptomCheckin[]) ?? [],
+        mrsCheckinCount: countResult.error ? get().mrsCheckinCount : (countResult.count ?? 0),
         isLoading: false,
         hasFetched: true,
-        fetchedLimit: limit,
+        fetchedLimit: Math.max(get().fetchedLimit, limit),
       });
     })();
 
@@ -225,7 +240,7 @@ export const useCheckinsStore = create<CheckinsState>((set, get) => ({
     }
 
     const promise = (async () => {
-      const requestId = ++latestListRequest;
+      const requestId = ++latestRangeRequest;
       set({ isLoading: true, error: null });
 
       const [countResult, earliestResult] = await Promise.all([
@@ -244,7 +259,7 @@ export const useCheckinsStore = create<CheckinsState>((set, get) => ({
       ]);
 
       if (countResult.error || earliestResult.error) {
-        if (requestId !== latestListRequest) return;
+        if (requestId !== latestRangeRequest) return;
         set({
           isLoading: false,
           error:
@@ -266,7 +281,7 @@ export const useCheckinsStore = create<CheckinsState>((set, get) => ({
           .range(offset, offset + pageSize - 1);
 
         if (pageError) {
-          if (requestId !== latestListRequest) return;
+          if (requestId !== latestRangeRequest) return;
           set({ isLoading: false, error: pageError.message });
           return;
         }
@@ -274,10 +289,10 @@ export const useCheckinsStore = create<CheckinsState>((set, get) => ({
         const page = (data as SymptomCheckin[]) ?? [];
         rows.push(...page);
         if (page.length < pageSize) break;
-        if (requestId !== latestListRequest) return;
+        if (requestId !== latestRangeRequest) return;
       }
 
-      if (requestId !== latestListRequest) return;
+      if (requestId !== latestRangeRequest) return;
       set({
         mrsCheckinCount: countResult.count ?? 0,
         earliestCheckinDate:
@@ -285,6 +300,8 @@ export const useCheckinsStore = create<CheckinsState>((set, get) => ({
         checkins: rows,
         isLoading: false,
         hasFetched: true,
+        // Keep list prefetch from immediately re-fetching a shorter window.
+        fetchedLimit: Math.max(get().fetchedLimit, rows.length, DEFAULT_CHECKINS_LIMIT),
       });
     })();
 
