@@ -58,8 +58,20 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
     background-color: #ffffff;
     overflow-x: hidden;
+  }
+
+  /* Block text selection globally — re-enable on inputs */
+  *, *::before, *::after {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  input, textarea, [contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
   }
 
   body {

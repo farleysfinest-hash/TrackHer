@@ -28,7 +28,7 @@ export function LegalPageLayout({ children }: LegalPageLayoutProps) {
       </header>
 
       <main className="mx-auto max-w-3xl px-6 py-10">
-        <div className="prose prose-sage max-w-none">
+        <div className="prose prose-sage max-w-none select-text">
           {children}
         </div>
       </main>

@@ -13,25 +13,26 @@ export function Header() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    if (!menuOpen) return;
+    const handleClickOutside = (e: PointerEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setMenuOpen(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    document.addEventListener('pointerdown', handleClickOutside);
+    return () => document.removeEventListener('pointerdown', handleClickOutside);
+  }, [menuOpen]);
 
   const handleSignOut = async () => {
     await signOut();
     navigate('/login');
   };
 
-  const emailInitial =
-    user?.email?.trim()?.charAt(0)?.toUpperCase() ?? '?';
   const avatarText = profile?.display_name
     ? getInitials(profile.display_name)
-    : emailInitial;
+    : profile
+      ? (user?.email?.trim()?.charAt(0)?.toUpperCase() ?? '?')
+      : null;
 
   return (
     <header className="safe-area-top sticky top-0 z-20 flex min-w-0 items-center justify-between gap-3 overflow-x-hidden border-b border-sand-200 bg-white/95 px-4 pb-4 backdrop-blur-sm sm:px-6 md:px-8">
@@ -54,7 +55,7 @@ export function Header() {
           className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-sage-50"
         >
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sage-500 text-sm font-medium text-white">
-            {avatarText}
+            {avatarText ?? ' '}
           </div>
           <span className="hidden text-sm font-medium text-sage-700 sm:inline">
             {profile?.display_name ?? user?.email ?? 'User'}
