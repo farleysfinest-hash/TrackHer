@@ -5,6 +5,7 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 import { Sidebar } from './Sidebar';
 import { MobileNav } from './MobileNav';
 import { Header } from './Header';
+import { PersistentTabs, isMainTabPath } from './PersistentTabs';
 import { useReminderSync } from '../../hooks/useReminderSync';
 import { useAuthStore } from '../../stores/authStore';
 import { prefetchCoreData } from '../../lib/prefetchCoreData';
@@ -46,11 +47,7 @@ export function AppShell() {
   useNotificationNavigation();
   useCoreDataPrefetch();
 
-  useEffect(() => {
-    window.scrollTo(0, 0);
-    document.documentElement.scrollLeft = 0;
-    document.body.scrollLeft = 0;
-  }, [pathname]);
+  const onMainTab = isMainTabPath(pathname);
 
   return (
     <div className="flex min-h-screen max-w-[100vw] overflow-x-hidden bg-sand-50">
@@ -59,7 +56,8 @@ export function AppShell() {
         <Header />
         <main className="min-w-0 max-w-full flex-1 overflow-x-hidden px-4 py-6 pb-24 md:px-8 md:py-8 md:pb-8 lg:px-12">
           <div className="mx-auto min-w-0 max-w-[1200px]">
-            <Outlet />
+            <PersistentTabs />
+            {!onMainTab && <Outlet />}
           </div>
         </main>
         <MobileNav />

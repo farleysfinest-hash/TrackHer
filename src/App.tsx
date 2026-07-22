@@ -5,9 +5,6 @@ import { AppShell } from './components/layout/AppShell';
 import { ToastContainer } from './components/ui/Toast';
 import { ErrorBoundary, RouteErrorBoundary } from './components/ui/ErrorBoundary';
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
-// Default tab + heaviest chunk: load eagerly so tab-switch-back does not
-// re-parse ~900KB of Recharts/dashboard code on every visit.
-import { DashboardPage } from './pages/DashboardPage';
 
 const LoginPage = lazy(() =>
   import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })),
@@ -24,18 +21,6 @@ const ResetPasswordPage = lazy(() =>
 const OnboardingPage = lazy(() =>
   import('./pages/OnboardingPage').then((m) => ({ default: m.OnboardingPage })),
 );
-const MedicationsPage = lazy(() =>
-  import('./pages/MedicationsPage').then((m) => ({ default: m.MedicationsPage })),
-);
-const CheckinPage = lazy(() =>
-  import('./pages/CheckinPage').then((m) => ({ default: m.CheckinPage })),
-);
-const LabsPage = lazy(() =>
-  import('./pages/LabsPage').then((m) => ({ default: m.LabsPage })),
-);
-const InsightsPage = lazy(() =>
-  import('./pages/InsightsPage').then((m) => ({ default: m.InsightsPage })),
-);
 const SettingsPage = lazy(() =>
   import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })),
 );
@@ -45,6 +30,11 @@ const PrivacyPolicyPage = lazy(() =>
 const TermsOfServicePage = lazy(() =>
   import('./pages/TermsOfServicePage').then((m) => ({ default: m.TermsOfServicePage })),
 );
+
+/** URL match only — PersistentTabs owns the real page trees for main tabs. */
+function TabRoute() {
+  return null;
+}
 
 function RouteFallback() {
   return (
@@ -84,46 +74,11 @@ export function App() {
                 </ProtectedRoute>
               }
             >
-              <Route
-                path="/dashboard"
-                element={
-                  <RouteErrorBoundary>
-                    <DashboardPage />
-                  </RouteErrorBoundary>
-                }
-              />
-              <Route
-                path="/medications"
-                element={
-                  <RouteErrorBoundary>
-                    <MedicationsPage />
-                  </RouteErrorBoundary>
-                }
-              />
-              <Route
-                path="/checkin"
-                element={
-                  <RouteErrorBoundary>
-                    <CheckinPage />
-                  </RouteErrorBoundary>
-                }
-              />
-              <Route
-                path="/labs"
-                element={
-                  <RouteErrorBoundary>
-                    <LabsPage />
-                  </RouteErrorBoundary>
-                }
-              />
-              <Route
-                path="/insights"
-                element={
-                  <RouteErrorBoundary>
-                    <InsightsPage />
-                  </RouteErrorBoundary>
-                }
-              />
+              <Route path="/dashboard" element={<TabRoute />} />
+              <Route path="/medications" element={<TabRoute />} />
+              <Route path="/checkin" element={<TabRoute />} />
+              <Route path="/labs" element={<TabRoute />} />
+              <Route path="/insights" element={<TabRoute />} />
               <Route
                 path="/settings"
                 element={
