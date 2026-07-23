@@ -4,10 +4,7 @@ import { useChartData } from '../../hooks/useChartData';
 import { useCheckinStatus } from '../../hooks/useCheckinStatus';
 import { useInsights } from '../../hooks/useInsights';
 import { useStageProfile } from '../../hooks/useStageProfile';
-import { useLocalToday } from '../../hooks/useLocalToday';
 import { getStageTrackingPhrase } from '../../engine/stageProfile';
-import { getResolvedTimezone } from '../../utils/checkinHelpers';
-import { useAuthStore } from '../../stores/authStore';
 import { DateRangeSelector } from './DateRangeSelector';
 import { ScoreSummaryCards } from './ScoreSummaryCards';
 import { WelcomeMessage } from './WelcomeMessage';
@@ -20,7 +17,6 @@ import { DrillDownControls } from './DrillDownControls';
 import { ActiveMedicationsSummary } from './ActiveMedicationsSummary';
 import { LabSummaryWidget } from './LabSummaryWidget';
 import { AppointmentCountdownCard } from './AppointmentCountdownCard';
-import { daysBetweenISO } from '../../utils/localDate';
 import { ProviderReportButton } from './ProviderReportButton';
 import { DashboardInsightsPanel } from '../insights/DashboardInsightsPanel';
 import { SafeguardingCard } from '../insights/SafeguardingCard';
@@ -29,7 +25,6 @@ import { RecentLogs } from './RecentLogs';
 import { PersonalSymptomTrends } from './PersonalSymptomTrends';
 import { StrawStageCard } from './StrawStageCard';
 import { UnlockProgress } from './UnlockProgress';
-import { FullDashboardUnlockCard } from './FullDashboardUnlockCard';
 
 const FULL_DASHBOARD_CHECKINS = 7;
 
@@ -38,8 +33,7 @@ type DashboardMode = 'full' | 'early';
 export function DashboardLayout() {
   const dateRange = useDashboardStore((s) => s.dateRange);
   const refreshDateRange = useDashboardStore((s) => s.refreshDateRange);
-  // Kept warm for prompt 3 header subtitle swap (due-state).
-  useCheckinStatus();
+  const checkinStatus = useCheckinStatus();
   const { insights, primaryInsights, moreInsights, safeguardingInsights, dismissInsight, extendedSymptoms } = useInsights();
   const {
     getSymptomTrendData,
@@ -104,17 +98,17 @@ export function DashboardLayout() {
   const isFullDashboard = dashboardMode === 'full';
   const isEarlyDashboard = dashboardMode === 'early';
 
-  const timezone = getResolvedTimezone(useAuthStore((s) => s.profile?.timezone));
   const stageProfile = useStageProfile();
   const stageTrackingPhrase = getStageTrackingPhrase(stageProfile);
-  const today = useLocalToday(timezone);
-  const appointmentDate = useAuthStore((s) => s.profile?.next_appointment_date);
-  const daysUntilAppointment =
-    appointmentDate && appointmentDate >= today
-      ? daysBetweenISO(today, appointmentDate)
-      : null;
-  const showStandaloneReport =
-    isFullDashboard && (daysUntilAppointment === null || daysUntilAppointment > 7);
+
+  // Same gate WeeklyCheckinPromptCard uses for the owed/open CTA path:
+  // isDue is false once hasFullMrsToday or weeklyMinimumMet.
+  const weeklyCheckinOpen = checkinStatus.isDue;
+  const subtitle = weeklyCheckinOpen
+    ? 'Your weekly check-in is open — takes about 2 minutes.'
+    : stageTrackingPhrase
+      ? `You're tracking through ${stageTrackingPhrase}.`
+      : 'Track your symptoms, doses, and patterns over time.';
 
   const safeguardingCards = safeguardingInsights.map((insight) => (
     <SafeguardingCard
@@ -129,11 +123,7 @@ export function DashboardLayout() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-3xl text-sage-800">Dashboard</h1>
-          <p className="mt-1 text-sage-500">
-            {stageTrackingPhrase
-              ? `You're tracking through ${stageTrackingPhrase}.`
-              : 'Track your symptoms, doses, and patterns over time.'}
-          </p>
+          <p className="mt-1 text-sage-500">{subtitle}</p>
         </div>
       </div>
 
@@ -143,15 +133,13 @@ export function DashboardLayout() {
 
           <QuickLogWidget />
 
-          <FullDashboardUnlockCard />
+          <RecentLogs />
 
-          <AppointmentCountdownCard earliestCheckinDate={earliestCheckinDate} />
+          <UnlockProgress checkinCount={mrsCheckinCount} />
 
           <DateRangeSelector />
 
           <ScoreSummaryCards checkins={summaryCheckins} dateRange={dateRange} />
-
-          <RecentLogs />
 
           <DashboardInsightsPanel
             primaryInsights={primaryInsights}
@@ -200,7 +188,10 @@ export function DashboardLayout() {
             changeMarkers={changeMarkers}
           />
 
-          {showStandaloneReport && <ProviderReportButton />}
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <AppointmentCountdownCard earliestCheckinDate={earliestCheckinDate} />
+            <ProviderReportButton />
+          </div>
         </>
       ) : isEarlyDashboard ? (
         <>
@@ -208,13 +199,11 @@ export function DashboardLayout() {
 
           <QuickLogWidget />
 
-          <WelcomeMessage />
-
-          <AppointmentCountdownCard earliestCheckinDate={earliestCheckinDate} />
+          <RecentLogs />
 
           <UnlockProgress checkinCount={mrsCheckinCount} />
 
-          <RecentLogs />
+          <WelcomeMessage />
 
           {(primaryInsights.length > 0 || moreInsights.length > 0) && (
             <DashboardInsightsPanel

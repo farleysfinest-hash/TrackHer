@@ -1,58 +1,32 @@
-import { useMemo } from 'react';
 import { Calendar } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { getLocalDateISO, getResolvedTimezone } from '../../utils/checkinHelpers';
-import { ProviderReportButton } from './ProviderReportButton';
-import { Card } from '../ui/Card';
 import { daysBetweenISO } from '../../utils/localDate';
 
-function daysBetween(from: string, to: string): number {
-  return daysBetweenISO(from, to);
-}
-
 interface AppointmentCountdownCardProps {
+  /** Kept for call-site compatibility; chip no longer uses tracking history. */
   earliestCheckinDate: string | null;
 }
 
-export function AppointmentCountdownCard({ earliestCheckinDate }: AppointmentCountdownCardProps) {
+export function AppointmentCountdownCard({
+  earliestCheckinDate: _earliestCheckinDate,
+}: AppointmentCountdownCardProps) {
   const appointmentDate = useAuthStore((s) => s.profile?.next_appointment_date);
   const timezone = getResolvedTimezone(useAuthStore((s) => s.profile?.timezone));
   const today = getLocalDateISO(timezone);
 
-  const content = useMemo(() => {
-    if (!appointmentDate || appointmentDate < today) return null;
+  if (!appointmentDate || appointmentDate < today) return null;
 
-    const daysUntil = daysBetween(today, appointmentDate);
-    const heading =
-      daysUntil === 0
-        ? 'Your appointment is today'
-        : `Your appointment is in ${daysUntil} day${daysUntil !== 1 ? 's' : ''}`;
-
-    const trackingText = earliestCheckinDate
-      ? `${Math.max(1, Math.ceil(daysBetween(earliestCheckinDate, appointmentDate) / 7))} weeks of tracking`
-      : 'your tracking so far';
-
-    return { heading, trackingText, showReport: daysUntil <= 7 };
-  }, [appointmentDate, earliestCheckinDate, today]);
-
-  if (!content) return null;
+  const daysUntil = daysBetweenISO(today, appointmentDate);
+  const label =
+    daysUntil === 0
+      ? 'Appointment today'
+      : `Appointment in ${daysUntil} day${daysUntil === 1 ? '' : 's'}`;
 
   return (
-    <Card variant="elevated" className="border-l-4 border-l-sage-400">
-      <div className="flex items-start gap-3">
-        <Calendar className="mt-0.5 h-6 w-6 shrink-0 text-sage-500" />
-        <div className="flex-1 space-y-2">
-          <h2 className="font-display text-lg text-sage-800">{content.heading}</h2>
-          <p className="text-sm text-sage-600">
-            Your provider report will cover {content.trackingText} by then.
-          </p>
-          {content.showReport && (
-            <div className="pt-2">
-              <ProviderReportButton compact />
-            </div>
-          )}
-        </div>
-      </div>
-    </Card>
+    <div className="inline-flex items-center gap-2 rounded-full border border-sand-200 bg-sand-50 px-3 py-1.5 text-sm text-sage-600">
+      <Calendar className="h-4 w-4 shrink-0 text-sage-500" aria-hidden />
+      <span>{label}</span>
+    </div>
   );
 }
