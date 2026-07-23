@@ -46,6 +46,40 @@
   --color-danger: #b54f4f;
   --color-info: #8a6a7a;
 
+  /*
+   * Severity ramp — RecentLogs 1–10 → five rose depths.
+   * severity-3 equals sage-500; kept as a ramp stop so the scale is addressable as a set.
+   */
+  --color-severity-1: #e5aac8;
+  --color-severity-2: #c989a7;
+  --color-severity-3: #be739a;
+  --color-severity-4: #a64d79;
+  --color-severity-5: #7a3b5e;
+
+  /*
+   * Heatmap ramp — genuinely different from RecentLogs (pale floor + unique #eec9dd stop).
+   * heat-0 equals sage-50; heat-2/3/4 equal severity-2/4/5.
+   */
+  --color-heat-0: #faf5f8;
+  --color-heat-1: #eec9dd;
+  --color-heat-2: #c989a7;
+  --color-heat-3: #a64d79;
+  --color-heat-4: #7a3b5e;
+  --color-heat-empty: #f5ebef;
+
+  /* Chart chrome / series roles (hexes not already covered by sage/severity/heat) */
+  --color-chart-line-primary: #7a3b5e;
+  --color-chart-dot: #a64d79;
+  --color-chart-pulse: #c989a7;
+  --color-chart-marker: #a64d79;
+  --color-chart-grid: #f0eaec;
+  --color-chart-axis: #b896a3;
+  --color-chart-observation: #e5aac8;
+  --color-chart-band-conventional: #dfaec7;
+  --color-chart-urogenital: #e0a8c6;
+  --color-chart-line-secondary: #c07396;
+  --color-chart-med-muted: #f0d8e4;
+
   /* Typography */
   --font-display: 'Fraunces Variable', 'Fraunces', 'Georgia', serif;
   --font-body: system-ui, -apple-system, sans-serif;
@@ -59,7 +93,7 @@
     -moz-osx-font-smoothing: grayscale;
     -webkit-tap-highlight-color: transparent;
     -webkit-touch-callout: none;
-    background-color: #ffffff;
+    background-color: var(--color-sand-50);
     overflow-x: hidden;
   }
 
@@ -75,11 +109,11 @@
   }
 
   body {
-    @apply bg-white text-sage-800 text-base leading-relaxed;
+    @apply bg-sand-50 text-sage-800 text-base leading-relaxed;
     margin: 0;
     min-height: 100vh;
     min-height: 100dvh;
-    background-color: #ffffff;
+    background-color: var(--color-sand-50);
     overflow-x: hidden;
     max-width: 100vw;
   }
@@ -110,7 +144,7 @@
   #root {
     min-height: 100vh;
     min-height: 100dvh;
-    background-color: #ffffff;
+    background-color: var(--color-sand-50);
   }
 }
 

@@ -37,7 +37,7 @@ interface LabTrendChartProps {
 }
 
 const LAB_DOT_FILL = CHART_COLORS.mrsTotalDot;
-const LAB_DOT_STROKE = '#ffffff';
+const LAB_DOT_STROKE = 'var(--color-sand-50)';
 const LAB_DOT_RADIUS = 6;
 const LAB_VALUE_COLOR = CHART_COLORS.mrsTotal;
 

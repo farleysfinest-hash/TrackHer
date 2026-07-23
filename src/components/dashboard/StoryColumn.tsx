@@ -47,10 +47,10 @@ const LANE_AXIS_CLEARANCE = 18;
 const SYNC_ID = 'story-column';
 
 const INK = {
-  mrsStroke: '#7a3b5e',
-  mrsDot: '#a64d79',
-  pulse: '#c989a7',
-  rule: '#a64d79',
+  mrsStroke: 'var(--color-chart-line-primary)',
+  mrsDot: 'var(--color-chart-dot)',
+  pulse: 'var(--color-chart-pulse)',
+  rule: 'var(--color-chart-marker)',
 } as const;
 
 const CHART_MARGIN = {
@@ -89,7 +89,7 @@ function PulseAxisTick({ x = 0, y = 0, payload, channel }: PulseAxisTickProps) {
   if (!text) return null;
 
   return (
-    <text x={Number(x)} y={Number(y)} dy={4} textAnchor="end" fill="#b896a3" fontSize={9} dx={-4}>
+    <text x={Number(x)} y={Number(y)} dy={4} textAnchor="end" fill="var(--color-chart-axis)" fontSize={9} dx={-4}>
       {text}
     </text>
   );
@@ -232,7 +232,7 @@ function StoryColumnComponent({
                   dotColor={INK.mrsDot}
                   seriesProps={{
                     strokeWidth: 2,
-                    dot: { r: 3.5, fill: '#a64d79', stroke: '#a64d79', strokeWidth: 0 },
+                    dot: { r: 3.5, fill: 'var(--color-chart-dot)', stroke: 'var(--color-chart-dot)', strokeWidth: 0 },
                   }}
                 />
               </LineChart>

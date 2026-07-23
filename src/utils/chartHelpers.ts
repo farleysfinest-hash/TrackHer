@@ -1,27 +1,27 @@
 import type { MRSScore } from '../types/database';
 import { civilDateToUTCDate, parseISODate } from './localDate';
 
-/** Chart palette — aligned with soft blush theme (#BE739A) */
+/** Chart palette — CSS variables so dark mode can redefine ink without touching call sites. */
 export const CHART_COLORS = {
-  mrsTotal: '#7a3b5e',
-  mrsTotalDot: '#a64d79',
-  wellbeing: '#c989a7',
+  mrsTotal: 'var(--color-chart-line-primary)',
+  mrsTotalDot: 'var(--color-chart-dot)',
+  wellbeing: 'var(--color-chart-pulse)',
   /** MRS subscale line ramp: deep rose → raspberry → light blush */
-  psychological: '#7a3b5e',
-  somatic: '#a64d79',
-  urogenital: '#e0a8c6',
-  optimalBand: '#e5aac8',
-  conventionalBand: '#dfaec7',
-  outOfRange: '#7a3b5e',
-  estrogen: '#a64d79',
-  progesterone: '#c989a7',
-  testosterone: '#7a3b5e',
-  combination: '#be739a',
-  supportive: '#dfaec7',
-  other: '#dfaec7',
-  changeLine: '#ce93ad',
-  grid: '#f0eaec',
-  axisText: '#b896a3',
+  psychological: 'var(--color-chart-line-primary)',
+  somatic: 'var(--color-chart-dot)',
+  urogenital: 'var(--color-chart-urogenital)',
+  optimalBand: 'var(--color-chart-observation)',
+  conventionalBand: 'var(--color-chart-band-conventional)',
+  outOfRange: 'var(--color-chart-line-primary)',
+  estrogen: 'var(--color-chart-dot)',
+  progesterone: 'var(--color-chart-pulse)',
+  testosterone: 'var(--color-chart-line-primary)',
+  combination: 'var(--color-sage-500)',
+  supportive: 'var(--color-chart-band-conventional)',
+  other: 'var(--color-chart-band-conventional)',
+  changeLine: 'var(--color-sage-400)',
+  grid: 'var(--color-chart-grid)',
+  axisText: 'var(--color-chart-axis)',
 } as const;
 
 /**
@@ -31,12 +31,12 @@ export const CHART_COLORS = {
  * `deep` = post-increase dose.
  */
 export const MED_LANE_RAMP: Record<string, { base: string; deep: string }> = {
-  estrogen: { base: '#dfaec7', deep: '#a64d79' },
-  progesterone: { base: '#e5aac8', deep: '#c989a7' },
-  testosterone: { base: '#c989a7', deep: '#7a3b5e' },
-  combination: { base: '#e0a8c6', deep: '#be739a' },
-  supportive: { base: '#f0d8e4', deep: '#dfaec7' },
-  other: { base: '#f0d8e4', deep: '#dfaec7' },
+  estrogen: { base: 'var(--color-chart-band-conventional)', deep: 'var(--color-chart-dot)' },
+  progesterone: { base: 'var(--color-chart-observation)', deep: 'var(--color-chart-pulse)' },
+  testosterone: { base: 'var(--color-chart-pulse)', deep: 'var(--color-chart-line-primary)' },
+  combination: { base: 'var(--color-chart-urogenital)', deep: 'var(--color-sage-500)' },
+  supportive: { base: 'var(--color-chart-med-muted)', deep: 'var(--color-chart-band-conventional)' },
+  other: { base: 'var(--color-chart-med-muted)', deep: 'var(--color-chart-band-conventional)' },
 };
 
 export function getMedLaneRamp(category: string | null | undefined) {
@@ -46,33 +46,41 @@ export function getMedLaneRamp(category: string | null | undefined) {
 
 /** Series ramp — three separable rose depths. The rose family does not support a
  *  fourth distinguishable line colour; selection is capped at 3 to match. */
-export const DRILL_DOWN_COLORS = ['#7a3b5e', '#c07396', '#e5aac8'] as const;
+export const DRILL_DOWN_COLORS = [
+  'var(--color-chart-line-primary)',
+  'var(--color-chart-line-secondary)',
+  'var(--color-chart-observation)',
+] as const;
 
 /** Series lighter than this need a dot outline to hold on white (design rule 5). */
-export const LIGHT_SERIES_INKS: readonly string[] = ['#e5aac8', '#e0a8c6', '#dfaec7'];
-export const LIGHT_SERIES_OUTLINE = '#a64d79';
+export const LIGHT_SERIES_INKS: readonly string[] = [
+  'var(--color-chart-observation)',
+  'var(--color-chart-urogenital)',
+  'var(--color-chart-band-conventional)',
+];
+export const LIGHT_SERIES_OUTLINE = 'var(--color-chart-dot)';
 
 /** Severity as depth of rose (design rule 8) — monotonic lightness, grayscale-safe */
 export const HEATMAP_COLORS: Record<number, string> = {
-  0: '#faf5f8',
-  1: '#eec9dd',
-  2: '#c989a7',
-  3: '#a64d79',
-  4: '#7a3b5e',
+  0: 'var(--color-heat-0)',
+  1: 'var(--color-heat-1)',
+  2: 'var(--color-heat-2)',
+  3: 'var(--color-heat-3)',
+  4: 'var(--color-heat-4)',
 };
 
 /** Severity tier accents: depth of rose, never judgment hues (design rules 8–9) */
 export const MRS_SEVERITY_HEX: Record<string, string> = {
-  none: '#ddb3c4',
-  mild: '#c989a7',
-  moderate: '#a64d79',
-  severe: '#7a3b5e',
+  none: 'var(--color-sage-300)',
+  mild: 'var(--color-severity-2)',
+  moderate: 'var(--color-severity-4)',
+  severe: 'var(--color-severity-5)',
 };
 
 export function getWellbeingHex(score: number): string {
-  if (score >= 7) return '#7a3b5e';
-  if (score >= 4) return '#a64d79';
-  return '#c989a7';
+  if (score >= 7) return 'var(--color-severity-5)';
+  if (score >= 4) return 'var(--color-severity-4)';
+  return 'var(--color-severity-2)';
 }
 
 export function formatChartDate(dateStr: string): string {

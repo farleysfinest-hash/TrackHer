@@ -117,8 +117,8 @@ function SymptomHeatmapComponent({ rows }: SymptomHeatmapProps) {
                   {row.cells.map((cell) => {
                     const bg =
                       cell.score === null
-                        ? '#f5ebef'
-                        : HEATMAP_COLORS[cell.score as 0 | 1 | 2 | 3 | 4] ?? '#f5ebef';
+                        ? 'var(--color-heat-empty)'
+                        : HEATMAP_COLORS[cell.score as 0 | 1 | 2 | 3 | 4] ?? 'var(--color-heat-empty)';
                     const tip = `${row.label} · ${formatChartDate(cell.date)}: ${
                       cell.score === null ? 'Not rated' : SEVERITY_LABELS[cell.score]
                     }`;

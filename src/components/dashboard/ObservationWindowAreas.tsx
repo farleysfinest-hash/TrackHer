@@ -2,7 +2,7 @@ import { ReferenceArea } from 'recharts';
 import type { ObservationWindowRegion } from '../../utils/medicationHelpers';
 
 /** Soft rose wash for observation windows — approved chart ink, not sage. */
-const WINDOW_FILL = '#e5aac8';
+const WINDOW_FILL = 'var(--color-chart-observation)';
 
 interface ObservationWindowAreasProps {
   regions: ObservationWindowRegion[];

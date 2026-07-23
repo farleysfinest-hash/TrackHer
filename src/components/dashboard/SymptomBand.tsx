@@ -28,11 +28,11 @@ export const BAND_CHART_MARGIN = {
 } as const;
 
 const BAND_INK = {
-  line: '#7a3b5e',
-  dot: '#a64d79',
-  fill: '#c989a7',
-  baseline: '#f0eaec',
-  marker: '#a64d79',
+  line: 'var(--color-chart-line-primary)',
+  dot: 'var(--color-chart-dot)',
+  fill: 'var(--color-chart-pulse)',
+  baseline: 'var(--color-chart-grid)',
+  marker: 'var(--color-chart-marker)',
 } as const;
 
 export type SymptomBandTooltipMode = 'severity' | 'subscale' | 'plain';
@@ -186,7 +186,7 @@ export function SymptomBand({
     <div>
       <p className="text-[10px] text-sage-700">
         {name}
-        <span className="text-[#b896a3]"> · latest {latestLabel}</span>
+        <span className="text-chart-axis"> · latest {latestLabel}</span>
       </p>
       <div className="relative">
         {markers && markers.length > 0 && (
@@ -226,13 +226,13 @@ export function SymptomBand({
                 dot={{
                   r: 2.6,
                   fill: BAND_INK.dot,
-                  stroke: '#ffffff',
+                  stroke: 'var(--color-sand-50)',
                   strokeWidth: 0.8,
                 }}
                 activeDot={{
                   r: 4,
                   fill: BAND_INK.dot,
-                  stroke: '#ffffff',
+                  stroke: 'var(--color-sand-50)',
                   strokeWidth: 0.8,
                 }}
               />

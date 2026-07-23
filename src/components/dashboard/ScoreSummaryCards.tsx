@@ -26,13 +26,13 @@ export function ScoreSummaryCards({ checkins, dateRange }: ScoreSummaryCardsProp
         label="Symptom burden"
         value={summary.burdenHeadline}
         subtext={summary.burdenDetail}
-        color={summary.burdenImproving ? '#6f7f58' : undefined}
+        color={summary.burdenImproving ? 'var(--color-moss-600)' : undefined}
       />
       <StatCard
         label="Days logged"
         value={summary.daysLogged >= 1 ? String(summary.daysLogged) : '—'}
         subtext={periodDaysLabel(datePreset)}
-        color={summary.daysLogged >= 1 ? '#5a8a4a' : undefined}
+        color={summary.daysLogged >= 1 ? 'var(--color-success)' : undefined}
       />
     </div>
   );

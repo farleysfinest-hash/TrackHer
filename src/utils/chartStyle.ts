@@ -19,7 +19,7 @@ export const CHART_TOOLTIP_WRAPPER_STYLE: CSSProperties = {
 };
 
 export const CHART_TOOLTIP_SURFACE_STYLE: CSSProperties = {
-  backgroundColor: '#ffffff',
+  backgroundColor: 'var(--color-sand-50)',
 };
 
 export interface SeriesLineProps {
@@ -59,7 +59,7 @@ export function weeklySeriesProps(stroke: string, dotColor: string = stroke): Se
     activeDot: {
       r: 6,
       fill: dotColor,
-      stroke: needsOutline ? LIGHT_SERIES_OUTLINE : '#ffffff',
+      stroke: needsOutline ? LIGHT_SERIES_OUTLINE : 'var(--color-sand-50)',
       strokeWidth: needsOutline ? 0.75 : 1,
     },
   };

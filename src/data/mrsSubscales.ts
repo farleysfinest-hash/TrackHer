@@ -1,9 +1,9 @@
 /** MRS subscale palette — a lightness-separated rose ramp. */
 export const MRS_SUBSCALE_COLORS = {
-  psychological: '#7a3b5e',
-  somatic: '#a64d79',
-  urogenital: '#e0a8c6',
-  urogenitalDotOutline: '#a64d79',
+  psychological: 'var(--color-chart-line-primary)',
+  somatic: 'var(--color-chart-dot)',
+  urogenital: 'var(--color-chart-urogenital)',
+  urogenitalDotOutline: 'var(--color-chart-dot)',
 } as const;
 
 /** Per-subscale ceilings from MRS (4+4+3 items × 0–4 → 16+16+12 = 44). */

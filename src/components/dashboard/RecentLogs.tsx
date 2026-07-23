@@ -8,11 +8,11 @@ import { DashboardCardHeader } from './DashboardCardHeader';
 
 /** Severity as depth of rose — same language as the heatmap (design rule 8). Severity is 1–10. */
 function severityColor(severity: number): string {
-  if (severity <= 2) return 'bg-[#e5aac8]';
-  if (severity <= 4) return 'bg-[#c989a7]';
-  if (severity <= 6) return 'bg-[#be739a]';
-  if (severity <= 8) return 'bg-[#a64d79]';
-  return 'bg-[#7a3b5e]';
+  if (severity <= 2) return 'bg-severity-1';
+  if (severity <= 4) return 'bg-severity-2';
+  if (severity <= 6) return 'bg-severity-3';
+  if (severity <= 8) return 'bg-severity-4';
+  return 'bg-severity-5';
 }
 
 const DURATION_LABELS: Record<number, string> = {

@@ -95,7 +95,7 @@ export function MobileNav() {
   const tooltipLabel = isDue ? 'Weekly check-in due' : 'Daily check-in due';
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-sand-200 bg-white md:hidden safe-area-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-sand-200 bg-sand-50 md:hidden safe-area-bottom">
       <div className="flex items-center justify-around px-2 py-2">
         {navItems.map(({ path, label, icon, resolveIcon }) => {
           const Icon = resolveIcon ? resolveIcon(needsCheckin) : icon;
