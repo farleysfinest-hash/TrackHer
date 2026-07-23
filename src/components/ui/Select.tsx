@@ -33,7 +33,7 @@ export function Select({
       <select
         id={selectId}
         className={[
-          'w-full rounded-lg border bg-white px-4 py-3 text-sage-800',
+          'w-full rounded-lg border bg-white px-4 py-3 text-base text-sage-800',
           'transition-colors duration-150',
           'focus:border-sage-400 focus:outline-none focus:ring-2 focus:ring-sage-500/20',
           error ? 'border-danger' : 'border-sand-200',

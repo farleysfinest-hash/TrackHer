@@ -125,7 +125,7 @@ export function LabEntryForm({ onClose, onSuccess }: LabEntryFormProps) {
                 type="date"
                 value={drawDate}
                 onChange={(e) => setDrawDate(e.target.value)}
-                className="w-full rounded-lg border border-sand-200 px-3 py-2.5 text-sage-800"
+                className="w-full rounded-lg border border-sand-200 px-3 py-2.5 text-base text-sage-800"
                 required
                 max={todayISO()}
               />
@@ -164,7 +164,7 @@ export function LabEntryForm({ onClose, onSuccess }: LabEntryFormProps) {
                 type="time"
                 value={drawTime ?? ''}
                 onChange={(e) => setDrawTime(e.target.value || null)}
-                className="w-full rounded-lg border border-sand-200 px-3 py-2.5 text-sage-800"
+                className="w-full rounded-lg border border-sand-200 px-3 py-2.5 text-base text-sage-800"
               />
             </div>
 
@@ -205,7 +205,7 @@ export function LabEntryForm({ onClose, onSuccess }: LabEntryFormProps) {
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder={'e.g., "Drawn 2 hours after morning dose" or "Fasted 12 hours"'}
-              className="w-full rounded-lg border border-sand-200 px-3 py-2 text-sage-800 placeholder:text-sage-400"
+              className="w-full rounded-lg border border-sand-200 px-3 py-2 text-base text-sage-800 placeholder:text-sage-400"
             />
           </div>
 

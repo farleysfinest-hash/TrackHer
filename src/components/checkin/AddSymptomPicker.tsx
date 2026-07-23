@@ -54,7 +54,7 @@ export function AddSymptomPicker({ isOpen, onClose, excludeIds, onSelect }: AddS
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search symptoms…"
           autoFocus
-          className="w-full rounded-lg border border-sand-200 px-3 py-2 text-sm text-sage-800 placeholder:text-sage-400 focus:border-sage-400 focus:outline-none focus:ring-1 focus:ring-sage-400"
+          className="w-full rounded-lg border border-sand-200 px-3 py-2 text-base text-sage-800 placeholder:text-sage-400 focus:border-sage-400 focus:outline-none focus:ring-1 focus:ring-sage-400"
         />
         <div className="max-h-64 overflow-y-auto rounded-lg border border-sand-200">
           {results.length === 0 ? (

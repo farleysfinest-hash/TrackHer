@@ -162,7 +162,7 @@ export function DoseChangeForm({
           Reason for change (optional)
         </label>
         <textarea
-          className="w-full rounded-lg border border-sand-200 px-4 py-3 text-sm focus:border-sage-400 focus:outline-none focus:ring-2 focus:ring-sage-500/20"
+          className="w-full rounded-lg border border-sand-200 px-4 py-3 text-base focus:border-sage-400 focus:outline-none focus:ring-2 focus:ring-sage-500/20"
           rows={2}
           value={reason}
           onChange={(e) => setReason(e.target.value)}

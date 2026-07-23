@@ -96,7 +96,7 @@ function LabValueInputComponent({
             onChange={(e) => handleChange(e.target.value)}
             onBlur={handleBlur}
             className={[
-              'w-28 rounded-lg border-2 bg-white px-3 py-2.5 text-sage-800 outline-none focus:ring-2 focus:ring-sage-300',
+              'w-28 rounded-lg border-2 bg-white px-3 py-2.5 text-base text-sage-800 outline-none focus:ring-2 focus:ring-sage-300',
               getStatusBorderClass(status),
             ].join(' ')}
             aria-label={`${biomarker.label} value`}

@@ -2,6 +2,7 @@ import { memo, useState, type KeyboardEvent } from 'react';
 import { Info } from 'lucide-react';
 import type { MRSScore } from '../../types/database';
 import { SEVERITY_LABELS } from '../../utils/checkinHelpers';
+import { selectionTick } from '../../lib/haptics';
 
 interface SeveritySliderProps {
   symptomKey: string;
@@ -30,16 +31,22 @@ function SeveritySliderComponent({
   const descId = `${symptomKey}-desc`;
   const scores = [0, 1, 2, 3, 4] as MRSScore[];
 
+  const setScore = (next: MRSScore) => {
+    if (value === next) return;
+    void selectionTick();
+    onChange(symptomKey, next);
+  };
+
   const handleKeyDown = (e: KeyboardEvent, current: MRSScore | null) => {
     const idx = current === null ? -1 : scores.indexOf(current);
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
       e.preventDefault();
       const next = scores[Math.min(idx + 1, scores.length - 1)];
-      onChange(symptomKey, next);
+      setScore(next);
     } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
       e.preventDefault();
       const next = scores[Math.max(idx - 1, 0)];
-      onChange(symptomKey, next);
+      setScore(next);
     }
   };
 
@@ -86,7 +93,7 @@ function SeveritySliderComponent({
                 role="radio"
                 aria-checked={isSelected}
                 aria-label={`${label} severity: ${SEVERITY_LABELS[score]}`}
-                onClick={() => onChange(symptomKey, score)}
+                onClick={() => setScore(score)}
                 className={[
                   'min-h-[44px] w-full text-sm font-medium transition-colors',
                   isSelected

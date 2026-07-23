@@ -140,7 +140,7 @@ export function StepDoseFrequency({ onBack, onNext }: StepDoseFrequencyProps) {
       <div>
         <label className="mb-1.5 block text-sm font-medium text-sage-700">Notes (optional)</label>
         <textarea
-          className="w-full rounded-lg border border-sand-200 bg-white px-4 py-3 text-sage-800 focus:border-sage-400 focus:outline-none focus:ring-2 focus:ring-sage-500/20"
+          className="w-full rounded-lg border border-sand-200 bg-white px-4 py-3 text-base text-sage-800 focus:border-sage-400 focus:outline-none focus:ring-2 focus:ring-sage-500/20"
           rows={3}
           value={formData.notes}
           onChange={(e) => updateFormData({ notes: e.target.value })}

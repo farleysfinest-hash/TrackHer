@@ -10,6 +10,11 @@ const config: CapacitorConfig = {
     contentInset: 'never',
     backgroundColor: '#ffffff',
   },
+  plugins: {
+    Keyboard: {
+      resize: 'body',
+    },
+  },
 };
 
 export default config;

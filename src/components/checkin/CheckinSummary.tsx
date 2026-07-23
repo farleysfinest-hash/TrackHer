@@ -14,6 +14,7 @@ import { DailyChannelsDisplay } from '../ui/DailyChannelsDisplay';
 import type { SymptomCheckin } from '../../types/database';
 import { useAuthStore } from '../../stores/authStore';
 import { setUiFlag } from '../../lib/uiState';
+import { success as hapticSuccess } from '../../lib/haptics';
 import { formatDateLong, formatLoggingDate } from '../../utils/formatters';
 import { getSymptomByKey } from '../../data/symptoms';
 import { getPrimaryInstrument } from '../../data/instruments/registry';
@@ -116,6 +117,9 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
     setIsSaving(false);
     if (ok) {
       setUiFlag('first_checkin_done');
+      if (!isPulse) {
+        void hapticSuccess();
+      }
       toast.success(isEditing ? 'Check-in updated' : isPulse ? 'Pulse saved' : 'Check-in saved');
       if (isPulse) {
         onSuccess();

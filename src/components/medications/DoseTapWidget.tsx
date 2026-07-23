@@ -8,6 +8,7 @@ import { useToast } from '../../stores/toastStore';
 import { hasUiFlag, setUiFlag } from '../../lib/uiState';
 import { getResolvedTimezone } from '../../utils/checkinHelpers';
 import { showDoseChip, isDoseLoggedForMed, getDoseCycleDays } from '../../utils/medicationHelpers';
+import { tapLight } from '../../lib/haptics';
 import type { Medication } from '../../types/database';
 import { Card } from '../ui/Card';
 import { DashboardCardHeader } from '../dashboard/DashboardCardHeader';
@@ -71,6 +72,7 @@ export function DoseTapWidget() {
     dismissExplainer();
     const created = await logAdministration(med.id);
     if (created) {
+      void tapLight();
       const cycleDays = getDoseCycleDays(med);
       toast.success(
         cycleDays

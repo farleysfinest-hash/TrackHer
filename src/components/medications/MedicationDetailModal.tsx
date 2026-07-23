@@ -189,7 +189,7 @@ export function MedicationDetailModal({
               <label className="mb-1 block text-sm font-medium text-sage-700">Notes</label>
               {isEditing ? (
                 <textarea
-                  className="w-full rounded-lg border border-sand-200 px-4 py-3 text-sm"
+                  className="w-full rounded-lg border border-sand-200 px-4 py-3 text-base"
                   rows={3}
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}

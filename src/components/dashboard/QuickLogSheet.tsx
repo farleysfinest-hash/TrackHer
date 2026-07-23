@@ -14,6 +14,7 @@ import { Button } from '../ui/Button';
 import { useAuthStore } from '../../stores/authStore';
 import { getResolvedTimezone } from '../../utils/checkinHelpers';
 import { dateISOInTimeZone } from '../../utils/localDate';
+import { tapLight } from '../../lib/haptics';
 
 const TRIGGER_TAGS: { id: QuickLogTriggerTag; label: string }[] = [
   { id: 'stress', label: 'Stress' },
@@ -152,6 +153,7 @@ export function QuickLogSheet() {
     });
     setIsSaving(false);
     if (result) {
+      void tapLight();
       toast.success(buildQuickLogEcho(result, events));
       handleClose();
     } else {
@@ -263,7 +265,7 @@ export function QuickLogSheet() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search all symptoms…"
                   autoFocus
-                  className="w-full rounded-lg border border-sand-200 px-3 py-2 text-sm text-sage-800 placeholder:text-sage-400 focus:border-sage-400 focus:outline-none focus:ring-1 focus:ring-sage-400"
+                  className="w-full rounded-lg border border-sand-200 px-3 py-2 text-base text-sage-800 placeholder:text-sage-400 focus:border-sage-400 focus:outline-none focus:ring-1 focus:ring-sage-400"
                 />
                 {searchQuery.trim() && (
                   <div className="max-h-52 overflow-y-auto rounded-lg border border-sand-200">
@@ -415,7 +417,7 @@ export function QuickLogSheet() {
                     onChange={(e) => setNotes(e.target.value)}
                     rows={2}
                     placeholder="Anything else to note..."
-                    className="mt-2 w-full rounded-lg border border-sand-200 px-3 py-2 text-sm text-sage-800 placeholder:text-sage-400 focus:border-sage-400 focus:outline-none focus:ring-1 focus:ring-sage-400"
+                    className="mt-2 w-full rounded-lg border border-sand-200 px-3 py-2 text-base text-sage-800 placeholder:text-sage-400 focus:border-sage-400 focus:outline-none focus:ring-1 focus:ring-sage-400"
                   />
                 </div>
               </div>
