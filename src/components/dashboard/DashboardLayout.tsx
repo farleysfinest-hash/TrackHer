@@ -30,8 +30,6 @@ import { DashboardInsightsPanel } from '../insights/DashboardInsightsPanel';
 import { SafeguardingCard } from '../insights/SafeguardingCard';
 import { QuickLogWidget } from './QuickLogWidget';
 import { RecentLogs } from './RecentLogs';
-import { DoseTapWidget } from './DoseTapWidget';
-import { ExperimentWindowCard } from './ExperimentWindowCard';
 import { PersonalSymptomTrends } from './PersonalSymptomTrends';
 import { StrawStageCard } from './StrawStageCard';
 import { UnlockProgress } from './UnlockProgress';
@@ -171,16 +169,9 @@ export function DashboardLayout() {
 
           {pulseCard}
 
-          <DoseTapWidget />
-
           {weeklyCard}
 
           <FullDashboardUnlockCard />
-
-          <ExperimentWindowCard
-            insights={insights}
-            hasCheckedInToday={checkinStatus.hasCheckedInToday}
-          />
 
           <AppointmentCountdownCard earliestCheckinDate={earliestCheckinDate} />
 
@@ -247,16 +238,9 @@ export function DashboardLayout() {
 
           {pulseCard}
 
-          <DoseTapWidget />
-
           {weeklyCard}
 
           <WelcomeMessage />
-
-          <ExperimentWindowCard
-            insights={insights}
-            hasCheckedInToday={checkinStatus.hasCheckedInToday}
-          />
 
           <AppointmentCountdownCard earliestCheckinDate={earliestCheckinDate} />
 

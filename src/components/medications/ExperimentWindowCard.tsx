@@ -7,7 +7,7 @@ import { getLocalDateISO, getResolvedTimezone } from '../../utils/checkinHelpers
 import { addDaysISO, getMedicationChangePastLabel } from '../../utils/medicationHelpers';
 import { formatDate, formatDateLong } from '../../utils/formatters';
 import { Card } from '../ui/Card';
-import { DashboardCardHeader } from './DashboardCardHeader';
+import { DashboardCardHeader } from '../dashboard/DashboardCardHeader';
 import type { Insight } from '../../engine/types';
 import { daysBetweenISO } from '../../utils/localDate';
 

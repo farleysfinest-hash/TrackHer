@@ -10,7 +10,7 @@ import { getResolvedTimezone } from '../../utils/checkinHelpers';
 import { showDoseChip, isDoseLoggedForMed, getDoseCycleDays } from '../../utils/medicationHelpers';
 import type { Medication } from '../../types/database';
 import { Card } from '../ui/Card';
-import { DashboardCardHeader } from './DashboardCardHeader';
+import { DashboardCardHeader } from '../dashboard/DashboardCardHeader';
 
 function formatLogTime(iso: string, timezone: string): string {
   return new Date(iso).toLocaleTimeString('en-US', {

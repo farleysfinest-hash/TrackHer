@@ -2,11 +2,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, ChevronDown, ChevronUp } from 'lucide-react';
 import { useMedications } from '../hooks/useMedications';
 import { useMedicationChanges } from '../hooks/useMedicationChanges';
+import { useInsights } from '../hooks/useInsights';
+import { useCheckinStatus } from '../hooks/useCheckinStatus';
 import { ActiveMedicationsList } from '../components/medications/ActiveMedicationsList';
 import { MedicationEntryWizard } from '../components/medications/MedicationEntryWizard';
 import { MedicationDetailModal } from '../components/medications/MedicationDetailModal';
 import { DiscontinueModal } from '../components/medications/DiscontinueModal';
 import { MedicationHistory } from '../components/medications/MedicationHistory';
+import { DoseTapWidget } from '../components/medications/DoseTapWidget';
+import { ExperimentWindowCard } from '../components/medications/ExperimentWindowCard';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Button } from '../components/ui/Button';
 import { Pill } from 'lucide-react';
@@ -15,6 +19,8 @@ import type { Medication } from '../types/database';
 export function MedicationsPage() {
   const { medications, isLoading, fetchMedications } = useMedications();
   const { changes, fetchChanges } = useMedicationChanges();
+  const { insights } = useInsights();
+  const { hasCheckedInToday } = useCheckinStatus();
   const [showWizard, setShowWizard] = useState(false);
   const [selectedMed, setSelectedMed] = useState<Medication | null>(null);
   const [discontinueMed, setDiscontinueMed] = useState<Medication | null>(null);
@@ -56,6 +62,13 @@ export function MedicationsPage() {
           </Button>
         )}
       </div>
+
+      <DoseTapWidget />
+
+      <ExperimentWindowCard
+        insights={insights}
+        hasCheckedInToday={hasCheckedInToday}
+      />
 
       <section>
         <h2 className="font-display text-2xl text-sage-800">Your Current Medications</h2>
