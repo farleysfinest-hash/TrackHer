@@ -15,6 +15,16 @@ export async function tapLight(): Promise<void> {
   }
 }
 
+/** Medium impact — long-press confirm (chart expand). */
+export async function tapMedium(): Promise<void> {
+  if (!isNative()) return;
+  try {
+    await Haptics.impact({ style: ImpactStyle.Medium });
+  } catch {
+    // Haptics must never surface.
+  }
+}
+
 /** Success notification — full MRS save only. */
 export async function success(): Promise<void> {
   if (!isNative()) return;

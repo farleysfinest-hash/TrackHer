@@ -2,7 +2,7 @@ import { useCallback, useRef, useState, type ReactNode } from 'react';
 import { Card } from './Card';
 import { Button } from './Button';
 import { Modal } from './Modal';
-import { tapLight } from '../../lib/haptics';
+import { tapMedium } from '../../lib/haptics';
 
 const LONG_PRESS_MS = 480;
 const MOVE_CANCEL_PX = 12;
@@ -59,8 +59,8 @@ export function ChartCard({
 
   const openExpanded = useCallback(() => {
     clearPress();
+    void tapMedium();
     setExpanded(true);
-    void tapLight();
   }, [clearPress]);
 
   const onPointerDown = useCallback(
