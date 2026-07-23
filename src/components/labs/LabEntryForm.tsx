@@ -8,6 +8,7 @@ import { LAB_CATEGORIES } from '../../utils/labHelpers';
 import { LabPanelSection } from './LabPanelSection';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { todayISO } from '../../utils/localDate';
 
 interface LabEntryFormProps {
   onClose: () => void;
@@ -126,6 +127,7 @@ export function LabEntryForm({ onClose, onSuccess }: LabEntryFormProps) {
                 onChange={(e) => setDrawDate(e.target.value)}
                 className="w-full rounded-lg border border-sand-200 px-3 py-2.5 text-sage-800"
                 required
+                max={todayISO()}
               />
             </div>
 
