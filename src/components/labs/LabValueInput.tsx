@@ -28,6 +28,7 @@ function LabValueInputComponent({
 }: LabValueInputProps) {
   const [showTooltip, setShowTooltip] = useState(false);
   const [localText, setLocalText] = useState(value !== null ? String(value) : '');
+  const [warning, setWarning] = useState('');
 
   useEffect(() => {
     setLocalText(value !== null ? String(value) : '');
@@ -42,11 +43,18 @@ function LabValueInputComponent({
     const trimmed = localText.trim();
     if (trimmed === '') {
       onChange(biomarker.key, null);
+      setWarning('');
       return;
     }
     const num = parseFloat(trimmed);
     if (!Number.isNaN(num) && num >= 0) {
       onChange(biomarker.key, num);
+      const ceiling = (biomarker.conventionalRange?.max ?? Infinity) * 5;
+      if (num > ceiling) {
+        setWarning(`${num} ${biomarker.unit} seems unusually high — double-check?`);
+      } else {
+        setWarning('');
+      }
     } else {
       setLocalText(value !== null ? String(value) : '');
     }
@@ -122,6 +130,9 @@ function LabValueInputComponent({
       )}
 
       <p className="mt-1.5 text-xs text-sage-400">{formatRangeLine(biomarker)}</p>
+      {warning && (
+        <p className="mt-1 text-xs text-warning">{warning}</p>
+      )}
     </div>
   );
 }
