@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useCheckinStore } from '../../stores/checkinStore';
 import { useProfile } from '../../hooks/useProfile';
 import type { BleedingFlow } from '../../types/database';
+import { selectionTick } from '../../lib/haptics';
 import { Button } from '../ui/Button';
 import { FlareTapRow } from './FlareTapRow';
 
@@ -50,7 +51,10 @@ function ChannelRow({
             <button
               key={score}
               type="button"
-              onClick={() => onSelect(score)}
+              onClick={() => {
+                if (value !== score) void selectionTick();
+                onSelect(score);
+              }}
               className={[
                 'flex h-11 w-11 items-center justify-center rounded-full text-sm font-medium transition-all duration-150',
                 isSelected

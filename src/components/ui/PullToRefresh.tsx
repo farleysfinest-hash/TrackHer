@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
+import { tapLight } from '../../lib/haptics';
 
 const PULL_THRESHOLD_PX = 70;
 
@@ -117,6 +118,7 @@ export function PullToRefresh({ onRefresh, children, enabled = true }: PullToRef
 
       refreshingRef.current = true;
       setRefreshing(true);
+      void tapLight();
       if (prefersReducedMotion()) {
         setPull(0);
       } else {

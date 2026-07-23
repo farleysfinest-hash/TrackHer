@@ -62,6 +62,7 @@ export function DoseTapWidget() {
     if (logged && latest) {
       const removed = await undoLast(med.id);
       if (removed) {
+        void tapLight();
         toast.success(`Removed dose · ${formatLogTime(latest.taken_at, timezone)}`);
       } else {
         toast.error('Could not undo dose');
