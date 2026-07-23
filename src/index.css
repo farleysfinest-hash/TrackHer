@@ -136,13 +136,13 @@
   --color-severity-4: #b07090;
   --color-severity-5: #9a5a78;
 
-  /* Heatmap: same light→dark direction; pale floor above sand; empty distinct */
-  --color-heat-0: #2a1f26;
-  --color-heat-1: #6b4558;
-  --color-heat-2: #e0b4c8;
-  --color-heat-3: #b07090;
-  --color-heat-4: #9a5a78;
-  --color-heat-empty: #221820;
+  /* Heatmap: light→dark rose on dark surface (monotonic); empty distinct from sand */
+  --color-heat-0: #6e5a66;
+  --color-heat-1: #5c4a56;
+  --color-heat-2: #4a3a46;
+  --color-heat-3: #3c2e38;
+  --color-heat-4: #2e222a;
+  --color-heat-empty: #241c22;
 
   /* Charts — grid ≈ sand-300; series lifted for contrast on plum */
   --color-chart-line-primary: #e2bccf;
@@ -151,13 +151,15 @@
   --color-chart-marker: #daa9c0;
   --color-chart-grid: #3a2c33;
   --color-chart-axis: #a88898;
-  --color-chart-observation: #6b4558;
-  --color-chart-band-conventional: #57404c;
+  --color-chart-observation: #c098ac;
+  --color-chart-band-conventional: #8a6478;
   --color-chart-urogenital: #b892a8;
   --color-chart-line-secondary: #d4a0b8;
   --color-chart-med-muted: #3c2b35;
 
   --color-on-accent: #ffffff;
+
+  color-scheme: dark;
 }
 
 @layer base {
@@ -169,6 +171,7 @@
     -webkit-touch-callout: none;
     background-color: var(--color-sand-50);
     overflow-x: hidden;
+    color-scheme: light;
   }
 
   /* Block text selection globally — re-enable on inputs */
