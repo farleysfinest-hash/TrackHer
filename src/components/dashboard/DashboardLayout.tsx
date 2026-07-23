@@ -19,7 +19,6 @@ import { ActiveMedicationsSummary } from './ActiveMedicationsSummary';
 import { LabSummaryWidget } from './LabSummaryWidget';
 import { AppointmentCountdownCard } from './AppointmentCountdownCard';
 import { ProviderReportButton } from './ProviderReportButton';
-import { DashboardInsightsPanel } from '../insights/DashboardInsightsPanel';
 import { SafeguardingCard } from '../insights/SafeguardingCard';
 import { QuickLogWidget } from './QuickLogWidget';
 import { PersonalSymptomTrends } from './PersonalSymptomTrends';
@@ -39,7 +38,7 @@ export function DashboardLayout() {
   const dateRange = useDashboardStore((s) => s.dateRange);
   const refreshDateRange = useDashboardStore((s) => s.refreshDateRange);
   const checkinStatus = useCheckinStatus();
-  const { insights, primaryInsights, moreInsights, safeguardingInsights, dismissInsight, extendedSymptoms } = useInsights();
+  const { insights, safeguardingInsights, dismissInsight, extendedSymptoms } = useInsights();
   const {
     getSymptomTrendData,
     getMedicationChangeMarkers,
@@ -150,12 +149,6 @@ export function DashboardLayout() {
 
           <ScoreSummaryCards checkins={summaryCheckins} dateRange={dateRange} />
 
-          <DashboardInsightsPanel
-            primaryInsights={primaryInsights}
-            moreInsights={moreInsights}
-            onDismiss={dismissInsight}
-          />
-
           <StrawStageCard />
 
           <StoryColumn
@@ -245,14 +238,6 @@ export function DashboardLayout() {
                 </p>
               </div>
             </>
-          )}
-
-          {(primaryInsights.length > 0 || moreInsights.length > 0) && (
-            <DashboardInsightsPanel
-              primaryInsights={primaryInsights}
-              moreInsights={moreInsights}
-              onDismiss={dismissInsight}
-            />
           )}
 
           <StrawStageCard />

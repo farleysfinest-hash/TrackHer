@@ -136,13 +136,13 @@
   --color-severity-4: #b07090;
   --color-severity-5: #9a5a78;
 
-  /* Heatmap: light→dark rose on dark surface (monotonic); empty distinct from sand */
-  --color-heat-0: #6e5a66;
-  --color-heat-1: #5c4a56;
-  --color-heat-2: #4a3a46;
-  --color-heat-3: #3c2e38;
-  --color-heat-4: #2e222a;
-  --color-heat-empty: #241c22;
+  /* Heatmap: same rose ramp as light mode (identical stops) */
+  --color-heat-0: #faf5f8;
+  --color-heat-1: #eec9dd;
+  --color-heat-2: #c989a7;
+  --color-heat-3: #a64d79;
+  --color-heat-4: #7a3b5e;
+  --color-heat-empty: #f5ebef;
 
   /* Charts — grid ≈ sand-300; series lifted for contrast on plum */
   --color-chart-line-primary: #e2bccf;

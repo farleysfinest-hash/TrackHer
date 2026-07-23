@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import {
   Flame,
   Brain,
@@ -31,6 +32,14 @@ export function QuickLogWidget() {
   const openSheet = useQuickLogStore((s) => s.openSheet);
   const { watchSymptomIds, isLoading } = useSymptomSelections();
 
+  const sortedWatchIds = useMemo(() => {
+    return [...watchSymptomIds].sort((a, b) => {
+      const labelA = getSymptomChipLabel(getSymptomByKey(a)) || a;
+      const labelB = getSymptomChipLabel(getSymptomByKey(b)) || b;
+      return labelA.length - labelB.length;
+    });
+  }, [watchSymptomIds]);
+
   if (isLoading) return null;
 
   if (watchSymptomIds.length === 0) return null;
@@ -44,7 +53,7 @@ export function QuickLogWidget() {
       </div>
 
       <div className="mt-2.5 flex flex-wrap gap-2">
-        {watchSymptomIds.map((id) => {
+        {sortedWatchIds.map((id) => {
           const def = getSymptomByKey(id);
           if (!def) return null;
           return (
@@ -52,7 +61,7 @@ export function QuickLogWidget() {
               key={id}
               type="button"
               onClick={() => openSheet(id)}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-sage-200 bg-sage-50 px-3 py-1.5 text-sm font-medium text-sage-700 transition-colors hover:border-sage-400 hover:bg-sage-100 active:scale-[0.98]"
+              className="inline-flex items-center gap-2 rounded-full border border-sage-200 bg-sage-50 px-3 py-1.5 text-sm font-medium text-sage-700 transition-colors hover:border-sage-400 hover:bg-sage-100 active:scale-[0.98]"
             >
               <SymptomIcon bodySystem={def.bodySystem} />
               {getSymptomChipLabel(def)}

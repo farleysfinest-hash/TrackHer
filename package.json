@@ -9,7 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
-    "assets": "capacitor-assets generate --ios --iconBackgroundColor '#F7F3EE' --iconBackgroundColorDark '#F7F3EE'",
+    "assets": "capacitor-assets generate --ios --iconBackgroundColor '#F7F3EE' --iconBackgroundColorDark '#171114'",
     "cap:sync": "npm run build && npx cap sync ios"
   },
   "dependencies": {
