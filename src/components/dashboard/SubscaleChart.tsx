@@ -68,6 +68,8 @@ function SubscaleChartComponent({ data, changes = [] }: SubscaleChartProps) {
       isEmpty={isEmpty}
       emptyState={{ message: 'Need at least 2 check-ins to show subscale trends.' }}
       minHeight="210px"
+      expandable
+      expandedMinHeight="60vh"
     >
       {!isEmpty && (
         <div className="space-y-0">

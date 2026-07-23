@@ -95,6 +95,8 @@ export function PersonalSymptomTrends({ checkins, extendedLogs }: PersonalSympto
         message: 'Select personal symptoms during check-in to see trends here.',
       }}
       minHeight="210px"
+      expandable
+      expandedMinHeight="60vh"
     >
       {!isEmpty && (
         <div className="space-y-0">

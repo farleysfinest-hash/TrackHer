@@ -64,6 +64,8 @@ function SymptomHeatmapComponent({ rows }: SymptomHeatmapProps) {
       isEmpty={isEmpty}
       emptyState={{ message: 'Complete check-ins to see your symptom heatmap.' }}
       minHeight="320px"
+      expandable
+      expandedMinHeight="70vh"
     >
       {!isEmpty && (
         <div className="min-w-0 w-full overflow-hidden">

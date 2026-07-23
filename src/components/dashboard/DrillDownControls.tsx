@@ -149,6 +149,8 @@ export function DrillDownControls({
       isEmpty={isEmpty}
       emptyState={{ message: 'Need at least 2 check-ins for comparison charts.' }}
       minHeight="360px"
+      expandable
+      expandedMinHeight="70vh"
     >
       {!isEmpty && (
         <div className="space-y-4">

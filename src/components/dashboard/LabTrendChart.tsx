@@ -175,6 +175,8 @@ function LabTrendChartComponent({
         },
       }}
       minHeight="280px"
+      expandable
+      expandedMinHeight="55vh"
     >
       {!isEmpty && biomarker && (
         <div className="space-y-3">
