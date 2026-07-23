@@ -41,8 +41,7 @@ function capObservations(insights: Insight[]): Insight[] {
 function partitionPanel(insights: Insight[]): PatternEngineResult {
   const primaryCandidates = insights
     .filter(
-      (i) =>
-        (i.confidence.level === 'provisional' || i.confidence.level !== 'low') && !i.demotedToMore,
+      (i) => i.confidence.level !== 'low' && !i.demotedToMore,
     )
     .sort((a, b) => {
       const priorityDiff = PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
