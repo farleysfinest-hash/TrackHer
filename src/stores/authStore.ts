@@ -19,7 +19,7 @@ interface AuthState {
     email: string,
     password: string,
     displayName: string,
-  ) => Promise<{ success: boolean; error?: string }>;
+  ) => Promise<{ success: boolean; error?: string; needsEmailConfirmation?: boolean }>;
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
@@ -79,7 +79,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   signUp: async (email, password, displayName) => {
     set({ isLoading: true, error: null });
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -92,7 +92,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ error: message });
       return { success: false, error: message };
     }
-    return { success: true };
+    // If signUp returns a session, the user is logged in immediately (no email confirmation).
+    // If session is null, Supabase sent a confirmation email.
+    return { success: true, needsEmailConfirmation: !data.session };
   },
 
   signIn: async (email, password) => {
