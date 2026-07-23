@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useDashboardStore } from '../../stores/dashboardStore';
 import { useChartData } from '../../hooks/useChartData';
 import { useCheckinStatus } from '../../hooks/useCheckinStatus';
 import { useInsights } from '../../hooks/useInsights';
 import { useStageProfile } from '../../hooks/useStageProfile';
 import { getStageTrackingPhrase } from '../../engine/stageProfile';
+import { refreshCheckinStatusForCurrentUser } from '../../stores/checkinStatusStore';
 import { DateRangeSelector } from './DateRangeSelector';
 import { ScoreSummaryCards } from './ScoreSummaryCards';
 import { WelcomeMessage } from './WelcomeMessage';
@@ -26,12 +28,14 @@ import { PersonalSymptomTrends } from './PersonalSymptomTrends';
 import { StrawStageCard } from './StrawStageCard';
 import { UnlockProgress } from './UnlockProgress';
 import { GhostChartFrame } from './GhostChartFrame';
+import { PullToRefresh } from '../ui/PullToRefresh';
 
 const FULL_DASHBOARD_CHECKINS = 7;
 
 type DashboardMode = 'full' | 'early';
 
 export function DashboardLayout() {
+  const { pathname } = useLocation();
   const dateRange = useDashboardStore((s) => s.dateRange);
   const refreshDateRange = useDashboardStore((s) => s.refreshDateRange);
   const checkinStatus = useCheckinStatus();
@@ -53,6 +57,10 @@ export function DashboardLayout() {
     allLabResults,
     refreshAll,
   } = useChartData(dateRange);
+
+  const handlePullRefresh = useCallback(async () => {
+    await Promise.all([refreshAll(), refreshCheckinStatusForCurrentUser()]);
+  }, [refreshAll]);
 
   const [biomarkerKey, setBiomarkerKey] = useState('estradiol');
   // Stick the early/full branch after first resolve so date-range refetches
@@ -120,6 +128,7 @@ export function DashboardLayout() {
   ));
 
   return (
+    <PullToRefresh enabled={pathname === '/dashboard'} onRefresh={handlePullRefresh}>
     <div className="mx-auto min-w-0 max-w-6xl space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -255,5 +264,6 @@ export function DashboardLayout() {
         </>
       ) : null}
     </div>
+    </PullToRefresh>
   );
 }

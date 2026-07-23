@@ -50,7 +50,23 @@ const QUICK_SEVERITY_LABELS = [
   'Worst ever',
 ];
 
+/** iOS sheet spring curve */
+const SHEET_CURVE = 'cubic-bezier(0.32, 0.72, 0, 1)';
+const SHEET_SPRING_MS = 300;
+const DISMISS_DISTANCE_PX = 120;
+/** px per ms — flick dismiss */
+const DISMISS_VELOCITY = 0.55;
+
 type TimeOptionId = 'now' | '30min' | `hours_${number}`;
+
+function prefersReducedMotion(): boolean {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function applyDragResistance(deltaY: number): number {
+  if (deltaY <= 0) return 0;
+  return deltaY / (1 + deltaY / 450);
+}
 
 function buildTimeOptions(timezone: string): { id: TimeOptionId; label: string; getIso: () => string }[] {
   const now = new Date();
@@ -111,8 +127,20 @@ export function QuickLogSheet() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-  const touchStartY = useRef<number | null>(null);
+
+  const [offsetY, setOffsetY] = useState(0);
+  const [sheetTransition, setSheetTransition] = useState<string | undefined>(undefined);
+
   const sheetRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const offsetYRef = useRef(0);
+  const draggingRef = useRef(false);
+  const fromHandleRef = useRef(false);
+  const pointerIdRef = useRef<number | null>(null);
+  const startClientYRef = useRef(0);
+  const lastSampleRef = useRef<{ y: number; t: number } | null>(null);
+  const velocityRef = useRef(0);
+  const closingRef = useRef(false);
 
   const symptom = selectedSymptomId ? getSymptomByKey(selectedSymptomId) : null;
   const searchResults = useMemo(
@@ -135,10 +163,40 @@ export function QuickLogSheet() {
     setSearchQuery('');
   }, []);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
+    closingRef.current = false;
+    offsetYRef.current = 0;
+    setOffsetY(0);
+    setSheetTransition(undefined);
     resetForm();
     closeSheet();
+  }, [closeSheet, resetForm]);
+
+  const setOffset = (y: number) => {
+    offsetYRef.current = y;
+    setOffsetY(y);
   };
+
+  const finishDismiss = useCallback(() => {
+    if (prefersReducedMotion()) {
+      handleClose();
+      return;
+    }
+    closingRef.current = true;
+    const distance = Math.max(window.innerHeight * 0.5, offsetYRef.current + 240);
+    setSheetTransition(`transform ${SHEET_SPRING_MS}ms ${SHEET_CURVE}`);
+    setOffset(distance);
+  }, [handleClose]);
+
+  const springBack = useCallback(() => {
+    if (prefersReducedMotion()) {
+      setSheetTransition(undefined);
+      setOffset(0);
+      return;
+    }
+    setSheetTransition(`transform ${SHEET_SPRING_MS}ms ${SHEET_CURVE}`);
+    setOffset(0);
+  }, []);
 
   const handleSave = async () => {
     if (!selectedSymptomId) return;
@@ -161,22 +219,92 @@ export function QuickLogSheet() {
     }
   };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if ((e.target as HTMLElement).closest('button, input, textarea, a')) return;
-    touchStartY.current = e.touches[0].clientY;
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartY.current === null) return;
-    const delta = e.changedTouches[0].clientY - touchStartY.current;
-    if (delta > 80) handleClose();
-    touchStartY.current = null;
-  };
-
   const handleSelectSymptom = (id: string) => {
     selectSymptom(id);
     setSearchOpen(false);
     setSearchQuery('');
+  };
+
+  const canStartDrag = (target: EventTarget | null): boolean => {
+    if (!(target instanceof HTMLElement)) return false;
+    if (target.closest('button, input, textarea, a, label')) return false;
+    if (target.closest('[data-sheet-drag-handle]')) return true;
+    const content = contentRef.current;
+    if (!content) return false;
+    return content.scrollTop <= 0;
+  };
+
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0 || closingRef.current) return;
+    if (!canStartDrag(e.target)) return;
+
+    fromHandleRef.current = Boolean(
+      e.target instanceof HTMLElement && e.target.closest('[data-sheet-drag-handle]'),
+    );
+    draggingRef.current = true;
+    pointerIdRef.current = e.pointerId;
+    startClientYRef.current = e.clientY;
+    lastSampleRef.current = { y: e.clientY, t: performance.now() };
+    velocityRef.current = 0;
+    setSheetTransition(undefined);
+    sheetRef.current?.setPointerCapture(e.pointerId);
+  };
+
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!draggingRef.current || pointerIdRef.current !== e.pointerId) return;
+
+    const raw = e.clientY - startClientYRef.current;
+    // Content-originated drag: upward means scroll — abandon sheet drag.
+    if (!fromHandleRef.current && raw < 0) {
+      draggingRef.current = false;
+      pointerIdRef.current = null;
+      try {
+        sheetRef.current?.releasePointerCapture(e.pointerId);
+      } catch {
+        // Capture may already be released.
+      }
+      springBack();
+      return;
+    }
+
+    const now = performance.now();
+    const prev = lastSampleRef.current;
+    if (prev) {
+      const dt = now - prev.t;
+      if (dt > 0) velocityRef.current = (e.clientY - prev.y) / dt;
+    }
+    lastSampleRef.current = { y: e.clientY, t: now };
+    setOffset(applyDragResistance(raw));
+  };
+
+  const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!draggingRef.current || pointerIdRef.current !== e.pointerId) return;
+    draggingRef.current = false;
+    pointerIdRef.current = null;
+
+    const y = offsetYRef.current;
+    const flick = velocityRef.current > DISMISS_VELOCITY;
+    if (y > DISMISS_DISTANCE_PX || flick) {
+      finishDismiss();
+    } else {
+      springBack();
+    }
+  };
+
+  const onPointerCancel = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (pointerIdRef.current !== e.pointerId) return;
+    draggingRef.current = false;
+    pointerIdRef.current = null;
+    if (!closingRef.current) springBack();
+  };
+
+  const onSheetTransitionEnd = (e: React.TransitionEvent<HTMLDivElement>) => {
+    if (e.propertyName !== 'transform') return;
+    if (closingRef.current) {
+      handleClose();
+      return;
+    }
+    setSheetTransition(undefined);
   };
 
   if (!isOpen) return null;
@@ -194,15 +322,31 @@ export function QuickLogSheet() {
         role="dialog"
         aria-modal
         aria-labelledby="quick-log-title"
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerCancel}
+        onTransitionEnd={onSheetTransitionEnd}
+        style={{
+          transform: offsetY ? `translateY(${offsetY}px)` : undefined,
+          transition: sheetTransition,
+          touchAction: offsetY > 0 ? 'none' : undefined,
+        }}
         className="relative z-10 flex w-full max-w-lg flex-col animate-slide-up rounded-t-2xl border border-sand-200 bg-white shadow-2xl sm:m-4 sm:rounded-2xl max-h-[min(90vh,640px)]"
       >
-        <div className="flex justify-center pt-3 sm:hidden">
-          <div className="h-1 w-10 rounded-full bg-sand-300" />
+        <div
+          data-sheet-drag-handle
+          className="flex shrink-0 cursor-grab justify-center py-3 active:cursor-grabbing"
+          aria-hidden
+        >
+          {/* 36×4 grabber; py-3 expands the hit target */}
+          <div className="h-1 w-9 rounded-full bg-sand-300" />
         </div>
 
-        <div className="flex shrink-0 items-center justify-between border-b border-sand-100 px-5 py-4">
+        <div
+          data-sheet-drag-handle
+          className="flex shrink-0 items-center justify-between border-b border-sand-100 px-5 pb-4"
+        >
           <h2 id="quick-log-title" className="font-display text-lg text-sage-800">
             {symptom ? symptom.label : 'Quick log'}
           </h2>
@@ -216,7 +360,11 @@ export function QuickLogSheet() {
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">
+        <div
+          ref={contentRef}
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4"
+          style={{ overflowY: offsetY > 0 ? 'hidden' : undefined }}
+        >
           {watchSymptomIds.length > 0 && (
             <div className="mb-4">
               <p className="mb-2 text-xs font-medium uppercase tracking-wide text-sage-400">
