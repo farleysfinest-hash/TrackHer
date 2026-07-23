@@ -492,12 +492,15 @@ export const useCheckinsStore = create<CheckinsState>((set, get) => ({
       .from('symptom_checkins')
       .select('checkin_date')
       .eq('user_id', userId)
-      .order('checkin_date', { ascending: false });
+      .order('checkin_date', { ascending: false })
+      .limit(400);
 
     if (!data || data.length === 0) return 0;
 
-    const dates = (data as { checkin_date: string }[]).map((d) => d.checkin_date);
-    const uniqueDates = [...new Set(dates)];
+    const uniqueDates = new Set(
+      (data as { checkin_date: string }[]).map((d) => d.checkin_date),
+    );
+    const uniqueDatesArray = [...uniqueDates];
 
     if (frequency === 'daily') {
       let streak = 0;
@@ -505,7 +508,7 @@ export const useCheckinsStore = create<CheckinsState>((set, get) => ({
       let cursorDate = today;
 
       for (let i = 0; i < 365; i++) {
-        if (uniqueDates.includes(cursorDate)) {
+        if (uniqueDates.has(cursorDate)) {
           streak++;
           cursorDate = addDaysISO(cursorDate, -1);
         } else if (i === 0) {
@@ -524,7 +527,7 @@ export const useCheckinsStore = create<CheckinsState>((set, get) => ({
       for (let w = 0; w < 52; w++) {
         const weekEnd = addDaysISO(today, -w * 7);
         const weekStart = addDaysISO(weekEnd, -6);
-        const hasCheckin = uniqueDates.some((d) => d >= weekStart && d <= weekEnd);
+        const hasCheckin = uniqueDatesArray.some((d) => d >= weekStart && d <= weekEnd);
         if (hasCheckin) streak++;
         else if (w > 0) break;
       }
@@ -536,7 +539,7 @@ export const useCheckinsStore = create<CheckinsState>((set, get) => ({
     const firstOfMonth = `${today.slice(0, 7)}-01`;
     for (let m = 0; m < 24; m++) {
       const key = addMonthsISO(firstOfMonth, -m).slice(0, 7);
-      const hasCheckin = uniqueDates.some((d) => d.slice(0, 7) === key);
+      const hasCheckin = uniqueDatesArray.some((d) => d.slice(0, 7) === key);
       if (hasCheckin) streak++;
       else if (m > 0) break;
     }
