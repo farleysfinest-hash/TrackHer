@@ -10,6 +10,16 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="description" content="TrackHer — Track your HRT/BHRT medications, symptoms, and lab results to discover what's helping and what's hurting." />
     <title>TrackHer — HRT Wellness Tracker</title>
+    <script>
+      // Apply scheme before CSS/JS modules paint to avoid a light FOUC.
+      (function () {
+        try {
+          if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+          }
+        } catch (_) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
