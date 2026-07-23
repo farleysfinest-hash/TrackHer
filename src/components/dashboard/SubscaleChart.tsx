@@ -71,32 +71,35 @@ function SubscaleChartComponent({ data, changes = [] }: SubscaleChartProps) {
       expandable
       expandedMinHeight="60vh"
     >
-      {!isEmpty && (
-        <div className="space-y-0">
-          {MRS_SUBSCALES.map((subscale, index) => (
-            <SymptomBand
-              key={subscale.dataKey}
-              name={subscale.plainLabel}
-              dataKey={subscale.dataKey}
-              data={dailyRows}
-              segmentKeys={weeklySegmentKeys[subscale.dataKey] ?? []}
-              domainMax={subscale.maxScore}
-              syncId={SYNC_ID}
-              tooltipMode="subscale"
-              tooltipSeries={TOOLTIP_SERIES}
-              isTooltipHost={index === 0}
-              showMrsTotal
-              observationRegions={windowRegions}
-            />
-          ))}
-          <BandXAxis data={dailyRows} />
-          {windowRegions.length > 0 && (
-            <p className="mt-2 text-xs text-sage-400">
-              Shaded area — observation window after a dose change.
-            </p>
-          )}
-        </div>
-      )}
+      {({ interactive }) =>
+        !isEmpty ? (
+          <div className="space-y-0">
+            {MRS_SUBSCALES.map((subscale, index) => (
+              <SymptomBand
+                key={subscale.dataKey}
+                name={subscale.plainLabel}
+                dataKey={subscale.dataKey}
+                data={dailyRows}
+                segmentKeys={weeklySegmentKeys[subscale.dataKey] ?? []}
+                domainMax={subscale.maxScore}
+                syncId={interactive ? `${SYNC_ID}-x` : SYNC_ID}
+                tooltipMode="subscale"
+                tooltipSeries={TOOLTIP_SERIES}
+                isTooltipHost={index === 0}
+                showMrsTotal
+                observationRegions={windowRegions}
+                interactive={interactive}
+              />
+            ))}
+            <BandXAxis data={dailyRows} />
+            {windowRegions.length > 0 && (
+              <p className="mt-2 text-xs text-sage-400">
+                Shaded area — observation window after a dose change.
+              </p>
+            )}
+          </div>
+        ) : null
+      }
     </ChartCard>
   );
 }

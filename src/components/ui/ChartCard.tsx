@@ -1,18 +1,25 @@
-import { useState, type ReactNode } from 'react';
-import { Maximize2 } from 'lucide-react';
+import { useCallback, useRef, useState, type ReactNode } from 'react';
 import { Card } from './Card';
 import { Button } from './Button';
 import { Modal } from './Modal';
+import { tapLight } from '../../lib/haptics';
+
+const LONG_PRESS_MS = 480;
+const MOVE_CANCEL_PX = 12;
+
+export type ChartCardChildren =
+  | ReactNode
+  | ((opts: { interactive: boolean }) => ReactNode);
 
 interface ChartCardProps {
   title: string;
   description?: string;
   actions?: ReactNode;
-  children: ReactNode;
+  children: ChartCardChildren;
   minHeight?: string;
   /** Min height inside the expand modal (defaults larger than minHeight). */
   expandedMinHeight?: string;
-  /** Show Expand → full-screen modal with the same chart body. */
+  /** Long-press the chart to open full screen (tooltips only work there). */
   expandable?: boolean;
   isEmpty?: boolean;
   emptyState?: {
@@ -20,6 +27,10 @@ interface ChartCardProps {
     actionLabel?: string;
     onAction?: () => void;
   };
+}
+
+function renderChildren(children: ChartCardChildren, interactive: boolean): ReactNode {
+  return typeof children === 'function' ? children({ interactive }) : children;
 }
 
 export function ChartCard({
@@ -35,28 +46,55 @@ export function ChartCard({
 }: ChartCardProps) {
   const [expanded, setExpanded] = useState(false);
   const showExpand = expandable && !isEmpty;
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const startRef = useRef<{ x: number; y: number } | null>(null);
 
-  const expandButton = showExpand ? (
-    <button
-      type="button"
-      onClick={() => setExpanded(true)}
-      className="inline-flex items-center gap-1.5 rounded-lg border border-sand-200 px-2.5 py-1.5 text-xs font-medium text-sage-600 transition-colors hover:bg-sage-50"
-      aria-label={`Expand ${title} to full screen`}
-    >
-      <Maximize2 className="h-3.5 w-3.5" aria-hidden />
-      Expand
-    </button>
+  const clearPress = useCallback(() => {
+    if (timerRef.current != null) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    startRef.current = null;
+  }, []);
+
+  const openExpanded = useCallback(() => {
+    clearPress();
+    setExpanded(true);
+    void tapLight();
+  }, [clearPress]);
+
+  const onPointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      if (!showExpand || e.button !== 0) return;
+      const el = e.target as HTMLElement | null;
+      if (el?.closest('button, a, input, select, textarea, label, [role="button"]')) return;
+      startRef.current = { x: e.clientX, y: e.clientY };
+      clearPress();
+      timerRef.current = setTimeout(() => {
+        timerRef.current = null;
+        openExpanded();
+      }, LONG_PRESS_MS);
+    },
+    [showExpand, clearPress, openExpanded],
+  );
+
+  const onPointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (!startRef.current || timerRef.current == null) return;
+      const dx = e.clientX - startRef.current.x;
+      const dy = e.clientY - startRef.current.y;
+      if (dx * dx + dy * dy > MOVE_CANCEL_PX * MOVE_CANCEL_PX) {
+        clearPress();
+      }
+    },
+    [clearPress],
+  );
+
+  const headerActions = actions ? (
+    <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">{actions}</div>
   ) : null;
 
-  const headerActions =
-    expandButton || actions ? (
-      <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-        {actions}
-        {expandButton}
-      </div>
-    ) : null;
-
-  const body =
+  const emptyBody =
     isEmpty && emptyState ? (
       <div
         className="flex flex-col items-center justify-center text-center text-sage-500"
@@ -69,9 +107,7 @@ export function ChartCard({
           </Button>
         )}
       </div>
-    ) : (
-      <div style={{ minHeight }}>{children}</div>
-    );
+    ) : null;
 
   return (
     <>
@@ -80,10 +116,28 @@ export function ChartCard({
           <div>
             <h3 className="font-display text-lg text-sage-800">{title}</h3>
             {description && <p className="mt-1 text-sm text-sage-500">{description}</p>}
+            {showExpand && (
+              <p className="mt-1 text-xs text-sage-400">Long-press chart to expand</p>
+            )}
           </div>
           {headerActions}
         </div>
-        {body}
+        {emptyBody ?? (
+          <div
+            style={{ minHeight }}
+            className="touch-manipulation select-none"
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={clearPress}
+            onPointerCancel={clearPress}
+            onPointerLeave={clearPress}
+            onContextMenu={(e) => {
+              if (showExpand) e.preventDefault();
+            }}
+          >
+            {renderChildren(children, false)}
+          </div>
+        )}
       </Card>
 
       {showExpand && (
@@ -95,7 +149,9 @@ export function ChartCard({
         >
           {description && <p className="mb-4 text-sm text-sage-500">{description}</p>}
           {actions && <div className="mb-4 flex flex-wrap gap-2">{actions}</div>}
-          <div style={{ minHeight: expandedMinHeight }}>{children}</div>
+          <div style={{ minHeight: expandedMinHeight }}>
+            {renderChildren(children, true)}
+          </div>
         </Modal>
       )}
     </>

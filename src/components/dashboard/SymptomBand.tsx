@@ -71,6 +71,8 @@ interface SymptomBandProps {
   showMrsTotal?: boolean;
   markers?: DoseMarker[];
   observationRegions?: ObservationWindowRegion[];
+  /** When false, no tooltip / activeDot (inline dashboard). Fullscreen passes true. */
+  interactive?: boolean;
 }
 
 function latestValue(rows: SymptomBandRow[], dataKey: string): number | null {
@@ -169,6 +171,7 @@ export function SymptomBand({
   showMrsTotal = false,
   markers,
   observationRegions,
+  interactive = true,
 }: SymptomBandProps) {
   const latest = latestValue(data, dataKey);
   const latestLabel =
@@ -229,12 +232,16 @@ export function SymptomBand({
                   stroke: 'var(--color-sand-50)',
                   strokeWidth: 0.8,
                 }}
-                activeDot={{
-                  r: 4,
-                  fill: BAND_INK.dot,
-                  stroke: 'var(--color-sand-50)',
-                  strokeWidth: 0.8,
-                }}
+                activeDot={
+                  interactive
+                    ? {
+                        r: 4,
+                        fill: BAND_INK.dot,
+                        stroke: 'var(--color-sand-50)',
+                        strokeWidth: 0.8,
+                      }
+                    : false
+                }
               />
             ))}
             <YAxis hide domain={[0, domainMax]} />
@@ -242,7 +249,7 @@ export function SymptomBand({
               isAnimationActive={false}
               wrapperStyle={CHART_TOOLTIP_WRAPPER_STYLE}
               content={
-                isTooltipHost ? (
+                interactive && isTooltipHost ? (
                   <SymptomBandTooltip
                     tooltipSeries={seriesForTooltip}
                     tooltipMode={tooltipMode}

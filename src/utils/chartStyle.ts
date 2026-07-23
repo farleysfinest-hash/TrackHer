@@ -35,12 +35,14 @@ export interface SeriesLineProps {
         stroke: string;
         strokeWidth: number;
       };
-  activeDot: {
-    r: number;
-    fill: string;
-    stroke?: string;
-    strokeWidth?: number;
-  };
+  activeDot:
+    | false
+    | {
+        r: number;
+        fill: string;
+        stroke?: string;
+        strokeWidth?: number;
+      };
   strokeOpacity?: number;
 }
 

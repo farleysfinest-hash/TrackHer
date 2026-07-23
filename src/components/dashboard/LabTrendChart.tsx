@@ -178,83 +178,89 @@ function LabTrendChartComponent({
       expandable
       expandedMinHeight="55vh"
     >
-      {!isEmpty && biomarker && (
-        <div className="space-y-3">
-          <div>
-            <p className="text-sm font-medium text-sage-600">
-              {biomarker.label} · {biomarker.unit}
-            </p>
-            {trendSummary && (
-              <div className="mt-1">
-                <p className={`font-display text-xl font-semibold ${toneClass}`}>
-                  {trendSummary.headline}
-                </p>
-                <p className="mt-0.5 text-sm text-sage-500">{trendSummary.detail}</p>
-              </div>
-            )}
-            {referenceLegend && (
-              <p className="mt-1.5 text-[11px] leading-snug text-sage-400">
-                {referenceLegend}
+      {({ interactive }) =>
+        !isEmpty && biomarker ? (
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm font-medium text-sage-600">
+                {biomarker.label} · {biomarker.unit}
               </p>
-            )}
-          </div>
+              {trendSummary && (
+                <div className="mt-1">
+                  <p className={`font-display text-xl font-semibold ${toneClass}`}>
+                    {trendSummary.headline}
+                  </p>
+                  <p className="mt-0.5 text-sm text-sage-500">{trendSummary.detail}</p>
+                </div>
+              )}
+              {referenceLegend && (
+                <p className="mt-1.5 text-[11px] leading-snug text-sage-400">
+                  {referenceLegend}
+                </p>
+              )}
+            </div>
 
-          <div className="min-w-0 w-full max-w-none sm:max-w-[440px]">
-            <ResponsiveContainer width="100%" height={160}>
-              <ComposedChart data={data} margin={{ top: 20, right: 12, left: 0, bottom: 0 }}>
-              {referenceContext.bands.map((band) => (
-                <ReferenceArea
-                  key={band.label}
-                  y1={band.y1}
-                  y2={band.y2}
-                  fill={band.fill}
-                  fillOpacity={band.fillOpacity}
-                />
-              ))}
-              {referenceContext.edges.map((edge) => {
-                const area = referenceEdgeArea(edge.edge, { min: yDomain[0], max: yDomain[1] });
-                return (
-                  <ReferenceArea
-                    key={edge.label}
-                    y1={area.y1}
-                    y2={area.y2}
-                    fill={edge.fill}
-                    fillOpacity={0.28}
+            <div className={interactive ? 'min-w-0 w-full' : 'min-w-0 w-full max-w-none sm:max-w-[440px]'}>
+              <ResponsiveContainer width="100%" height={interactive ? 280 : 160}>
+                <ComposedChart data={data} margin={{ top: 20, right: 12, left: 0, bottom: 0 }}>
+                  {referenceContext.bands.map((band) => (
+                    <ReferenceArea
+                      key={band.label}
+                      y1={band.y1}
+                      y2={band.y2}
+                      fill={band.fill}
+                      fillOpacity={band.fillOpacity}
+                    />
+                  ))}
+                  {referenceContext.edges.map((edge) => {
+                    const area = referenceEdgeArea(edge.edge, { min: yDomain[0], max: yDomain[1] });
+                    return (
+                      <ReferenceArea
+                        key={edge.label}
+                        y1={area.y1}
+                        y2={area.y2}
+                        fill={edge.fill}
+                        fillOpacity={0.28}
+                      />
+                    );
+                  })}
+                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
+                  <XAxis dataKey="dateLabel" tick={{ fontSize: 11, fill: CHART_COLORS.axisText }} />
+                  <YAxis
+                    domain={yDomain}
+                    tick={{ fontSize: 11, fill: CHART_COLORS.axisText }}
+                    width={44}
+                    tickFormatter={(v) => formatLabChartValue(Number(v))}
                   />
-                );
-              })}
-              <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
-              <XAxis dataKey="dateLabel" tick={{ fontSize: 11, fill: CHART_COLORS.axisText }} />
-              <YAxis
-                domain={yDomain}
-                tick={{ fontSize: 11, fill: CHART_COLORS.axisText }}
-                width={44}
-                tickFormatter={(v) => formatLabChartValue(Number(v))}
-              />
-              <Tooltip
-                trigger="click"
-                isAnimationActive={false}
-                wrapperStyle={CHART_TOOLTIP_WRAPPER_STYLE}
-                content={
-                  <LabTooltipContent biomarkerLabel={biomarker.label} unit={biomarker.unit} />
-                }
-              />
-              <Scatter
-                data={data}
-                dataKey="value"
-                fill={LAB_DOT_FILL}
-                isAnimationActive={false}
-                shape={LabDrawDot}
-              />
-            </ComposedChart>
-          </ResponsiveContainer>
-          </div>
+                  <Tooltip
+                    trigger="click"
+                    isAnimationActive={false}
+                    wrapperStyle={CHART_TOOLTIP_WRAPPER_STYLE}
+                    content={
+                      interactive ? (
+                        <LabTooltipContent biomarkerLabel={biomarker.label} unit={biomarker.unit} />
+                      ) : (
+                        () => null
+                      )
+                    }
+                  />
+                  <Scatter
+                    data={data}
+                    dataKey="value"
+                    fill={LAB_DOT_FILL}
+                    isAnimationActive={false}
+                    shape={LabDrawDot}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
 
-          <p className="text-xs text-sage-400">
-            Each dot is a blood draw. Levels between draws are not measured.
-          </p>
-        </div>
-      )}
+            <p className="text-xs text-sage-400">
+              Each dot is a blood draw. Levels between draws are not measured.
+            </p>
+          </div>
+        ) : null
+      }
     </ChartCard>
   );
 }

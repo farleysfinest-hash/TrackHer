@@ -1,5 +1,4 @@
 import { memo, useMemo, useState } from 'react';
-import { Maximize2 } from 'lucide-react';
 import {
   ResponsiveContainer,
   LineChart,
@@ -11,7 +10,6 @@ import {
   Tooltip,
 } from 'recharts';
 import { ChartCard } from '../ui/ChartCard';
-import { Modal } from '../ui/Modal';
 import { ChartTooltipContent } from './ChartTooltipContent';
 import { MedicationLane } from './MedicationLane';
 import { ObservationWindowAreas } from './ObservationWindowAreas';
@@ -110,6 +108,7 @@ interface StoryChartsBodyProps {
   pulseHeight: number;
   /** Unique sync id so expanded + inline charts don't cross-talk. */
   syncId: string;
+  interactive: boolean;
 }
 
 function StoryChartsBody({
@@ -124,6 +123,7 @@ function StoryChartsBody({
   mrsHeight,
   pulseHeight,
   syncId,
+  interactive,
 }: StoryChartsBodyProps) {
   const laneHeight = laneRows.length > 0 ? laneRows.length * LANE_ROW_HEIGHT + 8 : 0;
   const mrsTicks = [0, 22, 44];
@@ -146,11 +146,10 @@ function StoryChartsBody({
               axisLine={false}
               tickLine={false}
             />
-            {/* Sole tooltip host — pulse keeps an empty Tooltip for syncId alignment. */}
             <Tooltip
               isAnimationActive={false}
               wrapperStyle={CHART_TOOLTIP_WRAPPER_STYLE}
-              content={<ChartTooltipContent />}
+              content={interactive ? <ChartTooltipContent /> : () => null}
             />
             <WeeklySegmentLines
               segmentKeys={mrsSegmentKeys}
@@ -160,6 +159,9 @@ function StoryChartsBody({
               seriesProps={{
                 strokeWidth: 2,
                 dot: { r: 3.5, fill: 'var(--color-chart-dot)', stroke: 'var(--color-chart-dot)', strokeWidth: 0 },
+                activeDot: interactive
+                  ? { r: 5, fill: 'var(--color-chart-dot)', stroke: 'var(--color-chart-dot)', strokeWidth: 0 }
+                  : false,
               }}
             />
           </LineChart>
@@ -279,7 +281,6 @@ function StoryColumnComponent({
   insights,
 }: StoryColumnProps) {
   const isEmpty = data.length < 2;
-  const [expanded, setExpanded] = useState(false);
 
   const pulseDefaults = useMemo(
     () => resolvePulsePanelDefaults(insights, data.map((d) => d.checkin), medicationChanges),
@@ -342,61 +343,30 @@ function StoryColumnComponent({
   };
 
   return (
-    <>
-      <ChartCard
-        title="Symptom & Medication Overview"
-        description="Your score, daily pulse, and medications on one timeline"
-        isEmpty={isEmpty}
-        emptyState={{
-          message: 'Check in at least twice to see your symptom trends here.',
-          actionLabel: 'Go to Check In',
-          onAction: () => {
-            window.location.href = '/checkin';
-          },
-        }}
-        minHeight="360px"
-        actions={
-          !isEmpty ? (
-            <button
-              type="button"
-              onClick={() => setExpanded(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-sand-200 px-2.5 py-1.5 text-xs font-medium text-sage-600 transition-colors hover:bg-sage-50"
-              aria-label="Expand chart to full screen"
-            >
-              <Maximize2 className="h-3.5 w-3.5" aria-hidden />
-              Expand
-            </button>
-          ) : undefined
-        }
-      >
-        {!isEmpty && (
-          <StoryChartsBody
-            {...chartProps}
-            mrsHeight={PANEL_MRS_HEIGHT}
-            pulseHeight={PANEL_PULSE_HEIGHT}
-            syncId={SYNC_ID}
-          />
-        )}
-        {!isEmpty && windowRegions.length > 0 && (
-          <p className="mt-2 text-xs text-sage-400">
-            Shaded area — observation window after a dose change.
-          </p>
-        )}
-      </ChartCard>
-
-      <Modal
-        isOpen={expanded}
-        onClose={() => setExpanded(false)}
-        title="Symptom & Medication Overview"
-        size="full"
-      >
-        {!isEmpty && (
+    <ChartCard
+      title="Symptom & Medication Overview"
+      description="Your score, daily pulse, and medications on one timeline"
+      isEmpty={isEmpty}
+      emptyState={{
+        message: 'Check in at least twice to see your symptom trends here.',
+        actionLabel: 'Go to Check In',
+        onAction: () => {
+          window.location.href = '/checkin';
+        },
+      }}
+      minHeight="360px"
+      expandable
+      expandedMinHeight="75vh"
+    >
+      {({ interactive }) =>
+        !isEmpty ? (
           <>
             <StoryChartsBody
               {...chartProps}
-              mrsHeight={PANEL_MRS_HEIGHT_EXPANDED}
-              pulseHeight={PANEL_PULSE_HEIGHT_EXPANDED}
-              syncId={`${SYNC_ID}-expanded`}
+              mrsHeight={interactive ? PANEL_MRS_HEIGHT_EXPANDED : PANEL_MRS_HEIGHT}
+              pulseHeight={interactive ? PANEL_PULSE_HEIGHT_EXPANDED : PANEL_PULSE_HEIGHT}
+              syncId={interactive ? `${SYNC_ID}-x` : SYNC_ID}
+              interactive={interactive}
             />
             {windowRegions.length > 0 && (
               <p className="mt-2 text-xs text-sage-400">
@@ -404,9 +374,9 @@ function StoryColumnComponent({
               </p>
             )}
           </>
-        )}
-      </Modal>
-    </>
+        ) : null
+      }
+    </ChartCard>
   );
 }
 

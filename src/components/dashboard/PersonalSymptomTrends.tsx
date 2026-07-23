@@ -98,25 +98,28 @@ export function PersonalSymptomTrends({ checkins, extendedLogs }: PersonalSympto
       expandable
       expandedMinHeight="60vh"
     >
-      {!isEmpty && (
-        <div className="space-y-0">
-          {chartData.keys.map((key, index) => (
-            <SymptomBand
-              key={key}
-              name={getSymptomByKey(key)?.label ?? key}
-              dataKey={key}
-              data={chartData.points}
-              segmentKeys={chartData.segmentKeysByKey[key] ?? []}
-              domainMax={DOMAIN_MAX}
-              syncId={SYNC_ID}
-              tooltipMode="severity"
-              tooltipSeries={tooltipSeries}
-              isTooltipHost={index === 0}
-            />
-          ))}
-          <BandXAxis data={chartData.points} />
-        </div>
-      )}
+      {({ interactive }) =>
+        !isEmpty ? (
+          <div className="space-y-0">
+            {chartData.keys.map((key, index) => (
+              <SymptomBand
+                key={key}
+                name={getSymptomByKey(key)?.label ?? key}
+                dataKey={key}
+                data={chartData.points}
+                segmentKeys={chartData.segmentKeysByKey[key] ?? []}
+                domainMax={DOMAIN_MAX}
+                syncId={interactive ? `${SYNC_ID}-x` : SYNC_ID}
+                tooltipMode="severity"
+                tooltipSeries={tooltipSeries}
+                isTooltipHost={index === 0}
+                interactive={interactive}
+              />
+            ))}
+            <BandXAxis data={chartData.points} />
+          </div>
+        ) : null
+      }
     </ChartCard>
   );
 }

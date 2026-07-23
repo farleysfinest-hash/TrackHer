@@ -152,78 +152,81 @@ export function DrillDownControls({
       expandable
       expandedMinHeight="70vh"
     >
-      {!isEmpty && (
-        <div className="space-y-4">
-          <div className="flex flex-wrap gap-2">
-            <span className="text-xs font-medium text-sage-500">Symptoms:</span>
-            {MRS_CORE_SYMPTOMS.map((s) => (
-              <button
-                key={s.key}
-                type="button"
-                onClick={() => toggleSymptom(s.key)}
-                className={[
-                  'max-w-[9.5rem] rounded-2xl px-3 py-1.5 text-center text-xs font-medium leading-snug break-words transition-colors',
-                  selectedSymptoms.includes(s.key)
-                    ? 'bg-sage-500 text-on-accent'
-                    : 'border border-sand-200 text-sage-600 hover:bg-sage-50',
-                ].join(' ')}
-              >
-                {getSymptomChipLabel(s)}
-              </button>
-            ))}
+      {({ interactive }) =>
+        !isEmpty ? (
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              <span className="text-xs font-medium text-sage-500">Symptoms:</span>
+              {MRS_CORE_SYMPTOMS.map((s) => (
+                <button
+                  key={s.key}
+                  type="button"
+                  onClick={() => toggleSymptom(s.key)}
+                  className={[
+                    'max-w-[9.5rem] rounded-2xl px-3 py-1.5 text-center text-xs font-medium leading-snug break-words transition-colors',
+                    selectedSymptoms.includes(s.key)
+                      ? 'bg-sage-500 text-on-accent'
+                      : 'border border-sand-200 text-sage-600 hover:bg-sage-50',
+                  ].join(' ')}
+                >
+                  {getSymptomChipLabel(s)}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <span className="text-xs font-medium text-sage-500">Medications:</span>
+              {medications.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => toggleMed(m.id)}
+                  className={[
+                    'max-w-[9.5rem] rounded-2xl px-3 py-1.5 text-center text-xs font-medium leading-snug break-words transition-colors',
+                    selectedMeds.includes(m.id)
+                      ? 'bg-sage-500 text-on-accent'
+                      : 'border border-sand-200 text-sage-600 hover:bg-sage-50',
+                  ].join(' ')}
+                >
+                  {m.medication_name}
+                </button>
+              ))}
+            </div>
+
+            <div className="space-y-0">
+              {drillData.symptomLines.map((line, index) => (
+                <SymptomBand
+                  key={line.key}
+                  name={line.label}
+                  dataKey={line.key}
+                  data={chartData.dailyRows}
+                  segmentKeys={chartData.segmentKeysByLine[line.key] ?? []}
+                  domainMax={DOMAIN_MAX}
+                  syncId={interactive ? `${SYNC_ID}-x` : SYNC_ID}
+                  tooltipMode="severity"
+                  tooltipSeries={tooltipSeries}
+                  isTooltipHost={index === 0}
+                  markers={markerLines}
+                  interactive={interactive}
+                />
+              ))}
+
+              {laneRows.length > 0 && (
+                <div
+                  style={{
+                    marginLeft: BAND_CHART_MARGIN.left,
+                    marginRight: BAND_CHART_MARGIN.right,
+                  }}
+                >
+                  <MedicationLane rows={laneRows} markers={markerLines} />
+                </div>
+              )}
+            </div>
+
+            <BandXAxis data={chartData.dailyRows} />
           </div>
-
-          <div className="flex flex-wrap gap-2">
-            <span className="text-xs font-medium text-sage-500">Medications:</span>
-            {medications.map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => toggleMed(m.id)}
-                className={[
-                  'max-w-[9.5rem] rounded-2xl px-3 py-1.5 text-center text-xs font-medium leading-snug break-words transition-colors',
-                  selectedMeds.includes(m.id)
-                    ? 'bg-sage-500 text-on-accent'
-                    : 'border border-sand-200 text-sage-600 hover:bg-sage-50',
-                ].join(' ')}
-              >
-                {m.medication_name}
-              </button>
-            ))}
-          </div>
-
-          <div className="space-y-0">
-            {drillData.symptomLines.map((line, index) => (
-              <SymptomBand
-                key={line.key}
-                name={line.label}
-                dataKey={line.key}
-                data={chartData.dailyRows}
-                segmentKeys={chartData.segmentKeysByLine[line.key] ?? []}
-                domainMax={DOMAIN_MAX}
-                syncId={SYNC_ID}
-                tooltipMode="severity"
-                tooltipSeries={tooltipSeries}
-                isTooltipHost={index === 0}
-                markers={markerLines}
-              />
-            ))}
-
-            {laneRows.length > 0 && (
-              <div
-                style={{
-                  marginLeft: BAND_CHART_MARGIN.left,
-                  marginRight: BAND_CHART_MARGIN.right,
-                }}
-              >
-                <MedicationLane rows={laneRows} markers={markerLines} />
-              </div>
-            )}
-          </div>
-
-          <BandXAxis data={chartData.dailyRows} />
-        </div>
-      )}
+        ) : null
+      }
     </ChartCard>
   );
 }
