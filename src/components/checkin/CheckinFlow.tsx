@@ -174,7 +174,7 @@ export function CheckinFlow({ onClose, onComplete }: CheckinFlowProps) {
       aria-modal="true"
       aria-label={mode === 'quick' ? 'Quick pulse' : 'Full check-in'}
     >
-      <header className="safe-area-top flex items-center justify-between border-b border-sand-200 bg-white px-6 pb-4">
+      <header className="safe-area-top flex items-center justify-between border-b border-sand-200 bg-sand-50 px-6 pb-4">
         <div>
           <h1 className="font-display text-xl text-sage-800">
             {mode === 'quick' ? 'Quick pulse' : 'Full Check-in'}

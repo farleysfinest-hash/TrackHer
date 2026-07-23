@@ -18,7 +18,7 @@ export function StatCard({ label, value, subtext, trend, color }: StatCardProps)
     : '';
 
   return (
-    <div className="rounded-xl border border-sand-200 bg-white p-4 shadow-sm">
+    <div className="rounded-xl border border-sand-200 bg-sand-50 p-4 shadow-sm">
       <p className="text-xs font-medium uppercase tracking-wide text-sage-400">{label}</p>
       <p
         className="mt-1 select-none font-display text-3xl font-semibold text-sage-800"

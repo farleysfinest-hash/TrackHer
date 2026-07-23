@@ -63,7 +63,7 @@ export function StepProduct({ onBack, onCustom }: StepProductProps) {
                 'w-full rounded-xl border p-4 text-left transition-colors duration-150',
                 isSelected
                   ? 'border-sage-500 bg-sage-50'
-                  : 'border-sand-200 bg-white hover:border-sage-300',
+                  : 'border-sand-200 bg-sand-50 hover:border-sage-300',
               ].join(' ')}
             >
               <div className="flex flex-wrap items-center gap-2">

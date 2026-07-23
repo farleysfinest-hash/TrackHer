@@ -125,8 +125,8 @@ export function StepSymptomSelection({ onNext, onBack }: StepSymptomSelectionPro
                 className={[
                   'inline-flex items-center gap-2 rounded-full border px-5 py-3 text-base font-medium transition-colors',
                   isStarred
-                    ? 'border-sage-600 bg-sage-600 text-white'
-                    : 'border-sand-200 bg-white text-sage-600 hover:border-sage-300',
+                    ? 'border-sage-600 bg-sage-600 text-on-accent'
+                    : 'border-sand-200 bg-sand-50 text-sage-600 hover:border-sage-300',
                 ].join(' ')}
               >
                 <Star
@@ -183,7 +183,7 @@ export function StepSymptomSelection({ onNext, onBack }: StepSymptomSelectionPro
           if (common.length === 0 && other.length === 0) return null;
 
           return (
-            <div key={system} className="rounded-xl border border-sand-200 bg-white p-4">
+            <div key={system} className="rounded-xl border border-sand-200 bg-sand-50 p-4">
               <h3 className="font-display text-base text-sage-800">
                 {SYMPTOM_BODY_SYSTEM_LABELS[system]}
               </h3>

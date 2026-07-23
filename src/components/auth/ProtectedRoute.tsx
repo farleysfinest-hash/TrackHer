@@ -28,7 +28,7 @@ export function ProtectedRoute({ children, requireOnboarding = true }: Protected
           <button
             type="button"
             onClick={() => void retryProfileLoad()}
-            className="mt-4 rounded-lg bg-sage-500 px-4 py-2 text-sm font-medium text-white hover:bg-sage-600"
+            className="mt-4 rounded-lg bg-sage-500 px-4 py-2 text-sm font-medium text-on-accent hover:bg-sage-600"
           >
             Try Again
           </button>

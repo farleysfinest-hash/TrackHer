@@ -18,7 +18,7 @@ function WatchSymptomTapRowComponent({
   onChange,
 }: WatchSymptomTapRowProps) {
   return (
-    <div className="rounded-xl border border-sand-200 bg-white p-3">
+    <div className="rounded-xl border border-sand-200 bg-sand-50 p-3">
       <p className="mb-2 text-sm font-medium text-sage-800">{label}</p>
       <div className="flex gap-1">
         {SCORES.map((score) => {
@@ -32,7 +32,7 @@ function WatchSymptomTapRowComponent({
               className={[
                 'min-h-[40px] flex-1 rounded-lg text-sm font-medium transition-colors',
                 isSelected
-                  ? 'bg-sage-500 text-white'
+                  ? 'bg-sage-500 text-on-accent'
                   : 'bg-sand-100 text-sage-600 hover:bg-sand-200',
               ].join(' ')}
               aria-pressed={isSelected}

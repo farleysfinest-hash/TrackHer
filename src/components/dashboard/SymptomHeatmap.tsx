@@ -73,7 +73,7 @@ function SymptomHeatmapComponent({ rows }: SymptomHeatmapProps) {
               gridTemplateColumns: `${LABEL_COLUMN_WIDTH} repeat(${dates.length}, minmax(0, 1fr))`,
             }}
           >
-            <div className="bg-white px-1 pb-0 pt-2 text-[9px] font-medium leading-none text-sage-500">
+            <div className="bg-sand-50 px-1 pb-0 pt-2 text-[9px] font-medium leading-none text-sage-500">
               {/* spacer aligned with month row */}
             </div>
             {dates.map((d, i) => {
@@ -89,7 +89,7 @@ function SymptomHeatmapComponent({ rows }: SymptomHeatmapProps) {
               );
             })}
 
-            <div className="bg-white px-1 pb-1 pt-1 text-xs font-medium text-sage-500">Symptom</div>
+            <div className="bg-sand-50 px-1 pb-1 pt-1 text-xs font-medium text-sage-500">Symptom</div>
             {dates.map((d) => {
               const day = parseISODate(d.date).day;
               return (
@@ -109,7 +109,7 @@ function SymptomHeatmapComponent({ rows }: SymptomHeatmapProps) {
               return (
                 <Fragment key={row.symptomKey}>
                   <div
-                    className="flex h-8 min-w-0 items-center overflow-hidden bg-white pr-1 text-xs text-sage-700"
+                    className="flex h-8 min-w-0 items-center overflow-hidden bg-sand-50 pr-1 text-xs text-sage-700"
                     title={row.label}
                   >
                     <span className="truncate whitespace-nowrap">{displayLabel}</span>
@@ -130,7 +130,7 @@ function SymptomHeatmapComponent({ rows }: SymptomHeatmapProps) {
                           cell.score === null
                             ? 'text-sage-300'
                             : cell.score >= 3
-                              ? 'text-white'
+                              ? 'text-on-accent'
                               : 'text-sage-600',
                         ].join(' ')}
                         style={{ backgroundColor: bg }}

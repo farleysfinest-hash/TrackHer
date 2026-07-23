@@ -130,7 +130,7 @@ export function InstrumentSection({ instrument, onNext, onBack }: InstrumentSect
         })}
       </div>
 
-      <div className="rounded-xl border border-sand-200 bg-white p-4">
+      <div className="rounded-xl border border-sand-200 bg-sand-50 p-4">
         <InstrumentScoreBadge instrument={instrument} score={score} />
         <p className="mt-2 text-xs text-sage-400">
           {score.isComplete && score.total !== null ? (

@@ -22,7 +22,7 @@ export function StepCheckinIntro({ onNext, onBack }: StepCheckinIntroProps) {
         </p>
       </div>
 
-      <div className="rounded-xl border border-sand-200 bg-white px-4">
+      <div className="rounded-xl border border-sand-200 bg-sand-50 px-4">
         <SeveritySlider
           symptomKey="practice_hot_flashes"
           label="Hot flashes, sweating"

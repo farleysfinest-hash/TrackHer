@@ -60,7 +60,7 @@ export function CheckinHistory({ onViewDetails, reloadToken }: CheckinHistoryPro
         <select
           value={range}
           onChange={(e) => setRange(e.target.value as DateRange)}
-          className="rounded-lg border border-sand-200 bg-white px-3 py-2 text-base text-sage-700"
+          className="rounded-lg border border-sand-200 bg-sand-50 px-3 py-2 text-base text-sage-700"
         >
           <option value="7">Last 7 days</option>
           <option value="30">Last 30 days</option>

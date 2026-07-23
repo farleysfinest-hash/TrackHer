@@ -12,8 +12,8 @@ interface CardProps {
 }
 
 const variantClasses: Record<CardVariant, string> = {
-  default: 'bg-white border border-sand-200',
-  elevated: 'bg-white border border-sand-200 shadow-sm',
+  default: 'bg-sand-50 border border-sand-200',
+  elevated: 'bg-sand-50 border border-sand-200 shadow-sm',
   outlined: 'bg-transparent border border-sand-200',
 };
 

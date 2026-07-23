@@ -125,7 +125,7 @@ export function KeepWatchingPrompt({
         <button
           type="button"
           onClick={onKeep}
-          className="rounded-full bg-sage-600 px-3 py-1 text-xs font-medium text-white hover:bg-sage-700"
+          className="rounded-full bg-sage-600 px-3 py-1 text-xs font-medium text-on-accent hover:bg-sage-700"
         >
           Yes, add to watch list
         </button>

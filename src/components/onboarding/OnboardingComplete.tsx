@@ -67,7 +67,7 @@ export function OnboardingComplete({ onGoToDashboard }: OnboardingCompleteProps)
         </p>
       </div>
 
-      <div className="rounded-xl border border-sand-200 bg-white p-6 text-left">
+      <div className="rounded-xl border border-sand-200 bg-sand-50 p-6 text-left">
         <dl className="space-y-3 text-sm">
           <div className="flex justify-between">
             <dt className="text-sage-500">Name</dt>

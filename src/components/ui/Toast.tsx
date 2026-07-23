@@ -5,10 +5,10 @@ const variantStyles: Record<
   ToastVariant,
   { bg: string; icon: typeof CheckCircle }
 > = {
-  success: { bg: 'bg-white border-success/30 text-sage-800', icon: CheckCircle },
-  error: { bg: 'bg-white border-danger/30 text-sage-800', icon: AlertCircle },
-  warning: { bg: 'bg-white border-amber-200 text-sage-800', icon: AlertTriangle },
-  info: { bg: 'bg-white border-info/30 text-sage-800', icon: Info },
+  success: { bg: 'bg-sand-50 border-success/30 text-sage-800', icon: CheckCircle },
+  error: { bg: 'bg-sand-50 border-danger/30 text-sage-800', icon: AlertCircle },
+  warning: { bg: 'bg-sand-50 border-amber-200 text-sage-800', icon: AlertTriangle },
+  info: { bg: 'bg-sand-50 border-info/30 text-sage-800', icon: Info },
 };
 
 const iconColors: Record<ToastVariant, string> = {

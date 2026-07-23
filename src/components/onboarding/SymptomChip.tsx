@@ -30,18 +30,18 @@ export function SymptomChip({
         disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
         isWatch
           ? watchSelected
-            ? 'border-sage-600 bg-sage-600 text-white'
-            : 'border-sand-200 bg-white text-sage-600 hover:border-sage-300'
+            ? 'border-sage-600 bg-sage-600 text-on-accent'
+            : 'border-sand-200 bg-sand-50 text-sage-600 hover:border-sage-300'
           : checked
             ? 'border-sage-500 bg-sage-50 text-sage-700'
-            : 'border-sand-200 bg-white text-sage-600 hover:border-sage-300',
+            : 'border-sand-200 bg-sand-50 text-sage-600 hover:border-sage-300',
       ].join(' ')}
     >
       {!isWatch && (
         <span
           className={[
             'flex h-4 w-4 shrink-0 items-center justify-center rounded border',
-            checked ? 'border-sage-500 bg-sage-500 text-white' : 'border-sand-300 bg-white',
+            checked ? 'border-sage-500 bg-sage-500 text-on-accent' : 'border-sand-300 bg-sand-50',
           ].join(' ')}
         >
           {checked && <Check className="h-3 w-3" strokeWidth={3} />}

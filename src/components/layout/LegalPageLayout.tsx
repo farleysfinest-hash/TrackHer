@@ -11,7 +11,7 @@ export function LegalPageLayout({ children }: LegalPageLayoutProps) {
 
   return (
     <div className="min-h-screen bg-sand-50">
-      <header className="safe-area-top border-b border-sand-200 bg-white">
+      <header className="safe-area-top border-b border-sand-200 bg-sand-50">
         <div className="mx-auto flex max-w-3xl items-center gap-4 px-6 pb-4">
           <button
             onClick={() => navigate(-1)}

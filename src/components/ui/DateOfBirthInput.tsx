@@ -18,7 +18,7 @@ interface DateOfBirthInputProps {
 }
 
 const fieldClass = [
-  'rounded-lg border bg-white py-3 text-center text-base text-sage-800',
+  'rounded-lg border bg-sand-50 py-3 text-center text-base text-sage-800',
   'placeholder:text-sand-400',
   'transition-colors duration-150',
   'focus:border-sage-400 focus:outline-none focus:ring-2 focus:ring-sage-500/20',

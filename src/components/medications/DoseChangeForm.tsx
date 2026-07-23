@@ -122,7 +122,7 @@ export function DoseChangeForm({
             onClick={() => setMode(m)}
             className={[
               'rounded-lg px-3 py-1.5 text-sm capitalize',
-              mode === m ? 'bg-sage-500 text-white' : 'bg-sage-100 text-sage-600',
+              mode === m ? 'bg-sage-500 text-on-accent' : 'bg-sage-100 text-sage-600',
             ].join(' ')}
           >
             {m}

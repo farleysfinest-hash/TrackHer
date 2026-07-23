@@ -42,7 +42,7 @@ export function Header() {
       : null;
 
   return (
-    <header className="safe-area-top sticky top-0 z-20 flex min-w-0 items-center justify-between gap-3 overflow-x-hidden border-b border-sand-200 bg-white/95 px-4 pb-4 backdrop-blur-sm sm:px-6 md:px-8">
+    <header className="safe-area-top sticky top-0 z-20 flex min-w-0 items-center justify-between gap-3 overflow-x-hidden border-b border-sand-200 bg-sand-50/95 px-4 pb-4 backdrop-blur-sm sm:px-6 md:px-8">
       <div className="flex min-w-0 items-center gap-2 md:hidden">
         <Logo size="sm" className="truncate" />
         <img
@@ -62,7 +62,7 @@ export function Header() {
           aria-expanded={menuOpen}
           className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-sage-50"
         >
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sage-500 text-sm font-medium text-white">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sage-500 text-sm font-medium text-on-accent">
             {avatarText ?? ' '}
           </div>
           <span className="hidden text-sm font-medium text-sage-700 sm:inline">
@@ -72,7 +72,7 @@ export function Header() {
         </button>
 
         {menuOpen && (
-          <div className="absolute right-0 mt-2 w-48 rounded-xl border border-sand-200 bg-white py-1 shadow-lg">
+          <div className="absolute right-0 mt-2 w-48 rounded-xl border border-sand-200 bg-sand-50 py-1 shadow-lg">
             <Link
               to="/settings"
               className="flex items-center gap-2 px-4 py-2.5 text-sm text-sage-700 hover:bg-sage-50"

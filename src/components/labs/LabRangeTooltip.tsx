@@ -12,7 +12,7 @@ export function LabRangeTooltip({ biomarker, isOpen, onClose }: LabRangeTooltipP
 
   return (
     <div
-      className="mt-2 rounded-lg border border-sand-200 bg-white p-4 text-sm shadow-sm"
+      className="mt-2 rounded-lg border border-sand-200 bg-sand-50 p-4 text-sm shadow-sm"
       role="tooltip"
     >
       <p className="font-medium text-sage-800">

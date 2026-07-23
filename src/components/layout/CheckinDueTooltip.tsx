@@ -61,7 +61,7 @@ export function CheckinDueTooltip({ anchorRef, label, onDismiss }: CheckinDueToo
     <div
       role="status"
       className={[
-        'pointer-events-none fixed z-50 whitespace-nowrap rounded-lg bg-sage-700 px-3 py-1.5 text-sm text-white',
+        'pointer-events-none fixed z-50 whitespace-nowrap rounded-lg bg-sage-700 px-3 py-1.5 text-sm text-on-accent',
         leaving ? 'checkin-due-tooltip-out' : 'checkin-due-tooltip-in',
       ].join(' ')}
       style={{

@@ -56,7 +56,7 @@ export function ExtendedSymptomsForm({ onNext, onBack, onSkip }: ExtendedSymptom
       <SymptomSearchBar value={search} onChange={setSearch} />
 
       {filteredSymptoms ? (
-        <div className="rounded-xl border border-sand-200 bg-white p-4">
+        <div className="rounded-xl border border-sand-200 bg-sand-50 p-4">
           {filteredSymptoms.length === 0 ? (
             <p className="text-sm text-sage-400">No symptoms match your search.</p>
           ) : (
@@ -88,7 +88,7 @@ export function ExtendedSymptomsForm({ onNext, onBack, onSkip }: ExtendedSymptom
                           className={[
                             'rounded-lg px-2 py-1 text-xs',
                             entry.severity === sev
-                              ? 'bg-sage-500 text-white'
+                              ? 'bg-sage-500 text-on-accent'
                               : 'bg-sand-100 text-sage-600',
                           ].join(' ')}
                         >

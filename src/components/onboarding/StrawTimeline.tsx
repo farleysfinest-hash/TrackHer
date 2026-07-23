@@ -18,7 +18,7 @@ export function StrawTimeline({ stage, stageLabel, description }: StrawTimelineP
 
   return (
     <div className="space-y-5">
-      <div className="rounded-xl border border-sand-200 bg-white p-5">
+      <div className="rounded-xl border border-sand-200 bg-sand-50 p-5">
         <p className="text-xs font-medium uppercase tracking-wide text-sage-400">
           Your stage
         </p>
@@ -49,10 +49,10 @@ export function StrawTimeline({ stage, stageLabel, description }: StrawTimelineP
                       className={[
                         'z-10 flex h-8 w-8 items-center justify-center rounded-full border-2 text-[10px] font-semibold transition-colors',
                         isActive
-                          ? 'border-sage-600 bg-sage-600 text-white shadow-md ring-4 ring-sage-200'
+                          ? 'border-sage-600 bg-sage-600 text-on-accent shadow-md ring-4 ring-sage-200'
                           : isPast
                             ? 'border-sage-400 bg-sage-100 text-sage-600'
-                            : 'border-sand-300 bg-white text-sage-400',
+                            : 'border-sand-300 bg-sand-50 text-sage-400',
                       ].join(' ')}
                     >
                       {s.shortLabel}
@@ -82,8 +82,8 @@ export function StrawTimeline({ stage, stageLabel, description }: StrawTimelineP
                 className={[
                   'rounded-full px-3 py-1 text-xs font-medium',
                   s.code === stage
-                    ? 'bg-sage-600 text-white'
-                    : 'bg-white text-sage-500 border border-sand-200',
+                    ? 'bg-sage-600 text-on-accent'
+                    : 'bg-sand-50 text-sage-500 border border-sand-200',
                 ].join(' ')}
               >
                 {s.label}

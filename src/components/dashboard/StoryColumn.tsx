@@ -252,7 +252,7 @@ function StoryColumnComponent({
                       className={[
                         'rounded-2xl px-2.5 py-1 text-[10px] font-medium transition-colors',
                         activeChannel === chip.id
-                          ? 'bg-sage-500 text-white'
+                          ? 'bg-sage-500 text-on-accent'
                           : 'border border-sand-200 text-sage-600 hover:bg-sage-50',
                       ].join(' ')}
                     >

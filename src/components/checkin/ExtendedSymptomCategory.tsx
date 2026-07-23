@@ -26,7 +26,7 @@ export function ExtendedSymptomCategory({
   if (symptoms.length === 0) return null;
 
   return (
-    <div className="rounded-xl border border-sand-200 bg-white">
+    <div className="rounded-xl border border-sand-200 bg-sand-50">
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
@@ -75,7 +75,7 @@ export function ExtendedSymptomCategory({
                         className={[
                           'min-h-[36px] flex-1 rounded-lg text-xs font-medium',
                           entry.severity === score
-                            ? 'bg-sage-500 text-white'
+                            ? 'bg-sage-500 text-on-accent'
                             : 'bg-sand-100 text-sage-600 hover:bg-sand-200',
                         ].join(' ')}
                       >

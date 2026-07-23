@@ -40,7 +40,7 @@ export function StepDeliveryMethod({ onBack }: StepDeliveryMethodProps) {
                 'rounded-xl border p-4 text-left transition-colors duration-150',
                 isSelected
                   ? 'border-sage-500 bg-sage-50 ring-2 ring-sage-500/20'
-                  : 'border-sand-200 bg-white hover:border-sage-300 hover:bg-sage-50/50',
+                  : 'border-sand-200 bg-sand-50 hover:border-sage-300 hover:bg-sage-50/50',
               ].join(' ')}
             >
               <span className="font-medium text-sage-800">{info.label}</span>

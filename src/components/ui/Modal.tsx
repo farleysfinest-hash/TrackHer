@@ -103,7 +103,7 @@ export function Modal({
         aria-labelledby={title ? titleId : undefined}
         tabIndex={-1}
         className={[
-          'relative z-10 flex w-full flex-col overflow-hidden rounded-xl border border-sand-200 bg-white shadow-xl outline-none',
+          'relative z-10 flex w-full flex-col overflow-hidden rounded-xl border border-sand-200 bg-sand-50 shadow-xl outline-none',
           sizeClasses[size],
         ].join(' ')}
       >

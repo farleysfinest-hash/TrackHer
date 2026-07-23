@@ -80,10 +80,84 @@
   --color-chart-line-secondary: #c07396;
   --color-chart-med-muted: #f0d8e4;
 
+  /* Ink that stays light in both schemes — labels on filled accents / deep heatmap cells */
+  --color-on-accent: #ffffff;
+
   /* Typography */
   --font-display: 'Fraunces Variable', 'Fraunces', 'Georgia', serif;
   --font-body: system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/*
+ * Warm plum-charcoal dark scheme. No dark: utilities — utilities read these vars.
+ * Surfaces sink; text/accent stops rise. Same room at night.
+ */
+.dark {
+  --color-sage-50: #241a20;
+  --color-sage-100: #2e2129;
+  --color-sage-200: #3c2b35;
+  --color-sage-300: #57404c;
+  --color-sage-400: #8a6478;
+  --color-sage-500: #c98ca9;
+  --color-sage-600: #d6a3bc;
+  --color-sage-700: #e2bccf;
+  --color-sage-800: #efd7e2;
+  --color-sage-900: #f8ecf2;
+
+  --color-sand-50: #171114;
+  --color-sand-100: #1e161a;
+  --color-sand-200: #2a1f25;
+  --color-sand-300: #3a2c33;
+  --color-sand-400: #6b5761;
+
+  --color-clay-400: #b5788f;
+  --color-clay-500: #c98ca9;
+  --color-clay-600: #daa9c0;
+
+  --color-moss-100: #232b1d;
+  --color-moss-300: #4a5a3c;
+  --color-moss-500: #93a67c;
+  --color-moss-600: #a9bb90;
+  --color-moss-700: #c2d1ab;
+
+  /* Safeguarding only — lifted for AA on plum surfaces, hue unchanged */
+  --color-alert-700: #d4786a;
+
+  --color-success: #7fae6e;
+  --color-warning: #d4a97e;
+  --color-danger: #d47a7a;
+  --color-info: #b492a4;
+
+  /* Severity: light→dark rose on dark surface; stop 1 visible on sand-100 */
+  --color-severity-1: #f0d4e2;
+  --color-severity-2: #e0b4c8;
+  --color-severity-3: #c98ca9;
+  --color-severity-4: #b07090;
+  --color-severity-5: #9a5a78;
+
+  /* Heatmap: same light→dark direction; pale floor above sand; empty distinct */
+  --color-heat-0: #2a1f26;
+  --color-heat-1: #6b4558;
+  --color-heat-2: #e0b4c8;
+  --color-heat-3: #b07090;
+  --color-heat-4: #9a5a78;
+  --color-heat-empty: #221820;
+
+  /* Charts — grid ≈ sand-300; series lifted for contrast on plum */
+  --color-chart-line-primary: #e2bccf;
+  --color-chart-dot: #daa9c0;
+  --color-chart-pulse: #c98ca9;
+  --color-chart-marker: #daa9c0;
+  --color-chart-grid: #3a2c33;
+  --color-chart-axis: #a88898;
+  --color-chart-observation: #6b4558;
+  --color-chart-band-conventional: #57404c;
+  --color-chart-urogenital: #b892a8;
+  --color-chart-line-secondary: #d4a0b8;
+  --color-chart-med-muted: #3c2b35;
+
+  --color-on-accent: #ffffff;
 }
 
 @layer base {

@@ -23,7 +23,7 @@ export function LabPanelSection({
   const [expanded, setExpanded] = useState(defaultExpanded);
 
   return (
-    <div className="rounded-xl border border-sand-200 bg-white">
+    <div className="rounded-xl border border-sand-200 bg-sand-50">
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}

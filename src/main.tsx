@@ -8,14 +8,22 @@ import './index.css';
 import { useAuthStore } from './stores/authStore';
 import { initializeSubscriptions } from './lib/subscriptions';
 
+/** System appearance → `.dark` on <html> + status bar icons. Runs before React to avoid a light flash. */
+function applyColorScheme(mq: MediaQueryList | MediaQueryListEvent): void {
+  const isDark = mq.matches;
+  document.documentElement.classList.toggle('dark', isDark);
+  if (!Capacitor.isNativePlatform()) return;
+  void StatusBar.setStyle({ style: isDark ? Style.Dark : Style.Light }).catch(() => {
+    // Native chrome must never block boot.
+  });
+}
+
+const colorSchemeMq = window.matchMedia('(prefers-color-scheme: dark)');
+applyColorScheme(colorSchemeMq);
+colorSchemeMq.addEventListener('change', applyColorScheme);
+
 async function initNativeShell(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
-  try {
-    // Dark icons on light background (matches white / sand shell).
-    await StatusBar.setStyle({ style: Style.Light });
-  } catch {
-    // Native chrome must never block boot.
-  }
   if (Capacitor.getPlatform() === 'ios') {
     try {
       await Keyboard.setAccessoryBarVisible({ isVisible: false });

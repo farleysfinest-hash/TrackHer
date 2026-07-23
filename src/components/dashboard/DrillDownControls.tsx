@@ -162,7 +162,7 @@ export function DrillDownControls({
                 className={[
                   'max-w-[9.5rem] rounded-2xl px-3 py-1.5 text-center text-xs font-medium leading-snug break-words transition-colors',
                   selectedSymptoms.includes(s.key)
-                    ? 'bg-sage-500 text-white'
+                    ? 'bg-sage-500 text-on-accent'
                     : 'border border-sand-200 text-sage-600 hover:bg-sage-50',
                 ].join(' ')}
               >
@@ -181,7 +181,7 @@ export function DrillDownControls({
                 className={[
                   'max-w-[9.5rem] rounded-2xl px-3 py-1.5 text-center text-xs font-medium leading-snug break-words transition-colors',
                   selectedMeds.includes(m.id)
-                    ? 'bg-sage-500 text-white'
+                    ? 'bg-sage-500 text-on-accent'
                     : 'border border-sand-200 text-sage-600 hover:bg-sage-50',
                 ].join(' ')}
               >

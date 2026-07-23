@@ -210,7 +210,7 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
       )}
 
       {mode === 'full' && ratedExtended.length > 0 && (
-        <Card className="border-l-4 border-l-amber-400 bg-gradient-to-br from-white to-sand-50/50">
+        <Card className="border-l-4 border-l-amber-400 bg-sand-50">
           <h3 className="mb-3 font-display text-lg text-sage-800">Personal Tracker</h3>
           <ul className="space-y-2 text-sm">
             {ratedExtended.map((s) => {

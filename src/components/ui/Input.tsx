@@ -36,7 +36,7 @@ export function Input({
         <input
           id={inputId}
           className={[
-            'w-full rounded-lg border bg-white px-4 py-3 text-base text-sage-800',
+            'w-full rounded-lg border bg-sand-50 px-4 py-3 text-base text-sage-800',
             'placeholder:text-sand-400',
             'transition-colors duration-150',
             'focus:border-sage-400 focus:outline-none focus:ring-2 focus:ring-sage-500/20',

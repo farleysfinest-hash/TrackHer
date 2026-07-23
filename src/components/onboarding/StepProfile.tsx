@@ -59,7 +59,7 @@ export function StepProfile({ onNext }: StepProfileProps) {
               'flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition-colors',
               formData.hasUterusConfirmed && formData.hasUterus === true
                 ? 'border-sage-500 bg-sage-50 text-sage-700'
-                : 'border-sand-200 bg-white text-sage-600 hover:border-sage-300',
+                : 'border-sand-200 bg-sand-50 text-sage-600 hover:border-sage-300',
             ].join(' ')}
           >
             Yes
@@ -71,7 +71,7 @@ export function StepProfile({ onNext }: StepProfileProps) {
               'flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition-colors',
               formData.hasUterusConfirmed && formData.hasUterus === false
                 ? 'border-sage-500 bg-sage-50 text-sage-700'
-                : 'border-sand-200 bg-white text-sage-600 hover:border-sage-300',
+                : 'border-sand-200 bg-sand-50 text-sage-600 hover:border-sage-300',
             ].join(' ')}
           >
             No
@@ -83,7 +83,7 @@ export function StepProfile({ onNext }: StepProfileProps) {
               'flex-1 rounded-lg border px-4 py-3 text-sm font-medium transition-colors',
               formData.hasUterusConfirmed && formData.hasUterus === null
                 ? 'border-sage-500 bg-sage-50 text-sage-700'
-                : 'border-sand-200 bg-white text-sage-600 hover:border-sage-300',
+                : 'border-sand-200 bg-sand-50 text-sage-600 hover:border-sage-300',
             ].join(' ')}
           >
             I&apos;m not sure

@@ -37,7 +37,7 @@ export function UnlockProgress({ checkinCount }: UnlockProgressProps) {
     if (hasUiFlag(profile, 'full_dashboard_seen')) return null;
 
     return (
-      <Card variant="elevated" className="relative border-sage-200 bg-gradient-to-br from-sage-50/80 to-white">
+      <Card variant="elevated" className="relative border-sage-200 bg-sage-50">
         <button
           type="button"
           onClick={() => setUiFlag('full_dashboard_seen')}

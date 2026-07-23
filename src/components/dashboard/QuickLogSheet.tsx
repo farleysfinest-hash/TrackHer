@@ -332,7 +332,7 @@ export function QuickLogSheet() {
           transition: sheetTransition,
           touchAction: offsetY > 0 ? 'none' : undefined,
         }}
-        className="relative z-10 flex w-full max-w-lg flex-col animate-slide-up rounded-t-2xl border border-sand-200 bg-white shadow-2xl sm:m-4 sm:rounded-2xl max-h-[min(90vh,640px)]"
+        className="relative z-10 flex w-full max-w-lg flex-col animate-slide-up rounded-t-2xl border border-sand-200 bg-sand-50 shadow-2xl sm:m-4 sm:rounded-2xl max-h-[min(90vh,640px)]"
       >
         <div
           data-sheet-drag-handle
@@ -383,7 +383,7 @@ export function QuickLogSheet() {
                       className={[
                         'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors',
                         isSelected
-                          ? 'border-sage-500 bg-sage-500 text-white'
+                          ? 'border-sage-500 bg-sage-500 text-on-accent'
                           : 'border-sage-200 bg-sage-50 text-sage-700 hover:border-sage-400',
                       ].join(' ')}
                     >
@@ -573,7 +573,7 @@ export function QuickLogSheet() {
           </div>
         </div>
 
-        <div className="shrink-0 border-t border-sand-100 bg-white px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div className="shrink-0 border-t border-sand-100 bg-sand-50 px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           {isOneOff && (
             <p className="mb-3 text-xs text-sage-400">
               Logged as a one-off. You can add it to your tracked symptoms in check-in settings.

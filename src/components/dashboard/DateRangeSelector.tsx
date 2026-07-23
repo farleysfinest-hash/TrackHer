@@ -35,8 +35,8 @@ export function DateRangeSelector() {
             className={[
               'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
               datePreset === key
-                ? 'bg-sage-500 text-white'
-                : 'text-sage-600 hover:bg-white',
+                ? 'bg-sage-500 text-on-accent'
+                : 'text-sage-600 hover:bg-sand-50',
             ].join(' ')}
           >
             {label}

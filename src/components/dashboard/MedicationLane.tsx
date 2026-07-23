@@ -24,7 +24,7 @@ function LaneTooltip({ state }: { state: LaneTooltipState }) {
   const { row, segment } = state;
   return (
     <div
-      className="pointer-events-none fixed z-50 rounded-lg border border-sand-200 bg-white px-3 py-2 text-xs shadow-lg"
+      className="pointer-events-none fixed z-50 rounded-lg border border-sand-200 bg-sand-50 px-3 py-2 text-xs shadow-lg"
       style={{ left: state.x, top: state.y, transform: 'translate(-50%, -110%)' }}
     >
       <p className="font-medium text-sage-800">{row.medicationName}</p>

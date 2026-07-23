@@ -27,7 +27,7 @@ export function RadioGroup({ label, options, value, onChange, error, name }: Rad
                 'flex cursor-pointer flex-col rounded-xl border p-4 transition-colors duration-150',
                 isSelected
                   ? 'border-sage-500 bg-sage-50'
-                  : 'border-sand-200 bg-white hover:border-sage-300 hover:bg-sage-50/50',
+                  : 'border-sand-200 bg-sand-50 hover:border-sage-300 hover:bg-sage-50/50',
               ].join(' ')}
             >
               <div className="flex items-start gap-3">

@@ -35,7 +35,7 @@ export function LabTrendSelector({ labResults, selectedKey, onChange }: LabTrend
         id="lab-trend-select"
         value={selectedKey}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full min-w-[10rem] rounded-lg border border-sand-200 bg-white px-3 py-2 text-base text-sage-700 focus:border-sage-400 focus:outline-none focus:ring-1 focus:ring-sage-400 sm:w-auto sm:max-w-xs"
+        className="w-full min-w-[10rem] rounded-lg border border-sand-200 bg-sand-50 px-3 py-2 text-base text-sage-700 focus:border-sage-400 focus:outline-none focus:ring-1 focus:ring-sage-400 sm:w-auto sm:max-w-xs"
       >
         {LAB_CATEGORIES.map((cat) => {
           const biomarkers = LAB_BIOMARKERS.filter(

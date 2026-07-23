@@ -59,7 +59,7 @@ export function StepCheckinDay({ onComplete, onBack }: StepCheckinDayProps) {
                 'rounded-full border px-4 py-2 text-sm font-medium transition',
                 isSelected
                   ? 'border-sage-600 bg-sage-50 text-sage-800 ring-2 ring-sage-500/20'
-                  : 'border-sand-200 bg-white text-sage-600 hover:border-sage-300 hover:bg-sage-50/50',
+                  : 'border-sand-200 bg-sand-50 text-sage-600 hover:border-sage-300 hover:bg-sage-50/50',
               ].join(' ')}
               aria-pressed={isSelected}
             >

@@ -39,7 +39,7 @@ export function MRSCoreForm({ onNext, onBack }: MRSCoreFormProps) {
         <p className="mt-2 text-sage-500">{getTimeframeLabel(frequency)}</p>
       </div>
 
-      <div className="rounded-xl border border-sand-200 bg-white px-4">
+      <div className="rounded-xl border border-sand-200 bg-sand-50 px-4">
         {orderedSymptoms.map((symptom) => (
           <SeveritySlider
             key={symptom.key}

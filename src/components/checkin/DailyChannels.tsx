@@ -54,7 +54,7 @@ function ChannelRow({
               className={[
                 'flex h-11 w-11 items-center justify-center rounded-full text-sm font-medium transition-all duration-150',
                 isSelected
-                  ? 'scale-110 bg-sage-500 text-white shadow-md'
+                  ? 'scale-110 bg-sage-500 text-on-accent shadow-md'
                   : 'bg-sand-100 text-sage-600 hover:bg-sage-100 hover:text-sage-800',
               ].join(' ')}
               aria-label={`${ariaPrefix} ${score}`}
@@ -166,7 +166,7 @@ export function DailyChannels({ onNext }: DailyChannelsProps) {
                     className={[
                       'rounded-full px-4 py-2 text-sm font-medium transition-all duration-150',
                       isSelected
-                        ? 'scale-110 bg-sage-500 text-white shadow-md'
+                        ? 'scale-110 bg-sage-500 text-on-accent shadow-md'
                         : 'bg-sand-100 text-sage-600 hover:bg-sage-100',
                     ].join(' ')}
                     aria-label={`Bleeding: ${opt.label}`}

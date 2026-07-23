@@ -156,7 +156,7 @@ export function CheckinReadout({
       </button>
 
       {showAllScores && (
-        <div className="space-y-4 rounded-xl border border-sand-200 bg-white p-4">
+        <div className="space-y-4 rounded-xl border border-sand-200 bg-sand-50 p-4">
           <Card variant="outlined" padding="sm">
             <p className="text-sm text-sage-500">Daily pulse</p>
             <div className="mt-2">

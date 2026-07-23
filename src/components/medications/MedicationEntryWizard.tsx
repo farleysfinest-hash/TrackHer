@@ -55,7 +55,7 @@ export function MedicationEntryWizard({ isOpen, onClose, onComplete }: Medicatio
       aria-modal="true"
       aria-label="Add medication"
     >
-      <header className="safe-area-top flex items-center justify-between border-b border-sand-200 bg-white px-6 pb-4">
+      <header className="safe-area-top flex items-center justify-between border-b border-sand-200 bg-sand-50 px-6 pb-4">
         <h1 className="font-display text-xl text-sage-800">Add Medication</h1>
         <button
           type="button"

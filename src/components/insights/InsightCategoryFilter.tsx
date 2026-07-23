@@ -25,7 +25,7 @@ export function InsightCategoryFilter({
             className={[
               'rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
               isActive
-                ? 'bg-sage-500 text-white'
+                ? 'bg-sage-500 text-on-accent'
                 : 'bg-sand-100 text-sage-600 hover:bg-sand-200',
             ].join(' ')}
           >
