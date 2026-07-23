@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useCheckins } from '../../hooks/useCheckins';
 import { useInsights } from '../../hooks/useInsights';
 import { useMedicationChanges } from '../../hooks/useMedicationChanges';
@@ -46,6 +46,8 @@ interface CheckinReadoutProps {
   ratedExtended: Array<{ symptom_key: string; severity: MRSScore }>;
   notes: string;
   onDone: () => void;
+  /** Optional content above Done (e.g. post-MRS nudge). */
+  beforeDone?: ReactNode;
 }
 
 export function CheckinReadout({
@@ -62,6 +64,7 @@ export function CheckinReadout({
   ratedExtended,
   notes,
   onDone,
+  beforeDone,
 }: CheckinReadoutProps) {
   const [showAllScores, setShowAllScores] = useState(false);
   const { checkins, fetchCheckins } = useCheckins();
@@ -186,6 +189,8 @@ export function CheckinReadout({
           {notes && <p className="text-sm italic text-sage-600">&ldquo;{notes}&rdquo;</p>}
         </div>
       )}
+
+      {beforeDone}
 
       <Button onClick={onDone} className="w-full">
         Done

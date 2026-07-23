@@ -20,6 +20,7 @@ import { getPrimaryInstrument } from '../../data/instruments/registry';
 import { getItemStorageKey } from '../../data/instruments/scoring';
 import { InstrumentScoreBadge } from './InstrumentScoreBadge';
 import { CheckinReadout } from './CheckinReadout';
+import { PostCheckinNudge } from './PostCheckinNudge';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import type { MRSScore } from '../../types/database';
@@ -159,6 +160,7 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
         ratedExtended={ratedExtended}
         notes={notes}
         onDone={onSuccess}
+        beforeDone={<PostCheckinNudge />}
       />
     );
   }
