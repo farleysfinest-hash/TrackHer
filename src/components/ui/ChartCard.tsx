@@ -4,8 +4,9 @@ import { Button } from './Button';
 import { Modal } from './Modal';
 import { tapMedium } from '../../lib/haptics';
 
-const LONG_PRESS_MS = 480;
-const MOVE_CANCEL_PX = 12;
+const LONG_PRESS_MS = 450;
+/** Finger tremor / Recharts noise — cancel only on a real drag. */
+const MOVE_CANCEL_PX = 28;
 
 export type ChartCardChildren =
   | ReactNode
@@ -48,6 +49,8 @@ export function ChartCard({
   const showExpand = expandable && !isEmpty;
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startRef = useRef<{ x: number; y: number } | null>(null);
+  /** True while a long-press timer is armed — used to ignore late pointer noise. */
+  const armedRef = useRef(false);
 
   const clearPress = useCallback(() => {
     if (timerRef.current != null) {
@@ -55,6 +58,7 @@ export function ChartCard({
       timerRef.current = null;
     }
     startRef.current = null;
+    armedRef.current = false;
   }, []);
 
   const openExpanded = useCallback(() => {
@@ -69,18 +73,20 @@ export function ChartCard({
       const el = e.target as HTMLElement | null;
       if (el?.closest('button, a, input, select, textarea, label, [role="button"]')) return;
       startRef.current = { x: e.clientX, y: e.clientY };
-      clearPress();
+      armedRef.current = true;
+      if (timerRef.current != null) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
         timerRef.current = null;
+        if (!armedRef.current) return;
         openExpanded();
       }, LONG_PRESS_MS);
     },
-    [showExpand, clearPress, openExpanded],
+    [showExpand, openExpanded],
   );
 
   const onPointerMove = useCallback(
     (e: React.PointerEvent) => {
-      if (!startRef.current || timerRef.current == null) return;
+      if (!armedRef.current || !startRef.current) return;
       const dx = e.clientX - startRef.current.x;
       const dy = e.clientY - startRef.current.y;
       if (dx * dx + dy * dy > MOVE_CANCEL_PX * MOVE_CANCEL_PX) {
@@ -125,12 +131,19 @@ export function ChartCard({
         {emptyBody ?? (
           <div
             style={{ minHeight }}
-            className="touch-manipulation select-none"
+            className={[
+              'select-none',
+              // Let long-press hit the card, not Recharts (which steals touch for cursors/tooltips).
+              showExpand
+                ? 'touch-manipulation [&_.recharts-wrapper]:pointer-events-none [&_button]:pointer-events-auto [&_a]:pointer-events-auto [&_[role=button]]:pointer-events-auto'
+                : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={clearPress}
             onPointerCancel={clearPress}
-            onPointerLeave={clearPress}
             onContextMenu={(e) => {
               if (showExpand) e.preventDefault();
             }}

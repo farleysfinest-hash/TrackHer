@@ -134,7 +134,7 @@ function StoryChartsBody({
 
       <div className="relative">
         <ResponsiveContainer width="100%" height={mrsHeight}>
-          <LineChart data={chartData} margin={CHART_MARGIN} syncId={syncId}>
+          <LineChart data={chartData} margin={CHART_MARGIN} syncId={interactive ? syncId : undefined}>
             <XAxis dataKey="date" hide />
             <ObservationWindowAreas regions={windowRegions} />
             <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} vertical={false} />
@@ -146,11 +146,14 @@ function StoryChartsBody({
               axisLine={false}
               tickLine={false}
             />
-            <Tooltip
-              isAnimationActive={false}
-              wrapperStyle={CHART_TOOLTIP_WRAPPER_STYLE}
-              content={interactive ? <ChartTooltipContent /> : () => null}
-            />
+            {interactive && (
+              <Tooltip
+                isAnimationActive={false}
+                cursor={false}
+                wrapperStyle={CHART_TOOLTIP_WRAPPER_STYLE}
+                content={<ChartTooltipContent />}
+              />
+            )}
             <WeeklySegmentLines
               segmentKeys={mrsSegmentKeys}
               name="MRS Score"
@@ -191,7 +194,7 @@ function StoryChartsBody({
             </div>
           </div>
           <ResponsiveContainer width="100%" height={pulseHeight}>
-            <AreaChart data={chartData} margin={CHART_MARGIN} syncId={syncId}>
+            <AreaChart data={chartData} margin={CHART_MARGIN} syncId={interactive ? syncId : undefined}>
               <XAxis dataKey="date" hide />
               <ObservationWindowAreas regions={windowRegions} />
               <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} vertical={false} />
@@ -203,7 +206,9 @@ function StoryChartsBody({
                 axisLine={false}
                 tickLine={false}
               />
-              <Tooltip isAnimationActive={false} content={() => null} />
+              {interactive && (
+                <Tooltip isAnimationActive={false} cursor={false} content={() => null} />
+              )}
               <Area
                 dataKey="pulseRaw"
                 type="monotone"

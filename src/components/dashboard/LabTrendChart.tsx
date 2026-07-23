@@ -232,18 +232,17 @@ function LabTrendChartComponent({
                     width={44}
                     tickFormatter={(v) => formatLabChartValue(Number(v))}
                   />
-                  <Tooltip
-                    trigger="click"
-                    isAnimationActive={false}
-                    wrapperStyle={CHART_TOOLTIP_WRAPPER_STYLE}
-                    content={
-                      interactive ? (
+                  {interactive && (
+                    <Tooltip
+                      trigger="click"
+                      isAnimationActive={false}
+                      cursor={false}
+                      wrapperStyle={CHART_TOOLTIP_WRAPPER_STYLE}
+                      content={
                         <LabTooltipContent biomarkerLabel={biomarker.label} unit={biomarker.unit} />
-                      ) : (
-                        () => null
-                      )
-                    }
-                  />
+                      }
+                    />
+                  )}
                   <Scatter
                     data={data}
                     dataKey="value"

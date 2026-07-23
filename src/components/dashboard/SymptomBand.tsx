@@ -196,7 +196,7 @@ export function SymptomBand({
           <BandDoseMarkerOverlay markers={markers} height={BAND_CHART_HEIGHT} />
         )}
         <ResponsiveContainer width="100%" height={BAND_CHART_HEIGHT}>
-          <ComposedChart data={data} margin={BAND_CHART_MARGIN} syncId={syncId}>
+          <ComposedChart data={data} margin={BAND_CHART_MARGIN} syncId={interactive ? syncId : undefined}>
             <XAxis dataKey="date" hide />
             {observationRegions && observationRegions.length > 0 && (
               <ObservationWindowAreas regions={observationRegions} />
@@ -245,21 +245,24 @@ export function SymptomBand({
               />
             ))}
             <YAxis hide domain={[0, domainMax]} />
-            <Tooltip
-              isAnimationActive={false}
-              wrapperStyle={CHART_TOOLTIP_WRAPPER_STYLE}
-              content={
-                interactive && isTooltipHost ? (
-                  <SymptomBandTooltip
-                    tooltipSeries={seriesForTooltip}
-                    tooltipMode={tooltipMode}
-                    showMrsTotal={showMrsTotal}
-                  />
-                ) : (
-                  () => null
-                )
-              }
-            />
+            {interactive && (
+              <Tooltip
+                isAnimationActive={false}
+                cursor={false}
+                wrapperStyle={CHART_TOOLTIP_WRAPPER_STYLE}
+                content={
+                  isTooltipHost ? (
+                    <SymptomBandTooltip
+                      tooltipSeries={seriesForTooltip}
+                      tooltipMode={tooltipMode}
+                      showMrsTotal={showMrsTotal}
+                    />
+                  ) : (
+                    () => null
+                  )
+                }
+              />
+            )}
           </ComposedChart>
         </ResponsiveContainer>
       </div>
