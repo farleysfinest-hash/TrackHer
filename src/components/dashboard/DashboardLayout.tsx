@@ -7,7 +7,6 @@ import { useInsights } from '../../hooks/useInsights';
 import { useStageProfile } from '../../hooks/useStageProfile';
 import { getStageTrackingPhrase } from '../../engine/stageProfile';
 import { refreshCheckinStatusForCurrentUser } from '../../stores/checkinStatusStore';
-import { DateRangeSelector } from './DateRangeSelector';
 import { ScoreSummaryCards } from './ScoreSummaryCards';
 import { WelcomeMessage } from './WelcomeMessage';
 import { StoryColumn } from './StoryColumn';
@@ -146,8 +145,6 @@ export function DashboardLayout() {
           <RecentLogs />
 
           <UnlockProgress checkinCount={mrsCheckinCount} />
-
-          <DateRangeSelector />
 
           <ScoreSummaryCards checkins={summaryCheckins} dateRange={dateRange} />
 
