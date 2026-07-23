@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase';
 import type { SymptomCheckin } from '../types/database';
 import { hasMRSData } from '../utils/checkinHelpers';
-import { addDaysISO, daysBetweenISO, dayOfWeekISO } from '../utils/localDate';
+import { addDaysISO, daysBetweenISO } from '../utils/localDate';
 
 export interface CheckinStatusSnapshot {
   recentCheckins: SymptomCheckin[];
@@ -80,7 +80,8 @@ export function computeCheckinStatus(
   } else if (checkinDay === null) {
     isDue = true;
   } else {
-    isDue = dayOfWeekISO(todayStr) >= checkinDay;
+    // Preferred day is a nudge, not a gate: once the weekly minimum is unmet, due.
+    isDue = true;
   }
 
   return {

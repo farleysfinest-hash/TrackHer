@@ -346,19 +346,25 @@ describe('computeCheckinStatus', () => {
     expect(status.isDue).toBe(true);
   });
 
-  it('is not due before the configured check-in day', () => {
-    // TODAY is Wednesday (3); configured day is Thursday (4)
+  it('is due when weekly minimum unmet even before the preferred check-in day', () => {
+    // TODAY is Wednesday (3); preferred day is Thursday (4) — preference must not suppress due.
     const status = computeCheckinStatus(emptySnapshot(), TODAY, 4);
-    expect(status.isDue).toBe(false);
+    expect(status.isDue).toBe(true);
   });
 
-  it('is due on the configured check-in day', () => {
+  it('is due on the preferred check-in day when weekly minimum unmet', () => {
     const status = computeCheckinStatus(emptySnapshot(), TODAY, 3);
     expect(status.isDue).toBe(true);
   });
 
-  it('is due after the configured check-in day', () => {
+  it('is due after the preferred check-in day when weekly minimum unmet', () => {
     const status = computeCheckinStatus(emptySnapshot(), TODAY, 2);
+    expect(status.isDue).toBe(true);
+  });
+
+  it('is due Sun–Fri when Saturday is preferred and weekly minimum unmet', () => {
+    // Saturday = 6; TODAY Wednesday = 3. Old >= gate stayed silent until Sat.
+    const status = computeCheckinStatus(emptySnapshot(), TODAY, 6);
     expect(status.isDue).toBe(true);
   });
 
