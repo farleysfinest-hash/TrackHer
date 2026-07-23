@@ -11,10 +11,6 @@ import { useAuthStore } from '../../stores/authStore';
 import { DateRangeSelector } from './DateRangeSelector';
 import { ScoreSummaryCards } from './ScoreSummaryCards';
 import { WelcomeMessage } from './WelcomeMessage';
-import {
-  PulsePromptCard,
-  WeeklyCheckinPromptCard,
-} from '../checkin/CheckinPromptWidget';
 import { StoryColumn } from './StoryColumn';
 import { SubscaleChart } from './SubscaleChart';
 import { SymptomHeatmap } from './SymptomHeatmap';
@@ -42,7 +38,8 @@ type DashboardMode = 'full' | 'early';
 export function DashboardLayout() {
   const dateRange = useDashboardStore((s) => s.dateRange);
   const refreshDateRange = useDashboardStore((s) => s.refreshDateRange);
-  const checkinStatus = useCheckinStatus();
+  // Kept warm for prompt 3 header subtitle swap (due-state).
+  useCheckinStatus();
   const { insights, primaryInsights, moreInsights, safeguardingInsights, dismissInsight, extendedSymptoms } = useInsights();
   const {
     getSymptomTrendData,
@@ -127,27 +124,6 @@ export function DashboardLayout() {
     />
   ));
 
-  const pulseCard = (
-    <PulsePromptCard
-      hasCheckedInToday={checkinStatus.hasCheckedInToday}
-      hasPulseToday={checkinStatus.hasPulseToday}
-      hasFullMrsToday={checkinStatus.hasFullMrsToday}
-      todaysCheckin={checkinStatus.todaysCheckin}
-      isLoading={checkinStatus.isLoading}
-    />
-  );
-
-  const weeklyCard = (
-    <WeeklyCheckinPromptCard
-      hasFullMrsToday={checkinStatus.hasFullMrsToday}
-      weeklyMinimumMet={checkinStatus.weeklyMinimumMet}
-      isDue={checkinStatus.isDue}
-      todaysCheckin={checkinStatus.todaysCheckin}
-      daysSinceLastCheckin={checkinStatus.daysSinceLastCheckin}
-      isLoading={checkinStatus.isLoading}
-    />
-  );
-
   return (
     <div className="mx-auto min-w-0 max-w-6xl space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -166,10 +142,6 @@ export function DashboardLayout() {
           {safeguardingCards}
 
           <QuickLogWidget />
-
-          {pulseCard}
-
-          {weeklyCard}
 
           <FullDashboardUnlockCard />
 
@@ -235,10 +207,6 @@ export function DashboardLayout() {
           {safeguardingCards}
 
           <QuickLogWidget />
-
-          {pulseCard}
-
-          {weeklyCard}
 
           <WelcomeMessage />
 

@@ -14,6 +14,8 @@ export interface PulsePromptCardProps {
   hasFullMrsToday: boolean;
   todaysCheckin: SymptomCheckin | null;
   isLoading?: boolean;
+  /** When set (e.g. already on /checkin), start the pulse flow instead of navigating. */
+  onStart?: () => void;
 }
 
 export interface WeeklyCheckinPromptCardProps {
@@ -23,6 +25,8 @@ export interface WeeklyCheckinPromptCardProps {
   todaysCheckin: SymptomCheckin | null;
   daysSinceLastCheckin: number | null;
   isLoading?: boolean;
+  /** When set (e.g. already on /checkin), start/edit the full flow instead of navigating. */
+  onStart?: () => void;
 }
 
 export function PulsePromptCard({
@@ -31,6 +35,7 @@ export function PulsePromptCard({
   hasFullMrsToday,
   todaysCheckin,
   isLoading = false,
+  onStart,
 }: PulsePromptCardProps) {
   if (isLoading) {
     return (
@@ -72,9 +77,15 @@ export function PulsePromptCard({
         description="Ten seconds on energy, mood, and sleep — between weekly check-ins."
       />
       <div className="mt-4">
-        <Link to="/checkin?mode=quick" className="block">
-          <Button className="w-full sm:w-auto">Quick pulse (~10 sec)</Button>
-        </Link>
+        {onStart ? (
+          <Button className="w-full sm:w-auto" onClick={onStart}>
+            Quick pulse (~10 sec)
+          </Button>
+        ) : (
+          <Link to="/checkin?mode=quick" className="block">
+            <Button className="w-full sm:w-auto">Quick pulse (~10 sec)</Button>
+          </Link>
+        )}
       </div>
     </Card>
   );
@@ -87,6 +98,7 @@ export function WeeklyCheckinPromptCard({
   todaysCheckin,
   daysSinceLastCheckin,
   isLoading = false,
+  onStart,
 }: WeeklyCheckinPromptCardProps) {
   const isComeback = daysSinceLastCheckin !== null && daysSinceLastCheckin >= 7;
 
@@ -112,9 +124,19 @@ export function WeeklyCheckinPromptCard({
           <MrsScoreDisplay checkin={todaysCheckin} compact showDot />
         </div>
         <div className="mt-4">
-          <Link to="/checkin" className="text-sm text-sage-500 underline hover:text-sage-700">
-            Edit today&apos;s check-in
-          </Link>
+          {onStart ? (
+            <button
+              type="button"
+              onClick={onStart}
+              className="text-sm text-sage-500 underline hover:text-sage-700"
+            >
+              Edit today&apos;s check-in
+            </button>
+          ) : (
+            <Link to="/checkin" className="text-sm text-sage-500 underline hover:text-sage-700">
+              Edit today&apos;s check-in
+            </Link>
+          )}
         </div>
       </Card>
     );
@@ -131,11 +153,17 @@ export function WeeklyCheckinPromptCard({
           done
         />
         <div className="mt-4">
-          <Link to="/checkin?mode=full" className="block">
-            <Button variant="secondary" className="w-full sm:w-auto">
+          {onStart ? (
+            <Button variant="secondary" className="w-full sm:w-auto" onClick={onStart}>
               Log another check-in (~2 min)
             </Button>
-          </Link>
+          ) : (
+            <Link to="/checkin?mode=full" className="block">
+              <Button variant="secondary" className="w-full sm:w-auto">
+                Log another check-in (~2 min)
+              </Button>
+            </Link>
+          )}
         </div>
       </Card>
     );
@@ -158,11 +186,17 @@ export function WeeklyCheckinPromptCard({
         }
       />
       <div className="mt-4">
-        <Link to="/checkin?mode=full" className="block">
-          <Button className="w-full sm:w-auto">
+        {onStart ? (
+          <Button className="w-full sm:w-auto" onClick={onStart}>
             {isDue || isComeback ? 'Weekly check-in (~2 min)' : 'Check in early (~2 min)'}
           </Button>
-        </Link>
+        ) : (
+          <Link to="/checkin?mode=full" className="block">
+            <Button className="w-full sm:w-auto">
+              {isDue || isComeback ? 'Weekly check-in (~2 min)' : 'Check in early (~2 min)'}
+            </Button>
+          </Link>
+        )}
       </div>
     </Card>
   );

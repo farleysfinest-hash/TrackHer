@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { CheckCircle2 } from 'lucide-react';
 import { useCheckinStatus } from '../hooks/useCheckinStatus';
 import { useCheckins } from '../hooks/useCheckins';
 import { useCheckinStore } from '../stores/checkinStore';
@@ -7,13 +6,14 @@ import { useAuthStore } from '../stores/authStore';
 import { CheckinFlow } from '../components/checkin/CheckinFlow';
 import { CheckinHistory } from '../components/checkin/CheckinHistory';
 import { CheckinDetailModal } from '../components/checkin/CheckinDetailModal';
-import { MrsScoreDisplay } from '../components/checkin/MrsScoreDisplay';
-import { Card } from '../components/ui/Card';
+import {
+  PulsePromptCard,
+  WeeklyCheckinPromptCard,
+} from '../components/checkin/CheckinPromptWidget';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
 import { getLocalDateISO, getResolvedTimezone } from '../utils/checkinHelpers';
-import { DailyChannelsDisplay } from '../components/ui/DailyChannelsDisplay';
 import { formatLoggingDate } from '../utils/formatters';
 import { isValidCalendarDate } from '../utils/localDate';
 import type { SymptomCheckin, CheckinDraft } from '../types/database';
@@ -23,8 +23,17 @@ import { useLocation, useNavigate } from 'react-router-dom';
 export function CheckinPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { hasCheckedInToday, todaysCheckin, weeklyMinimumMet, refresh, isLoading } =
-    useCheckinStatus();
+  const {
+    hasCheckedInToday,
+    todaysCheckin,
+    weeklyMinimumMet,
+    refresh,
+    isLoading,
+    hasPulseToday,
+    hasFullMrsToday,
+    isDue,
+    daysSinceLastCheckin,
+  } = useCheckinStatus();
   const { fetchCheckinDetail, getCheckinForDate } = useCheckins();
   const setMode = useCheckinStore((s) => s.setMode);
   const setTargetDate = useCheckinStore((s) => s.setTargetDate);
@@ -156,7 +165,7 @@ export function CheckinPage() {
     const mode = params.get('mode');
     if (mode !== 'quick' && mode !== 'full') return;
 
-    // Auto-start from dashboard prompt.
+    // Deep-link / notification entry still auto-starts.
     void startCheckin(mode);
     navigate('/checkin', { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -165,9 +174,6 @@ export function CheckinPage() {
   if (activeFlow) {
     return <CheckinFlow onClose={() => setActiveFlow(false)} onComplete={handleFlowComplete} />;
   }
-
-  const todaysIsPulse = todaysCheckin?.checkin_type === 'pulse';
-  const loggingForPastDay = backdateValid && backdateValue < todayStr;
 
   return (
     <div className="min-w-0 space-y-10 overflow-x-hidden">
@@ -179,126 +185,67 @@ export function CheckinPage() {
         </p>
       </div>
 
-      {!isLoading && hasCheckedInToday && todaysCheckin && !loggingForPastDay ? (
-        <Card variant="elevated">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-start gap-3">
-              <CheckCircle2 className="h-6 w-6 shrink-0 text-success" />
-              <div>
-                <h2 className="font-display text-lg text-sage-800">
-                  {todaysIsPulse ? 'Pulse logged today' : "You've checked in today"}
-                </h2>
-                {!todaysIsPulse && weeklyMinimumMet && (
-                  <p className="mt-1 text-sm text-sage-500">
-                    This week&apos;s minimum is met. Log again on another day anytime — more data
-                    sharpens your trends.
-                  </p>
-                )}
-                <div className="mt-2 flex flex-wrap items-center gap-4 text-sm">
-                  <DailyChannelsDisplay checkin={todaysCheckin} />
-                  <MrsScoreDisplay checkin={todaysCheckin} compact showDot />
-                </div>
-              </div>
-            </div>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                if (todaysIsPulse) {
-                  void startFullFromPulse(todaysCheckin);
-                } else {
-                  setPendingMode('full');
-                  void handleUpdateExisting(todayStr);
-                }
-              }}
-            >
-              {todaysIsPulse ? 'Complete full check-in' : 'Edit'}
-            </Button>
-          </div>
-        </Card>
-      ) : (
-        !isLoading && (
-          <Card variant="elevated">
-            <h2 className="font-display text-xl text-sage-800">How are you feeling?</h2>
-            {loggingForPastDay && (
+      <WeeklyCheckinPromptCard
+        hasFullMrsToday={hasFullMrsToday}
+        weeklyMinimumMet={weeklyMinimumMet}
+        isDue={isDue}
+        todaysCheckin={todaysCheckin}
+        daysSinceLastCheckin={daysSinceLastCheckin}
+        isLoading={isLoading}
+        onStart={() => void startCheckin('full')}
+      />
+
+      <PulsePromptCard
+        hasCheckedInToday={hasCheckedInToday}
+        hasPulseToday={hasPulseToday}
+        hasFullMrsToday={hasFullMrsToday}
+        todaysCheckin={todaysCheckin}
+        isLoading={isLoading}
+        onStart={() => void startCheckin('quick')}
+      />
+
+      <div>
+        {!showBackdate ? (
+          <button
+            type="button"
+            onClick={() => setShowBackdate(true)}
+            className="text-sm text-sage-500 underline hover:text-sage-700"
+          >
+            Logging for a past day?
+          </button>
+        ) : (
+          <div className="max-w-xs">
+            <Input
+              label="Check-in date"
+              type="date"
+              value={backdateValue}
+              max={todayStr}
+              onChange={(e) => setBackdateValue(e.target.value)}
+            />
+            {!backdateValid && (
+              <p className="mt-2 text-sm text-amber-700">
+                Finish picking a date, or go back to today — check-ins started now would be logged
+                for today.
+              </p>
+            )}
+            {backdateValid && backdateValue < todayStr && (
               <p className="mt-2 text-sm text-sage-600">
-                Logging for {formatLoggingDate(backdateValue)}
+                Logging for {formatLoggingDate(backdateValue)}. Use the cards above to start.
               </p>
             )}
-            {weeklyMinimumMet && !loggingForPastDay && (
-              <p className="mt-2 text-sm text-sage-500">
-                This week&apos;s check-in minimum is already met. Extra entries are welcome.
-              </p>
-            )}
-            <div className="mt-6 grid grid-cols-1 gap-3">
-              <button
-                type="button"
-                onClick={() => void startCheckin('full')}
-                disabled={showBackdate && !backdateValid}
-                className="rounded-xl border border-sand-200 bg-white p-4 text-left transition hover:border-sage-300 hover:bg-sage-50/50 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <p className="text-xs font-medium uppercase tracking-wide text-sage-500">
-                  Weekly check-in
-                </p>
-                <p className="mt-1 font-display text-lg text-sage-800">
-                  {weeklyMinimumMet ? 'Another check-in (~2 min)' : 'Full check-in (~2 min)'}
-                </p>
-                <p className="mt-1 text-sm text-sage-500">
-                  Rate your symptoms on the clinical scale
-                </p>
-              </button>
-              <button
-                type="button"
-                onClick={() => void startCheckin('quick')}
-                disabled={showBackdate && !backdateValid}
-                className="rounded-xl border border-sand-200 bg-white p-4 text-left transition hover:border-sage-300 hover:bg-sage-50/50 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <p className="text-xs font-medium uppercase tracking-wide text-sage-500">
-                  Daily pulse
-                </p>
-                <p className="mt-1 font-display text-lg text-sage-800">Quick pulse (~10 sec)</p>
-                <p className="mt-1 text-sm text-sage-500">Just log how you feel overall today</p>
-              </button>
-            </div>
-            <div className="mt-4">
-              {!showBackdate ? (
-                <button
-                  type="button"
-                  onClick={() => setShowBackdate(true)}
-                  className="text-sm text-sage-500 underline hover:text-sage-700"
-                >
-                  Logging for a past day?
-                </button>
-              ) : (
-                <div className="max-w-xs">
-                  <Input
-                    label="Check-in date"
-                    type="date"
-                    value={backdateValue}
-                    max={todayStr}
-                    onChange={(e) => setBackdateValue(e.target.value)}
-                  />
-                  {!backdateValid && (
-                    <p className="mt-2 text-sm text-amber-700">
-                      Finish picking a date, or go back to today — check-ins started now
-                      would be logged for today.
-                    </p>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowBackdate(false);
-                      setBackdateValue('');
-                    }}
-                    className="mt-2 text-sm text-sage-500 underline hover:text-sage-700"
-                  >
-                    Back to today
-                  </button>
-                </div>
-              )}
-            </div>
-          </Card>
-        )
-      )}
+            <button
+              type="button"
+              onClick={() => {
+                setShowBackdate(false);
+                setBackdateValue('');
+              }}
+              className="mt-2 text-sm text-sage-500 underline hover:text-sage-700"
+            >
+              Back to today
+            </button>
+          </div>
+        )}
+      </div>
 
       <CheckinHistory onViewDetails={setDetailCheckin} reloadToken={historyReloadToken} />
 
