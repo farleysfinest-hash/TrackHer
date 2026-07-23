@@ -46,9 +46,13 @@ export function RecentLogs() {
       >
         <DashboardCardHeader
           icon={History}
-          eyebrow="Recent logs"
-          title={`${recent.length} recent ${recent.length === 1 ? 'entry' : 'entries'}`}
-          description={peek}
+          eyebrow="Quick log"
+          title="Recent symptom logs"
+          description={
+            peek
+              ? `In-the-moment entries · ${peek}`
+              : 'In-the-moment symptoms from the dashboard Quick Log.'
+          }
         />
         {folderOpen ? (
           <ChevronUp className="mt-1 h-5 w-5 shrink-0 text-sage-400" aria-hidden />

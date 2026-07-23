@@ -178,8 +178,6 @@ export function CheckinPage() {
 
   return (
     <div className="min-w-0 space-y-10 overflow-x-hidden">
-      <RecentLogs />
-
       <div className="min-w-0">
         <h1 className="font-display text-3xl text-sage-800">Check In</h1>
         <p className="mt-1 text-sage-500">
@@ -249,6 +247,8 @@ export function CheckinPage() {
           </div>
         )}
       </div>
+
+      <RecentLogs />
 
       <CheckinHistory onViewDetails={setDetailCheckin} reloadToken={historyReloadToken} />
 
