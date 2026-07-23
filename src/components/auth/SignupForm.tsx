@@ -17,6 +17,7 @@ export function SignupForm() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [needsConfirmation, setNeedsConfirmation] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,6 +41,7 @@ export function SignupForm() {
 
     const result = await signUp(email, password, displayName);
     if (result.success) {
+      setNeedsConfirmation(result.needsEmailConfirmation ?? true);
       setSuccess(true);
     } else {
       setFormError(result.error ?? 'Failed to create account');
@@ -47,16 +49,30 @@ export function SignupForm() {
   };
 
   if (success) {
+    if (needsConfirmation) {
+      return (
+        <div className="text-center">
+          <CheckCircle className="mx-auto mb-4 h-12 w-12 text-success" />
+          <h1 className="font-display text-2xl text-sage-800">Check your email</h1>
+          <p className="mt-2 text-sage-500">
+            We sent a verification link to <strong>{email}</strong>. Click the link to verify your
+            account, then sign in.
+          </p>
+          <Link to="/login" className="mt-6 inline-block">
+            <Button variant="secondary">Back to Sign In</Button>
+          </Link>
+        </div>
+      );
+    }
     return (
       <div className="text-center">
         <CheckCircle className="mx-auto mb-4 h-12 w-12 text-success" />
-        <h1 className="font-display text-2xl text-sage-800">Check your email</h1>
+        <h1 className="font-display text-2xl text-sage-800">Account created</h1>
         <p className="mt-2 text-sage-500">
-          We sent a verification link to <strong>{email}</strong>. Click the link to verify your
-          account, then sign in.
+          Welcome! Your account is ready.
         </p>
         <Link to="/login" className="mt-6 inline-block">
-          <Button variant="secondary">Back to Sign In</Button>
+          <Button variant="secondary">Sign In</Button>
         </Link>
       </div>
     );
