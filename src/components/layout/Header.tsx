@@ -2,9 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Settings, LogOut, ChevronDown } from 'lucide-react';
 import { Logo } from '../ui/Logo';
+import { LogoMark } from '../ui/LogoMark';
 import { useAuth } from '../../hooks/useAuth';
 import { getInitials } from '../../utils/formatters';
-import logoMark from '../../assets/logo-mark.png';
 
 export function Header() {
   const navigate = useNavigate();
@@ -45,13 +45,7 @@ export function Header() {
     <header className="safe-area-top sticky top-0 z-20 flex min-w-0 items-center justify-between gap-3 overflow-x-hidden border-b border-sand-200 bg-sand-50/95 px-4 pb-4 backdrop-blur-sm sm:px-6 md:px-8">
       <div className="flex min-w-0 items-center gap-2 md:hidden">
         <Logo size="sm" className="truncate" />
-        <img
-          src={logoMark}
-          alt=""
-          width={36}
-          height={36}
-          className="block h-9 w-9 shrink-0 object-contain"
-        />
+        <LogoMark size={36} className="h-9 w-9" />
       </div>
       <div className="hidden md:block" />
 

@@ -9,8 +9,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { Logo } from '../ui/Logo';
+import { LogoMark } from '../ui/LogoMark';
 import { APP_VERSION } from '../../lib/constants';
-import logoMark from '../../assets/logo-mark.png';
 import { useCheckinStatus } from '../../hooks/useCheckinStatus';
 
 const navItems: Array<{
@@ -40,13 +40,7 @@ export function Sidebar() {
     <aside className="fixed left-0 top-0 z-30 hidden h-screen w-[240px] flex-col border-r border-sand-200 bg-sand-50 md:flex">
       <div className="flex items-center justify-between gap-2 border-b border-sand-200 px-6 py-4">
         <Logo />
-        <img
-          src={logoMark}
-          alt=""
-          width={64}
-          height={64}
-          className="block h-16 w-16 shrink-0 object-contain"
-        />
+        <LogoMark size={64} className="h-16 w-16" />
       </div>
 
       <nav className="flex-1 space-y-1 px-3 py-4">
