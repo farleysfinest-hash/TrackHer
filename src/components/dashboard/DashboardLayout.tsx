@@ -25,6 +25,7 @@ import { RecentLogs } from './RecentLogs';
 import { PersonalSymptomTrends } from './PersonalSymptomTrends';
 import { StrawStageCard } from './StrawStageCard';
 import { UnlockProgress } from './UnlockProgress';
+import { GhostChartFrame } from './GhostChartFrame';
 
 const FULL_DASHBOARD_CHECKINS = 7;
 
@@ -204,6 +205,41 @@ export function DashboardLayout() {
           <UnlockProgress checkinCount={mrsCheckinCount} />
 
           <WelcomeMessage />
+
+          {mrsCheckinCount === 0 ? (
+            <>
+              <GhostChartFrame
+                title="Symptom story"
+                caption={`Your symptom story unlocks after ${FULL_DASHBOARD_CHECKINS} weekly check-ins · ${mrsCheckinCount} done`}
+              />
+              <GhostChartFrame
+                title="Symptom domains"
+                caption={`Your symptom domains unlock after ${FULL_DASHBOARD_CHECKINS} weekly check-ins · ${mrsCheckinCount} done`}
+              />
+            </>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <StoryColumn
+                  data={symptomTrend}
+                  medications={medications}
+                  medicationChanges={changes}
+                  windowStart={dateRange.start}
+                  windowEnd={dateRange.end}
+                  insights={insights}
+                />
+                <p className="text-sm text-sage-500">
+                  More check-ins will sharpen this — {mrsCheckinCount} of {FULL_DASHBOARD_CHECKINS}.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <SubscaleChart data={symptomTrend} />
+                <p className="text-sm text-sage-500">
+                  More check-ins will sharpen this — {mrsCheckinCount} of {FULL_DASHBOARD_CHECKINS}.
+                </p>
+              </div>
+            </>
+          )}
 
           {(primaryInsights.length > 0 || moreInsights.length > 0) && (
             <DashboardInsightsPanel
