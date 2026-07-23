@@ -1,6 +1,14 @@
 import UIKit
 import Capacitor
 
+/// Matches CSS `--color-sand-50`: white in light mode, warm plum-charcoal `#171114` in dark.
+/// Do not use `.systemBackground` — pure black is too harsh for this app.
+private let appBackground = UIColor { traits in
+    traits.userInterfaceStyle == .dark
+        ? UIColor(red: 0.09, green: 0.067, blue: 0.078, alpha: 1) // #171114
+        : .white
+}
+
 /// Capacitor disables WKWebView rubber-banding by default (`scrollView.bounces = false`).
 /// Re-enable it so TrackHer feels like a normal iOS app while staying a React/Capacitor shell.
 class BridgeViewController: CAPBridgeViewController {
@@ -9,8 +17,8 @@ class BridgeViewController: CAPBridgeViewController {
         guard let scrollView = webView?.scrollView else { return }
         scrollView.bounces = true
         scrollView.alwaysBounceVertical = true
-        scrollView.backgroundColor = .white
-        webView?.backgroundColor = .white
+        scrollView.backgroundColor = appBackground
+        webView?.backgroundColor = appBackground
     }
 
     override open func viewDidAppear(_ animated: Bool) {

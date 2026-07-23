@@ -1,6 +1,14 @@
 import UIKit
 import Capacitor
 
+/// Matches CSS `--color-sand-50`: white in light mode, warm plum-charcoal `#171114` in dark.
+/// Do not use `.systemBackground` — pure black is too harsh for this app.
+private let appBackground = UIColor { traits in
+    traits.userInterfaceStyle == .dark
+        ? UIColor(red: 0.09, green: 0.067, blue: 0.078, alpha: 1) // #171114
+        : .white
+}
+
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
@@ -8,7 +16,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Match the web app so rubber-band overscroll never flashes the default black window.
-        window?.backgroundColor = UIColor.white
+        window?.backgroundColor = appBackground
         return true
     }
 
@@ -27,8 +35,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
-        window?.backgroundColor = .white
-        window?.rootViewController?.view.backgroundColor = .white
+        window?.backgroundColor = appBackground
+        window?.rootViewController?.view.backgroundColor = appBackground
     }
 
     func applicationWillTerminate(_ application: UIApplication) {
