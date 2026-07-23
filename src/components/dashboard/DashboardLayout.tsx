@@ -22,7 +22,6 @@ import { ProviderReportButton } from './ProviderReportButton';
 import { DashboardInsightsPanel } from '../insights/DashboardInsightsPanel';
 import { SafeguardingCard } from '../insights/SafeguardingCard';
 import { QuickLogWidget } from './QuickLogWidget';
-import { RecentLogs } from './RecentLogs';
 import { PersonalSymptomTrends } from './PersonalSymptomTrends';
 import { StrawStageCard } from './StrawStageCard';
 import { UnlockProgress } from './UnlockProgress';
@@ -147,8 +146,6 @@ export function DashboardLayout() {
 
           <QuickLogWidget />
 
-          <RecentLogs />
-
           <UnlockProgress checkinCount={mrsCheckinCount} />
 
           <ScoreSummaryCards checkins={summaryCheckins} dateRange={dateRange} />
@@ -210,8 +207,6 @@ export function DashboardLayout() {
           {safeguardingCards}
 
           <QuickLogWidget />
-
-          <RecentLogs />
 
           <UnlockProgress checkinCount={mrsCheckinCount} />
 

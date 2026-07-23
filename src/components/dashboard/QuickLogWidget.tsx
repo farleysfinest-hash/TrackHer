@@ -12,7 +12,6 @@ import { useSymptomSelections } from '../../hooks/useSymptomSelections';
 import { getSymptomByKey, getSymptomChipLabel } from '../../data/symptoms';
 import type { SymptomBodySystem } from '../../types/symptoms';
 import { Card } from '../ui/Card';
-import { DashboardCardHeader } from './DashboardCardHeader';
 import { QuickLogSheet } from './QuickLogSheet';
 
 const ICON_BY_SYSTEM: Partial<Record<SymptomBodySystem, LucideIcon>> = {
@@ -38,14 +37,13 @@ export function QuickLogWidget() {
 
   return (
     <Card variant="elevated">
-      <DashboardCardHeader
-        icon={Zap}
-        eyebrow="Quick log"
-        title="Log a symptom"
-        description="In the moment — about 5 seconds."
-      />
+      <div className="flex items-center gap-2">
+        <Zap className="h-[18px] w-[18px] shrink-0 text-sage-500" aria-hidden />
+        <p className="text-xs font-medium uppercase tracking-wide text-sage-500">Quick log</p>
+        <span className="ml-auto text-sm text-sage-400">in the moment · ~5 sec</span>
+      </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-2.5 flex flex-wrap gap-2">
         {watchSymptomIds.map((id) => {
           const def = getSymptomByKey(id);
           if (!def) return null;
@@ -54,7 +52,7 @@ export function QuickLogWidget() {
               key={id}
               type="button"
               onClick={() => openSheet(id)}
-              className="inline-flex items-center gap-2 rounded-full border border-sage-200 bg-sage-50 px-3 py-1.5 text-sm font-medium text-sage-700 transition-colors hover:border-sage-400 hover:bg-sage-100 active:scale-[0.98]"
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-sage-200 bg-sage-50 px-3 py-1.5 text-sm font-medium text-sage-700 transition-colors hover:border-sage-400 hover:bg-sage-100 active:scale-[0.98]"
             >
               <SymptomIcon bodySystem={def.bodySystem} />
               {getSymptomChipLabel(def)}

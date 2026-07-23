@@ -4,7 +4,7 @@ import { useQuickLog } from '../../hooks/useQuickLog';
 import { getSymptomByKey, getSymptomChipLabel } from '../../data/symptoms';
 import { formatRelativeTime, capitalize } from '../../utils/formatters';
 import { Card } from '../ui/Card';
-import { DashboardCardHeader } from './DashboardCardHeader';
+import { DashboardCardHeader } from '../dashboard/DashboardCardHeader';
 
 /** Severity as depth of rose — same language as the heatmap (design rule 8). Severity is 1–10. */
 function severityColor(severity: number): string {

@@ -5,6 +5,7 @@ import { useCheckinStore } from '../stores/checkinStore';
 import { useAuthStore } from '../stores/authStore';
 import { CheckinFlow } from '../components/checkin/CheckinFlow';
 import { CheckinHistory } from '../components/checkin/CheckinHistory';
+import { RecentLogs } from '../components/checkin/RecentLogs';
 import { CheckinDetailModal } from '../components/checkin/CheckinDetailModal';
 import {
   PulsePromptCard,
@@ -177,6 +178,8 @@ export function CheckinPage() {
 
   return (
     <div className="min-w-0 space-y-10 overflow-x-hidden">
+      <RecentLogs />
+
       <div className="min-w-0">
         <h1 className="font-display text-3xl text-sage-800">Check In</h1>
         <p className="mt-1 text-sage-500">
