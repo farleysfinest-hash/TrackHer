@@ -1,4 +1,5 @@
 import { memo, useMemo, useState } from 'react';
+import { Maximize2 } from 'lucide-react';
 import {
   ResponsiveContainer,
   LineChart,
@@ -10,13 +11,12 @@ import {
   Tooltip,
 } from 'recharts';
 import { ChartCard } from '../ui/ChartCard';
+import { Modal } from '../ui/Modal';
 import { ChartTooltipContent } from './ChartTooltipContent';
 import { MedicationLane } from './MedicationLane';
 import { ObservationWindowAreas } from './ObservationWindowAreas';
 import { CHART_COLORS } from '../../utils/chartHelpers';
-import { formatChartDateLong } from '../../utils/chartHelpers';
 import {
-  CHART_TOOLTIP_SURFACE_STYLE,
   CHART_TOOLTIP_WRAPPER_STYLE,
 } from '../../utils/chartStyle';
 import { buildDailyIndexedWeeklyChart } from '../../utils/weeklyChartSeries';
@@ -40,6 +40,8 @@ import type { Insight } from '../../engine/types';
 
 const PANEL_MRS_HEIGHT = 80;
 const PANEL_PULSE_HEIGHT = 64;
+const PANEL_MRS_HEIGHT_EXPANDED = 180;
+const PANEL_PULSE_HEIGHT_EXPANDED = 140;
 const X_AXIS_HEIGHT = 28;
 const LANE_ROW_HEIGHT = 28;
 /** Clearance under the last med lane for hanging dose-change labels before the date axis. */
@@ -95,32 +97,175 @@ function PulseAxisTick({ x = 0, y = 0, payload, channel }: PulseAxisTickProps) {
   );
 }
 
-interface PulseTooltipProps {
-  active?: boolean;
-  payload?: Array<{ payload?: Record<string, unknown> }>;
-  label?: string | number;
-  channel: PulseChannel;
+interface StoryChartsBodyProps {
+  chartData: ReturnType<typeof buildDailyIndexedWeeklyChart>['dailyRows'];
+  mrsSegmentKeys: string[];
+  activeChannel: PulseChannel;
+  pulseHeader: string;
+  onPulseChannel: (id: PulseChannel) => void;
+  laneRows: ReturnType<typeof buildMedicationLaneRows>;
+  markerLines: ReturnType<typeof doseChangeMarkerPercents>;
+  windowRegions: ReturnType<typeof observationWindowRegions>;
+  mrsHeight: number;
+  pulseHeight: number;
+  /** Unique sync id so expanded + inline charts don't cross-talk. */
+  syncId: string;
 }
 
-function PulseTooltip({ active, payload, label, channel }: PulseTooltipProps) {
-  if (!active || !payload?.length) return null;
-  const point = payload[0]?.payload as { date?: string; pulseRaw?: number | null } | undefined;
-  if (!point || point.pulseRaw === null || point.pulseRaw === undefined) return null;
-
-  const channelLabel = PULSE_CHANNELS.find((c) => c.id === channel)?.label ?? 'Pulse';
-  const dateStr = point.date ?? (typeof label === 'string' ? label : '');
+function StoryChartsBody({
+  chartData,
+  mrsSegmentKeys,
+  activeChannel,
+  pulseHeader,
+  onPulseChannel,
+  laneRows,
+  markerLines,
+  windowRegions,
+  mrsHeight,
+  pulseHeight,
+  syncId,
+}: StoryChartsBodyProps) {
+  const laneHeight = laneRows.length > 0 ? laneRows.length * LANE_ROW_HEIGHT + 8 : 0;
+  const mrsTicks = [0, 22, 44];
 
   return (
-    <div
-      className="rounded-lg border border-sand-200 px-4 py-3 text-sm shadow-lg"
-      style={CHART_TOOLTIP_SURFACE_STYLE}
-    >
-      <p className="font-medium text-sage-800">
-        {dateStr.includes('-') ? formatChartDateLong(dateStr) : label}
-      </p>
-      <p className="mt-1 text-sage-700">
-        {channelLabel}: <strong>{point.pulseRaw}</strong>/5
-      </p>
+    <div>
+      <p className="mb-1 text-[10px] text-sage-500">MRS score · weekly · 0–44</p>
+
+      <div className="relative">
+        <ResponsiveContainer width="100%" height={mrsHeight}>
+          <LineChart data={chartData} margin={CHART_MARGIN} syncId={syncId}>
+            <XAxis dataKey="date" hide />
+            <ObservationWindowAreas regions={windowRegions} />
+            <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} vertical={false} />
+            <YAxis
+              domain={[0, 44]}
+              ticks={mrsTicks}
+              tick={{ fontSize: 10, fill: CHART_COLORS.axisText }}
+              width={CHART_MARGIN_LEFT}
+              axisLine={false}
+              tickLine={false}
+            />
+            {/* Sole tooltip host — pulse keeps an empty Tooltip for syncId alignment. */}
+            <Tooltip
+              isAnimationActive={false}
+              wrapperStyle={CHART_TOOLTIP_WRAPPER_STYLE}
+              content={<ChartTooltipContent />}
+            />
+            <WeeklySegmentLines
+              segmentKeys={mrsSegmentKeys}
+              name="MRS Score"
+              stroke={INK.mrsStroke}
+              dotColor={INK.mrsDot}
+              seriesProps={{
+                strokeWidth: 2,
+                dot: { r: 3.5, fill: 'var(--color-chart-dot)', stroke: 'var(--color-chart-dot)', strokeWidth: 0 },
+              }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+
+        <div className="mt-1">
+          <div className="mb-1 flex flex-col gap-1.5 md:flex-row md:items-start md:justify-between md:gap-2">
+            <p className="min-w-0 text-[10px] leading-snug text-sage-500 md:flex-1">
+              {pulseHeader}
+            </p>
+            <div className="flex flex-wrap gap-1.5 md:shrink-0 md:justify-end">
+              {PULSE_CHANNELS.map((chip) => (
+                <button
+                  key={chip.id}
+                  type="button"
+                  onClick={() => onPulseChannel(chip.id)}
+                  className={[
+                    'rounded-2xl px-2.5 py-1 text-[10px] font-medium transition-colors',
+                    activeChannel === chip.id
+                      ? 'bg-sage-500 text-on-accent'
+                      : 'border border-sand-200 text-sage-600 hover:bg-sage-50',
+                  ].join(' ')}
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <ResponsiveContainer width="100%" height={pulseHeight}>
+            <AreaChart data={chartData} margin={CHART_MARGIN} syncId={syncId}>
+              <XAxis dataKey="date" hide />
+              <ObservationWindowAreas regions={windowRegions} />
+              <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} vertical={false} />
+              <YAxis
+                domain={[1, 5]}
+                ticks={[1, 5]}
+                tick={(props) => <PulseAxisTick {...props} channel={activeChannel} />}
+                width={CHART_MARGIN_LEFT}
+                axisLine={false}
+                tickLine={false}
+              />
+              <Tooltip isAnimationActive={false} content={() => null} />
+              <Area
+                dataKey="pulseRaw"
+                type="monotone"
+                stroke={INK.pulse}
+                strokeWidth={1.5}
+                fill={INK.pulse}
+                fillOpacity={0.2}
+                dot={false}
+                activeDot={false}
+                connectNulls={false}
+                isAnimationActive={false}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
+        <div
+          className="px-0"
+          style={{
+            marginLeft: CHART_MARGIN_LEFT,
+            marginRight: CHART_MARGIN_RIGHT,
+            paddingBottom: laneRows.length > 0 ? LANE_AXIS_CLEARANCE : 0,
+          }}
+        >
+          <MedicationLane rows={laneRows} />
+        </div>
+
+        <div
+          className="pointer-events-none absolute top-0 hidden md:block"
+          style={{
+            left: CHART_MARGIN_LEFT,
+            right: CHART_MARGIN_RIGHT,
+            height: mrsHeight + pulseHeight + laneHeight + 28,
+          }}
+          aria-hidden
+        >
+          {markerLines.map((marker) => (
+            <div
+              key={marker.id}
+              className="absolute top-0 border-l border-dashed"
+              style={{
+                left: `${marker.leftPercent}%`,
+                height: '100%',
+                borderColor: INK.rule,
+                opacity: 0.5,
+                borderWidth: 1,
+              }}
+            />
+          ))}
+        </div>
+      </div>
+
+      <ResponsiveContainer width="100%" height={X_AXIS_HEIGHT}>
+        <LineChart data={chartData} margin={{ ...CHART_MARGIN, top: 0 }}>
+          <XAxis
+            dataKey="dateLabel"
+            tick={{ fontSize: 11, fill: CHART_COLORS.axisText }}
+            axisLine={false}
+            tickLine={false}
+            interval="preserveStartEnd"
+          />
+          <YAxis hide domain={[0, 1]} />
+        </LineChart>
+      </ResponsiveContainer>
     </div>
   );
 }
@@ -134,6 +279,7 @@ function StoryColumnComponent({
   insights,
 }: StoryColumnProps) {
   const isEmpty = data.length < 2;
+  const [expanded, setExpanded] = useState(false);
 
   const pulseDefaults = useMemo(
     () => resolvePulsePanelDefaults(insights, data.map((d) => d.checkin), medicationChanges),
@@ -184,173 +330,83 @@ function StoryColumnComponent({
     [medicationChanges, windowStart, windowEnd],
   );
 
-  const laneHeight = laneRows.length > 0 ? laneRows.length * LANE_ROW_HEIGHT + 8 : 0;
-
-  const mrsTicks = [0, 22, 44];
+  const chartProps = {
+    chartData,
+    mrsSegmentKeys,
+    activeChannel,
+    pulseHeader,
+    onPulseChannel: setPulseChannel,
+    laneRows,
+    markerLines,
+    windowRegions,
+  };
 
   return (
-    <ChartCard
-      title="Symptom & Medication Overview"
-      description="Your score, daily pulse, and medications on one timeline"
-      isEmpty={isEmpty}
-      emptyState={{
-        message: 'Check in at least twice to see your symptom trends here.',
-        actionLabel: 'Go to Check In',
-        onAction: () => {
-          window.location.href = '/checkin';
-        },
-      }}
-      minHeight="360px"
-    >
-      {!isEmpty && (
-        <div>
-          <p className="mb-1 text-[10px] text-sage-500">MRS score · weekly · 0–44</p>
-
-          <div className="relative">
-            <ResponsiveContainer width="100%" height={PANEL_MRS_HEIGHT}>
-              <LineChart data={chartData} margin={CHART_MARGIN} syncId={SYNC_ID}>
-                <XAxis dataKey="date" hide />
-                <ObservationWindowAreas regions={windowRegions} />
-                <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} vertical={false} />
-                <YAxis
-                  domain={[0, 44]}
-                  ticks={mrsTicks}
-                  tick={{ fontSize: 10, fill: CHART_COLORS.axisText }}
-                  width={CHART_MARGIN_LEFT}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip
-                  isAnimationActive={false}
-                  wrapperStyle={CHART_TOOLTIP_WRAPPER_STYLE}
-                  content={<ChartTooltipContent />}
-                />
-                <WeeklySegmentLines
-                  segmentKeys={mrsSegmentKeys}
-                  name="MRS Score"
-                  stroke={INK.mrsStroke}
-                  dotColor={INK.mrsDot}
-                  seriesProps={{
-                    strokeWidth: 2,
-                    dot: { r: 3.5, fill: 'var(--color-chart-dot)', stroke: 'var(--color-chart-dot)', strokeWidth: 0 },
-                  }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-
-            <div className="mt-1">
-              <div className="mb-1 flex flex-col gap-1.5 md:flex-row md:items-start md:justify-between md:gap-2">
-                <p className="min-w-0 text-[10px] leading-snug text-sage-500 md:flex-1">
-                  {pulseHeader}
-                </p>
-                <div className="flex flex-wrap gap-1.5 md:shrink-0 md:justify-end">
-                  {PULSE_CHANNELS.map((chip) => (
-                    <button
-                      key={chip.id}
-                      type="button"
-                      onClick={() => setPulseChannel(chip.id)}
-                      className={[
-                        'rounded-2xl px-2.5 py-1 text-[10px] font-medium transition-colors',
-                        activeChannel === chip.id
-                          ? 'bg-sage-500 text-on-accent'
-                          : 'border border-sand-200 text-sage-600 hover:bg-sage-50',
-                      ].join(' ')}
-                    >
-                      {chip.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <ResponsiveContainer width="100%" height={PANEL_PULSE_HEIGHT}>
-                <AreaChart data={chartData} margin={CHART_MARGIN} syncId={SYNC_ID}>
-                  <XAxis dataKey="date" hide />
-                  <ObservationWindowAreas regions={windowRegions} />
-                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} vertical={false} />
-                  <YAxis
-                    domain={[1, 5]}
-                    ticks={[1, 5]}
-                    tick={(props) => <PulseAxisTick {...props} channel={activeChannel} />}
-                    width={CHART_MARGIN_LEFT}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip
-                    isAnimationActive={false}
-                    wrapperStyle={CHART_TOOLTIP_WRAPPER_STYLE}
-                    content={<PulseTooltip channel={activeChannel} />}
-                  />
-                  <Area
-                    dataKey="pulseRaw"
-                    type="monotone"
-                    stroke={INK.pulse}
-                    strokeWidth={1.5}
-                    fill={INK.pulse}
-                    fillOpacity={0.2}
-                    dot={false}
-                    activeDot={{ r: 5, fill: INK.pulse }}
-                    connectNulls={false}
-                    isAnimationActive={false}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div
-              className="px-0"
-              style={{
-                marginLeft: CHART_MARGIN_LEFT,
-                marginRight: CHART_MARGIN_RIGHT,
-                paddingBottom: laneRows.length > 0 ? LANE_AXIS_CLEARANCE : 0,
-              }}
+    <>
+      <ChartCard
+        title="Symptom & Medication Overview"
+        description="Your score, daily pulse, and medications on one timeline"
+        isEmpty={isEmpty}
+        emptyState={{
+          message: 'Check in at least twice to see your symptom trends here.',
+          actionLabel: 'Go to Check In',
+          onAction: () => {
+            window.location.href = '/checkin';
+          },
+        }}
+        minHeight="360px"
+        actions={
+          !isEmpty ? (
+            <button
+              type="button"
+              onClick={() => setExpanded(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-sand-200 px-2.5 py-1.5 text-xs font-medium text-sage-600 transition-colors hover:bg-sage-50"
+              aria-label="Expand chart to full screen"
             >
-              <MedicationLane rows={laneRows} />
-            </div>
+              <Maximize2 className="h-3.5 w-3.5" aria-hidden />
+              Expand
+            </button>
+          ) : undefined
+        }
+      >
+        {!isEmpty && (
+          <StoryChartsBody
+            {...chartProps}
+            mrsHeight={PANEL_MRS_HEIGHT}
+            pulseHeight={PANEL_PULSE_HEIGHT}
+            syncId={SYNC_ID}
+          />
+        )}
+        {!isEmpty && windowRegions.length > 0 && (
+          <p className="mt-2 text-xs text-sage-400">
+            Shaded area — observation window after a dose change.
+          </p>
+        )}
+      </ChartCard>
 
-            <div
-              className="pointer-events-none absolute top-0 hidden md:block"
-              style={{
-                left: CHART_MARGIN_LEFT,
-                right: CHART_MARGIN_RIGHT,
-                height: PANEL_MRS_HEIGHT + PANEL_PULSE_HEIGHT + laneHeight + 28,
-              }}
-              aria-hidden
-            >
-              {markerLines.map((marker) => (
-                <div
-                  key={marker.id}
-                  className="absolute top-0 border-l border-dashed"
-                  style={{
-                    left: `${marker.leftPercent}%`,
-                    height: '100%',
-                    borderColor: INK.rule,
-                    opacity: 0.5,
-                    borderWidth: 1,
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-
-          <ResponsiveContainer width="100%" height={X_AXIS_HEIGHT}>
-            <LineChart data={chartData} margin={{ ...CHART_MARGIN, top: 0 }}>
-              <XAxis
-                dataKey="dateLabel"
-                tick={{ fontSize: 11, fill: CHART_COLORS.axisText }}
-                axisLine={false}
-                tickLine={false}
-                interval="preserveStartEnd"
-              />
-              <YAxis hide domain={[0, 1]} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-      {!isEmpty && windowRegions.length > 0 && (
-        <p className="mt-2 text-xs text-sage-400">
-          Shaded area — observation window after a dose change.
-        </p>
-      )}
-    </ChartCard>
+      <Modal
+        isOpen={expanded}
+        onClose={() => setExpanded(false)}
+        title="Symptom & Medication Overview"
+        size="full"
+      >
+        {!isEmpty && (
+          <>
+            <StoryChartsBody
+              {...chartProps}
+              mrsHeight={PANEL_MRS_HEIGHT_EXPANDED}
+              pulseHeight={PANEL_PULSE_HEIGHT_EXPANDED}
+              syncId={`${SYNC_ID}-expanded`}
+            />
+            {windowRegions.length > 0 && (
+              <p className="mt-2 text-xs text-sage-400">
+                Shaded area — observation window after a dose change.
+              </p>
+            )}
+          </>
+        )}
+      </Modal>
+    </>
   );
 }
 
