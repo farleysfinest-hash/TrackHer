@@ -28,6 +28,7 @@ import { StrawStageCard } from './StrawStageCard';
 import { UnlockProgress } from './UnlockProgress';
 import { GhostChartFrame } from './GhostChartFrame';
 import { PullToRefresh } from '../ui/PullToRefresh';
+import { useQuickLogStore } from '../../stores/quickLogStore';
 
 const FULL_DASHBOARD_CHECKINS = 7;
 
@@ -35,6 +36,7 @@ type DashboardMode = 'full' | 'early';
 
 export function DashboardLayout() {
   const { pathname } = useLocation();
+  const quickLogOpen = useQuickLogStore((s) => s.isSheetOpen);
   const dateRange = useDashboardStore((s) => s.dateRange);
   const refreshDateRange = useDashboardStore((s) => s.refreshDateRange);
   const checkinStatus = useCheckinStatus();
@@ -127,7 +129,10 @@ export function DashboardLayout() {
   ));
 
   return (
-    <PullToRefresh enabled={pathname === '/dashboard'} onRefresh={handlePullRefresh}>
+    <PullToRefresh
+      enabled={pathname === '/dashboard' && !quickLogOpen}
+      onRefresh={handlePullRefresh}
+    >
     <div className="mx-auto min-w-0 max-w-6xl space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
