@@ -13,6 +13,7 @@ function applyColorScheme(mq: MediaQueryList | MediaQueryListEvent): void {
   const isDark = mq.matches;
   document.documentElement.classList.toggle('dark', isDark);
   if (!Capacitor.isNativePlatform()) return;
+  // Style.Dark = light icons (dark chrome); Style.Light = dark icons (light chrome).
   void StatusBar.setStyle({ style: isDark ? Style.Dark : Style.Light }).catch(() => {
     // Native chrome must never block boot.
   });

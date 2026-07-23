@@ -171,7 +171,8 @@
     -webkit-touch-callout: none;
     background-color: var(--color-sand-50);
     overflow-x: hidden;
-    color-scheme: light;
+    /* Declare both — light-only tells WKWebView the page does not support dark. */
+    color-scheme: light dark;
   }
 
   /* Block text selection globally — re-enable on inputs */

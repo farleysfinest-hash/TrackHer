@@ -19,6 +19,7 @@ class BridgeViewController: CAPBridgeViewController {
         scrollView.alwaysBounceVertical = true
         scrollView.backgroundColor = appBackground
         webView?.backgroundColor = appBackground
+        syncWebColorScheme()
     }
 
     override open func viewDidAppear(_ animated: Bool) {
@@ -26,5 +27,23 @@ class BridgeViewController: CAPBridgeViewController {
         // Capacitor sets bounces during webview prep; re-assert after appear in case of races.
         webView?.scrollView.bounces = true
         webView?.scrollView.alwaysBounceVertical = true
+        syncWebColorScheme()
+    }
+
+    override open func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        guard traitCollection.hasDifferentColorAppearance(comparedTo: previousTraitCollection) else { return }
+        syncWebColorScheme()
+    }
+
+    /// Drive `html.dark` from the native trait collection so theme does not depend solely on
+    /// `matchMedia('(prefers-color-scheme: dark)')`, which can lag or stay light in WKWebView
+    /// until the document opts into both color schemes.
+    private func syncWebColorScheme() {
+        let isDark = traitCollection.userInterfaceStyle == .dark
+        let js = isDark
+            ? "document.documentElement.classList.add('dark');"
+            : "document.documentElement.classList.remove('dark');"
+        webView?.evaluateJavaScript(js, completionHandler: nil)
     }
 }
