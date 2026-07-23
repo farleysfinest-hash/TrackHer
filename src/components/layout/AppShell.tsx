@@ -8,6 +8,7 @@ import { Header } from './Header';
 import { PersistentTabs, isMainTabPath } from './PersistentTabs';
 import { useReminderSync } from '../../hooks/useReminderSync';
 import { useAuthStore } from '../../stores/authStore';
+import { refreshCheckinStatusForCurrentUser } from '../../stores/checkinStatusStore';
 import { prefetchCoreData } from '../../lib/prefetchCoreData';
 
 function useCoreDataPrefetch() {
@@ -17,6 +18,18 @@ function useCoreDataPrefetch() {
     if (!userId) return;
     void prefetchCoreData();
   }, [userId]);
+}
+
+function useCheckinStatusVisibilityRefresh() {
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        void refreshCheckinStatusForCurrentUser();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, []);
 }
 
 function useNotificationNavigation() {
@@ -46,6 +59,7 @@ export function AppShell() {
   useReminderSync();
   useNotificationNavigation();
   useCoreDataPrefetch();
+  useCheckinStatusVisibilityRefresh();
 
   const onMainTab = isMainTabPath(pathname);
 

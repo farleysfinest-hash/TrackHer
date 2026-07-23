@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from './authStore';
+import { refreshCheckinStatusForCurrentUser } from './checkinStatusStore';
 import type {
   SymptomCheckin,
   ExtendedSymptomLog,
@@ -434,6 +435,7 @@ export const useCheckinsStore = create<CheckinsState>((set, get) => ({
       });
 
       await get().fetchCheckins(undefined, { force: true });
+      void refreshCheckinStatusForCurrentUser();
       return checkin;
     } catch (saveError) {
       set({ error: getErrorMessage(saveError) });
@@ -464,6 +466,7 @@ export const useCheckinsStore = create<CheckinsState>((set, get) => ({
       });
 
       await get().fetchCheckins(undefined, { force: true });
+      void refreshCheckinStatusForCurrentUser();
       return true;
     } catch (saveError) {
       set({ error: getErrorMessage(saveError) });
@@ -478,6 +481,7 @@ export const useCheckinsStore = create<CheckinsState>((set, get) => ({
       return false;
     }
     await get().fetchCheckins(undefined, { force: true });
+    void refreshCheckinStatusForCurrentUser();
     return true;
   },
 
