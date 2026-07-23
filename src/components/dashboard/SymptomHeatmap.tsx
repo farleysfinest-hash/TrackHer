@@ -128,12 +128,13 @@ function SymptomHeatmapComponent({ rows }: SymptomHeatmapProps) {
                       <div
                         key={`${row.symptomKey}-${cell.date}`}
                         className={[
-                          'flex h-8 min-w-0 items-center justify-center rounded-sm text-[10px]',
+                          'flex h-8 min-w-0 items-center justify-center rounded-sm text-[10px] font-semibold tabular-nums',
                           cell.score === null
-                            ? 'text-sage-300'
+                            ? 'text-sage-500'
                             : cell.score >= 3
                               ? 'text-on-accent'
-                              : 'text-sage-600',
+                              : // Fixed dark plum — theme sage-* lightens in .dark and vanishes on pale heat cells
+                                'text-[#4a2838]',
                         ].join(' ')}
                         style={{ backgroundColor: bg }}
                         title={tip}
