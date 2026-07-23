@@ -163,7 +163,7 @@ export function DashboardLayout() {
 
           <div className="grid min-w-0 gap-6 lg:grid-cols-2">
             <div className="min-w-0">
-              <SubscaleChart data={symptomTrend} />
+              <SubscaleChart data={symptomTrend} changes={changes} />
             </div>
             <div className="min-w-0">
               <SymptomHeatmap rows={heatmapRows} />
@@ -233,7 +233,7 @@ export function DashboardLayout() {
                 </p>
               </div>
               <div className="space-y-2">
-                <SubscaleChart data={symptomTrend} />
+                <SubscaleChart data={symptomTrend} changes={changes} />
                 <p className="text-sm text-sage-500">
                   More check-ins will sharpen this — {mrsCheckinCount} of {FULL_DASHBOARD_CHECKINS}.
                 </p>

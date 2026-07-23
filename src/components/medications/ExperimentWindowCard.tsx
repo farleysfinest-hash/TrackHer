@@ -4,14 +4,14 @@ import { useMedicationChanges, type MedicationChangeWithMed } from '../../hooks/
 import { useAuthStore } from '../../stores/authStore';
 import { hasUiFlag, setUiFlag } from '../../lib/uiState';
 import { getLocalDateISO, getResolvedTimezone } from '../../utils/checkinHelpers';
-import { addDaysISO, getMedicationChangePastLabel } from '../../utils/medicationHelpers';
+import { addDaysISO, getMedicationChangePastLabel, EXPERIMENT_WINDOW_DAYS } from '../../utils/medicationHelpers';
 import { formatDate, formatDateLong } from '../../utils/formatters';
 import { Card } from '../ui/Card';
 import { DashboardCardHeader } from '../dashboard/DashboardCardHeader';
 import type { Insight } from '../../engine/types';
 import { daysBetweenISO } from '../../utils/localDate';
 
-const WINDOW_DAYS = 21;
+const WINDOW_DAYS = EXPERIMENT_WINDOW_DAYS;
 const SPARSE_GRACE_DAYS = 3;
 
 function daysBetween(from: string, to: string): number {

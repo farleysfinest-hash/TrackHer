@@ -345,6 +345,42 @@ export function isDoseLoggedForMed(
 
 export { addDaysISO } from './localDate';
 
+/** Days after a dose change for the observation / correlation window. */
+export const EXPERIMENT_WINDOW_DAYS = 21;
+
+export interface ObservationWindowRegion {
+  id: string;
+  x1: string;
+  x2: string;
+}
+
+/**
+ * Shaded observation windows for dose changes whose change_date falls in the
+ * visible chart range. End is change_date + EXPERIMENT_WINDOW_DAYS, clamped
+ * to the visible window.
+ */
+export function observationWindowRegions(
+  changes: MedicationChange[],
+  windowStart: string,
+  windowEnd: string,
+): ObservationWindowRegion[] {
+  return changes
+    .filter(
+      (c) =>
+        (c.change_type === 'dose_increased' || c.change_type === 'dose_decreased') &&
+        c.change_date >= windowStart &&
+        c.change_date <= windowEnd,
+    )
+    .map((c) => {
+      const rawEnd = addDaysISO(c.change_date, EXPERIMENT_WINDOW_DAYS);
+      const x1 = c.change_date;
+      const x2 = rawEnd > windowEnd ? windowEnd : rawEnd;
+      if (x1 >= x2) return null;
+      return { id: c.id, x1, x2 };
+    })
+    .filter((region): region is ObservationWindowRegion => region !== null);
+}
+
 export function getChangeTimelineColor(type: MedicationChangeType): string {
   switch (type) {
     case 'started':

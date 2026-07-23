@@ -12,6 +12,7 @@ import {
 import { ChartCard } from '../ui/ChartCard';
 import { ChartTooltipContent } from './ChartTooltipContent';
 import { MedicationLane } from './MedicationLane';
+import { ObservationWindowAreas } from './ObservationWindowAreas';
 import { CHART_COLORS } from '../../utils/chartHelpers';
 import { formatChartDateLong } from '../../utils/chartHelpers';
 import {
@@ -26,6 +27,7 @@ import {
   CHART_MARGIN_LEFT,
   CHART_MARGIN_RIGHT,
 } from '../../utils/medicationLaneHelpers';
+import { observationWindowRegions } from '../../utils/medicationHelpers';
 import {
   getPulseChannelValue,
   PULSE_CHANNELS,
@@ -177,6 +179,11 @@ function StoryColumnComponent({
     [medicationChanges, domainDates, windowStart, windowEnd],
   );
 
+  const windowRegions = useMemo(
+    () => observationWindowRegions(medicationChanges, windowStart, windowEnd),
+    [medicationChanges, windowStart, windowEnd],
+  );
+
   const laneHeight = laneRows.length > 0 ? laneRows.length * LANE_ROW_HEIGHT + 8 : 0;
 
   const mrsTicks = [0, 22, 44];
@@ -202,6 +209,8 @@ function StoryColumnComponent({
           <div className="relative">
             <ResponsiveContainer width="100%" height={PANEL_MRS_HEIGHT}>
               <LineChart data={chartData} margin={CHART_MARGIN} syncId={SYNC_ID}>
+                <XAxis dataKey="date" hide />
+                <ObservationWindowAreas regions={windowRegions} />
                 <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} vertical={false} />
                 <YAxis
                   domain={[0, 44]}
@@ -254,6 +263,8 @@ function StoryColumnComponent({
               </div>
               <ResponsiveContainer width="100%" height={PANEL_PULSE_HEIGHT}>
                 <AreaChart data={chartData} margin={CHART_MARGIN} syncId={SYNC_ID}>
+                  <XAxis dataKey="date" hide />
+                  <ObservationWindowAreas regions={windowRegions} />
                   <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} vertical={false} />
                   <YAxis
                     domain={[1, 5]}
@@ -333,6 +344,11 @@ function StoryColumnComponent({
             </LineChart>
           </ResponsiveContainer>
         </div>
+      )}
+      {!isEmpty && windowRegions.length > 0 && (
+        <p className="mt-2 text-xs text-sage-400">
+          Shaded area — observation window after a dose change.
+        </p>
       )}
     </ChartCard>
   );

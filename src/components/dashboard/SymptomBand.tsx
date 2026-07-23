@@ -14,6 +14,8 @@ import {
   CHART_TOOLTIP_WRAPPER_STYLE,
 } from '../../utils/chartStyle';
 import { SEVERITY_LABELS } from '../../utils/checkinHelpers';
+import { ObservationWindowAreas } from './ObservationWindowAreas';
+import type { ObservationWindowRegion } from '../../utils/medicationHelpers';
 
 export const BAND_CHART_HEIGHT = 44;
 export const BAND_X_AXIS_HEIGHT = 28;
@@ -68,6 +70,7 @@ interface SymptomBandProps {
   /** When true (subscale charts), host tooltip appends MRS total / 44. */
   showMrsTotal?: boolean;
   markers?: DoseMarker[];
+  observationRegions?: ObservationWindowRegion[];
 }
 
 function latestValue(rows: SymptomBandRow[], dataKey: string): number | null {
@@ -165,6 +168,7 @@ export function SymptomBand({
   isTooltipHost = false,
   showMrsTotal = false,
   markers,
+  observationRegions,
 }: SymptomBandProps) {
   const latest = latestValue(data, dataKey);
   const latestLabel =
@@ -190,6 +194,10 @@ export function SymptomBand({
         )}
         <ResponsiveContainer width="100%" height={BAND_CHART_HEIGHT}>
           <ComposedChart data={data} margin={BAND_CHART_MARGIN} syncId={syncId}>
+            <XAxis dataKey="date" hide />
+            {observationRegions && observationRegions.length > 0 && (
+              <ObservationWindowAreas regions={observationRegions} />
+            )}
             <ReferenceLine y={0} stroke={BAND_INK.baseline} strokeWidth={1} />
             {segmentKeys.map((segmentKey) => (
               <Area

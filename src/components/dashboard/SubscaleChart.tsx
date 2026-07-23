@@ -8,10 +8,13 @@ import {
   type BandTooltipSeries,
   type SymptomBandRow,
 } from './SymptomBand';
+import { observationWindowRegions } from '../../utils/medicationHelpers';
 import type { SymptomTrendPoint } from '../../hooks/useChartData';
+import type { MedicationChange } from '../../types/database';
 
 interface SubscaleChartProps {
   data: SymptomTrendPoint[];
+  changes?: MedicationChange[];
 }
 
 const SUBSCALE_VALUE_KEYS = MRS_SUBSCALES.map((s) => s.dataKey);
@@ -23,12 +26,16 @@ const TOOLTIP_SERIES: BandTooltipSeries[] = MRS_SUBSCALES.map((s) => ({
   domainMax: s.maxScore,
 }));
 
-function SubscaleChartComponent({ data }: SubscaleChartProps) {
+function SubscaleChartComponent({ data, changes = [] }: SubscaleChartProps) {
   const isEmpty = data.length < 2;
 
-  const { dailyRows, weeklySegmentKeys } = useMemo(() => {
+  const { dailyRows, weeklySegmentKeys, chartWindow } = useMemo(() => {
     if (data.length < 2) {
-      return { dailyRows: [] as SymptomBandRow[], weeklySegmentKeys: {} as Record<string, string[]> };
+      return {
+        dailyRows: [] as SymptomBandRow[],
+        weeklySegmentKeys: {} as Record<string, string[]>,
+        chartWindow: { start: '', end: '' },
+      };
     }
 
     const sparseRows: SymptomBandRow[] = data.map((point) => ({
@@ -45,8 +52,14 @@ function SubscaleChartComponent({ data }: SubscaleChartProps) {
     return {
       dailyRows: indexed.dailyRows as SymptomBandRow[],
       weeklySegmentKeys: indexed.weeklySegmentKeys,
+      chartWindow: window,
     };
   }, [data]);
+
+  const windowRegions = useMemo(() => {
+    if (!chartWindow.start || !chartWindow.end) return [];
+    return observationWindowRegions(changes, chartWindow.start, chartWindow.end);
+  }, [changes, chartWindow.start, chartWindow.end]);
 
   return (
     <ChartCard
@@ -71,9 +84,15 @@ function SubscaleChartComponent({ data }: SubscaleChartProps) {
               tooltipSeries={TOOLTIP_SERIES}
               isTooltipHost={index === 0}
               showMrsTotal
+              observationRegions={windowRegions}
             />
           ))}
           <BandXAxis data={dailyRows} />
+          {windowRegions.length > 0 && (
+            <p className="mt-2 text-xs text-sage-400">
+              Shaded area — observation window after a dose change.
+            </p>
+          )}
         </div>
       )}
     </ChartCard>
