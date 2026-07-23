@@ -10,6 +10,7 @@ import { useReminderSync } from '../../hooks/useReminderSync';
 import { useAuthStore } from '../../stores/authStore';
 import { refreshCheckinStatusForCurrentUser } from '../../stores/checkinStatusStore';
 import { prefetchCoreData } from '../../lib/prefetchCoreData';
+import { resyncRemindersForCurrentUser } from '../../hooks/useReminderSync';
 
 function useCoreDataPrefetch() {
   const userId = useAuthStore((s) => s.user?.id);
@@ -24,7 +25,10 @@ function useCheckinStatusVisibilityRefresh() {
   useEffect(() => {
     const onVisibility = () => {
       if (document.visibilityState === 'visible') {
-        void refreshCheckinStatusForCurrentUser();
+        void (async () => {
+          await refreshCheckinStatusForCurrentUser();
+          await resyncRemindersForCurrentUser();
+        })();
       }
     };
     document.addEventListener('visibilitychange', onVisibility);

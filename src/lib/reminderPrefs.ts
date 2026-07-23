@@ -15,7 +15,7 @@ export interface ReminderPrefs {
   asked: boolean;
 }
 
-const DEFAULT_CHECKIN_TIME = '09:00';
+const DEFAULT_CHECKIN_TIME = '18:00';
 
 function parseBool(value: unknown, fallback: boolean): boolean {
   if (typeof value === 'boolean') return value;
@@ -50,7 +50,7 @@ export function setReminderPrefs(patch: Partial<ReminderPrefs>): ReminderPrefs {
 export function parseCheckinTime(time: string): { hour: number; minute: number } {
   const [h, m] = parseTime(time).split(':').map(Number);
   return {
-    hour: Number.isFinite(h) ? Math.min(23, Math.max(0, h)) : 9,
+    hour: Number.isFinite(h) ? Math.min(23, Math.max(0, h)) : 18,
     minute: Number.isFinite(m) ? Math.min(59, Math.max(0, m)) : 0,
   };
 }

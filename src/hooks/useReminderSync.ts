@@ -9,6 +9,7 @@ import {
 import { getReminderPrefs, setReminderPrefs, type ReminderPrefs } from '../lib/reminderPrefs';
 import { syncLocalReminders } from '../lib/reminderSync';
 import { useAuthStore } from '../stores/authStore';
+import { useCheckinStatusStore } from '../stores/checkinStatusStore';
 import type { Medication } from '../types/database';
 
 async function loadActiveMedications(userId: string): Promise<Medication[]> {
@@ -26,10 +27,12 @@ export async function resyncRemindersForCurrentUser(): Promise<number> {
   if (!user?.id || !isNativeNotificationsAvailable()) return 0;
   const permission = await getReminderPermissionState();
   const medications = await loadActiveMedications(user.id);
+  const weeklyDone = useCheckinStatusStore.getState().status.weeklyMinimumMet;
   return syncLocalReminders({
     profile,
     medications,
     prefs: getReminderPrefs(),
+    weeklyDone,
     permissionGranted: permission === 'granted',
   });
 }

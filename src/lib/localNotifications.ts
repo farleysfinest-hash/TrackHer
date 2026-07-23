@@ -24,6 +24,42 @@ export function toCapacitorWeekday(checkinDay: number): Weekday {
   return (clamped + 1) as Weekday;
 }
 
+/**
+ * Next one-shot fire time for the weekly MRS reminder.
+ * - Other weekday → next occurrence of checkin_day at hour:minute
+ * - Today + weeklyDone → same weekday next week
+ * - Today + not done + before reminder time → today
+ * - Today + not done + at/after reminder time → next week
+ */
+export function nextCheckinReminderAt(opts: {
+  checkinDay: number;
+  hour: number;
+  minute: number;
+  weeklyDone: boolean;
+  now?: Date;
+}): Date {
+  const now = opts.now ?? new Date();
+  const targetDow = ((opts.checkinDay % 7) + 7) % 7;
+  const currentDow = now.getDay();
+
+  let daysAhead = (targetDow - currentDow + 7) % 7;
+
+  if (daysAhead === 0) {
+    const todayAt = new Date(now);
+    todayAt.setHours(opts.hour, opts.minute, 0, 0);
+    if (opts.weeklyDone || now.getTime() >= todayAt.getTime()) {
+      daysAhead = 7;
+    } else {
+      return todayAt;
+    }
+  }
+
+  const at = new Date(now);
+  at.setDate(at.getDate() + daysAhead);
+  at.setHours(opts.hour, opts.minute, 0, 0);
+  return at;
+}
+
 /** Map medication time_of_day labels to a clock hour (local). */
 export function timeOfDayToHour(timeOfDay: string | undefined | null): number {
   switch (timeOfDay) {
@@ -97,21 +133,14 @@ export async function scheduleReminders(notifications: LocalNotificationSchema[]
 }
 
 export function buildCheckinNotification(opts: {
-  checkinDay: number;
-  hour: number;
-  minute: number;
+  at: Date;
 }): LocalNotificationSchema {
   return {
     id: CHECKIN_NOTIFICATION_ID,
     title: 'Weekly check-in',
     body: 'A few minutes now keeps your HRT timeline clear for your next appointment.',
     schedule: {
-      on: {
-        weekday: toCapacitorWeekday(opts.checkinDay),
-        hour: opts.hour,
-        minute: opts.minute,
-      },
-      repeats: true,
+      at: opts.at,
       allowWhileIdle: true,
     },
     extra: { path: '/checkin' },

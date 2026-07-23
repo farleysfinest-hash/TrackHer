@@ -6,6 +6,7 @@ import {
   buildDailyMedicationNotification,
   buildWeeklyMedicationNotification,
   medicationNotificationId,
+  nextCheckinReminderAt,
   scheduleReminders,
   timeOfDayToHour,
 } from './localNotifications';
@@ -35,27 +36,40 @@ function hoursForFrequency(
   return [primary];
 }
 
+export interface BuildReminderNotificationsOpts {
+  profile: Pick<Profile, 'checkin_day'> | null;
+  medications: Pick<
+    Medication,
+    'id' | 'medication_name' | 'frequency' | 'frequency_details' | 'is_active'
+  >[];
+  prefs?: ReminderPrefs;
+  /** Whether this week's MRS minimum is already met. */
+  weeklyDone?: boolean;
+  /** Override clock for tests. */
+  now?: Date;
+}
+
 /**
  * Build the local notification list from profile + active medications + prefs.
  * Pure — safe to unit test without Capacitor.
  */
-export function buildReminderNotifications(opts: {
-  profile: Pick<Profile, 'checkin_day'> | null;
-  medications: Pick<Medication, 'id' | 'medication_name' | 'frequency' | 'frequency_details' | 'is_active'>[];
-  prefs?: ReminderPrefs;
-}): LocalNotificationSchema[] {
+export function buildReminderNotifications(
+  opts: BuildReminderNotificationsOpts,
+): LocalNotificationSchema[] {
   const prefs = opts.prefs ?? getReminderPrefs();
   const notifications: LocalNotificationSchema[] = [];
+  const weeklyDone = opts.weeklyDone ?? false;
 
   if (prefs.checkinEnabled && opts.profile?.checkin_day != null) {
     const { hour, minute } = parseCheckinTime(prefs.checkinTime);
-    notifications.push(
-      buildCheckinNotification({
-        checkinDay: opts.profile.checkin_day,
-        hour,
-        minute,
-      }),
-    );
+    const at = nextCheckinReminderAt({
+      checkinDay: opts.profile.checkin_day,
+      hour,
+      minute,
+      weeklyDone,
+      now: opts.now,
+    });
+    notifications.push(buildCheckinNotification({ at }));
   }
 
   if (!prefs.medsEnabled) return notifications;
@@ -100,12 +114,9 @@ export function buildReminderNotifications(opts: {
 }
 
 /** Cancel pending locals and reschedule from current prefs + data. */
-export async function syncLocalReminders(opts: {
-  profile: Pick<Profile, 'checkin_day'> | null;
-  medications: Pick<Medication, 'id' | 'medication_name' | 'frequency' | 'frequency_details' | 'is_active'>[];
-  prefs?: ReminderPrefs;
-  permissionGranted: boolean;
-}): Promise<number> {
+export async function syncLocalReminders(
+  opts: BuildReminderNotificationsOpts & { permissionGranted: boolean },
+): Promise<number> {
   if (!opts.permissionGranted) {
     await scheduleReminders([]);
     return 0;

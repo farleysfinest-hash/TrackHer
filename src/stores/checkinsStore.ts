@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from './authStore';
 import { refreshCheckinStatusForCurrentUser } from './checkinStatusStore';
+import { resyncRemindersForCurrentUser } from '../hooks/useReminderSync';
 import type {
   SymptomCheckin,
   ExtendedSymptomLog,
@@ -435,7 +436,10 @@ export const useCheckinsStore = create<CheckinsState>((set, get) => ({
       });
 
       await get().fetchCheckins(undefined, { force: true });
-      void refreshCheckinStatusForCurrentUser();
+      void (async () => {
+        await refreshCheckinStatusForCurrentUser();
+        await resyncRemindersForCurrentUser();
+      })();
       return checkin;
     } catch (saveError) {
       set({ error: getErrorMessage(saveError) });
@@ -466,7 +470,10 @@ export const useCheckinsStore = create<CheckinsState>((set, get) => ({
       });
 
       await get().fetchCheckins(undefined, { force: true });
-      void refreshCheckinStatusForCurrentUser();
+      void (async () => {
+        await refreshCheckinStatusForCurrentUser();
+        await resyncRemindersForCurrentUser();
+      })();
       return true;
     } catch (saveError) {
       set({ error: getErrorMessage(saveError) });
@@ -481,7 +488,10 @@ export const useCheckinsStore = create<CheckinsState>((set, get) => ({
       return false;
     }
     await get().fetchCheckins(undefined, { force: true });
-    void refreshCheckinStatusForCurrentUser();
+    void (async () => {
+      await refreshCheckinStatusForCurrentUser();
+      await resyncRemindersForCurrentUser();
+    })();
     return true;
   },
 

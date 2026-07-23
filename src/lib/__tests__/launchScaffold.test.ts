@@ -3,6 +3,7 @@ import { Weekday } from '@capacitor/local-notifications';
 import {
   CHECKIN_NOTIFICATION_ID,
   medicationNotificationId,
+  nextCheckinReminderAt,
   timeOfDayToHour,
   toCapacitorWeekday,
 } from '../localNotifications';
@@ -25,7 +26,7 @@ describe('local notification helpers', () => {
 
   it('parses check-in HH:mm', () => {
     expect(parseCheckinTime('14:30')).toEqual({ hour: 14, minute: 30 });
-    expect(parseCheckinTime('bad')).toEqual({ hour: 9, minute: 0 });
+    expect(parseCheckinTime('bad')).toEqual({ hour: 18, minute: 0 });
   });
 
   it('builds stable medication notification ids', () => {
@@ -39,23 +40,104 @@ describe('local notification helpers', () => {
   });
 });
 
+describe('nextCheckinReminderAt', () => {
+  // Wednesday 2026-07-22 at 10:00 local
+  const wednesdayMorning = new Date(2026, 6, 22, 10, 0, 0, 0);
+
+  it('today + not done → today at reminder time', () => {
+    const at = nextCheckinReminderAt({
+      checkinDay: 3, // Wednesday
+      hour: 18,
+      minute: 0,
+      weeklyDone: false,
+      now: wednesdayMorning,
+    });
+    expect(at.getFullYear()).toBe(2026);
+    expect(at.getMonth()).toBe(6);
+    expect(at.getDate()).toBe(22);
+    expect(at.getHours()).toBe(18);
+    expect(at.getMinutes()).toBe(0);
+  });
+
+  it('today + done → next week', () => {
+    const at = nextCheckinReminderAt({
+      checkinDay: 3,
+      hour: 18,
+      minute: 0,
+      weeklyDone: true,
+      now: wednesdayMorning,
+    });
+    expect(at.getDate()).toBe(29);
+    expect(at.getHours()).toBe(18);
+  });
+
+  it('other weekday → next due day', () => {
+    const at = nextCheckinReminderAt({
+      checkinDay: 1, // Monday
+      hour: 18,
+      minute: 0,
+      weeklyDone: false,
+      now: wednesdayMorning,
+    });
+    // Next Monday from Wed Jul 22 is Jul 27
+    expect(at.getDate()).toBe(27);
+    expect(at.getDay()).toBe(1);
+    expect(at.getHours()).toBe(18);
+  });
+
+  it('today + not done but after reminder time → next week', () => {
+    const wednesdayEvening = new Date(2026, 6, 22, 19, 0, 0, 0);
+    const at = nextCheckinReminderAt({
+      checkinDay: 3,
+      hour: 18,
+      minute: 0,
+      weeklyDone: false,
+      now: wednesdayEvening,
+    });
+    expect(at.getDate()).toBe(29);
+  });
+});
+
 describe('buildReminderNotifications', () => {
-  it('schedules weekly check-in when enabled and day is set', () => {
+  it('schedules one-shot check-in when enabled and day is set', () => {
+    const now = new Date(2026, 6, 22, 10, 0, 0, 0); // Wed
     const notifications = buildReminderNotifications({
-      profile: { checkin_day: 1 },
+      profile: { checkin_day: 3 },
       medications: [],
       prefs: {
         checkinEnabled: true,
         medsEnabled: false,
-        checkinTime: '09:15',
+        checkinTime: '18:00',
         asked: true,
       },
+      weeklyDone: false,
+      now,
     });
     expect(notifications).toHaveLength(1);
     expect(notifications[0].id).toBe(CHECKIN_NOTIFICATION_ID);
-    expect(notifications[0].schedule?.on?.weekday).toBe(Weekday.Monday);
-    expect(notifications[0].schedule?.on?.hour).toBe(9);
-    expect(notifications[0].schedule?.on?.minute).toBe(15);
+    expect(notifications[0].schedule?.at).toBeInstanceOf(Date);
+    expect(notifications[0].schedule?.repeats).toBeFalsy();
+    const at = notifications[0].schedule?.at as Date;
+    expect(at.getHours()).toBe(18);
+    expect(at.getDate()).toBe(22);
+  });
+
+  it('skips this week when weeklyDone on due day', () => {
+    const now = new Date(2026, 6, 22, 10, 0, 0, 0);
+    const notifications = buildReminderNotifications({
+      profile: { checkin_day: 3 },
+      medications: [],
+      prefs: {
+        checkinEnabled: true,
+        medsEnabled: false,
+        checkinTime: '18:00',
+        asked: true,
+      },
+      weeklyDone: true,
+      now,
+    });
+    const at = notifications[0].schedule?.at as Date;
+    expect(at.getDate()).toBe(29);
   });
 
   it('schedules daily and twice-daily medication reminders', () => {
@@ -87,7 +169,7 @@ describe('buildReminderNotifications', () => {
       prefs: {
         checkinEnabled: false,
         medsEnabled: true,
-        checkinTime: '09:00',
+        checkinTime: '18:00',
         asked: true,
       },
     });
@@ -112,7 +194,7 @@ describe('buildReminderNotifications', () => {
       prefs: {
         checkinEnabled: false,
         medsEnabled: true,
-        checkinTime: '09:00',
+        checkinTime: '18:00',
         asked: true,
       },
     });
