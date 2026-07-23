@@ -8,6 +8,7 @@ export function useAuth() {
     isInitialized,
     isAuthenticated,
     error,
+    profileLoadFailed,
     signUp,
     signIn,
     signOut,
@@ -17,6 +18,7 @@ export function useAuth() {
     resetAccount,
     deleteAccount,
     fetchProfile,
+    retryProfileLoad,
     clearError,
   } = useAuthStore();
 
@@ -27,6 +29,7 @@ export function useAuth() {
     isInitialized,
     isAuthenticated,
     error,
+    profileLoadFailed,
     signUp,
     signIn,
     signOut,
@@ -36,6 +39,7 @@ export function useAuth() {
     resetAccount,
     deleteAccount,
     fetchProfile,
+    retryProfileLoad,
     clearError,
   };
 }

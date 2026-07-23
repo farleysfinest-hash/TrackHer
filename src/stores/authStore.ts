@@ -14,6 +14,7 @@ interface AuthState {
   isInitialized: boolean;
   isAuthenticated: boolean;
   error: string | null;
+  profileLoadFailed: boolean;
   initialize: () => () => void;
   signUp: (
     email: string,
@@ -25,6 +26,7 @@ interface AuthState {
   resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
   updatePassword: (password: string) => Promise<{ success: boolean; error?: string }>;
   fetchProfile: (userId: string) => Promise<void>;
+  retryProfileLoad: () => Promise<void>;
   updateProfile: (updates: ProfileUpdate) => Promise<{ success: boolean; error?: string }>;
   resetAccount: () => Promise<{ success: boolean; error?: string }>;
   deleteAccount: () => Promise<{ success: boolean; error?: string }>;
@@ -38,6 +40,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isInitialized: false,
   isAuthenticated: false,
   error: null,
+  profileLoadFailed: false,
 
   initialize: () => {
     let mounted = true;
@@ -169,6 +172,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   fetchProfile: async (userId) => {
     if (profileFetchInFlight === userId) return;
     profileFetchInFlight = userId;
+    set({ profileLoadFailed: false });
 
     try {
       const { data, error } = await supabase
@@ -179,6 +183,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       if (error) {
         console.error('Failed to fetch profile:', error.message);
+        set({ profileLoadFailed: true });
         return;
       }
 
@@ -205,6 +210,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } finally {
       if (profileFetchInFlight === userId) profileFetchInFlight = null;
     }
+  },
+
+  retryProfileLoad: async () => {
+    const userId = get().user?.id;
+    if (!userId) return;
+    await get().fetchProfile(userId);
   },
 
   updateProfile: async (updates: ProfileUpdate) => {
