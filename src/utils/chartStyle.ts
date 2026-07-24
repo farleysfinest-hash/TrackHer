@@ -4,7 +4,7 @@
  * Never put strokeDasharray on data series (dots inherit it and render as broken arcs).
  */
 
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { LIGHT_SERIES_INKS, LIGHT_SERIES_OUTLINE } from './chartHelpers';
 
 /**
@@ -34,7 +34,10 @@ export interface SeriesLineProps {
         fill: string;
         stroke: string;
         strokeWidth: number;
-      };
+      }
+    // Recharts also accepts a render function for selection-aware dots.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    | ((props: any) => ReactNode);
   activeDot:
     | false
     | {
@@ -42,7 +45,9 @@ export interface SeriesLineProps {
         fill: string;
         stroke?: string;
         strokeWidth?: number;
-      };
+      }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    | ((props: any) => ReactNode);
   strokeOpacity?: number;
 }
 
