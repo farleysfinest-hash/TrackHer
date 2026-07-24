@@ -1,22 +1,23 @@
-import { memo, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import {
   ResponsiveContainer,
   LineChart,
   AreaChart,
   Area,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
 } from 'recharts';
+import type { MouseHandlerDataParam } from 'recharts';
 import { ChartCard } from '../ui/ChartCard';
-import { ChartTooltipContent } from './ChartTooltipContent';
+import { ChartReadoutDock } from './ChartReadoutDock';
+import { StoryPointReadout } from './ChartTooltipContent';
 import { MedicationLane } from './MedicationLane';
 import { ObservationWindowAreas } from './ObservationWindowAreas';
 import { CHART_COLORS } from '../../utils/chartHelpers';
-import {
-  CHART_TOOLTIP_WRAPPER_STYLE,
-} from '../../utils/chartStyle';
+import { dateFromChartClick } from '../../utils/chartSelection';
 import { buildDailyIndexedWeeklyChart } from '../../utils/weeklyChartSeries';
 import { WeeklySegmentLines } from './WeeklySegmentLines';
 import {
@@ -44,7 +45,6 @@ const X_AXIS_HEIGHT = 28;
 const LANE_ROW_HEIGHT = 28;
 /** Clearance under the last med lane for hanging dose-change labels before the date axis. */
 const LANE_AXIS_CLEARANCE = 18;
-const SYNC_ID = 'story-column';
 
 const INK = {
   mrsStroke: 'var(--color-chart-line-primary)',
@@ -60,6 +60,18 @@ const CHART_MARGIN = {
   bottom: 0,
 } as const;
 
+/** Hit-test only — never visible over the plot. */
+function HiddenTooltip() {
+  return (
+    <Tooltip
+      content={() => null}
+      cursor={false}
+      isAnimationActive={false}
+      wrapperStyle={{ display: 'none' }}
+    />
+  );
+}
+
 interface StoryColumnProps {
   data: SymptomTrendPoint[];
   medications: Medication[];
@@ -68,6 +80,13 @@ interface StoryColumnProps {
   windowEnd: string;
   insights: Insight[];
 }
+
+type StoryChartRow = ReturnType<typeof buildDailyIndexedWeeklyChart>['dailyRows'][number] & {
+  pulseRaw?: number | null;
+  checkin?: SymptomTrendPoint['checkin'];
+  mrsTotal?: number | null;
+  gapNotice?: string;
+};
 
 const PULSE_AXIS_LABELS: Record<PulseChannel, { high: string; low: string }> = {
   energy: { high: 'Energized', low: 'Drained' },
@@ -96,7 +115,7 @@ function PulseAxisTick({ x = 0, y = 0, payload, channel }: PulseAxisTickProps) {
 }
 
 interface StoryChartsBodyProps {
-  chartData: ReturnType<typeof buildDailyIndexedWeeklyChart>['dailyRows'];
+  chartData: StoryChartRow[];
   mrsSegmentKeys: string[];
   activeChannel: PulseChannel;
   pulseHeader: string;
@@ -106,8 +125,6 @@ interface StoryChartsBodyProps {
   windowRegions: ReturnType<typeof observationWindowRegions>;
   mrsHeight: number;
   pulseHeight: number;
-  /** Unique sync id so expanded + inline charts don't cross-talk. */
-  syncId: string;
   interactive: boolean;
 }
 
@@ -122,19 +139,57 @@ function StoryChartsBody({
   windowRegions,
   mrsHeight,
   pulseHeight,
-  syncId,
   interactive,
 }: StoryChartsBodyProps) {
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!interactive) setSelectedDate(null);
+  }, [interactive]);
+
+  const dates = useMemo(() => chartData.map((row) => row.date), [chartData]);
+
+  const selectedPoint = useMemo(() => {
+    if (!selectedDate) return null;
+    return chartData.find((row) => row.date === selectedDate) ?? null;
+  }, [chartData, selectedDate]);
+
   const laneHeight = laneRows.length > 0 ? laneRows.length * LANE_ROW_HEIGHT + 8 : 0;
   const mrsTicks = [0, 22, 44];
 
-  return (
+  const handleChartClick = (state: MouseHandlerDataParam) => {
+    if (!interactive) return;
+    const date = dateFromChartClick(state, dates);
+    if (date) setSelectedDate(date);
+  };
+
+  const mrsDot = (props: { cx?: number; cy?: number; payload?: StoryChartRow }) => {
+    const { cx, cy, payload } = props;
+    if (cx == null || cy == null) return null;
+    const selected = interactive && payload?.date === selectedDate;
+    return (
+      <circle
+        cx={cx}
+        cy={cy}
+        r={selected ? 5 : 3.5}
+        fill="var(--color-chart-dot)"
+        stroke="var(--color-chart-dot)"
+        strokeWidth={0}
+      />
+    );
+  };
+
+  const plot = (
     <div>
       <p className="mb-1 text-[10px] text-sage-500">MRS score · weekly · 0–44</p>
 
       <div className="relative">
         <ResponsiveContainer width="100%" height={mrsHeight}>
-          <LineChart data={chartData} margin={CHART_MARGIN} syncId={interactive ? syncId : undefined}>
+          <LineChart
+            data={chartData}
+            margin={CHART_MARGIN}
+            onClick={interactive ? handleChartClick : undefined}
+          >
             <XAxis dataKey="date" hide />
             <ObservationWindowAreas regions={windowRegions} />
             <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} vertical={false} />
@@ -146,14 +201,7 @@ function StoryChartsBody({
               axisLine={false}
               tickLine={false}
             />
-            {interactive && (
-              <Tooltip
-                isAnimationActive={false}
-                cursor={false}
-                wrapperStyle={CHART_TOOLTIP_WRAPPER_STYLE}
-                content={<ChartTooltipContent />}
-              />
-            )}
+            {interactive && <HiddenTooltip />}
             <WeeklySegmentLines
               segmentKeys={mrsSegmentKeys}
               name="MRS Score"
@@ -161,10 +209,8 @@ function StoryChartsBody({
               dotColor={INK.mrsDot}
               seriesProps={{
                 strokeWidth: 2,
-                dot: { r: 3.5, fill: 'var(--color-chart-dot)', stroke: 'var(--color-chart-dot)', strokeWidth: 0 },
-                activeDot: interactive
-                  ? { r: 5, fill: 'var(--color-chart-dot)', stroke: 'var(--color-chart-dot)', strokeWidth: 0 }
-                  : false,
+                dot: mrsDot,
+                activeDot: false,
               }}
             />
           </LineChart>
@@ -194,7 +240,11 @@ function StoryChartsBody({
             </div>
           </div>
           <ResponsiveContainer width="100%" height={pulseHeight}>
-            <AreaChart data={chartData} margin={CHART_MARGIN} syncId={interactive ? syncId : undefined}>
+            <AreaChart
+              data={chartData}
+              margin={CHART_MARGIN}
+              onClick={interactive ? handleChartClick : undefined}
+            >
               <XAxis dataKey="date" hide />
               <ObservationWindowAreas regions={windowRegions} />
               <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} vertical={false} />
@@ -206,9 +256,7 @@ function StoryChartsBody({
                 axisLine={false}
                 tickLine={false}
               />
-              {interactive && (
-                <Tooltip isAnimationActive={false} cursor={false} content={() => null} />
-              )}
+              {interactive && <HiddenTooltip />}
               <Area
                 dataKey="pulseRaw"
                 type="monotone"
@@ -221,6 +269,31 @@ function StoryChartsBody({
                 connectNulls={false}
                 isAnimationActive={false}
               />
+              {interactive && selectedDate && (
+                <Line
+                  dataKey="pulseRaw"
+                  stroke="none"
+                  legendType="none"
+                  isAnimationActive={false}
+                  dot={(props: { cx?: number; cy?: number; payload?: StoryChartRow; value?: number | null }) => {
+                    const { cx, cy, payload, value } = props;
+                    if (cx == null || cy == null) return null;
+                    if (payload?.date !== selectedDate) return null;
+                    if (value === null || value === undefined) return null;
+                    return (
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={5}
+                        fill={INK.pulse}
+                        stroke="var(--color-sand-50)"
+                        strokeWidth={1}
+                      />
+                    );
+                  }}
+                  activeDot={false}
+                />
+              )}
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -275,6 +348,21 @@ function StoryChartsBody({
       </ResponsiveContainer>
     </div>
   );
+
+  const readout =
+    interactive && selectedPoint
+      ? StoryPointReadout({
+          point: selectedPoint as SymptomTrendPoint & {
+            pulseRaw?: number | null;
+            gapNotice?: string;
+          },
+          pulseChannel: activeChannel,
+        })
+      : null;
+
+  if (!interactive) return plot;
+
+  return <ChartReadoutDock plot={plot} readout={readout} />;
 }
 
 function StoryColumnComponent({
@@ -307,7 +395,7 @@ function StoryColumnComponent({
     }));
     const indexed = buildDailyIndexedWeeklyChart(sparse, windowStart, windowEnd, ['mrsTotal']);
     return {
-      chartData: indexed.dailyRows,
+      chartData: indexed.dailyRows as StoryChartRow[],
       mrsSegmentKeys: indexed.weeklySegmentKeys.mrsTotal ?? [],
     };
   }, [data, activeChannel, windowStart, windowEnd]);
@@ -370,7 +458,6 @@ function StoryColumnComponent({
               {...chartProps}
               mrsHeight={interactive ? PANEL_MRS_HEIGHT_EXPANDED : PANEL_MRS_HEIGHT}
               pulseHeight={interactive ? PANEL_PULSE_HEIGHT_EXPANDED : PANEL_PULSE_HEIGHT}
-              syncId={interactive ? `${SYNC_ID}-x` : SYNC_ID}
               interactive={interactive}
             />
             {windowRegions.length > 0 && (

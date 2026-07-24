@@ -162,7 +162,7 @@ export function ChartCard({
         >
           {description && <p className="mb-4 text-sm text-sage-500">{description}</p>}
           {actions && <div className="mb-4 flex flex-wrap gap-2">{actions}</div>}
-          <div style={{ minHeight: expandedMinHeight }}>
+          <div key={expanded ? 'chart-expanded' : 'chart-closed'} style={{ minHeight: expandedMinHeight }}>
             {renderChildren(children, true)}
           </div>
         </Modal>

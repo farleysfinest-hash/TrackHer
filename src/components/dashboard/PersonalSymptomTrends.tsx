@@ -1,10 +1,12 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChartCard } from '../ui/ChartCard';
 import { useSymptomSelections } from '../../hooks/useSymptomSelections';
 import { getSymptomByKey } from '../../data/symptoms';
 import { formatChartDate } from '../../utils/chartHelpers';
 import { buildDailyIndexedWeeklyChart, weeklyChartWindow } from '../../utils/weeklyChartSeries';
+import { ChartReadoutDock } from './ChartReadoutDock';
 import {
+  BandPointReadout,
   BandXAxis,
   SymptomBand,
   type BandTooltipSeries,
@@ -18,7 +20,6 @@ interface PersonalSymptomTrendsProps {
 }
 
 const DOMAIN_MAX = 3;
-const SYNC_ID = 'personal-symptom-trends';
 
 function extendedSeverity(log: ExtendedSymptomLog): number {
   if (log.severity_score !== null && log.severity_score !== undefined) {
@@ -28,6 +29,63 @@ function extendedSeverity(log: ExtendedSymptomLog): number {
   if (log.severity === 'moderate') return 2;
   if (log.severity === 'severe') return 3;
   return 0;
+}
+
+function PersonalTrendsBody({
+  interactive,
+  points,
+  keys,
+  segmentKeysByKey,
+  tooltipSeries,
+}: {
+  interactive: boolean;
+  points: SymptomBandRow[];
+  keys: string[];
+  segmentKeysByKey: Record<string, string[]>;
+  tooltipSeries: BandTooltipSeries[];
+}) {
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!interactive) setSelectedDate(null);
+  }, [interactive]);
+
+  const selectedPoint = useMemo(
+    () => (selectedDate ? points.find((row) => row.date === selectedDate) ?? null : null),
+    [points, selectedDate],
+  );
+
+  const bands = (
+    <div className="space-y-0">
+      {keys.map((key) => (
+        <SymptomBand
+          key={key}
+          name={getSymptomByKey(key)?.label ?? key}
+          dataKey={key}
+          data={points}
+          segmentKeys={segmentKeysByKey[key] ?? []}
+          domainMax={DOMAIN_MAX}
+          tooltipMode="severity"
+          interactive={interactive}
+          selectedDate={selectedDate}
+          onSelectDate={setSelectedDate}
+        />
+      ))}
+      <BandXAxis data={points} />
+    </div>
+  );
+
+  if (!interactive) return bands;
+
+  const readout = selectedPoint
+    ? BandPointReadout({
+        point: selectedPoint,
+        tooltipSeries,
+        tooltipMode: 'severity',
+      })
+    : null;
+
+  return <ChartReadoutDock plot={bands} readout={readout} />;
 }
 
 export function PersonalSymptomTrends({ checkins, extendedLogs }: PersonalSymptomTrendsProps) {
@@ -100,24 +158,13 @@ export function PersonalSymptomTrends({ checkins, extendedLogs }: PersonalSympto
     >
       {({ interactive }) =>
         !isEmpty ? (
-          <div className="space-y-0">
-            {chartData.keys.map((key, index) => (
-              <SymptomBand
-                key={key}
-                name={getSymptomByKey(key)?.label ?? key}
-                dataKey={key}
-                data={chartData.points}
-                segmentKeys={chartData.segmentKeysByKey[key] ?? []}
-                domainMax={DOMAIN_MAX}
-                syncId={interactive ? `${SYNC_ID}-x` : SYNC_ID}
-                tooltipMode="severity"
-                tooltipSeries={tooltipSeries}
-                isTooltipHost={index === 0}
-                interactive={interactive}
-              />
-            ))}
-            <BandXAxis data={chartData.points} />
-          </div>
+          <PersonalTrendsBody
+            interactive={interactive}
+            points={chartData.points}
+            keys={chartData.keys}
+            segmentKeysByKey={chartData.segmentKeysByKey}
+            tooltipSeries={tooltipSeries}
+          />
         ) : null
       }
     </ChartCard>

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -8,13 +9,12 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import type { MouseHandlerDataParam } from 'recharts';
 import { CHART_COLORS } from '../../utils/chartHelpers';
-import {
-  CHART_TOOLTIP_SURFACE_STYLE,
-  CHART_TOOLTIP_WRAPPER_STYLE,
-} from '../../utils/chartStyle';
+import { dateFromChartClick } from '../../utils/chartSelection';
 import { SEVERITY_LABELS } from '../../utils/checkinHelpers';
 import { ObservationWindowAreas } from './ObservationWindowAreas';
+import { ChartReadoutShell } from './ChartTooltipContent';
 import type { ObservationWindowRegion } from '../../utils/medicationHelpers';
 
 export const BAND_CHART_HEIGHT = 44;
@@ -61,18 +61,21 @@ interface SymptomBandProps {
   data: SymptomBandRow[];
   segmentKeys: string[];
   domainMax: number;
-  syncId: string;
+  /** @deprecated Kept for call-site compatibility; selection replaces sync tooltips. */
+  syncId?: string;
   tooltipMode?: SymptomBandTooltipMode;
-  /** All series in this card — used by the host tooltip for a single combined readout. */
+  /** @deprecated Selection is owned by the card host; ignored. */
   tooltipSeries?: BandTooltipSeries[];
-  /** Only the host band renders tooltip content; others keep an empty Tooltip for syncId. */
+  /** @deprecated Selection is owned by the card host; ignored. */
   isTooltipHost?: boolean;
-  /** When true (subscale charts), host tooltip appends MRS total / 44. */
+  /** @deprecated Selection is owned by the card host; ignored. */
   showMrsTotal?: boolean;
   markers?: DoseMarker[];
   observationRegions?: ObservationWindowRegion[];
-  /** When false, no tooltip / activeDot (inline dashboard). Fullscreen passes true. */
+  /** When false, no selection / enlarged selected dot (inline dashboard). */
   interactive?: boolean;
+  selectedDate?: string | null;
+  onSelectDate?: (date: string) => void;
 }
 
 function latestValue(rows: SymptomBandRow[], dataKey: string): number | null {
@@ -97,26 +100,17 @@ function formatBandValue(
   return String(value);
 }
 
-interface SymptomBandTooltipProps {
-  active?: boolean;
-  payload?: Array<{ payload?: SymptomBandRow }>;
-  tooltipSeries: BandTooltipSeries[];
-  tooltipMode: SymptomBandTooltipMode;
-  showMrsTotal?: boolean;
-}
-
-function SymptomBandTooltip({
-  active,
-  payload,
+export function BandPointReadout({
+  point,
   tooltipSeries,
   tooltipMode,
   showMrsTotal = false,
-}: SymptomBandTooltipProps) {
-  if (!active || !payload?.length) return null;
-
-  const point = payload[0]?.payload;
-  if (!point) return null;
-
+}: {
+  point: SymptomBandRow;
+  tooltipSeries: BandTooltipSeries[];
+  tooltipMode: SymptomBandTooltipMode;
+  showMrsTotal?: boolean;
+}): ReactNode {
   const lines = tooltipSeries
     .map((series) => {
       const raw = point[series.dataKey];
@@ -132,29 +126,27 @@ function SymptomBandTooltip({
 
   if (lines.length === 0) return null;
 
-  const gapNotice = point.gapNotice;
   const mrsTotal = showMrsTotal ? lines.reduce((sum, line) => sum + line.value, 0) : null;
 
   return (
-    <div
-      className="rounded-md border border-sand-200 px-2.5 py-1.5 text-[11px] shadow-md"
-      style={CHART_TOOLTIP_SURFACE_STYLE}
-    >
-      <p className="font-medium text-sage-800">{point.dateLabel}</p>
-      {gapNotice && <p className="mt-0.5 text-sage-600">{gapNotice}</p>}
+    <ChartReadoutShell>
+      <p className="font-medium leading-snug text-sage-800">{point.dateLabel}</p>
+      {point.gapNotice && (
+        <p className="mt-0.5 leading-snug text-sage-600">{point.gapNotice}</p>
+      )}
       <div className="mt-0.5 space-y-0.5">
         {lines.map((line) => (
-          <p key={line.name} className="text-sage-700">
+          <p key={line.name} className="leading-snug text-sage-700">
             {line.name} · <strong>{line.label}</strong>
           </p>
         ))}
       </div>
       {mrsTotal !== null && (
-        <p className="mt-1 border-t border-sand-100 pt-1 text-sage-700">
+        <p className="mt-1 border-t border-sand-100 pt-1 leading-snug text-sage-700">
           MRS total · <strong>{mrsTotal} / 44</strong>
         </p>
       )}
-    </div>
+    </ChartReadoutShell>
   );
 }
 
@@ -164,14 +156,12 @@ export function SymptomBand({
   data,
   segmentKeys,
   domainMax,
-  syncId,
   tooltipMode = 'plain',
-  tooltipSeries,
-  isTooltipHost = false,
-  showMrsTotal = false,
   markers,
   observationRegions,
   interactive = true,
+  selectedDate = null,
+  onSelectDate,
 }: SymptomBandProps) {
   const latest = latestValue(data, dataKey);
   const latestLabel =
@@ -181,9 +171,13 @@ export function SymptomBand({
         ? `${latest} / ${domainMax}`
         : String(latest);
 
-  const seriesForTooltip: BandTooltipSeries[] = tooltipSeries ?? [
-    { name, dataKey, domainMax },
-  ];
+  const dates = data.map((row) => row.date);
+
+  const handleClick = (state: MouseHandlerDataParam) => {
+    if (!interactive || !onSelectDate) return;
+    const date = dateFromChartClick(state, dates);
+    if (date) onSelectDate(date);
+  };
 
   return (
     <div>
@@ -196,7 +190,11 @@ export function SymptomBand({
           <BandDoseMarkerOverlay markers={markers} height={BAND_CHART_HEIGHT} />
         )}
         <ResponsiveContainer width="100%" height={BAND_CHART_HEIGHT}>
-          <ComposedChart data={data} margin={BAND_CHART_MARGIN} syncId={interactive ? syncId : undefined}>
+          <ComposedChart
+            data={data}
+            margin={BAND_CHART_MARGIN}
+            onClick={interactive ? handleClick : undefined}
+          >
             <XAxis dataKey="date" hide />
             {observationRegions && observationRegions.length > 0 && (
               <ObservationWindowAreas regions={observationRegions} />
@@ -226,41 +224,35 @@ export function SymptomBand({
                 connectNulls
                 isAnimationActive={false}
                 legendType="none"
-                dot={{
-                  r: 2.6,
-                  fill: BAND_INK.dot,
-                  stroke: 'var(--color-sand-50)',
-                  strokeWidth: 0.8,
+                dot={(props: {
+                  cx?: number;
+                  cy?: number;
+                  payload?: SymptomBandRow;
+                }) => {
+                  const { cx, cy, payload } = props;
+                  if (cx == null || cy == null) return null;
+                  const selected = interactive && payload?.date === selectedDate;
+                  return (
+                    <circle
+                      cx={cx}
+                      cy={cy}
+                      r={selected ? 4 : 2.6}
+                      fill={BAND_INK.dot}
+                      stroke="var(--color-sand-50)"
+                      strokeWidth={0.8}
+                    />
+                  );
                 }}
-                activeDot={
-                  interactive
-                    ? {
-                        r: 4,
-                        fill: BAND_INK.dot,
-                        stroke: 'var(--color-sand-50)',
-                        strokeWidth: 0.8,
-                      }
-                    : false
-                }
+                activeDot={false}
               />
             ))}
             <YAxis hide domain={[0, domainMax]} />
             {interactive && (
               <Tooltip
-                isAnimationActive={false}
+                content={() => null}
                 cursor={false}
-                wrapperStyle={CHART_TOOLTIP_WRAPPER_STYLE}
-                content={
-                  isTooltipHost ? (
-                    <SymptomBandTooltip
-                      tooltipSeries={seriesForTooltip}
-                      tooltipMode={tooltipMode}
-                      showMrsTotal={showMrsTotal}
-                    />
-                  ) : (
-                    () => null
-                  )
-                }
+                isAnimationActive={false}
+                wrapperStyle={{ display: 'none' }}
               />
             )}
           </ComposedChart>

@@ -1,20 +1,21 @@
-import { memo, useMemo } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import {
   ResponsiveContainer,
   ComposedChart,
   ReferenceArea,
   Scatter,
+  Tooltip,
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
 } from 'recharts';
-import type { ScatterPointItem } from 'recharts';
+import type { MouseHandlerDataParam, ScatterPointItem } from 'recharts';
 import { ChartCard } from '../ui/ChartCard';
-import { LabTooltipContent } from './ChartTooltipContent';
+import { LabPointReadout } from './ChartTooltipContent';
+import { ChartReadoutDock } from './ChartReadoutDock';
 import { LabTrendSelector } from './LabTrendSelector';
 import { CHART_COLORS, formatChartDate, formatChartDateLong } from '../../utils/chartHelpers';
-import { CHART_TOOLTIP_WRAPPER_STYLE } from '../../utils/chartStyle';
+import { dateFromChartClick } from '../../utils/chartSelection';
 import { getBiomarkerByKey } from '../../data/labRanges';
 import { getTrendDirection, getValueStatus, type LabValueStatus } from '../../utils/labHelpers';
 import {
@@ -95,16 +96,18 @@ function buildTrendSummary(data: LabTrendPoint[], unit: string, biomarker: LabBi
   };
 }
 
-function LabDrawDot(props: ScatterPointItem) {
-  const { cx, cy, payload } = props;
+function LabDrawDot(props: ScatterPointItem & { selectedDate?: string | null }) {
+  const { cx, cy, payload, selectedDate } = props;
   if (cx == null || cy == null || !payload) return null;
-  const value = (payload as LabTrendPoint).value;
+  const point = payload as LabTrendPoint;
+  const value = point.value;
+  const selected = selectedDate != null && point.date === selectedDate;
   return (
     <g>
       <circle
         cx={cx}
         cy={cy}
-        r={LAB_DOT_RADIUS}
+        r={selected ? LAB_DOT_RADIUS + 1.5 : LAB_DOT_RADIUS}
         fill={LAB_DOT_FILL}
         stroke={LAB_DOT_STROKE}
         strokeWidth={2}
@@ -121,6 +124,148 @@ function LabDrawDot(props: ScatterPointItem) {
       </text>
     </g>
   );
+}
+
+function LabTrendBody({
+  interactive,
+  data,
+  biomarker,
+  yDomain,
+  referenceContext,
+  trendSummary,
+  referenceLegend,
+  toneClass,
+}: {
+  interactive: boolean;
+  data: LabTrendPoint[];
+  biomarker: LabBiomarker;
+  yDomain: [number, number];
+  referenceContext: ReturnType<typeof resolveReferenceBands>;
+  trendSummary: ReturnType<typeof buildTrendSummary>;
+  referenceLegend: string | null;
+  toneClass: string;
+}) {
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!interactive) setSelectedDate(null);
+  }, [interactive]);
+
+  const dates = useMemo(() => data.map((row) => row.date), [data]);
+  const labels = useMemo(() => data.map((row) => row.dateLabel), [data]);
+
+  const selectedPoint = useMemo(
+    () => (selectedDate ? data.find((row) => row.date === selectedDate) ?? null : null),
+    [data, selectedDate],
+  );
+
+  const handleClick = (state: MouseHandlerDataParam) => {
+    if (!interactive) return;
+    const date = dateFromChartClick(state, dates, labels);
+    if (date) setSelectedDate(date);
+  };
+
+  const chart = (
+    <div className={interactive ? 'min-w-0 w-full' : 'min-w-0 w-full max-w-none sm:max-w-[440px]'}>
+      <ResponsiveContainer width="100%" height={interactive ? 280 : 160}>
+        <ComposedChart
+          data={data}
+          margin={{ top: 20, right: 12, left: 0, bottom: 0 }}
+          onClick={interactive ? handleClick : undefined}
+        >
+          {referenceContext.bands.map((band) => (
+            <ReferenceArea
+              key={band.label}
+              y1={band.y1}
+              y2={band.y2}
+              fill={band.fill}
+              fillOpacity={band.fillOpacity}
+            />
+          ))}
+          {referenceContext.edges.map((edge) => {
+            const area = referenceEdgeArea(edge.edge, { min: yDomain[0], max: yDomain[1] });
+            return (
+              <ReferenceArea
+                key={edge.label}
+                y1={area.y1}
+                y2={area.y2}
+                fill={edge.fill}
+                fillOpacity={0.28}
+              />
+            );
+          })}
+          <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
+          <XAxis dataKey="dateLabel" tick={{ fontSize: 11, fill: CHART_COLORS.axisText }} />
+          <YAxis
+            domain={yDomain}
+            tick={{ fontSize: 11, fill: CHART_COLORS.axisText }}
+            width={44}
+            tickFormatter={(v) => formatLabChartValue(Number(v))}
+          />
+          {interactive && (
+            <Tooltip
+              content={() => null}
+              cursor={false}
+              isAnimationActive={false}
+              wrapperStyle={{ display: 'none' }}
+            />
+          )}
+          <Scatter
+            data={data}
+            dataKey="value"
+            fill={LAB_DOT_FILL}
+            isAnimationActive={false}
+            shape={(props: ScatterPointItem) => (
+              <LabDrawDot {...props} selectedDate={interactive ? selectedDate : null} />
+            )}
+          />
+        </ComposedChart>
+      </ResponsiveContainer>
+    </div>
+  );
+
+  const summary = (
+    <div>
+      <p className="text-sm font-medium text-sage-600">
+        {biomarker.label} · {biomarker.unit}
+      </p>
+      {trendSummary && (
+        <div className="mt-1">
+          <p className={`font-display text-xl font-semibold ${toneClass}`}>
+            {trendSummary.headline}
+          </p>
+          <p className="mt-0.5 text-sm text-sage-500">{trendSummary.detail}</p>
+        </div>
+      )}
+      {referenceLegend && (
+        <p className="mt-1.5 text-[11px] leading-snug text-sage-400">
+          {referenceLegend}
+        </p>
+      )}
+    </div>
+  );
+
+  const plot = (
+    <div className="space-y-3">
+      {summary}
+      {chart}
+      <p className="text-xs text-sage-400">
+        Each dot is a blood draw. Levels between draws are not measured.
+      </p>
+    </div>
+  );
+
+  if (!interactive) return plot;
+
+  const readout = selectedPoint
+    ? LabPointReadout({
+        point: selectedPoint,
+        biomarkerLabel: biomarker.label,
+        unit: biomarker.unit,
+      })
+    : null;
+
+  return <ChartReadoutDock plot={plot} readout={readout} />;
 }
 
 function LabTrendChartComponent({
@@ -180,84 +325,16 @@ function LabTrendChartComponent({
     >
       {({ interactive }) =>
         !isEmpty && biomarker ? (
-          <div className="space-y-3">
-            <div>
-              <p className="text-sm font-medium text-sage-600">
-                {biomarker.label} · {biomarker.unit}
-              </p>
-              {trendSummary && (
-                <div className="mt-1">
-                  <p className={`font-display text-xl font-semibold ${toneClass}`}>
-                    {trendSummary.headline}
-                  </p>
-                  <p className="mt-0.5 text-sm text-sage-500">{trendSummary.detail}</p>
-                </div>
-              )}
-              {referenceLegend && (
-                <p className="mt-1.5 text-[11px] leading-snug text-sage-400">
-                  {referenceLegend}
-                </p>
-              )}
-            </div>
-
-            <div className={interactive ? 'min-w-0 w-full' : 'min-w-0 w-full max-w-none sm:max-w-[440px]'}>
-              <ResponsiveContainer width="100%" height={interactive ? 280 : 160}>
-                <ComposedChart data={data} margin={{ top: 20, right: 12, left: 0, bottom: 0 }}>
-                  {referenceContext.bands.map((band) => (
-                    <ReferenceArea
-                      key={band.label}
-                      y1={band.y1}
-                      y2={band.y2}
-                      fill={band.fill}
-                      fillOpacity={band.fillOpacity}
-                    />
-                  ))}
-                  {referenceContext.edges.map((edge) => {
-                    const area = referenceEdgeArea(edge.edge, { min: yDomain[0], max: yDomain[1] });
-                    return (
-                      <ReferenceArea
-                        key={edge.label}
-                        y1={area.y1}
-                        y2={area.y2}
-                        fill={edge.fill}
-                        fillOpacity={0.28}
-                      />
-                    );
-                  })}
-                  <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
-                  <XAxis dataKey="dateLabel" tick={{ fontSize: 11, fill: CHART_COLORS.axisText }} />
-                  <YAxis
-                    domain={yDomain}
-                    tick={{ fontSize: 11, fill: CHART_COLORS.axisText }}
-                    width={44}
-                    tickFormatter={(v) => formatLabChartValue(Number(v))}
-                  />
-                  {interactive && (
-                    <Tooltip
-                      trigger="click"
-                      isAnimationActive={false}
-                      cursor={false}
-                      wrapperStyle={CHART_TOOLTIP_WRAPPER_STYLE}
-                      content={
-                        <LabTooltipContent biomarkerLabel={biomarker.label} unit={biomarker.unit} />
-                      }
-                    />
-                  )}
-                  <Scatter
-                    data={data}
-                    dataKey="value"
-                    fill={LAB_DOT_FILL}
-                    isAnimationActive={false}
-                    shape={LabDrawDot}
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </div>
-
-            <p className="text-xs text-sage-400">
-              Each dot is a blood draw. Levels between draws are not measured.
-            </p>
-          </div>
+          <LabTrendBody
+            interactive={interactive}
+            data={data}
+            biomarker={biomarker}
+            yDomain={yDomain}
+            referenceContext={referenceContext}
+            trendSummary={trendSummary}
+            referenceLegend={referenceLegend}
+            toneClass={toneClass}
+          />
         ) : null
       }
     </ChartCard>

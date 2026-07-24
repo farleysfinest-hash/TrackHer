@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChartCard } from '../ui/ChartCard';
 import { MRS_CORE_SYMPTOMS, getSymptomChipLabel } from '../../data/symptoms';
 import { formatChartDate } from '../../utils/chartHelpers';
@@ -7,8 +7,10 @@ import {
   buildMedicationLaneRows,
   doseChangeMarkerPercents,
 } from '../../utils/medicationLaneHelpers';
+import { ChartReadoutDock } from './ChartReadoutDock';
 import {
   BAND_CHART_MARGIN,
+  BandPointReadout,
   BandXAxis,
   SymptomBand,
   type BandTooltipSeries,
@@ -37,7 +39,80 @@ interface DrillDownControlsProps {
 const MAX_SYMPTOMS = 3;
 const MAX_MEDS = 3;
 const DOMAIN_MAX = 4;
-const SYNC_ID = 'compare-symptoms-medications';
+
+function CompareBody({
+  interactive,
+  dailyRows,
+  segmentKeysByLine,
+  symptomLines,
+  tooltipSeries,
+  laneRows,
+  markerLines,
+}: {
+  interactive: boolean;
+  dailyRows: SymptomBandRow[];
+  segmentKeysByLine: Record<string, string[]>;
+  symptomLines: Array<{ key: string; label: string }>;
+  tooltipSeries: BandTooltipSeries[];
+  laneRows: ReturnType<typeof buildMedicationLaneRows>;
+  markerLines: ReturnType<typeof doseChangeMarkerPercents>;
+}) {
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!interactive) setSelectedDate(null);
+  }, [interactive]);
+
+  const selectedPoint = useMemo(
+    () => (selectedDate ? dailyRows.find((row) => row.date === selectedDate) ?? null : null),
+    [dailyRows, selectedDate],
+  );
+
+  const plot = (
+    <div className="space-y-0">
+      {symptomLines.map((line) => (
+        <SymptomBand
+          key={line.key}
+          name={line.label}
+          dataKey={line.key}
+          data={dailyRows}
+          segmentKeys={segmentKeysByLine[line.key] ?? []}
+          domainMax={DOMAIN_MAX}
+          tooltipMode="severity"
+          markers={markerLines}
+          interactive={interactive}
+          selectedDate={selectedDate}
+          onSelectDate={setSelectedDate}
+        />
+      ))}
+
+      {laneRows.length > 0 && (
+        <div
+          style={{
+            marginLeft: BAND_CHART_MARGIN.left,
+            marginRight: BAND_CHART_MARGIN.right,
+          }}
+        >
+          <MedicationLane rows={laneRows} markers={markerLines} />
+        </div>
+      )}
+
+      <BandXAxis data={dailyRows} />
+    </div>
+  );
+
+  if (!interactive) return plot;
+
+  const readout = selectedPoint
+    ? BandPointReadout({
+        point: selectedPoint,
+        tooltipSeries,
+        tooltipMode: 'severity',
+      })
+    : null;
+
+  return <ChartReadoutDock plot={plot} readout={readout} />;
+}
 
 export function DrillDownControls({
   checkinDates,
@@ -193,37 +268,15 @@ export function DrillDownControls({
               ))}
             </div>
 
-            <div className="space-y-0">
-              {drillData.symptomLines.map((line, index) => (
-                <SymptomBand
-                  key={line.key}
-                  name={line.label}
-                  dataKey={line.key}
-                  data={chartData.dailyRows}
-                  segmentKeys={chartData.segmentKeysByLine[line.key] ?? []}
-                  domainMax={DOMAIN_MAX}
-                  syncId={interactive ? `${SYNC_ID}-x` : SYNC_ID}
-                  tooltipMode="severity"
-                  tooltipSeries={tooltipSeries}
-                  isTooltipHost={index === 0}
-                  markers={markerLines}
-                  interactive={interactive}
-                />
-              ))}
-
-              {laneRows.length > 0 && (
-                <div
-                  style={{
-                    marginLeft: BAND_CHART_MARGIN.left,
-                    marginRight: BAND_CHART_MARGIN.right,
-                  }}
-                >
-                  <MedicationLane rows={laneRows} markers={markerLines} />
-                </div>
-              )}
-            </div>
-
-            <BandXAxis data={chartData.dailyRows} />
+            <CompareBody
+              interactive={interactive}
+              dailyRows={chartData.dailyRows}
+              segmentKeysByLine={chartData.segmentKeysByLine}
+              symptomLines={drillData.symptomLines}
+              tooltipSeries={tooltipSeries}
+              laneRows={laneRows}
+              markerLines={markerLines}
+            />
           </div>
         ) : null
       }

@@ -1,8 +1,10 @@
-import { memo, useMemo } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { ChartCard } from '../ui/ChartCard';
 import { buildDailyIndexedWeeklyChart, weeklyChartWindow } from '../../utils/weeklyChartSeries';
 import { MRS_SUBSCALES } from '../../data/mrsSubscales';
+import { ChartReadoutDock } from './ChartReadoutDock';
 import {
+  BandPointReadout,
   BandXAxis,
   SymptomBand,
   type BandTooltipSeries,
@@ -18,13 +20,74 @@ interface SubscaleChartProps {
 }
 
 const SUBSCALE_VALUE_KEYS = MRS_SUBSCALES.map((s) => s.dataKey);
-const SYNC_ID = 'subscale-breakdown';
 
 const TOOLTIP_SERIES: BandTooltipSeries[] = MRS_SUBSCALES.map((s) => ({
   name: s.plainLabel,
   dataKey: s.dataKey,
   domainMax: s.maxScore,
 }));
+
+function SubscaleBody({
+  interactive,
+  dailyRows,
+  weeklySegmentKeys,
+  windowRegions,
+}: {
+  interactive: boolean;
+  dailyRows: SymptomBandRow[];
+  weeklySegmentKeys: Record<string, string[]>;
+  windowRegions: ReturnType<typeof observationWindowRegions>;
+}) {
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!interactive) setSelectedDate(null);
+  }, [interactive]);
+
+  const selectedPoint = useMemo(
+    () => (selectedDate ? dailyRows.find((row) => row.date === selectedDate) ?? null : null),
+    [dailyRows, selectedDate],
+  );
+
+  const bands = (
+    <div className="space-y-0">
+      {MRS_SUBSCALES.map((subscale) => (
+        <SymptomBand
+          key={subscale.dataKey}
+          name={subscale.plainLabel}
+          dataKey={subscale.dataKey}
+          data={dailyRows}
+          segmentKeys={weeklySegmentKeys[subscale.dataKey] ?? []}
+          domainMax={subscale.maxScore}
+          tooltipMode="subscale"
+          observationRegions={windowRegions}
+          interactive={interactive}
+          selectedDate={selectedDate}
+          onSelectDate={setSelectedDate}
+        />
+      ))}
+      <BandXAxis data={dailyRows} />
+      {windowRegions.length > 0 && (
+        <p className="mt-2 text-xs text-sage-400">
+          Shaded area — observation window after a dose change.
+        </p>
+      )}
+    </div>
+  );
+
+  if (!interactive) return bands;
+
+  const readout = selectedPoint
+    ? BandPointReadout({
+        point: selectedPoint,
+        tooltipSeries: TOOLTIP_SERIES,
+        tooltipMode: 'subscale',
+        showMrsTotal: true,
+      })
+    : null;
+
+  return <ChartReadoutDock plot={bands} readout={readout} />;
+}
 
 function SubscaleChartComponent({ data, changes = [] }: SubscaleChartProps) {
   const isEmpty = data.length < 2;
@@ -73,31 +136,12 @@ function SubscaleChartComponent({ data, changes = [] }: SubscaleChartProps) {
     >
       {({ interactive }) =>
         !isEmpty ? (
-          <div className="space-y-0">
-            {MRS_SUBSCALES.map((subscale, index) => (
-              <SymptomBand
-                key={subscale.dataKey}
-                name={subscale.plainLabel}
-                dataKey={subscale.dataKey}
-                data={dailyRows}
-                segmentKeys={weeklySegmentKeys[subscale.dataKey] ?? []}
-                domainMax={subscale.maxScore}
-                syncId={interactive ? `${SYNC_ID}-x` : SYNC_ID}
-                tooltipMode="subscale"
-                tooltipSeries={TOOLTIP_SERIES}
-                isTooltipHost={index === 0}
-                showMrsTotal
-                observationRegions={windowRegions}
-                interactive={interactive}
-              />
-            ))}
-            <BandXAxis data={dailyRows} />
-            {windowRegions.length > 0 && (
-              <p className="mt-2 text-xs text-sage-400">
-                Shaded area — observation window after a dose change.
-              </p>
-            )}
-          </div>
+          <SubscaleBody
+            interactive={interactive}
+            dailyRows={dailyRows}
+            weeklySegmentKeys={weeklySegmentKeys}
+            windowRegions={windowRegions}
+          />
         ) : null
       }
     </ChartCard>
