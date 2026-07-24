@@ -23,6 +23,7 @@ import { WeeklySegmentLines } from './WeeklySegmentLines';
 import {
   buildMedicationLaneRows,
   doseChangeMarkerPercents,
+  medicationLaneBlockHeight,
   CHART_MARGIN_LEFT,
   CHART_MARGIN_RIGHT,
 } from '../../utils/medicationLaneHelpers';
@@ -36,15 +37,13 @@ import {
 import type { SymptomTrendPoint } from '../../hooks/useChartData';
 import type { Medication, MedicationChange } from '../../types/database';
 import type { Insight } from '../../engine/types';
+import { ChartDateAxisTick } from './ChartDateAxisTick';
 
 const PANEL_MRS_HEIGHT = 80;
 const PANEL_PULSE_HEIGHT = 64;
 const PANEL_MRS_HEIGHT_EXPANDED = 180;
 const PANEL_PULSE_HEIGHT_EXPANDED = 140;
 const X_AXIS_HEIGHT = 28;
-const LANE_ROW_HEIGHT = 28;
-/** Clearance under the last med lane for hanging dose-change labels before the date axis. */
-const LANE_AXIS_CLEARANCE = 18;
 
 const INK = {
   mrsStroke: 'var(--color-chart-line-primary)',
@@ -154,7 +153,7 @@ function StoryChartsBody({
     return chartData.find((row) => row.date === selectedDate) ?? null;
   }, [chartData, selectedDate]);
 
-  const laneHeight = laneRows.length > 0 ? laneRows.length * LANE_ROW_HEIGHT + 8 : 0;
+  const laneHeight = medicationLaneBlockHeight(laneRows);
   const mrsTicks = [0, 22, 44];
 
   const handleChartClick = (state: MouseHandlerDataParam) => {
@@ -303,7 +302,6 @@ function StoryChartsBody({
           style={{
             marginLeft: CHART_MARGIN_LEFT,
             marginRight: CHART_MARGIN_RIGHT,
-            paddingBottom: laneRows.length > 0 ? LANE_AXIS_CLEARANCE : 0,
           }}
         >
           <MedicationLane rows={laneRows} />
@@ -338,7 +336,7 @@ function StoryChartsBody({
         <LineChart data={chartData} margin={{ ...CHART_MARGIN, top: 0 }}>
           <XAxis
             dataKey="dateLabel"
-            tick={{ fontSize: 11, fill: CHART_COLORS.axisText }}
+            tick={(props) => <ChartDateAxisTick {...props} />}
             axisLine={false}
             tickLine={false}
             interval="preserveStartEnd"

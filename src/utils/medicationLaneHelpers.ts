@@ -9,6 +9,15 @@ export const MED_LANE_SEGMENT_GAP_PCT = 0.35;
 export const CHART_MARGIN_LEFT = 52;
 export const CHART_MARGIN_RIGHT = 28;
 
+/** Vertical space reserved under a lane bar for hanging dose-change labels. */
+export const LANE_BOUNDARY_LABEL_CLEARANCE_PX = 16;
+
+/**
+ * Near the plot edges, center-anchored labels clip. Switch to start/end
+ * anchoring inside this percent band from either end.
+ */
+export const BOUNDARY_LABEL_EDGE_PCT = 6;
+
 export interface MedicationLaneSegment {
   id: string;
   startDate: string;
@@ -23,6 +32,7 @@ export interface MedicationLaneSegment {
 
 export interface MedicationLaneBoundary {
   id: string;
+  medicationId: string;
   date: string;
   label: string;
   leftPercent: number;
@@ -34,6 +44,12 @@ export interface MedicationLaneRow {
   medicationName: string;
   segments: MedicationLaneSegment[];
   boundaries: MedicationLaneBoundary[];
+}
+
+export interface DoseChangeMarkerPercent {
+  id: string;
+  medicationId: string;
+  leftPercent: number;
 }
 
 interface DosePeriod {
@@ -92,6 +108,16 @@ export function dateToCategoryPercent(date: string, domainDates: string[]): numb
   }
 
   return 100;
+}
+
+/**
+ * CSS transform for a hanging boundary label so endpoint labels stay inside the track.
+ * Returns translateX percentage relative to the label's own width.
+ */
+export function boundaryLabelTranslateX(leftPercent: number): number {
+  if (leftPercent <= BOUNDARY_LABEL_EDGE_PCT) return 0;
+  if (leftPercent >= 100 - BOUNDARY_LABEL_EDGE_PCT) return -100;
+  return -50;
 }
 
 function buildDosePeriods(med: Medication, changes: MedicationChange[], today: string): DosePeriod[] {
@@ -181,6 +207,16 @@ function clipPeriod(
   return { ...period, startDate: start, endDate: end };
 }
 
+/** True when the medication's active calendar span overlaps [windowStart, windowEnd]. */
+export function medicationOverlapsWindow(
+  med: Pick<Medication, 'start_date' | 'end_date'>,
+  windowStart: string,
+  windowEnd: string,
+  today: string = todayISO(),
+): boolean {
+  return med.start_date <= windowEnd && (med.end_date ?? today) >= windowStart;
+}
+
 export function buildMedicationLaneRows(
   medications: Medication[],
   changes: MedicationChange[],
@@ -190,63 +226,66 @@ export function buildMedicationLaneRows(
   today: string = todayISO(),
 ): MedicationLaneRow[] {
   const activeMeds = medications
-    .filter((m) => m.start_date <= windowEnd && (m.end_date ?? today) >= windowStart)
+    .filter((m) => medicationOverlapsWindow(m, windowStart, windowEnd, today))
     .sort((a, b) => a.medication_name.localeCompare(b.medication_name));
 
-  return activeMeds.map((med) => {
-    const periods = buildDosePeriods(med, changes, today)
-      .map((p) => clipPeriod(p, windowStart, windowEnd))
-      .filter((p): p is DosePeriod => p !== null);
+  return activeMeds
+    .map((med) => {
+      const periods = buildDosePeriods(med, changes, today)
+        .map((p) => clipPeriod(p, windowStart, windowEnd))
+        .filter((p): p is DosePeriod => p !== null);
 
-    const hasDoseChange = periods.length > 1;
-    const segments: MedicationLaneSegment[] = periods.map((period, index) => {
-      let left = dateToCategoryPercent(period.startDate, domainDates);
-      let right = dateToCategoryPercent(period.endDate, domainDates);
-      if (hasDoseChange && index > 0) {
-        left += MED_LANE_SEGMENT_GAP_PCT / 2;
-      }
-      if (hasDoseChange && index < periods.length - 1) {
-        right -= MED_LANE_SEGMENT_GAP_PCT / 2;
-      }
-      const width = Math.max(right - left, 1.5);
-      const ramp = getMedLaneRamp(med.hormone_category);
-      const color = hasDoseChange && index > 0 ? ramp.deep : ramp.base;
-      return {
-        id: `${med.id}-${index}`,
-        startDate: period.startDate,
-        endDate: period.endDate,
-        dose: period.dose,
-        doseUnit: period.doseUnit,
-        doseLabel: formatDoseAmount(period.dose, period.doseUnit),
-        color,
-        leftPercent: left,
-        widthPercent: width,
-      };
-    });
-
-    const boundaries: MedicationLaneBoundary[] = changes
-      .filter((c) => c.medication_id === med.id)
-      .map((change) => {
-        const label = formatLaneBoundaryLabel(change, med.dose_unit);
-        if (!label) return null;
-        if (change.change_date < windowStart || change.change_date > windowEnd) return null;
+      const hasDoseChange = periods.length > 1;
+      const segments: MedicationLaneSegment[] = periods.map((period, index) => {
+        let left = dateToCategoryPercent(period.startDate, domainDates);
+        let right = dateToCategoryPercent(period.endDate, domainDates);
+        if (hasDoseChange && index > 0) {
+          left += MED_LANE_SEGMENT_GAP_PCT / 2;
+        }
+        if (hasDoseChange && index < periods.length - 1) {
+          right -= MED_LANE_SEGMENT_GAP_PCT / 2;
+        }
+        const width = Math.max(right - left, 1.5);
+        const ramp = getMedLaneRamp(med.hormone_category);
+        const color = hasDoseChange && index > 0 ? ramp.deep : ramp.base;
         return {
-          id: change.id,
-          date: change.change_date,
-          label,
-          leftPercent: dateToCategoryPercent(change.change_date, domainDates),
+          id: `${med.id}-${index}`,
+          startDate: period.startDate,
+          endDate: period.endDate,
+          dose: period.dose,
+          doseUnit: period.doseUnit,
+          doseLabel: formatDoseAmount(period.dose, period.doseUnit),
+          color,
+          leftPercent: left,
+          widthPercent: width,
         };
-      })
-      .filter((b): b is MedicationLaneBoundary => b !== null);
+      });
 
-    return {
-      medicationId: med.id,
-      rowLabel: buildMedicationRowLabel(med),
-      medicationName: med.medication_name,
-      segments,
-      boundaries,
-    };
-  });
+      const boundaries: MedicationLaneBoundary[] = changes
+        .filter((c) => c.medication_id === med.id)
+        .map((change) => {
+          const label = formatLaneBoundaryLabel(change, med.dose_unit);
+          if (!label) return null;
+          if (change.change_date < windowStart || change.change_date > windowEnd) return null;
+          return {
+            id: change.id,
+            medicationId: med.id,
+            date: change.change_date,
+            label,
+            leftPercent: dateToCategoryPercent(change.change_date, domainDates),
+          };
+        })
+        .filter((b): b is MedicationLaneBoundary => b !== null);
+
+      return {
+        medicationId: med.id,
+        rowLabel: buildMedicationRowLabel(med),
+        medicationName: med.medication_name,
+        segments,
+        boundaries,
+      };
+    })
+    .filter((row) => row.segments.length > 0);
 }
 
 /** Dose increases/decreases only — not starts/stops (lane bar edges carry those). */
@@ -255,16 +294,29 @@ export function doseChangeMarkerPercents(
   domainDates: string[],
   windowStart: string,
   windowEnd: string,
-): Array<{ id: string; leftPercent: number }> {
+): DoseChangeMarkerPercent[] {
   return changes
     .filter(
-      (c) =>
+      (c): c is MedicationChange & { medication_id: string } =>
+        c.medication_id != null &&
         (c.change_type === 'dose_increased' || c.change_type === 'dose_decreased') &&
         c.change_date >= windowStart &&
         c.change_date <= windowEnd,
     )
     .map((c) => ({
       id: c.id,
+      medicationId: c.medication_id,
       leftPercent: dateToCategoryPercent(c.change_date, domainDates),
     }));
+}
+
+/** Pixel height for the stacked lane block (names + bars + per-row label reserves). */
+export function medicationLaneBlockHeight(rows: MedicationLaneRow[]): number {
+  if (rows.length === 0) return 0;
+  const NAME_AND_BAR = 26;
+  return rows.reduce(
+    (sum, row) =>
+      sum + NAME_AND_BAR + (row.boundaries.length > 0 ? LANE_BOUNDARY_LABEL_CLEARANCE_PX : 0),
+    4,
+  );
 }

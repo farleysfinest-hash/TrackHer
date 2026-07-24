@@ -10,12 +10,13 @@ import {
   YAxis,
 } from 'recharts';
 import type { MouseHandlerDataParam } from 'recharts';
-import { CHART_COLORS } from '../../utils/chartHelpers';
 import { dateFromChartClick } from '../../utils/chartSelection';
 import { SEVERITY_LABELS } from '../../utils/checkinHelpers';
 import { ObservationWindowAreas } from './ObservationWindowAreas';
 import { ChartReadoutShell } from './ChartTooltipContent';
+import { ChartDateAxisTick } from './ChartDateAxisTick';
 import type { ObservationWindowRegion } from '../../utils/medicationHelpers';
+import type { DoseChangeMarkerPercent } from '../../utils/medicationLaneHelpers';
 
 export const BAND_CHART_HEIGHT = 44;
 export const BAND_X_AXIS_HEIGHT = 28;
@@ -50,11 +51,6 @@ export interface BandTooltipSeries {
   domainMax: number;
 }
 
-interface DoseMarker {
-  id: string;
-  leftPercent: number;
-}
-
 interface SymptomBandProps {
   name: string;
   dataKey: string;
@@ -70,7 +66,7 @@ interface SymptomBandProps {
   isTooltipHost?: boolean;
   /** @deprecated Selection is owned by the card host; ignored. */
   showMrsTotal?: boolean;
-  markers?: DoseMarker[];
+  markers?: DoseChangeMarkerPercent[];
   observationRegions?: ObservationWindowRegion[];
   /** When false, no selection / enlarged selected dot (inline dashboard). */
   interactive?: boolean;
@@ -272,7 +268,7 @@ export function BandXAxis({ data }: BandXAxisProps) {
       <ComposedChart data={data} margin={{ ...BAND_CHART_MARGIN, top: 0 }}>
         <XAxis
           dataKey="dateLabel"
-          tick={{ fontSize: 11, fill: CHART_COLORS.axisText }}
+          tick={(props) => <ChartDateAxisTick {...props} />}
           axisLine={false}
           tickLine={false}
           interval="preserveStartEnd"
@@ -284,7 +280,7 @@ export function BandXAxis({ data }: BandXAxisProps) {
 }
 
 interface BandDoseMarkerOverlayProps {
-  markers: DoseMarker[];
+  markers: DoseChangeMarkerPercent[];
   height: number;
   insetLeft?: number;
   insetRight?: number;

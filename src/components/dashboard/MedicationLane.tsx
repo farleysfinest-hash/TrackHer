@@ -1,16 +1,16 @@
 import { memo } from 'react';
 import { formatChartDate } from '../../utils/chartHelpers';
-import type { MedicationLaneRow } from '../../utils/medicationLaneHelpers';
+import {
+  boundaryLabelTranslateX,
+  LANE_BOUNDARY_LABEL_CLEARANCE_PX,
+  type DoseChangeMarkerPercent,
+  type MedicationLaneRow,
+} from '../../utils/medicationLaneHelpers';
 import { BandDoseMarkerOverlay } from './SymptomBand';
-
-interface DoseMarker {
-  id: string;
-  leftPercent: number;
-}
 
 interface MedicationLaneProps {
   rows: MedicationLaneRow[];
-  markers?: DoseMarker[];
+  markers?: DoseChangeMarkerPercent[];
 }
 
 function MedicationLaneComponent({ rows, markers }: MedicationLaneProps) {
@@ -18,55 +18,74 @@ function MedicationLaneComponent({ rows, markers }: MedicationLaneProps) {
 
   return (
     <div className="mt-0.5 space-y-1 pb-1 pt-0">
-      {rows.map((row) => (
-        <div key={row.medicationId} className="space-y-0.5">
-          <p
-            className="truncate text-[9px] text-sage-500 md:hidden"
-            title={row.rowLabel}
+      {rows.map((row) => {
+        const rowMarkers =
+          markers?.filter((marker) => marker.medicationId === row.medicationId) ?? [];
+        const hasBoundaries = row.boundaries.length > 0;
+
+        return (
+          <div
+            key={row.medicationId}
+            className="space-y-0.5"
+            data-medication-id={row.medicationId}
+            style={{
+              // Keep dose-change labels inside this med's row so they cannot
+              // collide with another medication's name or bar.
+              paddingBottom: hasBoundaries ? LANE_BOUNDARY_LABEL_CLEARANCE_PX : 0,
+            }}
           >
-            {row.medicationName}
-          </p>
-          <p
-            className="hidden truncate text-[9px] text-sage-500 md:block"
-            title={row.rowLabel}
-          >
-            {row.rowLabel}
-          </p>
-          <div className="relative h-[10px] rounded-[3px] bg-sand-50/50">
-            {markers && markers.length > 0 && (
-              <BandDoseMarkerOverlay
-                markers={markers}
-                height={10}
-                insetLeft={0}
-                insetRight={0}
-              />
-            )}
-            {row.segments.map((segment) => (
-              <div
-                key={segment.id}
-                className="absolute top-0 h-[10px] rounded-[3px]"
-                style={{
-                  left: `${segment.leftPercent}%`,
-                  width: `${segment.widthPercent}%`,
-                  backgroundColor: segment.color,
-                  opacity: 0.92,
-                }}
-                aria-label={`${row.medicationName}, ${segment.doseLabel}, ${formatChartDate(segment.startDate)} to ${formatChartDate(segment.endDate)}`}
-              />
-            ))}
-            {row.boundaries.map((boundary) => (
-              <span
-                key={boundary.id}
-                className="pointer-events-none absolute top-full mt-1 max-w-[9rem] -translate-x-1/2 whitespace-nowrap text-[8px] leading-tight text-sage-500"
-                style={{ left: `${boundary.leftPercent}%` }}
-                title={boundary.label}
-              >
-                {boundary.label}
-              </span>
-            ))}
+            <p
+              className="truncate text-[9px] text-sage-500 md:hidden"
+              title={row.rowLabel}
+            >
+              {row.medicationName}
+            </p>
+            <p
+              className="hidden truncate text-[9px] text-sage-500 md:block"
+              title={row.rowLabel}
+            >
+              {row.rowLabel}
+            </p>
+            <div className="relative h-[10px] rounded-[3px] bg-sand-50/50">
+              {rowMarkers.length > 0 && (
+                <BandDoseMarkerOverlay
+                  markers={rowMarkers}
+                  height={10}
+                  insetLeft={0}
+                  insetRight={0}
+                />
+              )}
+              {row.segments.map((segment) => (
+                <div
+                  key={segment.id}
+                  className="absolute top-0 h-[10px] rounded-[3px]"
+                  style={{
+                    left: `${segment.leftPercent}%`,
+                    width: `${segment.widthPercent}%`,
+                    backgroundColor: segment.color,
+                    opacity: 0.92,
+                  }}
+                  aria-label={`${row.medicationName}, ${segment.doseLabel}, ${formatChartDate(segment.startDate)} to ${formatChartDate(segment.endDate)}`}
+                />
+              ))}
+              {row.boundaries.map((boundary) => (
+                <span
+                  key={boundary.id}
+                  data-medication-id={boundary.medicationId}
+                  className="pointer-events-none absolute top-full mt-1 max-w-[9rem] whitespace-nowrap text-[8px] leading-tight text-sage-500"
+                  style={{
+                    left: `${boundary.leftPercent}%`,
+                    transform: `translateX(${boundaryLabelTranslateX(boundary.leftPercent)}%)`,
+                  }}
+                  title={boundary.label}
+                >
+                  {boundary.label}
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
