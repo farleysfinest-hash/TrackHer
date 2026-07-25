@@ -45,7 +45,7 @@ export function LabHistoryCard({ lab, onViewDetails }: LabHistoryCardProps) {
           return (
             <li key={key} className="flex items-center gap-2 text-sm text-sage-700">
               <span className={`h-2 w-2 shrink-0 rounded-full ${getStatusDotClass(status)}`} />
-              <span>
+              <span className="select-text">
                 {biomarker.label.split(' ')[0]}: {value} {biomarker.unit}
               </span>
             </li>

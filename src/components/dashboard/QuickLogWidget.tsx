@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import {
   Flame,
   Brain,
@@ -108,24 +107,17 @@ export function QuickLogWidget() {
           <div className="mt-4 rounded-xl border border-dashed border-sage-200 bg-sage-50/50 p-4">
             <p className="text-sm font-medium text-sage-700">No Quick Log shortcuts yet</p>
             <p className="mt-1 text-sm text-sage-500">
-              Star up to five personal symptoms for one-tap logging, or search the full library
-              for a one-off log.
+              {trackedSymptomIds.length > 0
+                ? 'Star up to five of your personal symptoms for one-tap logging, or search the full library for a one-off log.'
+                : 'Add the concerns you want to follow, then star up to five for one-tap logging.'}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <Button size="sm" onClick={() => setShortcutsOpen(true)}>
-                Choose shortcuts
+                {trackedSymptomIds.length > 0 ? 'Manage personal symptoms' : 'Add personal symptoms'}
               </Button>
               <Button size="sm" variant="secondary" onClick={() => openSheet()}>
                 Log something else
               </Button>
-              {trackedSymptomIds.length === 0 && (
-                <Link
-                  to="/checkin"
-                  className="inline-flex items-center justify-center rounded-lg px-3 py-2 text-sm font-medium text-sage-600 underline hover:text-sage-700"
-                >
-                  Add personal symptoms
-                </Link>
-              )}
             </div>
           </div>
         )}
@@ -136,7 +128,6 @@ export function QuickLogWidget() {
       <SymptomManageModal
         isOpen={shortcutsOpen}
         onClose={() => setShortcutsOpen(false)}
-        mode="tracked"
         trackedIds={trackedSymptomIds}
         watchIds={watchSymptomIds}
         onSave={async (nextTrackedIds, nextWatchIds) =>

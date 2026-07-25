@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
 import type { UserSymptomSelection } from '../types/database';
@@ -95,14 +95,23 @@ export function useSymptomSelections() {
     [fetchSelections],
   );
 
-  const trackedSymptomIds = selections
-    .map((s) => s.symptom_id)
-    .filter((id) => !isMRSCanonicalKey(id));
+  // Memoized because SymptomManageModal resets its in-progress edits from these
+  // arrays. Rebuilding them on every render of a consumer gave them a fresh
+  // identity each time, which re-fired that reset and silently discarded
+  // whatever the user had just tracked or starred.
+  const trackedSymptomIds = useMemo(
+    () => selections.map((s) => s.symptom_id).filter((id) => !isMRSCanonicalKey(id)),
+    [selections],
+  );
 
-  const watchSymptomIds = selections
-    .filter((s) => s.is_watch_symptom)
-    .map((s) => s.symptom_id)
-    .filter((id) => !isMRSCanonicalKey(id));
+  const watchSymptomIds = useMemo(
+    () =>
+      selections
+        .filter((s) => s.is_watch_symptom)
+        .map((s) => s.symptom_id)
+        .filter((id) => !isMRSCanonicalKey(id)),
+    [selections],
+  );
 
   return {
     selections,

@@ -336,7 +336,6 @@ export function CheckinPage() {
       <SymptomManageModal
         isOpen={personalSymptomsOpen}
         onClose={() => setPersonalSymptomsOpen(false)}
-        mode="tracked"
         trackedIds={trackedSymptomIds}
         watchIds={watchSymptomIds}
         onSave={async (nextTrackedIds, nextWatchIds) =>

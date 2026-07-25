@@ -14,12 +14,9 @@ import {
 } from '../../types/symptoms';
 import { isMRSCanonicalKey } from '../../utils/checkinHelpers';
 
-export type SymptomManageMode = 'tracked' | 'shortcuts';
-
 interface SymptomManageModalProps {
   isOpen: boolean;
   onClose: () => void;
-  mode: SymptomManageMode;
   trackedIds: string[];
   watchIds: string[];
   onSave: (trackedIds: string[], watchIds: string[]) => Promise<boolean>;
@@ -56,7 +53,6 @@ function groupByBodySystem(symptoms: SymptomDefinition[]) {
 export function SymptomManageModal({
   isOpen,
   onClose,
-  mode,
   trackedIds,
   watchIds,
   onSave,
@@ -64,6 +60,7 @@ export function SymptomManageModal({
   const [localTracked, setLocalTracked] = useState<string[]>(trackedIds);
   const [localWatch, setLocalWatch] = useState<string[]>(watchIds);
   const [query, setQuery] = useState('');
+  const [browseLibrary, setBrowseLibrary] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -72,26 +69,33 @@ export function SymptomManageModal({
     setLocalTracked(trackedIds);
     setLocalWatch(watchIds.filter((id) => trackedIds.includes(id)));
     setQuery('');
+    setBrowseLibrary(false);
     setSaveError(null);
   }, [isOpen, trackedIds, watchIds]);
 
-  const availableSymptoms = useMemo(() => {
-    const base =
-      mode === 'shortcuts'
-        ? localTracked
-            .map((id) => getSymptomByKey(id))
-            .filter((symptom): symptom is SymptomDefinition => Boolean(symptom))
-        : PERSONAL_CATALOG;
+  const trackedSymptoms = useMemo(
+    () =>
+      localTracked
+        .map((id) => getSymptomByKey(id))
+        .filter((symptom): symptom is SymptomDefinition => Boolean(symptom)),
+    [localTracked],
+  );
 
-    if (!query.trim()) return base;
+  // Opens on her own symptoms. The full 120-entry library is one tap away, and
+  // searching reaches it without the toggle.
+  const searching = query.trim().length > 0;
+  const showingLibrary = browseLibrary || searching;
+
+  const availableSymptoms = useMemo(() => {
+    const base = showingLibrary ? PERSONAL_CATALOG : trackedSymptoms;
+    if (!searching) return base;
+
     const allowed = new Set(base.map((symptom) => symptom.key));
     return searchSymptomCatalog(query, SYMPTOM_CATALOG.length).filter(
       (symptom) =>
-        allowed.has(symptom.key) &&
-        !symptom.isMRSCore &&
-        !isMRSCanonicalKey(symptom.key),
+        allowed.has(symptom.key) && !symptom.isMRSCore && !isMRSCanonicalKey(symptom.key),
     );
-  }, [localTracked, mode, query]);
+  }, [query, searching, showingLibrary, trackedSymptoms]);
 
   const groups = useMemo(() => groupByBodySystem(availableSymptoms), [availableSymptoms]);
 
@@ -124,35 +128,21 @@ export function SymptomManageModal({
     }
   };
 
-  const title = mode === 'tracked' ? 'Edit personal symptoms' : 'Edit Quick Log shortcuts';
-
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title} size="lg">
-      {mode === 'tracked' ? (
-        <div className="mb-5 rounded-xl border border-sage-200 bg-sage-50 p-4">
-          <h3 className="font-medium text-sage-800">Personal symptoms and Quick Log</h3>
-          <p className="mt-1 text-sm leading-relaxed text-sage-600">
-            Your weekly MRS questions are fixed and always included. Personal symptoms come from
-            TrackHer&apos;s full symptom library and help you follow concerns beyond the MRS. Star
-            up to five for one-tap Quick Log. Removing a Quick Log shortcut does not remove it from
-            your weekly tracking or delete its history. Removing a personal symptom stops future
-            prompts without deleting its history.
-          </p>
-          <p className="mt-2 text-sm font-medium text-sage-700">
-            {localTracked.length} tracked · {localWatch.length} of {MAX_SHORTCUTS} starred
-          </p>
-        </div>
-      ) : (
-        <div className="mb-5">
-          <p className="text-sm leading-relaxed text-sage-600">
-            Star up to five tracked symptoms for one-tap Quick Log buttons. Removing a star does
-            not remove weekly tracking or delete history.
-          </p>
-          <p className="mt-2 text-sm font-medium text-sage-700">
-            {localWatch.length} of {MAX_SHORTCUTS} starred
-          </p>
-        </div>
-      )}
+    <Modal isOpen={isOpen} onClose={onClose} title="Edit personal symptoms" size="lg">
+      <div className="mb-5 rounded-xl border border-sage-200 bg-sage-50 p-4">
+        <h3 className="font-medium text-sage-800">Personal symptoms and Quick Log</h3>
+        <p className="mt-1 text-sm leading-relaxed text-sage-600">
+          Your weekly MRS questions are fixed and always included. Personal symptoms come from
+          TrackHer&apos;s full symptom library and help you follow concerns beyond the MRS. Star up
+          to five for one-tap Quick Log. Removing a Quick Log shortcut does not remove it from your
+          weekly tracking or delete its history. Removing a personal symptom stops future prompts
+          without deleting its history.
+        </p>
+        <p className="mt-2 text-sm font-medium text-sage-700">
+          {localTracked.length} tracked · {localWatch.length} of {MAX_SHORTCUTS} starred
+        </p>
+      </div>
 
       <label className="relative block">
         <span className="sr-only">Search symptoms</span>
@@ -164,19 +154,36 @@ export function SymptomManageModal({
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder={
-            mode === 'tracked' ? 'Search the full symptom library…' : 'Search tracked symptoms…'
-          }
+          placeholder="Search the full symptom library…"
           className="w-full rounded-lg border border-sand-200 bg-sand-50 py-2.5 pl-9 pr-3 text-base text-sage-800 placeholder:text-sage-400 focus:border-sage-400 focus:outline-none focus:ring-1 focus:ring-sage-400"
         />
       </label>
 
+      {!searching && (
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <p className="text-sm text-sage-500">
+            {showingLibrary
+              ? 'Browsing the full symptom library'
+              : localTracked.length > 0
+                ? 'Your personal symptoms'
+                : 'You have no personal symptoms yet'}
+          </p>
+          <button
+            type="button"
+            onClick={() => setBrowseLibrary((current) => !current)}
+            className="shrink-0 text-sm font-medium text-sage-600 underline hover:text-sage-700"
+          >
+            {showingLibrary ? 'Show mine only' : 'Add from library'}
+          </button>
+        </div>
+      )}
+
       <div className="mt-4 max-h-[50dvh] space-y-5 overflow-y-auto pr-1">
         {availableSymptoms.length === 0 ? (
           <p className="rounded-lg border border-sand-200 px-4 py-6 text-center text-sm text-sage-500">
-            {mode === 'shortcuts' && localTracked.length === 0
-              ? 'No personal symptoms are tracked yet. Add them from the Check In page first.'
-              : 'No matching symptoms. Try a different everyday or clinical term.'}
+            {searching
+              ? 'No matching symptoms. Try a different everyday or clinical term.'
+              : 'No personal symptoms yet. Choose “Add from library” to pick the concerns you want to follow.'}
           </p>
         ) : (
           BODY_SYSTEM_ORDER.map((system) => {
@@ -196,55 +203,34 @@ export function SymptomManageModal({
                     return (
                       <div
                         key={symptom.key}
+                        role="group"
+                        aria-label={symptom.label}
                         className={[
                           'flex w-full items-center rounded-xl border text-left transition-colors',
-                          mode === 'tracked'
-                            ? tracked
-                              ? 'border-sage-400 bg-sage-50'
-                              : 'border-sand-200 hover:border-sage-300 hover:bg-sage-50/50'
-                            : starred
-                              ? 'border-sage-400 bg-sage-50'
-                              : 'border-sand-200 hover:border-sage-300 hover:bg-sage-50/50',
-                          mode === 'shortcuts' && shortcutLimitReached
-                            ? 'cursor-not-allowed opacity-45'
-                            : '',
+                          tracked
+                            ? 'border-sage-400 bg-sage-50'
+                            : 'border-sand-200 hover:border-sage-300 hover:bg-sage-50/50',
                         ].join(' ')}
                       >
                         <button
                           type="button"
-                          onClick={() =>
-                            mode === 'tracked'
-                              ? toggleTracked(symptom.key)
-                              : toggleShortcut(symptom.key)
+                          onClick={() => toggleTracked(symptom.key)}
+                          aria-pressed={tracked}
+                          aria-label={
+                            tracked
+                              ? `Stop tracking ${symptom.label}`
+                              : `Track ${symptom.label} weekly`
                           }
-                          disabled={mode === 'shortcuts' && shortcutLimitReached}
-                          aria-pressed={mode === 'tracked' ? tracked : starred}
                           className="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-3 py-3 text-left"
                         >
                           <span
                             className={[
                               'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
-                              mode === 'tracked'
-                                ? tracked
-                                  ? 'bg-sage-500 text-on-accent'
-                                  : 'bg-sand-100 text-sage-400'
-                                : starred
-                                  ? 'bg-sage-500 text-on-accent'
-                                  : 'bg-sand-100 text-sage-400',
+                              tracked ? 'bg-sage-500 text-on-accent' : 'bg-sand-100 text-sage-400',
                             ].join(' ')}
                             aria-hidden
                           >
-                            {mode === 'tracked' ? (
-                              tracked ? (
-                                <Check className="h-4 w-4" />
-                              ) : (
-                                <Plus className="h-4 w-4" />
-                              )
-                            ) : (
-                              <Star
-                                className={['h-4 w-4', starred ? 'fill-current' : ''].join(' ')}
-                              />
-                            )}
+                            {tracked ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
                           </span>
                           <span className="min-w-0">
                             <span className="block font-medium text-sage-800">{symptom.label}</span>
@@ -255,7 +241,7 @@ export function SymptomManageModal({
                             )}
                           </span>
                         </button>
-                        {mode === 'tracked' && tracked && (
+                        {tracked && (
                           <button
                             type="button"
                             onClick={() => toggleShortcut(symptom.key)}

@@ -65,8 +65,12 @@ export function success(): Promise<boolean> {
 }
 
 /**
- * Selection tick for discrete control changes (severity slider).
- * Brackets with selectionStart/End so iOS treats it as a selection gesture.
+ * Selection tick for a one-off discrete change (severity slider, daily channel
+ * buttons, a single tap on a chart). Brackets with selectionStart/End so iOS
+ * treats it as a complete selection gesture.
+ *
+ * Do NOT call this repeatedly during a continuous drag — see the three
+ * primitives below and lib/selectionGesture.
  */
 export function selectionTick(): Promise<boolean> {
   return runHaptic('selection tick', async () => {
@@ -74,4 +78,26 @@ export function selectionTick(): Promise<boolean> {
     await Haptics.selectionChanged();
     await Haptics.selectionEnd();
   });
+}
+
+/**
+ * Continuous-gesture primitives (chart scrubbing).
+ *
+ * iOS backs these with a UISelectionFeedbackGenerator: selectionStart prepares
+ * and warms the Taptic Engine, selectionEnd releases it. Bracketing every
+ * individual tick — start/changed/end per date — powers the engine down between
+ * ticks and costs three bridge round-trips each, which drops and delays taps
+ * during a fast scrub. Prepare once at the start of the drag, tick per change,
+ * release at the end.
+ */
+export function selectionGestureStart(): Promise<boolean> {
+  return runHaptic('selection gesture start', () => Haptics.selectionStart());
+}
+
+export function selectionGestureChanged(): Promise<boolean> {
+  return runHaptic('selection gesture changed', () => Haptics.selectionChanged());
+}
+
+export function selectionGestureEnd(): Promise<boolean> {
+  return runHaptic('selection gesture end', () => Haptics.selectionEnd());
 }

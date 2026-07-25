@@ -34,7 +34,9 @@ export function LabValueDisplay({
     <div className={compact ? 'text-sm' : ''}>
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-medium text-sage-800">{biomarker.label}</span>
-        <span className="text-sage-700">
+        {/* Selectable on purpose: lab values get copied into notes and messages
+            to providers. Selection is blocked app-wide in index.css. */}
+        <span className="select-text text-sage-700">
           {value} {biomarker.unit}
         </span>
         <span className={`h-2 w-2 shrink-0 rounded-full ${getStatusDotClass(status)}`} />

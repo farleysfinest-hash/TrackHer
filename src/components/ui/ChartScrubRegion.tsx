@@ -1,5 +1,6 @@
-import { useMemo, useRef, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, type CSSProperties, type ReactNode } from 'react';
 import { nearestDateForRatio } from '../../utils/chartScrub';
+import { beginSelectionGesture, endSelectionGesture } from '../../lib/selectionGesture';
 
 interface ChartScrubInsets {
   top?: number;
@@ -41,6 +42,10 @@ export function ChartScrubRegion({
     scrubbing: boolean;
   } | null>(null);
 
+  // A chart unmounting mid-scrub (rotation, modal close) would otherwise leave
+  // the feedback generator held open.
+  useEffect(() => endSelectionGesture, []);
+
   const uniqueDates = useMemo(() => [...new Set(dates)], [dates]);
   const chartDomainDates = useMemo(
     () => [...new Set(domainDates && domainDates.length > 0 ? domainDates : uniqueDates)],
@@ -73,6 +78,7 @@ export function ChartScrubRegion({
       element.releasePointerCapture(pointerId);
     }
     pointerRef.current = null;
+    endSelectionGesture();
   };
 
   return (
@@ -99,6 +105,9 @@ export function ChartScrubRegion({
               scrubbing: event.pointerType === 'mouse',
             };
             if (event.pointerType === 'mouse') {
+              // Mouse scrubs from the first press, so the gesture opens here
+              // rather than at the movement-intent threshold below.
+              beginSelectionGesture();
               selectAt(event.clientX, event.currentTarget);
               event.currentTarget.setPointerCapture(event.pointerId);
             }
@@ -125,6 +134,9 @@ export function ChartScrubRegion({
                 return;
               }
               pointer.scrubbing = true;
+              // Prepare the Taptic Engine once, now that this is definitely a
+              // scrub. Every date change until pointer-up is a bare tick.
+              beginSelectionGesture();
               event.currentTarget.setPointerCapture(event.pointerId);
             }
 

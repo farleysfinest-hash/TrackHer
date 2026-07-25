@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { selectionTick } from '../lib/haptics';
+import { selectionFeedback } from '../lib/selectionGesture';
 
 /**
  * Owns a chart's selected date and emits one native selection tick only when
@@ -19,7 +19,7 @@ export function useChartSelection(interactive: boolean) {
     if (selectedDateRef.current === date) return;
     selectedDateRef.current = date;
     setSelectedDate(date);
-    void selectionTick();
+    selectionFeedback();
   }, []);
 
   return { selectedDate, selectDate };
