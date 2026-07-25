@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { DateOfBirthInput } from '../components/ui/DateOfBirthInput';
@@ -21,6 +22,19 @@ import { TimezoneSelect } from '../components/ui/TimezoneSelect';
 import { getActiveTimezone, isValidTimeZone } from '../utils/localDate';
 import { deriveUterusAnswer, uterusAnswerToValue, type UterusAnswer } from '../utils/uterusAnswer';
 import { downloadJson, exportUserData } from '../utils/dataExport';
+import {
+  getHapticRuntimeStatus,
+  selectionTick,
+  success as hapticSuccess,
+  tapLight,
+  tapMedium,
+} from '../lib/haptics';
+import {
+  getProfileAvatar,
+  prepareProfileAvatar,
+  withProfileAvatar,
+} from '../utils/profileAvatar';
+import { Camera, Trash2 } from 'lucide-react';
 
 const DAY_OPTIONS: Array<{ label: string; value: number }> = [
   { label: 'Mon', value: 1 },
@@ -52,6 +66,9 @@ export function SettingsPage() {
   );
   const [profileSaved, setProfileSaved] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [isAvatarSaving, setIsAvatarSaving] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [newPassword, setNewPassword] = useState('');
@@ -62,11 +79,15 @@ export function SettingsPage() {
   const [showResetModal, setShowResetModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [hapticTestResult, setHapticTestResult] = useState<string | null>(null);
 
   const timezone = getResolvedTimezone(profile?.timezone);
   const todayStr = getLocalDateISO(timezone);
+  const showHapticDiagnostics = Capacitor.isNativePlatform() && Capacitor.DEBUG === true;
+  const hapticStatus = getHapticRuntimeStatus();
   const appointmentIsPast =
     !!nextAppointmentDate && nextAppointmentDate < todayStr;
+  const avatarUrl = getProfileAvatar(profile);
 
   useEffect(() => {
     if (profile) {
@@ -114,6 +135,40 @@ export function SettingsPage() {
     }
   };
 
+  const handleAvatarFile = async (file: File | undefined) => {
+    if (!file) return;
+    setAvatarError(null);
+    setIsAvatarSaving(true);
+    try {
+      const dataUrl = await prepareProfileAvatar(file);
+      const result = await update({
+        ui_state: withProfileAvatar(profile?.ui_state, dataUrl),
+      });
+      if (!result.success) {
+        setAvatarError(result.error ?? 'Could not save your profile picture.');
+      }
+    } catch (error) {
+      setAvatarError(
+        error instanceof Error ? error.message : 'Could not prepare your profile picture.',
+      );
+    } finally {
+      setIsAvatarSaving(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
+  };
+
+  const handleAvatarRemove = async () => {
+    setAvatarError(null);
+    setIsAvatarSaving(true);
+    const result = await update({
+      ui_state: withProfileAvatar(profile?.ui_state, null),
+    });
+    setIsAvatarSaving(false);
+    if (!result.success) {
+      setAvatarError(result.error ?? 'Could not remove your profile picture.');
+    }
+  };
+
   const handleExportData = async () => {
     setIsExporting(true);
     setExportError(null);
@@ -155,6 +210,25 @@ export function SettingsPage() {
     navigate('/login');
   };
 
+  const handleHapticTest = async (
+    label: string,
+    operation: () => Promise<boolean>,
+  ) => {
+    setHapticTestResult(`Testing ${label.toLowerCase()}…`);
+    const resolved = await operation();
+    const nextStatus = getHapticRuntimeStatus();
+    console.info('[Haptics] diagnostic test', {
+      test: label,
+      bridgeCallResolved: resolved,
+      ...nextStatus,
+    });
+    setHapticTestResult(
+      resolved
+        ? `${label} bridge call resolved. Confirm whether you felt it on the phone.`
+        : `${label} failed or was unavailable. Check the Xcode console for details.`,
+    );
+  };
+
   return (
     <div className="space-y-8">
       <div>
@@ -165,6 +239,50 @@ export function SettingsPage() {
       <Card>
         <h2 className="font-display text-xl text-sage-800">Profile</h2>
         <form onSubmit={handleProfileSave} className="mt-4 space-y-4">
+          <div>
+            <p className="mb-2 text-sm font-medium text-sage-700">Profile picture</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-sage-500 text-lg font-medium text-on-accent">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="Current profile" className="h-full w-full object-cover" />
+                ) : (
+                  (displayName.trim().charAt(0) || user?.email?.charAt(0) || '?').toUpperCase()
+                )}
+              </div>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={(event) => void handleAvatarFile(event.target.files?.[0])}
+              />
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => avatarInputRef.current?.click()}
+                isLoading={isAvatarSaving}
+                loadingText="Saving…"
+              >
+                <Camera className="h-4 w-4" aria-hidden />
+                {avatarUrl ? 'Change picture' : 'Add picture'}
+              </Button>
+              {avatarUrl && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => void handleAvatarRemove()}
+                  disabled={isAvatarSaving}
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden />
+                  Remove
+                </Button>
+              )}
+            </div>
+            <p className="mt-2 text-xs text-sage-500">
+              TrackHer crops the center of your picture into the account circle.
+            </p>
+            {avatarError && <p className="mt-2 text-sm text-danger">{avatarError}</p>}
+          </div>
           <Input
             label="Display Name"
             value={displayName}
@@ -264,6 +382,61 @@ export function SettingsPage() {
       <RemindersSettingsCard />
 
       <SubscriptionSettingsCard />
+
+      {showHapticDiagnostics && (
+        <Card>
+          <h2 className="font-display text-xl text-sage-800">Haptic diagnostics</h2>
+          <p className="mt-1 text-sm text-sage-500">
+            Temporary native debug controls. Test on the physical iPhone while watching the Xcode
+            console.
+          </p>
+          <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+            <dt className="text-sage-500">Platform</dt>
+            <dd className="font-medium text-sage-700">{hapticStatus.platform}</dd>
+            <dt className="text-sage-500">Native runtime</dt>
+            <dd className="font-medium text-sage-700">{String(hapticStatus.native)}</dd>
+            <dt className="text-sage-500">Haptics plugin</dt>
+            <dd className="font-medium text-sage-700">{String(hapticStatus.pluginAvailable)}</dd>
+            <dt className="text-sage-500">Capacitor debug</dt>
+            <dd className="font-medium text-sage-700">{String(hapticStatus.capacitorDebug)}</dd>
+          </dl>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => void handleHapticTest('Light impact', tapLight)}
+            >
+              Test light
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => void handleHapticTest('Medium impact', tapMedium)}
+            >
+              Test medium
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => void handleHapticTest('Selection tick', selectionTick)}
+            >
+              Test selection
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => void handleHapticTest('Success notification', hapticSuccess)}
+            >
+              Test success
+            </Button>
+          </div>
+          {hapticTestResult && (
+            <p role="status" className="mt-3 text-sm text-sage-600">
+              {hapticTestResult}
+            </p>
+          )}
+        </Card>
+      )}
 
       <Card>
         <h2 className="font-display text-xl text-sage-800">Account</h2>

@@ -37,10 +37,10 @@ export function Sidebar() {
   const needsCheckin = !isLoading && (!hasCheckedInToday || isDue);
 
   return (
-    <aside className="fixed left-0 top-0 z-30 hidden h-screen w-[240px] flex-col border-r border-sand-200 bg-sand-50 md:flex">
+    <aside className="safe-area-sidebar fixed left-0 top-0 z-30 hidden h-screen flex-col border-r border-sand-200 bg-sand-50 md:flex">
       <div className="flex items-center justify-between gap-2 border-b border-sand-200 px-6 py-4">
         <Logo />
-        <LogoMark size={64} className="h-16 w-16" />
+        <LogoMark size={36} className="h-9 w-9" />
       </div>
 
       <nav className="flex-1 space-y-1 px-3 py-4">

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, ChevronDown, ChevronUp, Pill } from 'lucide-react';
 import { useMedications } from '../hooks/useMedications';
 import { useMedicationChanges } from '../hooks/useMedicationChanges';
@@ -24,7 +24,6 @@ export function MedicationsPage() {
   const [selectedMed, setSelectedMed] = useState<Medication | null>(null);
   const [discontinueMed, setDiscontinueMed] = useState<Medication | null>(null);
   const [historyExpanded, setHistoryExpanded] = useState(false);
-  const manageSectionRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     void fetchMedications();
@@ -48,33 +47,13 @@ export function MedicationsPage() {
     void fetchChanges({ force: true });
   }, [fetchMedications, fetchChanges]);
 
-  const scrollToManage = useCallback(() => {
-    const section = manageSectionRef.current;
-    if (!section) return;
-    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    // Focus after scroll starts so keyboard/SR land on the management region
-    // without fighting the smooth scroll offset under the sticky header.
-    window.requestAnimationFrame(() => {
-      section.focus({ preventScroll: true });
-    });
-  }, []);
-
   return (
     <div className="space-y-10">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div>
         <div>
           <h1 className="font-display text-3xl text-sage-800">Medications</h1>
           <p className="mt-1 text-sage-500">Track your HRT/BHRT regimen and dose changes over time.</p>
         </div>
-        {activeCount > 0 && (
-          <Button
-            onClick={scrollToManage}
-            aria-controls="manage-medications"
-            className="self-start"
-          >
-            Manage Medications
-          </Button>
-        )}
       </div>
 
       <DoseTapWidget />
@@ -85,11 +64,9 @@ export function MedicationsPage() {
       />
 
       <section
-        ref={manageSectionRef}
         id="manage-medications"
-        tabIndex={-1}
         aria-labelledby="manage-medications-heading"
-        className="scroll-mt-28 space-y-8 outline-none"
+        className="space-y-8"
       >
         <div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

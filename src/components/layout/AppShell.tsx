@@ -68,11 +68,11 @@ export function AppShell() {
   const onMainTab = isMainTabPath(pathname);
 
   return (
-    <div className="flex min-h-screen max-w-[100vw] overflow-x-hidden bg-sand-50">
+    <div className="flex min-h-screen max-w-[100vw] overflow-x-clip bg-sand-50">
       <Sidebar />
-      <div className="flex min-w-0 max-w-full flex-1 flex-col md:ml-[240px]">
+      <div className="safe-area-sidebar-offset flex min-w-0 max-w-full flex-1 flex-col">
         <Header />
-        <main className="min-w-0 max-w-full flex-1 overflow-x-hidden px-4 py-6 pb-24 md:px-8 md:py-8 md:pb-8 lg:px-12">
+        <main className="safe-area-main-x min-w-0 max-w-full flex-1 overflow-x-clip py-6 pb-24 md:py-8 md:pb-8">
           <div className="mx-auto min-w-0 max-w-[1200px]">
             <PersistentTabs />
             {!onMainTab && <Outlet />}

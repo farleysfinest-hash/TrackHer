@@ -18,7 +18,7 @@ const sizeClasses: Record<ModalSize, string> = {
   sm: 'max-w-[400px] max-h-[85dvh]',
   md: 'max-w-[560px] max-h-[85dvh]',
   lg: 'max-w-[720px] max-h-[85dvh]',
-  full: 'max-w-[90vw] max-h-[90vh]',
+  full: 'h-[100dvh] w-[100dvw] max-h-none max-w-none rounded-none border-0 shadow-none',
 };
 
 const FOCUSABLE =
@@ -89,8 +89,15 @@ export function Modal({
 
   if (!isOpen) return null;
 
+  const isFullScreen = size === 'full';
+
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div
+      className={[
+        'fixed inset-0 z-50 flex',
+        isFullScreen ? 'items-stretch justify-stretch p-0' : 'items-center justify-center p-4',
+      ].join(' ')}
+    >
       <div
         className="absolute inset-0 bg-black/40"
         onClick={closeOnBackdrop ? onClose : undefined}
@@ -103,12 +110,18 @@ export function Modal({
         aria-labelledby={title ? titleId : undefined}
         tabIndex={-1}
         className={[
-          'relative z-10 flex w-full flex-col overflow-hidden rounded-xl border border-sand-200 bg-sand-50 shadow-xl outline-none',
+          'relative z-10 flex w-full flex-col overflow-hidden bg-sand-50 outline-none',
+          isFullScreen ? '' : 'rounded-xl border border-sand-200 shadow-xl',
           sizeClasses[size],
         ].join(' ')}
       >
         {(title || showCloseButton) && (
-          <div className="flex shrink-0 items-center justify-between border-b border-sand-200 px-6 py-4">
+          <div
+            className={[
+              'flex shrink-0 items-center justify-between border-b border-sand-200 pb-3',
+              isFullScreen ? 'safe-area-modal-header' : 'px-4 pt-4 sm:px-6',
+            ].join(' ')}
+          >
             {title && (
               <h2 id={titleId} className="font-display text-xl text-sage-800">
                 {title}
@@ -118,7 +131,7 @@ export function Modal({
               <button
                 type="button"
                 onClick={onClose}
-                className="ml-auto rounded-lg p-1 text-sage-400 hover:bg-sage-50 hover:text-sage-600"
+                className="ml-auto flex h-11 w-11 items-center justify-center rounded-lg text-sage-400 hover:bg-sage-50 hover:text-sage-600"
                 aria-label="Close"
               >
                 <X className="h-5 w-5" />
@@ -126,7 +139,16 @@ export function Modal({
             )}
           </div>
         )}
-        <div className="min-h-0 flex-1 overflow-y-auto p-6">{children}</div>
+        <div
+          className={[
+            'min-h-0 flex-1 overflow-y-auto',
+            isFullScreen
+              ? 'safe-area-modal-body pt-4'
+              : 'p-6',
+          ].join(' ')}
+        >
+          {children}
+        </div>
       </div>
     </div>,
     document.body,
