@@ -23,6 +23,7 @@ const RAW_SYMPTOM_CATALOG: RawSymptom[] = [
     key: 'hot_flashes',
     label: 'Hot flashes / night sweats',
     shortLabel: 'Hot flashes',
+    searchTerms: ['hot flush', 'hot flushes', 'temperature surge'],
     description:
       'Sudden feeling of warmth, flushing, sweating — especially in the face, neck, and chest. Night sweats that disrupt sleep.',
     category: 'body',
@@ -35,6 +36,7 @@ const RAW_SYMPTOM_CATALOG: RawSymptom[] = [
     key: 'heart_discomfort',
     label: 'Heart discomfort / palpitations',
     shortLabel: 'Heart discomfort',
+    searchTerms: ['racing heart', 'heart racing', 'fluttering heart', 'skipped beats'],
     description:
       'Unusual awareness of heartbeat, racing heart, skipped beats, or chest tightness.',
     category: 'body',
@@ -91,6 +93,7 @@ const RAW_SYMPTOM_CATALOG: RawSymptom[] = [
     key: 'exhaustion',
     label: 'Physical and mental exhaustion',
     shortLabel: 'Exhaustion',
+    searchTerms: ['fatigue', 'tiredness', 'feeling drained'],
     description:
       'Feeling drained, reduced stamina, difficulty concentrating, forgetfulness.',
     category: 'body',
@@ -103,6 +106,7 @@ const RAW_SYMPTOM_CATALOG: RawSymptom[] = [
     key: 'sexual_problems',
     label: 'Sexual problems / low libido',
     shortLabel: 'Sexual problems',
+    searchTerms: ['sex drive', 'sexual desire', 'loss of desire'],
     description:
       'Decreased sexual desire, difficulty with arousal or orgasm, changes in sexual enjoyment.',
     category: 'sexual_pelvic',
@@ -114,6 +118,7 @@ const RAW_SYMPTOM_CATALOG: RawSymptom[] = [
   {
     key: 'bladder_problems',
     label: 'Bladder problems',
+    searchTerms: ['urine leakage', 'urinary leakage', 'incontinence', 'uti'],
     description:
       'Increased urgency, frequency, difficulty urinating, leaking, or recurrent UTIs.',
     category: 'sexual_pelvic',
@@ -157,6 +162,7 @@ const RAW_SYMPTOM_CATALOG: RawSymptom[] = [
   {
     key: 'brain_fog',
     label: 'Brain fog',
+    searchTerms: ['mental fog', 'cloudy thinking', 'word finding', 'difficulty focusing'],
     description:
       'Difficulty concentrating, word-finding problems, mental sluggishness, feeling \'cloudy.\'',
     category: 'mind',
@@ -284,6 +290,7 @@ const RAW_SYMPTOM_CATALOG: RawSymptom[] = [
   {
     key: 'tingling_limbs',
     label: 'Tingling in Limbs',
+    searchTerms: ['pins and needles', 'limb tingling'],
     description:
       'Pins-and-needles, numbness, or tingling in hands, feet, arms, or legs. May be related to estrogen effects on nerves or thyroid-related neuropathy.',
     category: 'body',
@@ -998,6 +1005,7 @@ const RAW_SYMPTOM_CATALOG: RawSymptom[] = [
   {
     key: 'painful_intercourse',
     label: 'Painful Intercourse',
+    searchTerms: ['painful sex', 'pain during sex', 'dyspareunia'],
     description:
       'Pain or discomfort during or after sex, often due to vaginal dryness and tissue thinning. Also called dyspareunia.',
     category: 'sexual_pelvic',
@@ -1252,27 +1260,53 @@ export function getSymptomChipLabel(symptom: SymptomDefinition | undefined): str
 }
 
 export function searchSymptomCatalog(query: string, limit = 20): SymptomDefinition[] {
-  const q = query.toLowerCase().trim();
+  const normalize = (value: string) =>
+    value
+      .normalize('NFKD')
+      .toLowerCase()
+      .replace(/&/g, ' and ')
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim()
+      .replace(/\s+/g, ' ');
+
+  const q = normalize(query);
   if (!q) return [];
 
   const matches: { def: SymptomDefinition; rank: number }[] = [];
+  const queryTokens = q.split(' ');
 
   for (const s of SYMPTOM_CATALOG) {
-    const label = s.label.toLowerCase();
-    const bodyLabel = SYMPTOM_BODY_SYSTEM_LABELS[s.bodySystem].toLowerCase();
-    const combined = `${label} ${bodyLabel}`;
+    const label = normalize(s.label);
+    const shortLabel = normalize(s.shortLabel ?? '');
+    const bodyLabel = normalize(SYMPTOM_BODY_SYSTEM_LABELS[s.bodySystem]);
+    const aliases = (s.searchTerms ?? []).map(normalize);
+    const description = normalize(s.description ?? '');
+    const key = normalize(s.key);
+    const combined = [label, shortLabel, bodyLabel, ...aliases, description, key].join(' ');
 
-    if (!combined.includes(q)) continue;
+    if (!queryTokens.every((token) => combined.includes(token))) continue;
 
+    // An exact alias hit ("uti") must outrank an incidental mid-word label
+    // substring ("hirs-uti-sm"), or the accidental match buries the real one.
     let rank: number;
-    if (label.startsWith(q)) {
-      rank = 0; // label starts with query
-    } else if (label.split(/[\s/\-–—]+/).some((word) => word.startsWith(q))) {
-      rank = 1; // a word inside the label starts with query
-    } else if (bodyLabel.startsWith(q) || bodyLabel.split(/[\s/\-–—]+/).some((word) => word.startsWith(q))) {
-      rank = 2; // body system matches
+    if (label === q || shortLabel === q) {
+      rank = 0;
+    } else if (aliases.some((alias) => alias === q)) {
+      rank = 1;
+    } else if (label.startsWith(q) || shortLabel.startsWith(q)) {
+      rank = 2;
+    } else if (label.split(' ').some((word) => word.startsWith(q))) {
+      rank = 3;
+    } else if (aliases.some((alias) => alias.startsWith(q))) {
+      rank = 4;
+    } else if (label.includes(q) || shortLabel.includes(q)) {
+      rank = 5;
+    } else if (bodyLabel.includes(q)) {
+      rank = 6;
+    } else if (description.includes(q)) {
+      rank = 7;
     } else {
-      rank = 3; // substring anywhere
+      rank = 8;
     }
 
     matches.push({ def: s, rank });

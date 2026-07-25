@@ -81,4 +81,28 @@ describe('searchSymptomCatalog', () => {
   it('returns empty array when nothing matches', () => {
     expect(searchSymptomCatalog('zzzz')).toEqual([]);
   });
+
+  it.each([
+    ['heart racing', 'heart_discomfort'],
+    ['urine leakage', 'bladder_problems'],
+    ['pins and needles', 'tingling_limbs'],
+    ['painful sex', 'painful_intercourse'],
+    ['hot flushes', 'hot_flashes'],
+  ])('matches everyday search term "%s"', (query, expectedKey) => {
+    expect(searchSymptomCatalog(query).map((result) => result.key)).toContain(expectedKey);
+  });
+
+  it('ranks an exact alias hit above an incidental mid-word label substring', () => {
+    const results = searchSymptomCatalog('uti', 200);
+    const keys = results.map((result) => result.key);
+    expect(keys).toContain('bladder_problems');
+    expect(keys).toContain('hirsutism');
+    expect(keys.indexOf('bladder_problems')).toBeLessThan(keys.indexOf('hirsutism'));
+  });
+
+  it('normalizes punctuation and repeated whitespace', () => {
+    const results = searchSymptomCatalog('  mood   &   emotions ');
+    expect(results.length).toBeGreaterThan(0);
+    expect(results.every((result) => result.bodySystem === 'mood')).toBe(true);
+  });
 });

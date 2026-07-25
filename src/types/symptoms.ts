@@ -57,6 +57,8 @@ export interface SymptomDefinition {
   label: string;
   /** Compact label for chip/tap contexts when full label would collide with another watched symptom. */
   shortLabel?: string;
+  /** Everyday terms that should find this symptom even when they are not in its clinical label. */
+  searchTerms?: string[];
   description?: string;
   category: SymptomCategory;
   bodySystem: SymptomBodySystem;
