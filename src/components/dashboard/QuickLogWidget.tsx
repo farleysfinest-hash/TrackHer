@@ -82,7 +82,7 @@ export function QuickLogWidget() {
             onClick={() => setShortcutsOpen(true)}
             className="ml-auto text-sm font-medium text-sage-600 underline hover:text-sage-700"
           >
-            Edit shortcuts
+            Edit personal symptoms
           </button>
         </div>
 
@@ -136,7 +136,7 @@ export function QuickLogWidget() {
       <SymptomManageModal
         isOpen={shortcutsOpen}
         onClose={() => setShortcutsOpen(false)}
-        mode="shortcuts"
+        mode="tracked"
         trackedIds={trackedSymptomIds}
         watchIds={watchSymptomIds}
         onSave={async (nextTrackedIds, nextWatchIds) =>

@@ -133,9 +133,13 @@ export function SymptomManageModal({
           <h3 className="font-medium text-sage-800">Personal symptoms and Quick Log</h3>
           <p className="mt-1 text-sm leading-relaxed text-sage-600">
             Your weekly MRS questions are fixed and always included. Personal symptoms come from
-            TrackHer&apos;s full symptom library and help you follow concerns beyond the MRS.
-            Quick Log shortcuts are managed separately. Removing a personal symptom stops future
-            weekly prompts without deleting its history.
+            TrackHer&apos;s full symptom library and help you follow concerns beyond the MRS. Star
+            up to five for one-tap Quick Log. Removing a Quick Log shortcut does not remove it from
+            your weekly tracking or delete its history. Removing a personal symptom stops future
+            prompts without deleting its history.
+          </p>
+          <p className="mt-2 text-sm font-medium text-sage-700">
+            {localTracked.length} tracked · {localWatch.length} of {MAX_SHORTCUTS} starred
           </p>
         </div>
       ) : (
@@ -187,22 +191,13 @@ export function SymptomManageModal({
                   {symptoms.map((symptom) => {
                     const tracked = localTracked.includes(symptom.key);
                     const starred = localWatch.includes(symptom.key);
-                    const shortcutLimitReached =
-                      mode === 'shortcuts' && !starred && localWatch.length >= MAX_SHORTCUTS;
+                    const shortcutLimitReached = !starred && localWatch.length >= MAX_SHORTCUTS;
 
                     return (
-                      <button
+                      <div
                         key={symptom.key}
-                        type="button"
-                        onClick={() =>
-                          mode === 'tracked'
-                            ? toggleTracked(symptom.key)
-                            : toggleShortcut(symptom.key)
-                        }
-                        disabled={shortcutLimitReached}
-                        aria-pressed={mode === 'tracked' ? tracked : starred}
                         className={[
-                          'flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left transition-colors',
+                          'flex w-full items-center rounded-xl border text-left transition-colors',
                           mode === 'tracked'
                             ? tracked
                               ? 'border-sage-400 bg-sage-50'
@@ -210,41 +205,82 @@ export function SymptomManageModal({
                             : starred
                               ? 'border-sage-400 bg-sage-50'
                               : 'border-sand-200 hover:border-sage-300 hover:bg-sage-50/50',
-                          shortcutLimitReached ? 'cursor-not-allowed opacity-45' : '',
+                          mode === 'shortcuts' && shortcutLimitReached
+                            ? 'cursor-not-allowed opacity-45'
+                            : '',
                         ].join(' ')}
                       >
-                        <span
-                          className={[
-                            'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
+                        <button
+                          type="button"
+                          onClick={() =>
                             mode === 'tracked'
-                              ? tracked
-                                ? 'bg-sage-500 text-on-accent'
-                                : 'bg-sand-100 text-sage-400'
-                              : starred
-                                ? 'bg-sage-500 text-on-accent'
-                                : 'bg-sand-100 text-sage-400',
-                          ].join(' ')}
-                          aria-hidden
+                              ? toggleTracked(symptom.key)
+                              : toggleShortcut(symptom.key)
+                          }
+                          disabled={mode === 'shortcuts' && shortcutLimitReached}
+                          aria-pressed={mode === 'tracked' ? tracked : starred}
+                          className="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-3 py-3 text-left"
                         >
-                          {mode === 'tracked' ? (
-                            tracked ? (
-                              <Check className="h-4 w-4" />
+                          <span
+                            className={[
+                              'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
+                              mode === 'tracked'
+                                ? tracked
+                                  ? 'bg-sage-500 text-on-accent'
+                                  : 'bg-sand-100 text-sage-400'
+                                : starred
+                                  ? 'bg-sage-500 text-on-accent'
+                                  : 'bg-sand-100 text-sage-400',
+                            ].join(' ')}
+                            aria-hidden
+                          >
+                            {mode === 'tracked' ? (
+                              tracked ? (
+                                <Check className="h-4 w-4" />
+                              ) : (
+                                <Plus className="h-4 w-4" />
+                              )
                             ) : (
-                              <Plus className="h-4 w-4" />
-                            )
-                          ) : (
-                            <Star className={['h-4 w-4', starred ? 'fill-current' : ''].join(' ')} />
-                          )}
-                        </span>
-                        <span className="min-w-0">
-                          <span className="block font-medium text-sage-800">{symptom.label}</span>
-                          {symptom.description && (
-                            <span className="mt-0.5 line-clamp-2 block text-xs leading-relaxed text-sage-500">
-                              {symptom.description}
-                            </span>
-                          )}
-                        </span>
-                      </button>
+                              <Star
+                                className={['h-4 w-4', starred ? 'fill-current' : ''].join(' ')}
+                              />
+                            )}
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block font-medium text-sage-800">{symptom.label}</span>
+                            {symptom.description && (
+                              <span className="mt-0.5 line-clamp-2 block text-xs leading-relaxed text-sage-500">
+                                {symptom.description}
+                              </span>
+                            )}
+                          </span>
+                        </button>
+                        {mode === 'tracked' && tracked && (
+                          <button
+                            type="button"
+                            onClick={() => toggleShortcut(symptom.key)}
+                            disabled={shortcutLimitReached}
+                            aria-pressed={starred}
+                            aria-label={
+                              starred
+                                ? `Remove ${symptom.label} from Quick Log shortcuts`
+                                : `Add ${symptom.label} to Quick Log shortcuts`
+                            }
+                            className={[
+                              'mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors',
+                              starred
+                                ? 'bg-sage-500 text-on-accent'
+                                : 'bg-sand-100 text-sage-500 hover:bg-sage-100 hover:text-sage-700',
+                              shortcutLimitReached ? 'cursor-not-allowed opacity-45' : '',
+                            ].join(' ')}
+                          >
+                            <Star
+                              className={['h-5 w-5', starred ? 'fill-current' : ''].join(' ')}
+                              aria-hidden
+                            />
+                          </button>
+                        )}
+                      </div>
                     );
                   })}
                 </div>
