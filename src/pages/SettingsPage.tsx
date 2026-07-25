@@ -30,11 +30,13 @@ import {
   tapMedium,
 } from '../lib/haptics';
 import {
-  getProfileAvatar,
-  prepareProfileAvatar,
-  withProfileAvatar,
+  AVATAR_STAMP_KEY,
+  removeProfileAvatarObject,
+  uploadProfileAvatar,
 } from '../utils/profileAvatar';
 import { Camera, Trash2 } from 'lucide-react';
+import { useProfileAvatarUrl } from '../hooks/useProfileAvatarUrl';
+import { setUiValue } from '../lib/uiState';
 
 const DAY_OPTIONS: Array<{ label: string; value: number }> = [
   { label: 'Mon', value: 1 },
@@ -87,7 +89,7 @@ export function SettingsPage() {
   const hapticStatus = getHapticRuntimeStatus();
   const appointmentIsPast =
     !!nextAppointmentDate && nextAppointmentDate < todayStr;
-  const avatarUrl = getProfileAvatar(profile);
+  const avatarUrl = useProfileAvatarUrl();
 
   useEffect(() => {
     if (profile) {
@@ -135,21 +137,19 @@ export function SettingsPage() {
     }
   };
 
+  // The stamp goes through setUiValue (the merge_ui_state RPC) rather than a
+  // whole-column write, so saving a picture cannot clobber tooltip and banner
+  // keys another device wrote to ui_state since this client last fetched.
   const handleAvatarFile = async (file: File | undefined) => {
-    if (!file) return;
+    if (!file || !user) return;
     setAvatarError(null);
     setIsAvatarSaving(true);
     try {
-      const dataUrl = await prepareProfileAvatar(file);
-      const result = await update({
-        ui_state: withProfileAvatar(profile?.ui_state, dataUrl),
-      });
-      if (!result.success) {
-        setAvatarError(result.error ?? 'Could not save your profile picture.');
-      }
+      const stamp = await uploadProfileAvatar(user.id, file);
+      setUiValue(AVATAR_STAMP_KEY, stamp);
     } catch (error) {
       setAvatarError(
-        error instanceof Error ? error.message : 'Could not prepare your profile picture.',
+        error instanceof Error ? error.message : 'Could not save your profile picture.',
       );
     } finally {
       setIsAvatarSaving(false);
@@ -158,15 +158,16 @@ export function SettingsPage() {
   };
 
   const handleAvatarRemove = async () => {
+    if (!user) return;
     setAvatarError(null);
     setIsAvatarSaving(true);
-    const result = await update({
-      ui_state: withProfileAvatar(profile?.ui_state, null),
-    });
-    setIsAvatarSaving(false);
-    if (!result.success) {
-      setAvatarError(result.error ?? 'Could not remove your profile picture.');
+    const { error } = await removeProfileAvatarObject(user.id);
+    if (error) {
+      setAvatarError('Could not remove your profile picture.');
+    } else {
+      setUiValue(AVATAR_STAMP_KEY, null);
     }
+    setIsAvatarSaving(false);
   };
 
   const handleExportData = async () => {

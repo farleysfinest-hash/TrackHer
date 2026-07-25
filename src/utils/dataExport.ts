@@ -1,5 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { saveOrShareBlob } from './nativeExport';
+import { getProfileAvatarStamp, getProfileAvatarUrl } from './profileAvatar';
+import type { Profile } from '../types/database';
 
 /** PostgREST default max is 1000; page below that and walk until a short page. */
 const PAGE_SIZE = 500;
@@ -7,6 +9,12 @@ const PAGE_SIZE = 500;
 export interface ExportBundle {
   exported_at: string;
   profile: Record<string, unknown> | null;
+  /**
+   * Signed, time-limited link to the profile picture, which lives in Storage
+   * rather than in the profile row. Null when there is no picture. Download it
+   * while the link is fresh — it expires an hour after the export.
+   */
+  profile_picture_url: string | null;
   symptom_checkins: Record<string, unknown>[];
   extended_symptom_logs: Record<string, unknown>[];
   quick_log_events: Record<string, unknown>[];
@@ -85,9 +93,13 @@ export async function exportUserData(): Promise<ExportBundle> {
     checkedQuery(userId, 'ai_insights', 'generated_at'),
   ]);
 
+  const profile = (profileRes.data as Record<string, unknown> | null) ?? null;
+  const hasAvatar = getProfileAvatarStamp(profile as Profile | null) !== null;
+
   return {
     exported_at: new Date().toISOString(),
-    profile: (profileRes.data as Record<string, unknown> | null) ?? null,
+    profile,
+    profile_picture_url: hasAvatar ? await getProfileAvatarUrl(userId) : null,
     symptom_checkins: checkins,
     extended_symptom_logs: extended,
     quick_log_events: quickLogs,

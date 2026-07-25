@@ -5,7 +5,7 @@ import { Logo } from '../ui/Logo';
 import { LogoMark } from '../ui/LogoMark';
 import { useAuth } from '../../hooks/useAuth';
 import { getInitials } from '../../utils/formatters';
-import { getProfileAvatar } from '../../utils/profileAvatar';
+import { useProfileAvatarUrl } from '../../hooks/useProfileAvatarUrl';
 
 export function Header() {
   const navigate = useNavigate();
@@ -41,7 +41,7 @@ export function Header() {
     : profile
       ? (user?.email?.trim()?.charAt(0)?.toUpperCase() ?? '?')
       : null;
-  const avatarUrl = getProfileAvatar(profile);
+  const avatarUrl = useProfileAvatarUrl();
 
   return (
     <header className="safe-area-top safe-area-header-x sticky top-0 z-20 flex min-w-0 items-center justify-between gap-3 overflow-x-hidden border-b border-sand-200 bg-sand-50/95 pb-4 backdrop-blur-sm">

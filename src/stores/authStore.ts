@@ -3,6 +3,7 @@ import type { User, Session, AuthChangeEvent } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { deleteUserAppData, deleteUserAccount } from '../lib/accountReset';
 import { getAuthErrorMessage } from '../lib/constants';
+import { removeProfileAvatarObject } from '../utils/profileAvatar';
 import type { Profile, ProfileUpdate } from '../types/database';
 
 let profileFetchInFlight: string | null = null;
@@ -253,6 +254,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (!user) return { success: false, error: 'Not authenticated' };
 
     set({ isLoading: true, error: null });
+    // Storage is not covered by delete_user_account — that RPC only removes
+    // rows. Drop the object first, while the user's JWT still authorizes the
+    // bucket policy. Best-effort: an orphaned image must not block deletion.
+    await removeProfileAvatarObject(user.id);
     const result = await deleteUserAccount();
     if (!result.success) {
       set({ isLoading: false, error: result.error ?? 'Deletion failed' });
@@ -268,6 +273,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (!user) return { success: false, error: 'Not authenticated' };
 
     set({ isLoading: true, error: null });
+    // reset_user_app_data clears ui_state (and with it the avatar stamp), so
+    // the object has to go too or the picture would linger unreferenced.
+    await removeProfileAvatarObject(user.id);
     const result = await deleteUserAppData();
     if (!result.success) {
       set({ isLoading: false, error: result.error ?? 'Reset failed' });
