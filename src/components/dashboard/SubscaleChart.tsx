@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from 'react';
+import { memo, useMemo } from 'react';
 import { ChartCard } from '../ui/ChartCard';
 import { buildDailyIndexedWeeklyChart, weeklyChartWindow } from '../../utils/weeklyChartSeries';
 import { MRS_SUBSCALES } from '../../data/mrsSubscales';
@@ -13,6 +13,7 @@ import {
 import { observationWindowRegions } from '../../utils/medicationHelpers';
 import type { SymptomTrendPoint } from '../../hooks/useChartData';
 import type { MedicationChange } from '../../types/database';
+import { useChartSelection } from '../../hooks/useChartSelection';
 
 interface SubscaleChartProps {
   data: SymptomTrendPoint[];
@@ -38,11 +39,7 @@ function SubscaleBody({
   weeklySegmentKeys: Record<string, string[]>;
   windowRegions: ReturnType<typeof observationWindowRegions>;
 }) {
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!interactive) setSelectedDate(null);
-  }, [interactive]);
+  const { selectedDate, selectDate } = useChartSelection(interactive);
 
   const selectedPoint = useMemo(
     () => (selectedDate ? dailyRows.find((row) => row.date === selectedDate) ?? null : null),
@@ -63,12 +60,12 @@ function SubscaleBody({
           observationRegions={windowRegions}
           interactive={interactive}
           selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
+          onSelectDate={selectDate}
         />
       ))}
       <BandXAxis data={dailyRows} />
       {windowRegions.length > 0 && (
-        <p className="mt-2 text-xs text-sage-400">
+        <p className="mt-2 text-sm leading-relaxed text-sage-500">
           Shaded area — observation window after a dose change.
         </p>
       )}

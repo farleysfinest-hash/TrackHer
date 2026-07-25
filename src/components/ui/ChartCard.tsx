@@ -3,6 +3,7 @@ import { Card } from './Card';
 import { Button } from './Button';
 import { Modal } from './Modal';
 import { tapMedium } from '../../lib/haptics';
+import { useLandscape } from '../../hooks/useLandscape';
 
 const LONG_PRESS_MS = 450;
 /** Finger tremor / Recharts noise — cancel only on a real drag. */
@@ -20,7 +21,7 @@ interface ChartCardProps {
   minHeight?: string;
   /** Min height inside the expand modal (defaults larger than minHeight). */
   expandedMinHeight?: string;
-  /** Long-press the chart to open full screen (tooltips only work there). */
+  /** Long-press the chart to open the interactive full-screen view. */
   expandable?: boolean;
   isEmpty?: boolean;
   emptyState?: {
@@ -46,6 +47,7 @@ export function ChartCard({
   emptyState,
 }: ChartCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const landscape = useLandscape();
   const showExpand = expandable && !isEmpty;
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const startRef = useRef<{ x: number; y: number } | null>(null);
@@ -123,7 +125,9 @@ export function ChartCard({
             <h3 className="font-display text-lg text-sage-800">{title}</h3>
             {description && <p className="mt-1 text-sm text-sage-500">{description}</p>}
             {showExpand && (
-              <p className="mt-1 text-xs text-sage-400">Long-press chart to expand</p>
+              <p className="mt-1 text-xs text-sage-500">
+                Long-press to expand. Press and drag to explore in the detailed view.
+              </p>
             )}
           </div>
           {headerActions}
@@ -132,7 +136,7 @@ export function ChartCard({
           <div
             style={{ minHeight }}
             className={[
-              'select-none',
+              'select-none outline-none focus-visible:rounded-lg focus-visible:ring-2 focus-visible:ring-sage-500 focus-visible:ring-offset-2',
               // Let long-press hit the card, not Recharts (which steals touch for cursors/tooltips).
               showExpand
                 ? 'touch-manipulation [&_.recharts-wrapper]:pointer-events-none [&_button]:pointer-events-auto [&_a]:pointer-events-auto [&_[role=button]]:pointer-events-auto'
@@ -144,6 +148,14 @@ export function ChartCard({
             onPointerMove={onPointerMove}
             onPointerUp={clearPress}
             onPointerCancel={clearPress}
+            tabIndex={showExpand ? 0 : undefined}
+            role={showExpand ? 'group' : undefined}
+            aria-label={showExpand ? `${title}. Press Enter to open the detailed chart.` : undefined}
+            onKeyDown={(event) => {
+              if (!showExpand || (event.key !== 'Enter' && event.key !== ' ')) return;
+              event.preventDefault();
+              openExpanded();
+            }}
             onContextMenu={(e) => {
               if (showExpand) e.preventDefault();
             }}
@@ -162,7 +174,19 @@ export function ChartCard({
         >
           {description && <p className="mb-4 text-sm text-sage-500">{description}</p>}
           {actions && <div className="mb-4 flex flex-wrap gap-2">{actions}</div>}
-          <div key={expanded ? 'chart-expanded' : 'chart-closed'} style={{ minHeight: expandedMinHeight }}>
+          <p className="mb-3 text-center text-sm font-medium text-sage-600">
+            Press and drag to explore
+          </p>
+          {!landscape && (
+            <p className="mb-3 text-center text-sm text-sage-500 md:hidden">
+              Rotate for detailed view
+            </p>
+          )}
+          <div
+            key={expanded ? 'chart-expanded' : 'chart-closed'}
+            className="min-h-0"
+            style={{ minHeight: expandedMinHeight }}
+          >
             {renderChildren(children, true)}
           </div>
         </Modal>

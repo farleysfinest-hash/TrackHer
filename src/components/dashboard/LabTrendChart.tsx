@@ -1,21 +1,21 @@
-import { memo, useEffect, useMemo, useState } from 'react';
+import { memo, useMemo } from 'react';
 import {
   ResponsiveContainer,
   ComposedChart,
   ReferenceArea,
+  ReferenceLine,
   Scatter,
-  Tooltip,
   XAxis,
   YAxis,
   CartesianGrid,
 } from 'recharts';
-import type { MouseHandlerDataParam, ScatterPointItem } from 'recharts';
+import type { ScatterPointItem } from 'recharts';
 import { ChartCard } from '../ui/ChartCard';
+import { ChartScrubRegion } from '../ui/ChartScrubRegion';
 import { LabPointReadout } from './ChartTooltipContent';
 import { ChartReadoutDock } from './ChartReadoutDock';
 import { LabTrendSelector } from './LabTrendSelector';
 import { CHART_COLORS, formatChartDate, formatChartDateLong } from '../../utils/chartHelpers';
-import { dateFromChartClick } from '../../utils/chartSelection';
 import { getBiomarkerByKey } from '../../data/labRanges';
 import { getTrendDirection, getValueStatus, type LabValueStatus } from '../../utils/labHelpers';
 import {
@@ -29,6 +29,7 @@ import type { LabTrendPoint } from '../../hooks/useChartData';
 import type { LabResult } from '../../types/database';
 import type { LabBiomarker } from '../../types/labs';
 import { daysBetweenISO } from '../../utils/localDate';
+import { useChartSelection } from '../../hooks/useChartSelection';
 
 interface LabTrendChartProps {
   data: LabTrendPoint[];
@@ -145,11 +146,7 @@ function LabTrendBody({
   referenceLegend: string | null;
   toneClass: string;
 }) {
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!interactive) setSelectedDate(null);
-  }, [interactive]);
+  const { selectedDate, selectDate } = useChartSelection(interactive);
 
   const dates = useMemo(() => data.map((row) => row.date), [data]);
   const labels = useMemo(() => data.map((row) => row.dateLabel), [data]);
@@ -159,68 +156,76 @@ function LabTrendBody({
     [data, selectedDate],
   );
 
-  const handleClick = (state: MouseHandlerDataParam) => {
-    if (!interactive) return;
-    const date = dateFromChartClick(state, dates, labels);
-    if (date) setSelectedDate(date);
-  };
+  const selectedLabel =
+    selectedDate && dates.includes(selectedDate)
+      ? labels[dates.indexOf(selectedDate)] ?? null
+      : null;
 
   const chart = (
     <div className={interactive ? 'min-w-0 w-full' : 'min-w-0 w-full max-w-none sm:max-w-[440px]'}>
-      <ResponsiveContainer width="100%" height={interactive ? 280 : 160}>
-        <ComposedChart
-          data={data}
-          margin={{ top: 20, right: 12, left: 0, bottom: 0 }}
-          onClick={interactive ? handleClick : undefined}
-        >
-          {referenceContext.bands.map((band) => (
-            <ReferenceArea
-              key={band.label}
-              y1={band.y1}
-              y2={band.y2}
-              fill={band.fill}
-              fillOpacity={band.fillOpacity}
-            />
-          ))}
-          {referenceContext.edges.map((edge) => {
-            const area = referenceEdgeArea(edge.edge, { min: yDomain[0], max: yDomain[1] });
-            return (
-              <ReferenceArea
-                key={edge.label}
-                y1={area.y1}
-                y2={area.y2}
-                fill={edge.fill}
-                fillOpacity={0.28}
-              />
-            );
-          })}
-          <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
-          <XAxis dataKey="dateLabel" tick={{ fontSize: 11, fill: CHART_COLORS.axisText }} />
-          <YAxis
-            domain={yDomain}
-            tick={{ fontSize: 11, fill: CHART_COLORS.axisText }}
-            width={44}
-            tickFormatter={(v) => formatLabChartValue(Number(v))}
-          />
-          {interactive && (
-            <Tooltip
-              content={() => null}
-              cursor={false}
-              isAnimationActive={false}
-              wrapperStyle={{ display: 'none' }}
-            />
-          )}
-          <Scatter
+      <ChartScrubRegion
+        dates={dates}
+        selectedDate={selectedDate}
+        onSelectDate={selectDate}
+        ariaLabel={`Explore ${biomarker.label} lab results by date`}
+        insets={{ top: 20, right: 12, left: 44, bottom: 8 }}
+        enabled={interactive}
+      >
+        <ResponsiveContainer width="100%" height={interactive ? 280 : 160}>
+          <ComposedChart
             data={data}
-            dataKey="value"
-            fill={LAB_DOT_FILL}
-            isAnimationActive={false}
-            shape={(props: ScatterPointItem) => (
-              <LabDrawDot {...props} selectedDate={interactive ? selectedDate : null} />
+            margin={{ top: 20, right: 12, left: 0, bottom: 8 }}
+            accessibilityLayer={false}
+          >
+            {referenceContext.bands.map((band) => (
+              <ReferenceArea
+                key={band.label}
+                y1={band.y1}
+                y2={band.y2}
+                fill={band.fill}
+                fillOpacity={band.fillOpacity}
+              />
+            ))}
+            {referenceContext.edges.map((edge) => {
+              const area = referenceEdgeArea(edge.edge, { min: yDomain[0], max: yDomain[1] });
+              return (
+                <ReferenceArea
+                  key={edge.label}
+                  y1={area.y1}
+                  y2={area.y2}
+                  fill={edge.fill}
+                  fillOpacity={0.28}
+                />
+              );
+            })}
+            {interactive && selectedLabel && (
+              <ReferenceLine
+                x={selectedLabel}
+                stroke={CHART_COLORS.axisText}
+                strokeWidth={1}
+                strokeDasharray="3 3"
+              />
             )}
-          />
-        </ComposedChart>
-      </ResponsiveContainer>
+            <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
+            <XAxis dataKey="dateLabel" tick={{ fontSize: 11, fill: CHART_COLORS.axisText }} />
+            <YAxis
+              domain={yDomain}
+              tick={{ fontSize: 11, fill: CHART_COLORS.axisText }}
+              width={44}
+              tickFormatter={(v) => formatLabChartValue(Number(v))}
+            />
+            <Scatter
+              data={data}
+              dataKey="value"
+              fill={LAB_DOT_FILL}
+              isAnimationActive={false}
+              shape={(props: ScatterPointItem) => (
+                <LabDrawDot {...props} selectedDate={interactive ? selectedDate : null} />
+              )}
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </ChartScrubRegion>
     </div>
   );
 

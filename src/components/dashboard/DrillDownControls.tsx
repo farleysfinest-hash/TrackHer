@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ChartCard } from '../ui/ChartCard';
 import { MRS_CORE_SYMPTOMS, getSymptomChipLabel } from '../../data/symptoms';
 import { formatChartDate } from '../../utils/chartHelpers';
@@ -19,6 +19,7 @@ import {
 import { MedicationLane } from './MedicationLane';
 import type { ChangeMarker } from '../../hooks/useChartData';
 import type { Medication } from '../../types/database';
+import { useChartSelection } from '../../hooks/useChartSelection';
 
 interface DrillDownControlsProps {
   checkinDates: string[];
@@ -57,11 +58,7 @@ function CompareBody({
   laneRows: ReturnType<typeof buildMedicationLaneRows>;
   markerLines: ReturnType<typeof doseChangeMarkerPercents>;
 }) {
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!interactive) setSelectedDate(null);
-  }, [interactive]);
+  const { selectedDate, selectDate } = useChartSelection(interactive);
 
   const selectedPoint = useMemo(
     () => (selectedDate ? dailyRows.find((row) => row.date === selectedDate) ?? null : null),
@@ -82,7 +79,7 @@ function CompareBody({
           markers={markerLines}
           interactive={interactive}
           selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
+          onSelectDate={selectDate}
         />
       ))}
 

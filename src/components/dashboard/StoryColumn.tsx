@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import {
   ResponsiveContainer,
   LineChart,
@@ -8,16 +8,15 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  ReferenceLine,
 } from 'recharts';
-import type { MouseHandlerDataParam } from 'recharts';
 import { ChartCard } from '../ui/ChartCard';
+import { ChartScrubRegion } from '../ui/ChartScrubRegion';
 import { ChartReadoutDock } from './ChartReadoutDock';
 import { StoryPointReadout } from './ChartTooltipContent';
 import { MedicationLane } from './MedicationLane';
 import { ObservationWindowAreas } from './ObservationWindowAreas';
 import { CHART_COLORS } from '../../utils/chartHelpers';
-import { dateFromChartClick } from '../../utils/chartSelection';
 import { buildDailyIndexedWeeklyChart } from '../../utils/weeklyChartSeries';
 import { WeeklySegmentLines } from './WeeklySegmentLines';
 import {
@@ -38,6 +37,7 @@ import type { SymptomTrendPoint } from '../../hooks/useChartData';
 import type { Medication, MedicationChange } from '../../types/database';
 import type { Insight } from '../../engine/types';
 import { ChartDateAxisTick } from './ChartDateAxisTick';
+import { useChartSelection } from '../../hooks/useChartSelection';
 
 const PANEL_MRS_HEIGHT = 80;
 const PANEL_PULSE_HEIGHT = 64;
@@ -56,20 +56,8 @@ const CHART_MARGIN = {
   top: 4,
   right: CHART_MARGIN_RIGHT,
   left: CHART_MARGIN_LEFT,
-  bottom: 0,
+  bottom: 8,
 } as const;
-
-/** Hit-test only — never visible over the plot. */
-function HiddenTooltip() {
-  return (
-    <Tooltip
-      content={() => null}
-      cursor={false}
-      isAnimationActive={false}
-      wrapperStyle={{ display: 'none' }}
-    />
-  );
-}
 
 interface StoryColumnProps {
   data: SymptomTrendPoint[];
@@ -140,13 +128,22 @@ function StoryChartsBody({
   pulseHeight,
   interactive,
 }: StoryChartsBodyProps) {
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const { selectedDate, selectDate } = useChartSelection(interactive);
 
-  useEffect(() => {
-    if (!interactive) setSelectedDate(null);
-  }, [interactive]);
-
-  const dates = useMemo(() => chartData.map((row) => row.date), [chartData]);
+  const mrsDates = useMemo(
+    () =>
+      chartData
+        .filter((row) => row.mrsTotal !== null && row.mrsTotal !== undefined)
+        .map((row) => row.date),
+    [chartData],
+  );
+  const pulseDates = useMemo(
+    () =>
+      chartData
+        .filter((row) => row.pulseRaw !== null && row.pulseRaw !== undefined)
+        .map((row) => row.date),
+    [chartData],
+  );
 
   const selectedPoint = useMemo(() => {
     if (!selectedDate) return null;
@@ -155,12 +152,6 @@ function StoryChartsBody({
 
   const laneHeight = medicationLaneBlockHeight(laneRows);
   const mrsTicks = [0, 22, 44];
-
-  const handleChartClick = (state: MouseHandlerDataParam) => {
-    if (!interactive) return;
-    const date = dateFromChartClick(state, dates);
-    if (date) setSelectedDate(date);
-  };
 
   const mrsDot = (props: { cx?: number; cy?: number; payload?: StoryChartRow }) => {
     const { cx, cy, payload } = props;
@@ -183,37 +174,54 @@ function StoryChartsBody({
       <p className="mb-1 text-[10px] text-sage-500">MRS score · weekly · 0–44</p>
 
       <div className="relative">
-        <ResponsiveContainer width="100%" height={mrsHeight}>
-          <LineChart
-            data={chartData}
-            margin={CHART_MARGIN}
-            onClick={interactive ? handleChartClick : undefined}
-          >
-            <XAxis dataKey="date" hide />
-            <ObservationWindowAreas regions={windowRegions} />
-            <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} vertical={false} />
-            <YAxis
-              domain={[0, 44]}
-              ticks={mrsTicks}
-              tick={{ fontSize: 10, fill: CHART_COLORS.axisText }}
-              width={CHART_MARGIN_LEFT}
-              axisLine={false}
-              tickLine={false}
-            />
-            {interactive && <HiddenTooltip />}
-            <WeeklySegmentLines
-              segmentKeys={mrsSegmentKeys}
-              name="MRS Score"
-              stroke={INK.mrsStroke}
-              dotColor={INK.mrsDot}
-              seriesProps={{
-                strokeWidth: 2,
-                dot: mrsDot,
-                activeDot: false,
-              }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+        <ChartScrubRegion
+          dates={mrsDates}
+          domainDates={chartData.map((row) => row.date)}
+          selectedDate={selectedDate}
+          onSelectDate={selectDate}
+          ariaLabel="Explore MRS score by date"
+          insets={CHART_MARGIN}
+          enabled={interactive}
+        >
+          <ResponsiveContainer width="100%" height={mrsHeight}>
+            <LineChart
+              data={chartData}
+              margin={CHART_MARGIN}
+              accessibilityLayer={false}
+            >
+              <XAxis dataKey="date" hide />
+              <ObservationWindowAreas regions={windowRegions} />
+              {interactive && selectedDate && (
+                <ReferenceLine
+                  x={selectedDate}
+                  stroke={INK.rule}
+                  strokeWidth={1}
+                  strokeDasharray="3 3"
+                />
+              )}
+              <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} vertical={false} />
+              <YAxis
+                domain={[0, 44]}
+                ticks={mrsTicks}
+                tick={{ fontSize: 10, fill: CHART_COLORS.axisText }}
+                width={CHART_MARGIN_LEFT}
+                axisLine={false}
+                tickLine={false}
+              />
+              <WeeklySegmentLines
+                segmentKeys={mrsSegmentKeys}
+                name="MRS Score"
+                stroke={INK.mrsStroke}
+                dotColor={INK.mrsDot}
+                seriesProps={{
+                  strokeWidth: 2,
+                  dot: mrsDot,
+                  activeDot: false,
+                }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </ChartScrubRegion>
 
         <div className="mt-1">
           <div className="mb-1 flex flex-col gap-1.5 md:flex-row md:items-start md:justify-between md:gap-2">
@@ -238,63 +246,80 @@ function StoryChartsBody({
               ))}
             </div>
           </div>
-          <ResponsiveContainer width="100%" height={pulseHeight}>
-            <AreaChart
-              data={chartData}
-              margin={CHART_MARGIN}
-              onClick={interactive ? handleChartClick : undefined}
-            >
-              <XAxis dataKey="date" hide />
-              <ObservationWindowAreas regions={windowRegions} />
-              <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} vertical={false} />
-              <YAxis
-                domain={[1, 5]}
-                ticks={[1, 5]}
-                tick={(props) => <PulseAxisTick {...props} channel={activeChannel} />}
-                width={CHART_MARGIN_LEFT}
-                axisLine={false}
-                tickLine={false}
-              />
-              {interactive && <HiddenTooltip />}
-              <Area
-                dataKey="pulseRaw"
-                type="monotone"
-                stroke={INK.pulse}
-                strokeWidth={1.5}
-                fill={INK.pulse}
-                fillOpacity={0.2}
-                dot={false}
-                activeDot={false}
-                connectNulls={false}
-                isAnimationActive={false}
-              />
-              {interactive && selectedDate && (
-                <Line
-                  dataKey="pulseRaw"
-                  stroke="none"
-                  legendType="none"
-                  isAnimationActive={false}
-                  dot={(props: { cx?: number; cy?: number; payload?: StoryChartRow; value?: number | null }) => {
-                    const { cx, cy, payload, value } = props;
-                    if (cx == null || cy == null) return null;
-                    if (payload?.date !== selectedDate) return null;
-                    if (value === null || value === undefined) return null;
-                    return (
-                      <circle
-                        cx={cx}
-                        cy={cy}
-                        r={5}
-                        fill={INK.pulse}
-                        stroke="var(--color-sand-50)"
-                        strokeWidth={1}
-                      />
-                    );
-                  }}
-                  activeDot={false}
+          <ChartScrubRegion
+            dates={pulseDates}
+            domainDates={chartData.map((row) => row.date)}
+            selectedDate={selectedDate}
+            onSelectDate={selectDate}
+            ariaLabel={`Explore ${activeChannel} pulse by date`}
+            insets={CHART_MARGIN}
+            enabled={interactive}
+          >
+            <ResponsiveContainer width="100%" height={pulseHeight}>
+              <AreaChart
+                data={chartData}
+                margin={CHART_MARGIN}
+                accessibilityLayer={false}
+              >
+                <XAxis dataKey="date" hide />
+                <ObservationWindowAreas regions={windowRegions} />
+                {interactive && selectedDate && (
+                  <ReferenceLine
+                    x={selectedDate}
+                    stroke={INK.rule}
+                    strokeWidth={1}
+                    strokeDasharray="3 3"
+                  />
+                )}
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} vertical={false} />
+                <YAxis
+                  domain={[1, 5]}
+                  ticks={[1, 5]}
+                  tick={(props) => <PulseAxisTick {...props} channel={activeChannel} />}
+                  width={CHART_MARGIN_LEFT}
+                  axisLine={false}
+                  tickLine={false}
                 />
-              )}
-            </AreaChart>
-          </ResponsiveContainer>
+                <Area
+                  dataKey="pulseRaw"
+                  type="monotone"
+                  stroke={INK.pulse}
+                  strokeWidth={1.5}
+                  fill={INK.pulse}
+                  fillOpacity={0.2}
+                  dot={false}
+                  activeDot={false}
+                  connectNulls={false}
+                  isAnimationActive={false}
+                />
+                {interactive && selectedDate && (
+                  <Line
+                    dataKey="pulseRaw"
+                    stroke="none"
+                    legendType="none"
+                    isAnimationActive={false}
+                    dot={(props: { cx?: number; cy?: number; payload?: StoryChartRow; value?: number | null }) => {
+                      const { cx, cy, payload, value } = props;
+                      if (cx == null || cy == null) return null;
+                      if (payload?.date !== selectedDate) return null;
+                      if (value === null || value === undefined) return null;
+                      return (
+                        <circle
+                          cx={cx}
+                          cy={cy}
+                          r={5}
+                          fill={INK.pulse}
+                          stroke="var(--color-sand-50)"
+                          strokeWidth={1}
+                        />
+                      );
+                    }}
+                    activeDot={false}
+                  />
+                )}
+              </AreaChart>
+            </ResponsiveContainer>
+          </ChartScrubRegion>
         </div>
 
         <div
@@ -333,7 +358,11 @@ function StoryChartsBody({
       </div>
 
       <ResponsiveContainer width="100%" height={X_AXIS_HEIGHT}>
-        <LineChart data={chartData} margin={{ ...CHART_MARGIN, top: 0 }}>
+        <LineChart
+          data={chartData}
+          margin={{ ...CHART_MARGIN, top: 0 }}
+          accessibilityLayer={false}
+        >
           <XAxis
             dataKey="dateLabel"
             tick={(props) => <ChartDateAxisTick {...props} />}
@@ -344,6 +373,11 @@ function StoryChartsBody({
           <YAxis hide domain={[0, 1]} />
         </LineChart>
       </ResponsiveContainer>
+      {windowRegions.length > 0 && (
+        <p className="mt-2 text-sm leading-relaxed text-sage-500">
+          Shaded area — observation window after a dose change.
+        </p>
+      )}
     </div>
   );
 
@@ -458,11 +492,6 @@ function StoryColumnComponent({
               pulseHeight={interactive ? PANEL_PULSE_HEIGHT_EXPANDED : PANEL_PULSE_HEIGHT}
               interactive={interactive}
             />
-            {windowRegions.length > 0 && (
-              <p className="mt-2 text-xs text-sage-400">
-                Shaded area — observation window after a dose change.
-              </p>
-            )}
           </>
         ) : null
       }

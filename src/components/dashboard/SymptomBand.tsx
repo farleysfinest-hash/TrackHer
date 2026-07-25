@@ -5,16 +5,14 @@ import {
   Area,
   Line,
   ReferenceLine,
-  Tooltip,
   XAxis,
   YAxis,
 } from 'recharts';
-import type { MouseHandlerDataParam } from 'recharts';
-import { dateFromChartClick } from '../../utils/chartSelection';
 import { SEVERITY_LABELS } from '../../utils/checkinHelpers';
 import { ObservationWindowAreas } from './ObservationWindowAreas';
 import { ChartReadoutShell } from './ChartTooltipContent';
 import { ChartDateAxisTick } from './ChartDateAxisTick';
+import { ChartScrubRegion } from '../ui/ChartScrubRegion';
 import type { ObservationWindowRegion } from '../../utils/medicationHelpers';
 import type { DoseChangeMarkerPercent } from '../../utils/medicationLaneHelpers';
 
@@ -25,7 +23,7 @@ export const BAND_CHART_MARGIN = {
   top: 6,
   right: 6,
   left: 8,
-  bottom: 0,
+  bottom: 4,
 } as const;
 
 const BAND_INK = {
@@ -167,13 +165,80 @@ export function SymptomBand({
         ? `${latest} / ${domainMax}`
         : String(latest);
 
-  const dates = data.map((row) => row.date);
+  const selectableDates = data
+    .filter((row) => row[dataKey] !== null && row[dataKey] !== undefined)
+    .map((row) => row.date);
 
-  const handleClick = (state: MouseHandlerDataParam) => {
-    if (!interactive || !onSelectDate) return;
-    const date = dateFromChartClick(state, dates);
-    if (date) onSelectDate(date);
-  };
+  const chart = (
+    <ResponsiveContainer width="100%" height={BAND_CHART_HEIGHT}>
+      <ComposedChart
+        data={data}
+        margin={BAND_CHART_MARGIN}
+        accessibilityLayer={false}
+      >
+        <XAxis dataKey="date" hide />
+        {observationRegions && observationRegions.length > 0 && (
+          <ObservationWindowAreas regions={observationRegions} />
+        )}
+        {interactive && selectedDate && (
+          <ReferenceLine
+            x={selectedDate}
+            stroke={BAND_INK.marker}
+            strokeWidth={1}
+            strokeDasharray="3 3"
+          />
+        )}
+        <ReferenceLine y={0} stroke={BAND_INK.baseline} strokeWidth={1} />
+        {segmentKeys.map((segmentKey) => (
+          <Area
+            key={`area-${segmentKey}`}
+            dataKey={segmentKey}
+            type="linear"
+            stroke="none"
+            fill={BAND_INK.fill}
+            fillOpacity={0.12}
+            connectNulls
+            isAnimationActive={false}
+            legendType="none"
+          />
+        ))}
+        {segmentKeys.map((segmentKey, index) => (
+          <Line
+            key={`line-${segmentKey}`}
+            dataKey={segmentKey}
+            name={index === 0 ? name : undefined}
+            type="linear"
+            stroke={BAND_INK.line}
+            strokeWidth={1.8}
+            connectNulls
+            isAnimationActive={false}
+            legendType="none"
+            dot={(props: {
+              cx?: number;
+              cy?: number;
+              payload?: SymptomBandRow;
+            }) => {
+              const { cx, cy, payload } = props;
+              if (cx == null || cy == null) return null;
+              const selected = interactive && payload?.date === selectedDate;
+              return (
+                <circle
+                  cx={cx}
+                  cy={cy}
+                  r={selected ? 4 : 2.6}
+                  fill={BAND_INK.dot}
+                  stroke="var(--color-sand-50)"
+                  strokeWidth={0.8}
+                />
+              );
+            }}
+            activeDot={false}
+          />
+        ))}
+        <YAxis hide domain={[0, domainMax]} />
+      </ComposedChart>
+    </ResponsiveContainer>
+  );
 
   return (
     <div>
@@ -185,74 +250,20 @@ export function SymptomBand({
         {markers && markers.length > 0 && (
           <BandDoseMarkerOverlay markers={markers} height={BAND_CHART_HEIGHT} />
         )}
-        <ResponsiveContainer width="100%" height={BAND_CHART_HEIGHT}>
-          <ComposedChart
-            data={data}
-            margin={BAND_CHART_MARGIN}
-            onClick={interactive ? handleClick : undefined}
+        {interactive && onSelectDate ? (
+          <ChartScrubRegion
+            dates={selectableDates}
+            domainDates={data.map((row) => row.date)}
+            selectedDate={selectedDate}
+            onSelectDate={onSelectDate}
+            ariaLabel={`Explore ${name} by date`}
+            insets={BAND_CHART_MARGIN}
           >
-            <XAxis dataKey="date" hide />
-            {observationRegions && observationRegions.length > 0 && (
-              <ObservationWindowAreas regions={observationRegions} />
-            )}
-            <ReferenceLine y={0} stroke={BAND_INK.baseline} strokeWidth={1} />
-            {segmentKeys.map((segmentKey) => (
-              <Area
-                key={`area-${segmentKey}`}
-                dataKey={segmentKey}
-                type="linear"
-                stroke="none"
-                fill={BAND_INK.fill}
-                fillOpacity={0.12}
-                connectNulls
-                isAnimationActive={false}
-                legendType="none"
-              />
-            ))}
-            {segmentKeys.map((segmentKey, index) => (
-              <Line
-                key={`line-${segmentKey}`}
-                dataKey={segmentKey}
-                name={index === 0 ? name : undefined}
-                type="linear"
-                stroke={BAND_INK.line}
-                strokeWidth={1.8}
-                connectNulls
-                isAnimationActive={false}
-                legendType="none"
-                dot={(props: {
-                  cx?: number;
-                  cy?: number;
-                  payload?: SymptomBandRow;
-                }) => {
-                  const { cx, cy, payload } = props;
-                  if (cx == null || cy == null) return null;
-                  const selected = interactive && payload?.date === selectedDate;
-                  return (
-                    <circle
-                      cx={cx}
-                      cy={cy}
-                      r={selected ? 4 : 2.6}
-                      fill={BAND_INK.dot}
-                      stroke="var(--color-sand-50)"
-                      strokeWidth={0.8}
-                    />
-                  );
-                }}
-                activeDot={false}
-              />
-            ))}
-            <YAxis hide domain={[0, domainMax]} />
-            {interactive && (
-              <Tooltip
-                content={() => null}
-                cursor={false}
-                isAnimationActive={false}
-                wrapperStyle={{ display: 'none' }}
-              />
-            )}
-          </ComposedChart>
-        </ResponsiveContainer>
+            {chart}
+          </ChartScrubRegion>
+        ) : (
+          chart
+        )}
       </div>
     </div>
   );
@@ -265,7 +276,11 @@ interface BandXAxisProps {
 export function BandXAxis({ data }: BandXAxisProps) {
   return (
     <ResponsiveContainer width="100%" height={BAND_X_AXIS_HEIGHT}>
-      <ComposedChart data={data} margin={{ ...BAND_CHART_MARGIN, top: 0 }}>
+      <ComposedChart
+        data={data}
+        margin={{ ...BAND_CHART_MARGIN, top: 0 }}
+        accessibilityLayer={false}
+      >
         <XAxis
           dataKey="dateLabel"
           tick={(props) => <ChartDateAxisTick {...props} />}
