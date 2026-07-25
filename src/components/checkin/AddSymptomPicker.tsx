@@ -60,7 +60,7 @@ export function AddSymptomPicker({ isOpen, onClose, excludeIds, onSelect }: AddS
           {results.length === 0 ? (
             <p className="px-3 py-4 text-sm text-sage-400">
               {query.trim()
-                ? 'No matching symptoms — try a different word.'
+                ? 'No matching symptoms — try an everyday or clinical term.'
                 : 'Type to search the full catalog.'}
             </p>
           ) : (
@@ -119,7 +119,7 @@ export function KeepWatchingPrompt({
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-sage-200 bg-sage-50 px-4 py-3 text-sm">
       <span className="text-sage-700">
-        Keep watching <strong>{def?.label ?? symptomId}</strong>?
+        Track <strong>{def?.label ?? symptomId}</strong> in future weekly check-ins?
       </span>
       <div className="flex gap-2">
         <button
@@ -127,7 +127,7 @@ export function KeepWatchingPrompt({
           onClick={onKeep}
           className="rounded-full bg-sage-600 px-3 py-1 text-xs font-medium text-on-accent hover:bg-sage-700"
         >
-          Yes, add to watch list
+          Yes, track it weekly
         </button>
         <button
           type="button"

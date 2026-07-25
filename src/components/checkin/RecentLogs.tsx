@@ -3,8 +3,6 @@ import { ChevronDown, ChevronUp, History } from 'lucide-react';
 import { useQuickLog } from '../../hooks/useQuickLog';
 import { getSymptomByKey, getSymptomChipLabel } from '../../data/symptoms';
 import { formatRelativeTime, capitalize } from '../../utils/formatters';
-import { Card } from '../ui/Card';
-import { DashboardCardHeader } from '../dashboard/DashboardCardHeader';
 
 /** Severity as depth of rose — same language as the heatmap (design rule 8). Severity is 1–10. */
 function severityColor(severity: number): string {
@@ -37,23 +35,27 @@ export function RecentLogs() {
     : undefined;
 
   return (
-    <Card variant="elevated">
+    <div className="rounded-xl border border-sand-200 px-4 py-3">
       <button
         type="button"
         onClick={() => setFolderOpen((open) => !open)}
         className="flex w-full items-start justify-between gap-3 text-left"
         aria-expanded={folderOpen}
       >
-        <DashboardCardHeader
-          icon={History}
-          eyebrow="Quick log"
-          title="Recent symptom logs"
-          description={
-            peek
-              ? `In-the-moment entries · ${peek}`
-              : 'In-the-moment symptoms from the dashboard Quick Log.'
-          }
-        />
+        <span className="flex min-w-0 items-start gap-3">
+          <History className="mt-0.5 h-5 w-5 shrink-0 text-sage-500" aria-hidden />
+          <span className="min-w-0">
+            <span className="block text-xs font-medium uppercase tracking-wide text-sage-500">
+              Quick log
+            </span>
+            <span className="mt-0.5 block font-display text-lg text-sage-800">
+              Recent symptom logs
+            </span>
+            <span className="mt-0.5 block truncate text-sm text-sage-500">
+              {peek ?? 'In-the-moment symptoms from Dashboard Quick Log.'}
+            </span>
+          </span>
+        </span>
         {folderOpen ? (
           <ChevronUp className="mt-1 h-5 w-5 shrink-0 text-sage-400" aria-hidden />
         ) : (
@@ -155,6 +157,6 @@ export function RecentLogs() {
           })}
         </ul>
       )}
-    </Card>
+    </div>
   );
 }

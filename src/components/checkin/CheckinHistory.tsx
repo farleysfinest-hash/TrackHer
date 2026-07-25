@@ -56,7 +56,7 @@ export function CheckinHistory({ onViewDetails, reloadToken }: CheckinHistoryPro
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-display text-2xl text-sage-800">Your Check-in History</h2>
+        <h3 className="font-display text-xl text-sage-800">Check-in history</h3>
         <select
           value={range}
           onChange={(e) => setRange(e.target.value as DateRange)}

@@ -7,11 +7,13 @@ import { CheckinFlow } from '../components/checkin/CheckinFlow';
 import { CheckinHistory } from '../components/checkin/CheckinHistory';
 import { RecentLogs } from '../components/checkin/RecentLogs';
 import { CheckinDetailModal } from '../components/checkin/CheckinDetailModal';
+import { SymptomManageModal } from '../components/checkin/SymptomManageModal';
 import {
   PulsePromptCard,
   WeeklyCheckinPromptCard,
 } from '../components/checkin/CheckinPromptWidget';
 import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
 import { getLocalDateISO, getResolvedTimezone } from '../utils/checkinHelpers';
@@ -19,6 +21,7 @@ import { formatLoggingDate } from '../utils/formatters';
 import { isValidCalendarDate } from '../utils/localDate';
 import type { SymptomCheckin, CheckinDraft } from '../types/database';
 import { clearCheckinDraft, loadCheckinDraft } from '../lib/checkinDraft';
+import { useSymptomSelections } from '../hooks/useSymptomSelections';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 export function CheckinPage() {
@@ -36,6 +39,12 @@ export function CheckinPage() {
     daysSinceLastCheckin,
   } = useCheckinStatus();
   const { fetchCheckinDetail, getCheckinForDate } = useCheckins();
+  const {
+    trackedSymptomIds,
+    watchSymptomIds,
+    isLoading: symptomSelectionsLoading,
+    saveSelections,
+  } = useSymptomSelections();
   const setMode = useCheckinStore((s) => s.setMode);
   const setTargetDate = useCheckinStore((s) => s.setTargetDate);
   const reset = useCheckinStore((s) => s.reset);
@@ -57,6 +66,7 @@ export function CheckinPage() {
   const [pendingStartMode, setPendingStartMode] = useState<'full' | 'quick'>('full');
   const [pendingStartDate, setPendingStartDate] = useState(todayStr);
   const [historyReloadToken, setHistoryReloadToken] = useState(0);
+  const [personalSymptomsOpen, setPersonalSymptomsOpen] = useState(false);
 
   const backdateValid = isValidCalendarDate(backdateValue) && backdateValue <= todayStr;
   const resolveTargetDate = () => (backdateValid ? backdateValue : todayStr);
@@ -186,24 +196,71 @@ export function CheckinPage() {
         </p>
       </div>
 
-      <WeeklyCheckinPromptCard
-        hasFullMrsToday={hasFullMrsToday}
-        weeklyMinimumMet={weeklyMinimumMet}
-        isDue={isDue}
-        todaysCheckin={todaysCheckin}
-        daysSinceLastCheckin={daysSinceLastCheckin}
-        isLoading={isLoading}
-        onStart={() => void startCheckin('full')}
-      />
+      {weeklyMinimumMet ? (
+        <>
+          <PulsePromptCard
+            hasCheckedInToday={hasCheckedInToday}
+            hasPulseToday={hasPulseToday}
+            hasFullMrsToday={hasFullMrsToday}
+            todaysCheckin={todaysCheckin}
+            isLoading={isLoading}
+            onStart={() => void startCheckin('quick')}
+          />
+          <WeeklyCheckinPromptCard
+            hasFullMrsToday={hasFullMrsToday}
+            weeklyMinimumMet={weeklyMinimumMet}
+            isDue={isDue}
+            todaysCheckin={todaysCheckin}
+            daysSinceLastCheckin={daysSinceLastCheckin}
+            isLoading={isLoading}
+            onStart={() => void startCheckin('full')}
+          />
+        </>
+      ) : (
+        <>
+          <WeeklyCheckinPromptCard
+            hasFullMrsToday={hasFullMrsToday}
+            weeklyMinimumMet={weeklyMinimumMet}
+            isDue={isDue}
+            todaysCheckin={todaysCheckin}
+            daysSinceLastCheckin={daysSinceLastCheckin}
+            isLoading={isLoading}
+            onStart={() => void startCheckin('full')}
+          />
+          <PulsePromptCard
+            hasCheckedInToday={hasCheckedInToday}
+            hasPulseToday={hasPulseToday}
+            hasFullMrsToday={hasFullMrsToday}
+            todaysCheckin={todaysCheckin}
+            isLoading={isLoading}
+            onStart={() => void startCheckin('quick')}
+          />
+        </>
+      )}
 
-      <PulsePromptCard
-        hasCheckedInToday={hasCheckedInToday}
-        hasPulseToday={hasPulseToday}
-        hasFullMrsToday={hasFullMrsToday}
-        todaysCheckin={todaysCheckin}
-        isLoading={isLoading}
-        onStart={() => void startCheckin('quick')}
-      />
+      <Card variant="outlined" padding="sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="font-display text-lg text-sage-800">Personal symptoms</h2>
+            <p className="mt-1 text-sm text-sage-500">
+              {symptomSelectionsLoading
+                ? 'Loading the symptoms included in your weekly check-in…'
+                : trackedSymptomIds.length > 0
+                  ? `Your weekly check-in asks about all ${trackedSymptomIds.length} personal symptom${trackedSymptomIds.length === 1 ? '' : 's'} you track.`
+                  : 'Add personal symptoms for your weekly check-in to monitor beyond the fixed MRS questions.'}
+            </p>
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="self-start sm:self-auto"
+            onClick={() => setPersonalSymptomsOpen(true)}
+            disabled={symptomSelectionsLoading}
+          >
+            Edit personal symptoms
+          </Button>
+        </div>
+      </Card>
 
       <div>
         {!showBackdate ? (
@@ -248,9 +305,22 @@ export function CheckinPage() {
         )}
       </div>
 
-      <RecentLogs />
+      <section aria-labelledby="history-heading" className="space-y-5">
+        <div>
+          <h2 id="history-heading" className="font-display text-2xl text-sage-800">
+            History
+          </h2>
+          <p className="mt-1 text-sm text-sage-500">
+            Review quick symptom logs and completed check-ins.
+          </p>
+        </div>
 
-      <CheckinHistory onViewDetails={setDetailCheckin} reloadToken={historyReloadToken} />
+        <RecentLogs />
+
+        <div className="border-t border-sand-200 pt-5">
+          <CheckinHistory onViewDetails={setDetailCheckin} reloadToken={historyReloadToken} />
+        </div>
+      </section>
 
       <CheckinDetailModal
         checkin={detailCheckin}
@@ -261,6 +331,23 @@ export function CheckinPage() {
           setHistoryReloadToken((t) => t + 1);
           void refresh();
         }}
+      />
+
+      <SymptomManageModal
+        isOpen={personalSymptomsOpen}
+        onClose={() => setPersonalSymptomsOpen(false)}
+        mode="tracked"
+        trackedIds={trackedSymptomIds}
+        watchIds={watchSymptomIds}
+        onSave={async (nextTrackedIds, nextWatchIds) =>
+          saveSelections(
+            nextTrackedIds.map((symptom_id) => ({
+              symptom_id,
+              is_watch_symptom: nextWatchIds.includes(symptom_id),
+            })),
+            nextWatchIds,
+          )
+        }
       />
 
       <Modal

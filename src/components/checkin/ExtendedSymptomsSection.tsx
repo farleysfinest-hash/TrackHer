@@ -23,24 +23,24 @@ export function ExtendedSymptomsSection({ onNext, onBack, onSkip }: ExtendedSymp
   const initWatchSymptomsForCheckin = useCheckinStore((s) => s.initWatchSymptomsForCheckin);
   const { watchSymptomIds, trackedSymptomIds, isLoading, saveSelections } = useSymptomSelections();
   const [pickerOpen, setPickerOpen] = useState(false);
-  const extendedWatchSymptomIds = useMemo(
-    () => watchSymptomIds.filter((id) => !isMRSCanonicalKey(id)),
-    [watchSymptomIds],
+  const extendedTrackedSymptomIds = useMemo(
+    () => trackedSymptomIds.filter((id) => !isMRSCanonicalKey(id)),
+    [trackedSymptomIds],
   );
 
   useEffect(() => {
-    if (!isLoading && extendedWatchSymptomIds.length > 0 && extendedSymptoms.length === 0) {
-      initWatchSymptomsForCheckin(extendedWatchSymptomIds);
+    if (!isLoading && extendedTrackedSymptomIds.length > 0 && extendedSymptoms.length === 0) {
+      initWatchSymptomsForCheckin(extendedTrackedSymptomIds);
     }
-  }, [isLoading, extendedWatchSymptomIds, extendedSymptoms.length, initWatchSymptomsForCheckin]);
+  }, [isLoading, extendedTrackedSymptomIds, extendedSymptoms.length, initWatchSymptomsForCheckin]);
 
   const gridSymptomIds = useMemo(() => {
-    const watchSet = new Set(extendedWatchSymptomIds);
+    const trackedSet = new Set(extendedTrackedSymptomIds);
     const adHoc = extendedSymptoms
       .map((s) => s.symptom_key)
-      .filter((key) => !isMRSCanonicalKey(key) && !watchSet.has(key));
-    return [...extendedWatchSymptomIds, ...adHoc];
-  }, [extendedWatchSymptomIds, extendedSymptoms]);
+      .filter((key) => !isMRSCanonicalKey(key) && !trackedSet.has(key));
+    return [...extendedTrackedSymptomIds, ...adHoc];
+  }, [extendedTrackedSymptomIds, extendedSymptoms]);
 
   const handleScoreChange = (symptomKey: string, score: MRSScore) => {
     setExtendedScore(symptomKey, score);
@@ -51,17 +51,16 @@ export function ExtendedSymptomsSection({ onNext, onBack, onSkip }: ExtendedSymp
   };
 
   const handleKeepWatch = async (symptomId: string) => {
-    const newWatch = [...watchSymptomIds, symptomId];
     const trackedSet = new Set([...trackedSymptomIds, symptomId]);
     const rows = [...trackedSet].map((id) => ({
       symptom_id: id,
-      is_watch_symptom: newWatch.includes(id),
+      is_watch_symptom: watchSymptomIds.includes(id),
     }));
-    const ok = await saveSelections(rows, newWatch);
+    const ok = await saveSelections(rows, watchSymptomIds);
     if (ok) dismissKeepWatch(symptomId);
   };
 
-  const keepWatchPrompts = pendingKeepWatch.filter((id) => !watchSymptomIds.includes(id));
+  const keepWatchPrompts = pendingKeepWatch.filter((id) => !trackedSymptomIds.includes(id));
 
   return (
     <div className="space-y-6">
@@ -69,7 +68,8 @@ export function ExtendedSymptomsSection({ onNext, onBack, onSkip }: ExtendedSymp
         <div className="flex-1">
           <h2 className="font-display text-2xl text-sage-800">Anything else today?</h2>
           <p className="mt-2 text-sage-500">
-            Tap severity for your watch symptoms — quick ratings on top of your MRS score.
+            Rate every personal symptom you track — these build trends alongside your fixed MRS
+            score.
           </p>
         </div>
         <Button variant="ghost" size="sm" onClick={onSkip}>
@@ -100,7 +100,7 @@ export function ExtendedSymptomsSection({ onNext, onBack, onSkip }: ExtendedSymp
             </div>
           ) : (
             <p className="text-sm text-sage-500">
-              No watch symptoms yet — add one below or skip this step.
+              No personal symptoms tracked yet — add one below or skip this step.
             </p>
           )}
 

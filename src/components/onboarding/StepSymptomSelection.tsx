@@ -79,7 +79,7 @@ export function StepSymptomSelection({ onNext, onBack }: StepSymptomSelectionPro
   const watchCount = watchSymptoms.length;
   const atMax = selectedCount >= MAX_SYMPTOMS;
   const canContinueSelect = selectedCount >= 1;
-  const canContinueStar = watchCount >= 1 && watchCount <= MAX_WATCH;
+  const canContinueStar = watchCount <= MAX_WATCH;
 
   const handleContinueSelect = () => {
     initWatchSymptomsFromSelection();
@@ -105,7 +105,8 @@ export function StepSymptomSelection({ onNext, onBack }: StepSymptomSelectionPro
         <div>
           <h1 className="font-display text-3xl text-sage-800">Which of these hit you hardest?</h1>
           <p className="mt-3 text-sage-500">
-            Star up to 5 — they become one-tap quick logs on your dashboard.
+            Star up to 5 — they become one-tap quick logs on your dashboard. You can also continue
+            without shortcuts.
           </p>
           <p className="mt-2 text-sm font-medium text-sage-600">
             {watchCount} of {MAX_WATCH} starred

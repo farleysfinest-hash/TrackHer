@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { ChartCard } from '../ui/ChartCard';
 import { useSymptomSelections } from '../../hooks/useSymptomSelections';
 import { getSymptomByKey } from '../../data/symptoms';
@@ -13,6 +13,7 @@ import {
   type SymptomBandRow,
 } from './SymptomBand';
 import type { SymptomCheckin, ExtendedSymptomLog } from '../../types/database';
+import { useChartSelection } from '../../hooks/useChartSelection';
 
 interface PersonalSymptomTrendsProps {
   checkins: SymptomCheckin[];
@@ -44,11 +45,7 @@ function PersonalTrendsBody({
   segmentKeysByKey: Record<string, string[]>;
   tooltipSeries: BandTooltipSeries[];
 }) {
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!interactive) setSelectedDate(null);
-  }, [interactive]);
+  const { selectedDate, selectDate } = useChartSelection(interactive);
 
   const selectedPoint = useMemo(
     () => (selectedDate ? points.find((row) => row.date === selectedDate) ?? null : null),
@@ -68,7 +65,7 @@ function PersonalTrendsBody({
           tooltipMode="severity"
           interactive={interactive}
           selectedDate={selectedDate}
-          onSelectDate={setSelectedDate}
+          onSelectDate={selectDate}
         />
       ))}
       <BandXAxis data={points} />

@@ -368,7 +368,7 @@ export function QuickLogSheet() {
           {watchSymptomIds.length > 0 && (
             <div className="mb-4">
               <p className="mb-2 text-xs font-medium uppercase tracking-wide text-sage-400">
-                Watch symptoms
+                Quick Log shortcuts
               </p>
               <div className="flex flex-wrap gap-2">
                 {watchSymptomIds.map((id) => {
@@ -576,7 +576,7 @@ export function QuickLogSheet() {
         <div className="shrink-0 border-t border-sand-100 bg-sand-50 px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           {isOneOff && (
             <p className="mb-3 text-xs text-sage-400">
-              Logged as a one-off. You can add it to your tracked symptoms in check-in settings.
+              Logged as a one-off. You can add it to weekly tracking from the Check In page.
             </p>
           )}
           <Button

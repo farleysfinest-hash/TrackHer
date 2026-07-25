@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
 import type { UserSymptomSelection } from '../types/database';
@@ -9,10 +9,13 @@ export interface SymptomSelection {
   is_watch_symptom: boolean;
 }
 
+const SELECTIONS_UPDATED_EVENT = 'trackher:symptom-selections-updated';
+
 export function useSymptomSelections() {
   const [selections, setSelections] = useState<SymptomSelection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const instanceIdRef = useRef(Symbol('symptom-selections'));
 
   const getUserId = () => useAuthStore.getState().user?.id;
 
@@ -45,6 +48,20 @@ export function useSymptomSelections() {
     void fetchSelections();
   }, [fetchSelections]);
 
+  useEffect(() => {
+    const handleSelectionsUpdated = (event: Event) => {
+      if (
+        event instanceof CustomEvent &&
+        event.detail === instanceIdRef.current
+      ) {
+        return;
+      }
+      void fetchSelections();
+    };
+    window.addEventListener(SELECTIONS_UPDATED_EVENT, handleSelectionsUpdated);
+    return () => window.removeEventListener(SELECTIONS_UPDATED_EVENT, handleSelectionsUpdated);
+  }, [fetchSelections]);
+
   const saveSelections = useCallback(
     async (
       newSelections: SymptomSelection[],
@@ -70,6 +87,9 @@ export function useSymptomSelections() {
       }
 
       await fetchSelections();
+      window.dispatchEvent(
+        new CustomEvent(SELECTIONS_UPDATED_EVENT, { detail: instanceIdRef.current }),
+      );
       return true;
     },
     [fetchSelections],
