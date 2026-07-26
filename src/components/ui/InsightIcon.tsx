@@ -1,4 +1,5 @@
 import {
+  AlertCircle,
   AlertTriangle,
   TrendingUp,
   TrendingDown,
@@ -41,6 +42,8 @@ export function InsightIcon({ category, className = 'h-5 w-5' }: InsightIconProp
       return <Eye className={className} />;
     case 'mixed_signals':
       return <Lightbulb className={className} />;
+    case 'bleeding_red_flag':
+      return <AlertCircle className={className} />;
     default:
       return <Lightbulb className={className} />;
   }

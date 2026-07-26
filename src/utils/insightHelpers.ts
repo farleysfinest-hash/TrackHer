@@ -43,7 +43,9 @@ function shouldSuppressInsight(insight: Insight, dismissals: DismissalRecord[], 
   if (
     insight.category === 'trend_alert' ||
     insight.category === 'psych_trajectory' ||
-    insight.category === 'cardiac_persistence'
+    insight.category === 'cardiac_persistence' ||
+    // Must expire: an unresolved bleeding flag should return rather than be silenced for good.
+    insight.category === 'bleeding_red_flag'
   ) {
     return !isDismissalExpired(dismissal.dismissed_at, now);
   }
@@ -68,7 +70,14 @@ const FILTER_GROUPS: Record<InsightFilterGroup, InsightCategory[] | null> = {
   patterns: ['symptom_cluster'],
   // Improving scores are positive_trend (also on Positive); include them so Trends
   // is not empty when the only directional signal is improvement.
-  trends: ['trend_alert', 'positive_trend', 'new_symptom', 'medication_note'],
+  trends: [
+    'trend_alert',
+    'positive_trend',
+    'new_symptom',
+    'medication_note',
+    // Included so filtering to Trends cannot hide an active bleeding flag.
+    'bleeding_red_flag',
+  ],
   labs: ['lab_discordance', 'lab_due'],
   positive: ['positive_trend'],
 };
@@ -171,6 +180,8 @@ export function getCategoryLabel(category: InsightCategory): string {
       return 'Worth acting on';
     case 'cardiac_persistence':
       return 'Heart discomfort';
+    case 'bleeding_red_flag':
+      return 'Worth a prompt call';
   }
 }
 

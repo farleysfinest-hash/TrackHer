@@ -24,9 +24,38 @@ export function SafeguardingCard({ insight, onDismiss }: SafeguardingCardProps) 
           <p className="mt-1 text-sm text-sage-500">{formatConfidenceLine(insight.confidence)}</p>
           <p className="mt-2 whitespace-pre-line text-sm text-sage-800">{insight.body}</p>
 
-          <div className="mt-4 border-t border-sand-200 pt-3">
+          {/*
+            Naming a concrete route matters here: this card only appears when the engine has
+            already detected sustained deterioration, and "find your local crisis line" asks
+            someone in distress to do the research themselves. Find A Helpline is listed first
+            because it resolves to the right service in ~145 countries; 988 is the US default.
+          */}
+          <div className="mt-4 space-y-2 border-t border-sand-200 pt-3">
             <p className="text-sm text-sage-700">
-              Contact your local crisis line or emergency services if you may be in immediate danger.
+              If you may be in immediate danger, contact your local emergency services.
+            </p>
+            <p className="text-sm text-sage-700">
+              To talk to someone now,{' '}
+              <a
+                href="https://findahelpline.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-alert-700 underline underline-offset-2"
+              >
+                findahelpline.com
+              </a>{' '}
+              lists free, confidential lines for your country. In the US you can call or text{' '}
+              <a
+                href="tel:988"
+                className="font-medium text-alert-700 underline underline-offset-2"
+              >
+                988
+              </a>{' '}
+              at any hour — veterans can press 1.
+            </p>
+            <p className="text-xs text-sage-500">
+              Reaching out early is not an overreaction. You do not have to be in crisis to use
+              these services.
             </p>
           </div>
 

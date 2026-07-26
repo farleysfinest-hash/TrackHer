@@ -36,13 +36,13 @@ export function DailyChannelsDisplay({ checkin, compact = false }: DailyChannels
     <div className={compact ? 'flex flex-wrap items-center gap-x-4 gap-y-1.5' : 'space-y-2'}>
       {answered.map((channel) => (
         <div key={channel.label} className="flex items-center gap-2">
-          <span className="w-12 shrink-0 text-sm text-sage-500">{channel.label}</span>
+          <span className="w-16 shrink-0 text-sm text-sage-500">{channel.label}</span>
           <ChannelDots value={channel.value} label={channel.label} />
         </div>
       ))}
       {showBleeding && (
         <div className={compact ? 'flex items-center gap-2' : 'flex items-center gap-2'}>
-          <span className="w-12 shrink-0 text-sm text-sage-500">Bleeding</span>
+          <span className="w-16 shrink-0 text-sm text-sage-500">Bleeding</span>
           <span className="text-sm capitalize text-sage-700">{checkin.bleeding_flow}</span>
         </div>
       )}

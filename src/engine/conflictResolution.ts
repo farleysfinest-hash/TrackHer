@@ -2,6 +2,7 @@ import { addDaysISO, daysBetweenISO } from '../utils/localDate';
 import type { Insight, InsightSampleSize, InsightConfidence } from './types';
 import { finalizeInsightBody, INSIGHT_DISCLAIMER } from './types';
 import { confidenceSortScore } from './confidence';
+import { HORMONE_PATTERNS, patternsOppose, type HormonePattern } from './hormonePatterns';
 
 const CONFIDENCE_GAP_THRESHOLD = 0.25;
 
@@ -157,6 +158,152 @@ export function resolveConflicts(insights: Insight[]): Insight[] {
   }
 
   return [...result, ...mixedToAdd];
+}
+
+/* ------------------------------------------------------------------ *
+ * Opposing hormone patterns
+ *
+ * Separate from the dose-change conflicts above: InsightConflictMeta describes an
+ * improvement/worsening direction inside a window around a medication change, which cannot
+ * express "low estrogen versus high estrogen". These conflicts are matched on the pattern
+ * axis instead.
+ * ------------------------------------------------------------------ */
+
+const PATTERNS_BY_KEY = new Map(HORMONE_PATTERNS.map((p) => [p.key, p]));
+
+function patternForInsight(insight: Insight): HormonePattern | undefined {
+  if (insight.category !== 'symptom_cluster') return undefined;
+  const key = insight.supportingData.matchedPattern;
+  return typeof key === 'string' ? PATTERNS_BY_KEY.get(key) : undefined;
+}
+
+/** Swap dose-direction questions for measurement questions on a conflicted card. */
+function withConflictSafeActions(insight: Insight, pattern: HormonePattern): Insight {
+  if (!pattern.conflictDiscussionPoints) return insight;
+  return {
+    ...insight,
+    actionSuggestion: `Questions to consider for your provider:\n${pattern.conflictDiscussionPoints
+      .map((q) => `• ${q}`)
+      .join('\n')}`,
+  };
+}
+
+function buildAxisConflictInsight(
+  low: { insight: Insight; pattern: HormonePattern },
+  high: { insight: Insight; pattern: HormonePattern },
+): Insight {
+  const axis = low.pattern.axis as string;
+  const sampleSize = mergeSampleSize(low.insight, high.insight);
+  // Both patterns require three or more of their own hallmark symptoms, and their hallmark sets
+  // do not overlap. So co-firing means genuinely logging both groups, not double-counting.
+  //
+  // The two axes need different explanations. The estrogen "high" pattern is a ratio pattern —
+  // estrogen high *relative to progesterone* — so low-estrogen and high-ratio symptoms together
+  // are not a contradiction at all. They are the classic transition picture: estradiol swinging
+  // while progesterone falls away with anovulatory cycles. Calling that "we cannot tell" would
+  // be both less accurate and less useful than naming it. Androgen excess and deficiency really
+  // are contradictory, so testosterone keeps the measure-it framing.
+  const body =
+    axis === 'estrogen'
+      ? `You are logging symptoms from two groups at once: some that go with estrogen running low, ` +
+        `and some that go with estrogen running high relative to progesterone.\n\n` +
+        `That combination is not a contradiction, and it does not mean your data is confusing. ` +
+        `It is a common picture during the menopause transition, when estrogen swings up and down ` +
+        `rather than declining smoothly, while progesterone falls away earlier and more steadily. ` +
+        `The low-estrogen symptoms tend to come from the dips, and the others from the peaks with ` +
+        `less progesterone to balance them.\n\n` +
+        `The useful question here is usually about progesterone and about timing — when in the month ` +
+        `each group of symptoms shows up — rather than simply whether your estrogen is too high or too low. ` +
+        `That is a conversation for your provider. Please do not change a dose on the strength of this card.`
+      : `Your symptoms currently match both a low and a high ${axis} pattern. ` +
+        `Unlike estrogen, these two genuinely point in opposite directions, and acting on the wrong one ` +
+        `would make things worse.\n\n` +
+        `Symptoms on their own cannot separate them — this is a case where a blood level genuinely helps, ` +
+        `alongside your provider's read. Please do not change a dose on the strength of this card.`;
+
+  return {
+    id: `axis-conflict-${axis}`,
+    category: 'mixed_signals',
+    // High, not medium: this card exists to stop a harmful dose change, so it must not be
+    // pushed out of the primary panel by the cap.
+    priority: 'high',
+    title:
+      axis === 'estrogen'
+        ? 'Two symptom groups at once — a common transition picture'
+        : `Your ${axis} signals point both ways`,
+    body: finalizeInsightBody(body, sampleSize, true),
+    sampleSize,
+    confidence: averagedConfidence(low.insight, high.insight, sampleSize),
+    supportingData: {
+      mergedInsightIds: [low.insight.id, high.insight.id],
+      matchedPattern: `${low.pattern.key}+${high.pattern.key}`,
+    },
+    mergedFrom: [low.insight.id, high.insight.id],
+    relatedLabs: [
+      ...new Set([
+        ...low.pattern.relatedLabs.map((l) => l.biomarkerKey),
+        ...high.pattern.relatedLabs.map((l) => l.biomarkerKey),
+      ]),
+    ],
+    actionSuggestion:
+      axis === 'estrogen'
+        ? `Questions to consider for your provider:\n` +
+          `• I get both sets of symptoms — could my progesterone be part of this?\n` +
+          `• Does it matter when in the month each group shows up?\n` +
+          `• Would tracking the timing for a cycle or two help you decide?`
+        : `Questions to consider for your provider:\n` +
+          `• Could we measure my ${axis} level before changing my dose?\n` +
+          `• Which of these symptoms would you weight most heavily?`,
+    disclaimer: INSIGHT_DISCLAIMER,
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * Merges opposing hormone-pattern cards into one honest "points both ways" card.
+ *
+ * Both originals are demoted rather than deleted, matching resolveConflicts. Because demoted
+ * insights still render under "more", their contradictory dose questions are also rewritten —
+ * demotion alone would leave "increase your estradiol" one tap from "your estrogen is too high".
+ */
+export function resolveHormoneAxisConflicts(insights: Insight[]): Insight[] {
+  const result = insights.map((insight) => ({ ...insight }));
+  const clusters = result
+    .map((insight) => ({ insight, pattern: patternForInsight(insight) }))
+    .filter((entry): entry is { insight: Insight; pattern: HormonePattern } =>
+      entry.pattern !== undefined && entry.pattern.axis !== undefined,
+    );
+
+  const added: Insight[] = [];
+  const seenAxes = new Set<string>();
+
+  for (let i = 0; i < clusters.length; i++) {
+    for (let j = i + 1; j < clusters.length; j++) {
+      const a = clusters[i];
+      const b = clusters[j];
+      if (!patternsOppose(a.pattern, b.pattern)) continue;
+
+      const axis = a.pattern.axis as string;
+      if (seenAxes.has(axis)) continue;
+      seenAxes.add(axis);
+
+      const low = a.pattern.axisDirection === 'low' ? a : b;
+      const high = low === a ? b : a;
+
+      for (const entry of [low, high]) {
+        const index = result.findIndex((r) => r.id === entry.insight.id);
+        if (index === -1) continue;
+        result[index] = withConflictSafeActions(
+          { ...result[index], demotedToMore: true },
+          entry.pattern,
+        );
+      }
+
+      added.push(buildAxisConflictInsight(low, high));
+    }
+  }
+
+  return [...result, ...added];
 }
 
 export function conflictWindowForChange(changeDate: string, windowDays: number) {

@@ -1,3 +1,10 @@
+/**
+ * Hormone axes that have a low and a high pattern. Two patterns on the same axis with
+ * opposite directions cannot both be acted on — one says raise the dose, the other says
+ * lower it — so the engine merges them instead of showing both.
+ */
+export type HormoneAxis = 'estrogen' | 'testosterone';
+
 export interface HormonePattern {
   key: string;
   label: string;
@@ -9,6 +16,26 @@ export interface HormonePattern {
     expectedDirection: 'low' | 'high' | 'either';
   }>;
   discussionPoints: string[];
+  /** Set only for patterns that have an opposing counterpart on the same hormone. */
+  axis?: HormoneAxis;
+  axisDirection?: 'low' | 'high';
+  /**
+   * Replaces `discussionPoints` when the opposing pattern on this axis also matched.
+   * Symptoms alone cannot resolve the direction, so these ask for the measurement
+   * instead of suggesting a dose move.
+   */
+  conflictDiscussionPoints?: string[];
+}
+
+/** Patterns on the same axis pointing opposite ways — mutually exclusive as actions. */
+export function patternsOppose(a: HormonePattern, b: HormonePattern): boolean {
+  return (
+    a.axis !== undefined &&
+    a.axis === b.axis &&
+    a.axisDirection !== undefined &&
+    b.axisDirection !== undefined &&
+    a.axisDirection !== b.axisDirection
+  );
 }
 
 export const HORMONE_PATTERNS: HormonePattern[] = [
@@ -38,6 +65,13 @@ export const HORMONE_PATTERNS: HormonePattern[] = [
       'Would switching delivery methods improve absorption?',
       'Should we check my estradiol level with a blood test?',
     ],
+    axis: 'estrogen',
+    axisDirection: 'low',
+    conflictDiscussionPoints: [
+      'Could we check my estradiol level before changing anything?',
+      'My symptoms point in both directions — what would you want to measure first?',
+      'Could my levels be fluctuating rather than steadily high or low?',
+    ],
   },
   {
     key: 'estrogen_high',
@@ -65,6 +99,13 @@ export const HORMONE_PATTERNS: HormonePattern[] = [
       'Would adding or increasing progesterone help balance things?',
       'Should we check my estradiol-to-progesterone ratio?',
       'If I am on oral estrogen, would switching to transdermal reduce symptoms from estrogen levels being high relative to progesterone?',
+    ],
+    axis: 'estrogen',
+    axisDirection: 'high',
+    conflictDiscussionPoints: [
+      'Could we check my estradiol and progesterone levels before changing anything?',
+      'My symptoms point in both directions — what would you want to measure first?',
+      'Could my levels be fluctuating rather than steadily high or low?',
     ],
   },
   {
@@ -115,6 +156,12 @@ export const HORMONE_PATTERNS: HormonePattern[] = [
       'Is my SHBG high?',
       'Would DHEA supplementation be appropriate?',
     ],
+    axis: 'testosterone',
+    axisDirection: 'low',
+    conflictDiscussionPoints: [
+      'Could we check my total and free testosterone before changing anything?',
+      'My symptoms point in both directions — what would you want to measure first?',
+    ],
   },
   {
     key: 'testosterone_high',
@@ -132,6 +179,12 @@ export const HORMONE_PATTERNS: HormonePattern[] = [
       'Should my testosterone dose be reduced?',
       'Could my testosterone cream concentration be too high?',
       'Should we check my free testosterone and DHEA-S levels?',
+    ],
+    axis: 'testosterone',
+    axisDirection: 'high',
+    conflictDiscussionPoints: [
+      'Could we check my total and free testosterone before changing anything?',
+      'My symptoms point in both directions — what would you want to measure first?',
     ],
   },
   {

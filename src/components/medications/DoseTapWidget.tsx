@@ -32,15 +32,15 @@ function formatLogTime(iso: string, timezone: string): string {
   });
 }
 
-function shortMedName(name: string): string {
-  if (name.length <= 18) return name;
-  return `${name.slice(0, 16)}…`;
-}
-
-/** Outstanding doses read as actionable; anything satisfied or off-schedule reads as quiet. */
+/**
+ * Outstanding doses read as actionable; anything satisfied or off-schedule reads as quiet.
+ *
+ * The width cap lets long names ellipsize via CSS rather than a fixed character count, so a
+ * wide viewport shows the whole name and two similarly-named patches stay distinguishable.
+ */
 function chipClassName(status: DoseStatus): string {
   const base =
-    'flex max-w-full flex-col items-start gap-0.5 rounded-2xl border px-3 py-2 text-left transition-colors active:scale-[0.98]';
+    'flex w-full max-w-[17rem] flex-col items-start gap-0.5 rounded-2xl border px-3 py-2 text-left transition-colors active:scale-[0.98] sm:w-auto';
 
   switch (status.state) {
     case 'due_today':
@@ -165,11 +165,11 @@ export function DoseTapWidget({ title, hideWhenNothingDue = false }: DoseTapWidg
             aria-pressed={status.satisfied}
             className={`${chipClassName(status)} disabled:opacity-60`}
           >
-            <span className="flex max-w-full items-center gap-1.5 text-sm font-medium">
-              <span className="truncate">{shortMedName(medication.medication_name)}</span>
+            <span className="flex w-full min-w-0 items-center gap-1.5 text-sm font-medium">
+              <span className="truncate">{medication.medication_name}</span>
               {status.satisfied && <span aria-hidden>✓</span>}
             </span>
-            <span className="text-xs opacity-80">
+            <span className="w-full truncate text-xs opacity-80">
               {status.cadence.label} · {status.detail}
             </span>
           </button>

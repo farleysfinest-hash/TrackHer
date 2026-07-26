@@ -5,7 +5,12 @@ import { analyzeTrends } from './trendDetector';
 import { analyzeEarlyObservations } from './earlyObservations';
 import { analyzeWellbeingSignal } from './wellbeingSignal';
 import { analyzeSafeguarding } from './safeguarding';
-import { resolveConflicts } from './conflictResolution';
+import {
+  analyzeBleedingRedFlag,
+  demoteDoseTuningDuringBleedingFlag,
+} from './bleedingRedFlag';
+import { todayISO } from '../utils/localDate';
+import { resolveConflicts, resolveHormoneAxisConflicts } from './conflictResolution';
 import {
   buildEngineInputCacheKey,
   getCachedEngineResult,
@@ -109,8 +114,17 @@ function runPatternEngineInternal(input: EngineInput): PatternEngineResult {
     checkins: input.checkins,
   });
 
+  const bleedingInsights = analyzeBleedingRedFlag({
+    profile: input.profile,
+    checkins: input.checkins,
+    medications: input.medications,
+    today: todayISO(timezone),
+  });
+
   const seen = new Set<string>();
   const collected = [
+    // Ahead of everything else: this is a guideline threshold, not a ranked pattern.
+    ...bleedingInsights,
     ...safeguardingOrdinary,
     ...doseInsights,
     ...wellbeingInsights,
@@ -125,7 +139,11 @@ function runPatternEngineInternal(input: EngineInput): PatternEngineResult {
   });
 
   const capped = capObservations(collected);
-  const resolved = resolveConflicts(capped);
+  // Dose-change conflicts first, then opposing hormone patterns. The two are independent:
+  // the first matches on overlapping change windows, the second on hormone axis.
+  const resolved = demoteDoseTuningDuringBleedingFlag(
+    resolveHormoneAxisConflicts(resolveConflicts(capped)),
+  );
   const ranked = [...resolved].sort((a, b) => {
     const priorityDiff = PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
     if (priorityDiff !== 0) return priorityDiff;

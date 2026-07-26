@@ -13,11 +13,10 @@ import { RemindersSettingsCard } from '../components/settings/RemindersSettingsC
 import { SubscriptionSettingsCard } from '../components/settings/SubscriptionSettingsCard';
 import { useAuth } from '../hooks/useAuth';
 import { useProfile } from '../hooks/useProfile';
-import { MENOPAUSE_STAGES, APP_VERSION } from '../lib/constants';
+import { APP_VERSION } from '../lib/constants';
 import { PASSWORD_MIN_LENGTH } from '../lib/constants';
 import { validators, validateFields } from '../utils/validation';
 import { getLocalDateISO, getResolvedTimezone } from '../utils/checkinHelpers';
-import type { MenopauseStage } from '../types/database';
 import { TimezoneSelect } from '../components/ui/TimezoneSelect';
 import { getActiveTimezone, isValidTimeZone } from '../utils/localDate';
 import { deriveUterusAnswer, uterusAnswerToValue, type UterusAnswer } from '../utils/uterusAnswer';
@@ -54,7 +53,6 @@ export function SettingsPage() {
   const { profile, update, isUpdating } = useProfile();
 
   const [displayName, setDisplayName] = useState(profile?.display_name ?? '');
-  const [menopauseStage, setMenopauseStage] = useState(profile?.menopause_stage ?? '');
   const [uterusAnswer, setUterusAnswer] = useState<UterusAnswer | null>(
     deriveUterusAnswer(profile),
   );
@@ -94,7 +92,6 @@ export function SettingsPage() {
   useEffect(() => {
     if (profile) {
       setDisplayName(profile.display_name ?? '');
-      setMenopauseStage(profile.menopause_stage ?? '');
       setUterusAnswer(deriveUterusAnswer(profile));
       setPreferredTimezone(profile.timezone ?? getActiveTimezone());
       setDateOfBirth(profile.date_of_birth ?? '');
@@ -117,7 +114,6 @@ export function SettingsPage() {
     const confirmedAt = new Date().toISOString();
     const result = await update({
       display_name: displayName,
-      menopause_stage: (menopauseStage || undefined) as MenopauseStage | undefined,
       has_uterus: uterusAnswerToValue(uterusAnswer),
       has_uterus_confirmed_at: confirmedAt,
       timezone: preferredTimezone,
@@ -289,13 +285,28 @@ export function SettingsPage() {
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
           />
-          <Select
-            label="Menopause Stage"
-            value={menopauseStage}
-            onChange={(e) => setMenopauseStage(e.target.value)}
-            placeholder="Select stage"
-            options={MENOPAUSE_STAGES.map((s) => ({ value: s.value, label: s.label }))}
-          />
+          {/*
+            Read-only on purpose. This used to be a free-pick dropdown writing `menopause_stage`,
+            a column nothing clinical reads — the provider report, the insight engine and the
+            postmenopausal-bleeding check all key off `straw_stage`, which onboarding derives
+            from the STRAW questions. Editing here therefore looked like it corrected your
+            staging and silently did not. Showing the derived value is honest until a proper
+            "redo staging" flow exists.
+          */}
+          <div>
+            <p className="mb-1 block text-sm font-medium text-sage-700">Menopause stage</p>
+            <div className="rounded-lg border border-sand-200 bg-sand-50 px-3 py-2.5">
+              <p className="text-sage-800">
+                {profile?.straw_stage_label ??
+                  (profile?.straw_stage ? `Stage ${profile.straw_stage}` : 'Not set')}
+              </p>
+            </div>
+            <p className="mt-1 text-xs text-sage-500">
+              {profile?.straw_stage
+                ? 'Worked out from your onboarding answers. This drives your provider report and your insights — tell your provider if it looks wrong.'
+                : 'Not recorded yet. Your provider report will show “Not specified” until this is set.'}
+            </p>
+          </div>
           <Select
             label="Weekly check-in day"
             value={String(checkinDay ?? '')}

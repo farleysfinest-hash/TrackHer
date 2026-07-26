@@ -31,11 +31,31 @@ export function isSubscriptionsConfigured(): boolean {
 }
 
 /**
+ * Beta escape hatch. Setting the RevenueCat key for a TestFlight build would otherwise
+ * paywall Pro for every tester at once, because none of them hold the `pro` entitlement.
+ * This keeps Pro unlocked while still exercising the real RevenueCat SDK path.
+ *
+ * MUST be unset for any App Store release build — see docs/DEPLOYMENT.md.
+ */
+export function isBetaProUnlockEnabled(): boolean {
+  return import.meta.env.VITE_BETA_UNLOCK_PRO === 'true';
+}
+
+// Announce the override in production builds so it cannot ship to the App Store unnoticed.
+if (import.meta.env.PROD && isBetaProUnlockEnabled()) {
+  console.warn(
+    '[TrackHer] VITE_BETA_UNLOCK_PRO is enabled in a production build — every user has Pro. ' +
+      'Unset it before submitting to the App Store.',
+  );
+}
+
+/**
  * When RevenueCat is not configured (web, missing key), Pro stays unlocked so
  * private beta and browser use are not blocked. Once a native key is set,
- * access requires the `pro` entitlement.
+ * access requires the `pro` entitlement — unless the beta override is on.
  */
 export function hasProAccess(): boolean {
+  if (isBetaProUnlockEnabled()) return true;
   if (!isSubscriptionsConfigured()) return true;
   return cachedIsPro;
 }

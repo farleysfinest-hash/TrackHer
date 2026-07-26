@@ -22,7 +22,13 @@ export type InsightCategory =
   | 'mixed_signals'
   | 'psych_trajectory'
   | 'safeguarding'
-  | 'cardiac_persistence';
+  | 'cardiac_persistence'
+  /**
+   * Bleeding after the menopause transition is complete. Kept separate from `safeguarding`
+   * because that category is treated as mental-health content and is withheld from the
+   * provider report unless the user opts in — this one should reach a clinician by default.
+   */
+  | 'bleeding_red_flag';
 
 export type InsightPriority = 'high' | 'medium' | 'low' | 'positive';
 
