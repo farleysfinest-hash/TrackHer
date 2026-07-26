@@ -10,8 +10,8 @@ import type { StrawStageCode } from '../../lib/strawStaging';
 
 const TODAY = '2026-07-25';
 
-function makeProfile(stage: StrawStageCode | null): Profile {
-  return { id: 'user-1', straw_stage: stage, has_uterus: true } as Profile;
+function makeProfile(stage: StrawStageCode | null, hasUterus: boolean | null = true): Profile {
+  return { id: 'user-1', straw_stage: stage, has_uterus: hasUterus } as Profile;
 }
 
 function makeCheckin(date: string, bleeding: BleedingFlow | null): SymptomCheckin {
@@ -224,6 +224,74 @@ describe('analyzeBleedingRedFlag — copy', () => {
   it('is not filed under the mental-health category withheld from provider reports', () => {
     const result = analyze('+1b', [makeCheckin('2026-07-20', 'light')]);
     expect(result[0].category).not.toBe('safeguarding');
+  });
+});
+
+describe('analyzeBleedingRedFlag — copy when there is no uterus', () => {
+  // Caught by rendering the card in a browser: `buildBody` suppressed the unopposed-estrogen
+  // paragraph for has_uterus === false, but the endometrial framing and every progestogen
+  // question were unconditional. A woman post-hysterectomy was told to ask for a biopsy of an
+  // organ she does not have.
+  function analyzeNoUterus(medications: Medication[] = []) {
+    return analyzeBleedingRedFlag({
+      profile: makeProfile('surgical', false),
+      checkins: [makeCheckin('2026-07-20', 'light')],
+      medications,
+      today: TODAY,
+    });
+  }
+
+  it('still fires — bleeding without a uterus also warrants evaluation', () => {
+    expect(analyzeNoUterus()).toHaveLength(1);
+  });
+
+  it('does not offer an endometrial biopsy', () => {
+    const result = analyzeNoUterus();
+    expect(result[0].actionSuggestion).not.toMatch(/endometrial biopsy/i);
+    expect(result[0].body).not.toMatch(/lining of the uterus/i);
+  });
+
+  it('does not ask whether a progestogen is protecting a uterine lining', () => {
+    const result = analyzeNoUterus([
+      makeMedication({ hormone_category: 'estrogen', delivery_method: 'patch', frequency: 'weekly' }),
+    ]);
+    expect(result[0].actionSuggestion).not.toMatch(/uterine lining/i);
+    expect(result[0].actionSuggestion).not.toMatch(/progestogen/i);
+  });
+
+  it('does not explain the bleeding as an endometrium building up and shedding', () => {
+    const result = analyzeNoUterus([
+      makeMedication({ hormone_category: 'estrogen', delivery_method: 'patch', frequency: 'weekly' }),
+      makeMedication({ hormone_category: 'progesterone', delivery_method: 'oral_capsule', frequency: 'daily' }),
+    ]);
+    expect(result[0].body).not.toMatch(/lining of the uterus can build up/i);
+  });
+
+  it('says how the check is actually done instead', () => {
+    const result = analyzeNoUterus();
+    expect(result[0].body).toMatch(/vaginal tissue/i);
+    expect(result[0].actionSuggestion).toMatch(/do not have a uterus/i);
+  });
+
+  it('keeps the prompt-contact and do-not-self-adjust instructions', () => {
+    const result = analyzeNoUterus();
+    expect(result[0].body).toMatch(/contact your provider/i);
+    expect(result[0].body).toMatch(/do not change a dose/i);
+  });
+
+  it('still avoids naming cancer', () => {
+    expect(analyzeNoUterus()[0].body).not.toMatch(/cancer|carcinoma|malignan/i);
+  });
+
+  it('keeps the endometrial framing when has_uterus is unknown rather than guessing', () => {
+    const result = analyzeBleedingRedFlag({
+      profile: makeProfile('+1b', null),
+      checkins: [makeCheckin('2026-07-20', 'light')],
+      medications: [],
+      today: TODAY,
+    });
+    expect(result[0].body).toMatch(/lining of the uterus/i);
+    expect(result[0].actionSuggestion).toMatch(/endometrial biopsy/i);
   });
 });
 

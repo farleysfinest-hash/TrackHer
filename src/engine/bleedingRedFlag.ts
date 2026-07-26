@@ -148,6 +148,10 @@ interface BodyContext {
 function buildBody(ctx: BodyContext): string {
   const { episodeCount, cyclic, onSystemicEstrogen, onProgestogen, hasUterus } = ctx;
 
+  // Only an explicit false counts. `null` means we never asked, and guessing "no uterus" from
+  // missing data would drop the endometrial framing for someone who needs it.
+  const noUterus = hasUterus === false;
+
   const episodes =
     episodeCount === 1
       ? 'You logged bleeding on one day in the last three months.'
@@ -159,7 +163,7 @@ function buildBody(ctx: BodyContext): string {
     : '';
 
   let likelyCause = '';
-  if (onSystemicEstrogen && onProgestogen) {
+  if (onSystemicEstrogen && onProgestogen && !noUterus) {
     likelyCause =
       '\n\nA common and very fixable reason for this is the progesterone side of your regimen. ' +
       'If the dose, type, or timing of your progestogen is not quite keeping pace with your estrogen, ' +
@@ -174,15 +178,59 @@ function buildBody(ctx: BodyContext): string {
       'recorded in TrackHer, adding it here will make this picture more accurate.';
   }
 
+  // How the check is actually done depends on whether there is a uterus to examine. Offering an
+  // endometrial biopsy to someone who has had a hysterectomy is both impossible and alarming, and
+  // it tells her the app is not reading her own record.
+  const howItIsChecked = noUterus
+    ? 'The reason for checking quickly rather than waiting is to confirm that. ' +
+      'Your record says you do not have a uterus, so this is not about the womb lining — ' +
+      'it is usually an examination of the vaginal tissue instead. ' +
+      'That is not something symptoms alone can settle.'
+    : 'The reason for checking quickly rather than waiting is to confirm that, ' +
+      'by looking at the lining of the uterus with a scan or a biopsy. ' +
+      'That is not something symptoms alone can settle.';
+
   return (
     `${episodes} Your profile places you past the menopause transition, when bleeding is not expected.` +
     `${scheduled}` +
     `${likelyCause}\n\n` +
     'Either way, bleeding at this stage — including light spotting — is something clinicians want to look at promptly. ' +
-    'Most causes turn out to be benign. The reason for checking quickly rather than waiting is to confirm that, ' +
-    'by looking at the lining of the uterus with a scan or a biopsy. That is not something symptoms alone can settle.\n\n' +
+    `Most causes turn out to be benign. ${howItIsChecked}\n\n` +
     'Please contact your provider about this rather than waiting for your next scheduled appointment, ' +
     'and please do not change a dose on your own in the meantime.'
+  );
+}
+
+/**
+ * The questions are the part she is most likely to read out in the appointment, so they have to
+ * match her anatomy. Progestogen questions only make sense where there is an endometrium to
+ * protect; with no uterus they point the conversation at the wrong organ.
+ */
+function buildActionSuggestion(ctx: {
+  onSystemicEstrogen: boolean;
+  hasUterus: boolean | null;
+}): string {
+  const noUterus = ctx.hasUterus === false;
+
+  const opening =
+    'Questions to consider for your provider:\n' +
+    '• I have had bleeding since my periods stopped — can I be seen about this?\n';
+
+  if (noUterus) {
+    return (
+      opening +
+      '• I do not have a uterus — what could be causing this bleeding, and how is it checked?\n' +
+      '• Are there other causes we should rule out?'
+    );
+  }
+
+  return (
+    opening +
+    '• Do I need a transvaginal ultrasound or an endometrial biopsy?\n' +
+    (ctx.onSystemicEstrogen
+      ? '• Could my progestogen dose, type or timing be causing this?\n' +
+        '• Is my current progestogen enough to protect my uterine lining?'
+      : '• Are there other causes we should rule out first?')
   );
 }
 
@@ -261,14 +309,10 @@ export function analyzeBleedingRedFlag(input: BleedingRedFlagInput): Insight[] {
         },
       },
       relatedSymptoms: ['heavy_bleeding'],
-      actionSuggestion:
-        'Questions to consider for your provider:\n' +
-        '• I have had bleeding since my periods stopped — can I be seen about this?\n' +
-        '• Do I need a transvaginal ultrasound or an endometrial biopsy?\n' +
-        (onSystemicEstrogen
-          ? '• Could my progestogen dose, type or timing be causing this?\n' +
-            '• Is my current progestogen enough to protect my uterine lining?'
-          : '• Are there other causes we should rule out first?'),
+      actionSuggestion: buildActionSuggestion({
+        onSystemicEstrogen,
+        hasUterus: profile.has_uterus,
+      }),
       disclaimer: INSIGHT_DISCLAIMER,
       generatedAt: new Date().toISOString(),
     },

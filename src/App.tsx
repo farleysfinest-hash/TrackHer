@@ -31,6 +31,15 @@ const TermsOfServicePage = lazy(() =>
   import('./pages/TermsOfServicePage').then((m) => ({ default: m.TermsOfServicePage })),
 );
 
+/**
+ * Visual harness for the bleeding and safeguarding cards, which only fire for account states
+ * no test account is in. Registered under DEV only — the lazy import is unreachable in a
+ * production build, so Rollup drops the chunk. See src/pages/DevCardsPage.tsx.
+ */
+const DevCardsPage = import.meta.env.DEV
+  ? lazy(() => import('./pages/DevCardsPage').then((m) => ({ default: m.DevCardsPage })))
+  : null;
+
 /** URL match only — PersistentTabs owns the real page trees for main tabs. */
 function TabRoute() {
   return null;
@@ -57,6 +66,8 @@ export function App() {
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/privacy" element={<PrivacyPolicyPage />} />
             <Route path="/terms" element={<TermsOfServicePage />} />
+
+            {DevCardsPage && <Route path="/dev/cards" element={<DevCardsPage />} />}
 
             <Route
               path="/onboarding"
