@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { Logo } from '../ui/Logo';
 import { LogoMark } from '../ui/LogoMark';
-import { APP_VERSION } from '../../lib/constants';
+import { APP_VERSION, SUPPORT_EMAIL } from '../../lib/constants';
 import { useCheckinStatus } from '../../hooks/useCheckinStatus';
 
 const navItems: Array<{
@@ -75,12 +75,13 @@ export function Sidebar() {
       </nav>
 
       <div className="border-t border-sand-200 px-6 py-4">
-        <span
-          className="text-sm text-sage-400 cursor-default"
-          title="Support email coming soon"
+        <a
+          href={`mailto:${SUPPORT_EMAIL}`}
+          className="text-sm text-sage-500 underline underline-offset-2 hover:text-sage-700"
+          title={`Email ${SUPPORT_EMAIL}`}
         >
           Need Help?
-        </span>
+        </a>
         <p className="mt-1 text-xs text-sage-400">v{APP_VERSION}</p>
       </div>
     </aside>

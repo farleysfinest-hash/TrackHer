@@ -1,3 +1,4 @@
+import { SUPPORT_EMAIL } from '../lib/constants';
 import { LegalPageLayout } from '../components/layout/LegalPageLayout';
 import { Link } from 'react-router-dom';
 
@@ -308,7 +309,13 @@ export function TermsOfServicePage() {
             If you have questions about these Terms, please contact us at:
           </p>
           <p className="mt-2 text-sage-600">
-            Email: <a href="mailto:legal@trackher.app" className="text-sage-700 underline hover:text-sage-800">legal@trackher.app</a>
+            Email:{' '}
+            <a
+              href={`mailto:${SUPPORT_EMAIL}`}
+              className="text-sage-700 underline hover:text-sage-800"
+            >
+              {SUPPORT_EMAIL}
+            </a>
           </p>
         </section>
 

@@ -41,7 +41,18 @@ export function ProtectedRoute({ children, requireOnboarding = true }: Protected
     return <Navigate to="/onboarding" replace />;
   }
 
-  if (!requireOnboarding && profile?.onboarding_completed && location.pathname === '/onboarding') {
+  // A completed profile is normally bounced away from onboarding. The exception is a profile
+  // that finished onboarding without a STRAW stage: nothing else in the app can write
+  // `straw_stage`, so redirecting would trap the user with staging that can never be fixed —
+  // and staging gates the provider report, the insight engine and the bleeding check.
+  const stagingIncomplete = !profile?.straw_stage;
+
+  if (
+    !requireOnboarding &&
+    profile?.onboarding_completed &&
+    !stagingIncomplete &&
+    location.pathname === '/onboarding'
+  ) {
     return <Navigate to="/dashboard" replace />;
   }
 

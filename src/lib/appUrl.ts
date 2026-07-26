@@ -6,14 +6,20 @@ import { Capacitor } from '@capacitor/core';
  */
 export function getAppOrigin(): string {
   const fromEnv = import.meta.env.VITE_APP_URL?.trim().replace(/\/$/, '');
-  if (fromEnv) return fromEnv;
 
+  // Native WKWebView has no usable origin, so the configured public URL is the only option.
   if (Capacitor.isNativePlatform()) {
-    // Brand domain used in privacy/legal copy. Override with VITE_APP_URL in production.
-    return 'https://trackher.app';
+    return fromEnv || 'https://trackher.app';
   }
 
-  return window.location.origin;
+  // On the web the user is already somewhere real — send them back to where they actually are.
+  // Preferring VITE_APP_URL here mailed every localhost password reset to production, so the
+  // link landed on a different origin with no session and appeared to do nothing.
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin;
+  }
+
+  return fromEnv || 'https://trackher.app';
 }
 
 export function getPasswordResetRedirectUrl(): string {
