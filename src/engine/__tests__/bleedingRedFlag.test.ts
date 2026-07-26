@@ -332,3 +332,56 @@ describe('analyzeBleedingRedFlag — progesterone explanation', () => {
     expect(analyze('+1b', bleed, [])[0].actionSuggestion).not.toMatch(/progestogen/i);
   });
 });
+
+describe('analyzeBleedingRedFlag — stage frozen at onboarding', () => {
+  /**
+   * Regression guard. `straw_stage` is written once during onboarding and never recomputed, so a
+   * user who signed up during late transition stays `-1` indefinitely — including years after she
+   * has actually become postmenopausal. Reading the stored column directly silently excluded
+   * exactly the population this check exists to protect.
+   */
+  function agedProfile(lastPeriodDate: string): Profile {
+    return {
+      id: 'user-1',
+      straw_stage: '-1',
+      periods_status: 'stopped',
+      last_period_date: lastPeriodDate,
+      has_uterus: true,
+    } as Profile;
+  }
+
+  it('fires for a user still recorded as -1 who is now years postmenopausal', () => {
+    const result = analyzeBleedingRedFlag({
+      profile: agedProfile('2024-01-15'),
+      checkins: [makeCheckin('2026-07-20', 'spotting')],
+      medications: [],
+      today: TODAY,
+    });
+
+    expect(result).toHaveLength(1);
+    expect(result[0].category).toBe('bleeding_red_flag');
+  });
+
+  it('still stays silent for a user genuinely inside the transition', () => {
+    const result = analyzeBleedingRedFlag({
+      profile: agedProfile('2026-01-15'),
+      checkins: [makeCheckin('2026-07-20', 'heavy')],
+      medications: [],
+      today: TODAY,
+    });
+
+    expect(result).toHaveLength(0);
+  });
+
+  it('does not fire on a stale -1 when no last period date was recorded', () => {
+    // Nothing to advance from, so the stored stage stands. Documents the residual gap.
+    const result = analyzeBleedingRedFlag({
+      profile: { ...agedProfile('2024-01-15'), last_period_date: null } as Profile,
+      checkins: [makeCheckin('2026-07-20', 'heavy')],
+      medications: [],
+      today: TODAY,
+    });
+
+    expect(result).toHaveLength(0);
+  });
+});

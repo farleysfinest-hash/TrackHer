@@ -239,3 +239,80 @@ reuse must bypass it.
 
 `shortMedName` cut every label at 16 characters regardless of viewport, making two estradiol
 patches indistinguishable. Now CSS truncation against a width cap.
+
+---
+
+# Addendum 2 — bug hunt
+
+Systematic pass over modules the earlier audits did not reach: engine internals, stores, chart
+maths, validation, date handling. Prioritised by size × absence of test coverage.
+
+## C3 — Menopause stage never advances with time · **FIXED**
+
+**The bug.** `straw_stage` is written exactly once, by `onboardingStore.submitStaging()`, and is
+never recomputed. `getStageProfile()` appears to re-derive it, but only from the stored onboarding
+*answers* — which are equally frozen. So the stage a user is assigned on signup is the stage she
+keeps forever.
+
+**Why it matters.** `timeframeToStage` maps "last period less than 12 months ago" to `-1`, which
+is correct: postmenopause is not recognised until 12 months of amenorrhea. But a woman who
+onboards at ten months stays `-1` indefinitely. Two years later she is genuinely postmenopausal,
+her record still says late transition, and the postmenopausal-bleeding check excludes `-1` —
+correctly, because bleeding is expected there.
+
+The population most likely to cross into the risk window is therefore the population silently
+excluded from the check that exists for it.
+
+**Compounding finding.** `last_period_date` — an actual date, not a bucket — is collected during
+onboarding, written to the profile, and **read by nothing**. It was write-only. The data needed to
+fix this was already being stored.
+
+**Fixed:** `resolveCurrentStrawStage(profile, today)` in `lib/strawStaging.ts`, used by
+`analyzeBleedingRedFlag`.
+
+- Advances the stage from elapsed time when `last_period_date` is known.
+- Boundaries mirror `timeframeToStage` exactly, so this changes *when* a stage is recognised, not
+  what the app calls it. No new clinical convention introduced as part of a bug fix.
+- Surgical, iatrogenic and post-hysterectomy stages are events, not timeline positions, and are
+  returned unchanged.
+- Users still cycling are not advanced — transition stages are defined by cycle pattern, not
+  elapsed time.
+- Only ever moves forward. A mistyped date cannot walk someone backwards out of a stage-gated
+  safety check.
+- Falls back to the stored stage on a missing, unparseable or future date.
+
+**Residual gap, documented in a test:** a user with no `last_period_date` still cannot advance.
+The proper fix is the re-staging flow already noted under M4.
+
+## C4 — `lib/strawStaging.ts` had no test coverage · **FIXED**
+
+331 lines driving clinical staging, feeding the provider report, the insight engine and now the
+bleeding check — and zero tests. Added 31, covering `computeStagingResult` branches, the
+timeframe boundaries, and every `resolveCurrentStrawStage` fallback.
+
+## L7 — STRAW stage `+1b` is unreachable
+
+`timeframeToStage` returns `-1`, `+1a`, `+1c` or `+2`. No input produces `+1b`, though it is a
+valid `StrawStageCode` with full `STAGE_DETAILS`. Harmless today — the bleeding check treats all
+`+1x` stages identically — but the 1-to-3-year bucket spans what STRAW+10 splits into `+1a` and
+`+1b`, so anyone at 2–3 years is reported one sub-stage earlier than they are. Worth resolving if
+staging fidelity ever matters beyond the postmenopausal boundary.
+
+## L8 — `getInitials` returns an empty string for a whitespace-only name
+
+`utils/formatters.ts:38`. `"   "` survives the `!name` guard, and `"".charAt(0)` yields `""`, so
+the avatar renders blank rather than the intended `?`. Cosmetic.
+
+## Verified sound
+
+Checked and found correctly guarded — recorded so the next audit does not re-tread them:
+
+- **Division by array length** — every site either guards emptiness or is preceded by a minimum
+  sample check (`chartHelpers`, `storyColumnHelpers`, `scoreSummary`, `chartStyle`, `scoring`).
+- **Unguarded `[0]` access** — `labDiscordance` checks `recentCheckins.length === 0` first;
+  `trendDetector` and `clusterMatcher` sit behind minimum-check-in gates;
+  `medicationLaneHelpers` returns early for single-element domains before dividing by
+  `length - 1`.
+- **`STAGE_DETAILS` and `TYPICAL_SYMPTOM_CLUSTERS`** are exhaustive `Record` types, so a new stage
+  code cannot produce an undefined lookup at runtime — TypeScript enforces it.
+- **`chartDrawing.ts:66`** guards `dates.length === 1` before dividing by `length - 1`.

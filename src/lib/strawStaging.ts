@@ -1,3 +1,5 @@
+import { calendarMonthsBetween } from '../utils/localDate';
+
 export type StrawStageCode =
   | '-3b'
   | '-3a'
@@ -168,6 +170,72 @@ export function getStageDashboardDescription(
 ): string | null {
   if (!code) return null;
   return STAGE_DASHBOARD_DESCRIPTIONS[code] ?? null;
+}
+
+/**
+ * Months since the final menstrual period, mapped to a STRAW code.
+ *
+ * Boundaries deliberately mirror `timeframeToStage` so this changes *when* a stage is recognised,
+ * not *what* the app calls it. Postmenopause is not recognised until 12 months of amenorrhea,
+ * which is why under a year still reports late transition.
+ */
+export function monthsSinceFinalPeriodToStage(months: number): StrawStageCode {
+  if (months < 12) return '-1';
+  if (months < 36) return '+1a';
+  if (months < 72) return '+1c';
+  return '+2';
+}
+
+/**
+ * The user's stage *today*, rather than on the day they onboarded.
+ *
+ * `straw_stage` is written once during onboarding and never recomputed, so someone who signed up
+ * at ten months of amenorrhea stays at `-1` indefinitely — including years after she has actually
+ * become postmenopausal. That silently excludes her from stage-gated safety checks.
+ *
+ * When a real `last_period_date` was recorded, elapsed time is authoritative. Stages that do not
+ * advance on a clock — still cycling, or menopause induced by surgery or treatment — are returned
+ * unchanged, as is the stored stage whenever the date is missing or unusable.
+ */
+export function resolveCurrentStrawStage(
+  profile: {
+    straw_stage: StrawStageCode | null;
+    periods_status: PeriodsStatus | null;
+    last_period_date: string | null;
+  },
+  today: string,
+): StrawStageCode | null {
+  const stored = profile.straw_stage;
+
+  // Surgical, iatrogenic and post-hysterectomy stages are events, not points on a timeline.
+  if (stored === 'surgical' || stored === 'iatrogenic' || stored === 'hysterectomy_ovaries_intact') {
+    return stored;
+  }
+
+  // Still bleeding: the transition stages are defined by cycle pattern, not elapsed time.
+  if (profile.periods_status !== 'stopped') return stored;
+
+  const lastPeriod = profile.last_period_date;
+  if (!lastPeriod) return stored;
+
+  let months: number;
+  try {
+    months = calendarMonthsBetween(lastPeriod, today);
+  } catch {
+    // Unparseable stored date — trust the stored stage rather than guess.
+    return stored;
+  }
+  if (months < 0) return stored;
+
+  const advanced = monthsSinceFinalPeriodToStage(months);
+
+  // Only ever move forward. A stored stage further along than the date implies (for example a
+  // date entered wrongly) is left alone rather than silently regressed.
+  const order: StrawStageCode[] = ['-3b', '-3a', '-2', '-1', '+1a', '+1b', '+1c', '+2'];
+  const storedIndex = stored ? order.indexOf(stored) : -1;
+  const advancedIndex = order.indexOf(advanced);
+  if (storedIndex === -1) return advanced;
+  return advancedIndex > storedIndex ? advanced : stored;
 }
 
 function timeframeToStage(timeframe: LastPeriodTimeframe): StrawStageCode {

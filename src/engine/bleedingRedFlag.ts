@@ -20,7 +20,7 @@
  */
 
 import type { Medication, SymptomCheckin, Profile, BleedingFlow } from '../types/database';
-import type { StrawStageCode } from '../lib/strawStaging';
+import { resolveCurrentStrawStage, type StrawStageCode } from '../lib/strawStaging';
 import type { Insight } from './types';
 import { INSIGHT_DISCLAIMER } from './types';
 import { daysBetweenISO } from '../utils/localDate';
@@ -216,7 +216,12 @@ export function demoteDoseTuningDuringBleedingFlag(insights: Insight[]): Insight
 export function analyzeBleedingRedFlag(input: BleedingRedFlagInput): Insight[] {
   const { profile, checkins, medications, today } = input;
   if (!profile) return [];
-  if (!isPostmenopausalStage(profile.straw_stage)) return [];
+
+  // The stored stage is frozen at onboarding. Someone who signed up during late transition is
+  // still recorded as `-1` years after becoming postmenopausal, which would exclude her from
+  // this check exactly when it starts to matter. Resolve against elapsed time instead.
+  const currentStage = resolveCurrentStrawStage(profile, today);
+  if (!isPostmenopausalStage(currentStage)) return [];
 
   const episodes = bleedingCheckins(checkins, today);
   if (episodes.length === 0) return [];
