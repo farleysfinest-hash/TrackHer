@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
 import type { MedicationAdministration } from '../types/database';
 import { getActiveTimezone, getEventLocalMetadata } from '../utils/localDate';
+import { DOSE_HISTORY_DAYS } from '../utils/doseSchedule';
 
 export function useMedicationAdministrations() {
   const [administrations, setAdministrations] = useState<MedicationAdministration[]>([]);
@@ -11,7 +12,7 @@ export function useMedicationAdministrations() {
 
   const getUserId = () => useAuthStore.getState().user?.id;
 
-  const fetchRecent = useCallback(async (days = 90) => {
+  const fetchRecent = useCallback(async (days = DOSE_HISTORY_DAYS) => {
     const userId = getUserId();
     if (!userId) return;
 
@@ -39,7 +40,7 @@ export function useMedicationAdministrations() {
   }, []);
 
   useEffect(() => {
-    void fetchRecent(90);
+    void fetchRecent(DOSE_HISTORY_DAYS);
   }, [fetchRecent]);
 
   const logAdministration = useCallback(

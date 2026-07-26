@@ -12,6 +12,7 @@ import {
   PulsePromptCard,
   WeeklyCheckinPromptCard,
 } from '../components/checkin/CheckinPromptWidget';
+import { DoseTapWidget } from '../components/medications/DoseTapWidget';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Modal } from '../components/ui/Modal';
@@ -237,6 +238,9 @@ export function CheckinPage() {
           />
         </>
       )}
+
+      {/* Doses are part of the daily picture, so the check-in surface asks for them too. */}
+      <DoseTapWidget title="Did you take today's doses?" />
 
       <Card variant="outlined" padding="sm">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

@@ -49,7 +49,8 @@ export function useProviderReport() {
       );
     } catch (err) {
       if (err instanceof ProviderReportDataLoadError) {
-        setError(PROVIDER_REPORT_LOAD_ERROR_MESSAGE);
+        // Keep the friendly copy, but append the cause so a screenshot is diagnosable.
+        setError(`${PROVIDER_REPORT_LOAD_ERROR_MESSAGE} (${err.technicalDetail})`);
       } else {
         setError(err instanceof Error ? err.message : 'Failed to generate report');
       }

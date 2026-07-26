@@ -7,16 +7,9 @@ import type {
   MedicationFrequency,
   MedicationChange,
   MedicationChangeType,
-  MedicationAdministration,
 } from '../types/database';
 import { APPLICATION_SITE_LABELS } from '../lib/medicationConstants';
-import {
-  addDaysISO,
-  addMonthsISO,
-  daysBetweenISO,
-  resolveEventLocalDate,
-  todayISO,
-} from './localDate';
+import { addDaysISO, addMonthsISO, todayISO } from './localDate';
 
 export function getMethodsForHormone(hormone: HormoneCategory): DeliveryMethod[] {
   return [
@@ -292,56 +285,8 @@ export function getDoseCycleDays(med: Pick<Medication, 'frequency'>): number | n
   }
 }
 
-function daysBetweenDates(from: string, to: string): number {
-  return daysBetweenISO(from, to);
-}
-
-const DAILY_DOSE_FREQUENCIES: MedicationFrequency[] = [
-  'daily',
-  'twice_daily',
-  'three_times_daily',
-  'every_other_day',
-];
-
-export function showDoseChip(med: Medication): boolean {
-  if (!med.is_active) return false;
-  if (med.delivery_method === 'pellet') return false;
-  if (DAILY_DOSE_FREQUENCIES.includes(med.frequency)) return true;
-  return getDoseCycleDays(med) !== null;
-}
-
-export function isDoseLoggedForMed(
-  med: Medication,
-  administrations: MedicationAdministration[],
-  today: string,
-  timezone = 'UTC',
-): boolean {
-  const medAdmins = administrations
-    .filter((a) => a.medication_id === med.id)
-    .sort((a, b) => b.taken_at.localeCompare(a.taken_at));
-
-  if (medAdmins.length === 0) return false;
-
-  if (DAILY_DOSE_FREQUENCIES.includes(med.frequency)) {
-    return medAdmins.some(
-      (a) => resolveEventLocalDate(a.taken_at, a.local_date, a.event_timezone, timezone) === today,
-    );
-  }
-
-  const cycleDays = getDoseCycleDays(med);
-  if (cycleDays) {
-    const latest = medAdmins[0];
-    const latestDate = resolveEventLocalDate(
-      latest.taken_at,
-      latest.local_date,
-      latest.event_timezone,
-      timezone,
-    );
-    return daysBetweenDates(latestDate, today) < cycleDays;
-  }
-
-  return false;
-}
+// Dose-chip scheduling now lives in ./doseSchedule, which models every frequency rather than
+// only the clean day-interval subset. getDoseCycleDays is kept for the adherence-gap engine.
 
 export { addDaysISO } from './localDate';
 
