@@ -1,4 +1,3 @@
-import type jsPDF from 'jspdf';
 import type {
   Profile,
   Medication,
@@ -14,7 +13,13 @@ import { MENTAL_HEALTH_CATEGORIES } from '../../../engine/types';
 import type { Insight, InsightSampleSize } from '../../../engine/types';
 import type { PdfPageContext } from '../pdfTheme';
 import { dateISOInTimeZone } from '../../localDate';
-import { PDF_COLORS, drawSectionHeader, drawSubheader } from '../pdfTheme';
+import {
+  PDF_COLORS,
+  drawSectionHeader,
+  drawSubheader,
+  addNewPage,
+  contentBottomLimit,
+} from '../pdfTheme';
 import { formatChartDateLong } from '../../chartHelpers';
 import { formatReportDateRange } from '../reportData';
 
@@ -57,25 +62,64 @@ function wellbeingSafetyInsights(result: ReturnType<typeof runPatternEngine>): I
   return result.all.filter((insight) => isWellbeingSafetyInsight(insight));
 }
 
-function renderInsightBlock(doc: jsPDF, insight: Insight, y: number, timezone: string): number {
+/** Y at which content starts on any page of this section. */
+const CONTENT_TOP = 18;
+const BODY_LINE_HEIGHT = 4.5;
+
+/**
+ * Returns a Y with `needed` mm of room below it, breaking to a new page if the current one is
+ * full.
+ *
+ * Nothing here used to check the page bounds at all: `y` simply accumulated across up to six
+ * insights plus the wellbeing notes. A single bleeding red flag body is roughly 86mm, so two or
+ * three insights wrote past the footer and off the page — silently, in the clinical document the
+ * patient hands to her provider.
+ */
+function ensureSpace(ctx: PdfPageContext, y: number, needed: number): number {
+  if (y + needed <= contentBottomLimit(ctx.doc)) return y;
+  addNewPage(ctx);
+  return CONTENT_TOP;
+}
+
+/** Exported for the pagination test — the flow logic is the part worth pinning. */
+export function renderInsightBlock(
+  ctx: PdfPageContext,
+  insight: Insight,
+  y: number,
+  timezone: string,
+): number {
+  const { doc } = ctx;
+
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...PDF_COLORS.text);
   const titleLines = doc.splitTextToSize(insight.title, 180);
+
+  // Keep the title with at least its first body line — a heading stranded alone at the foot of a
+  // page reads as a section that produced nothing.
+  y = ensureSpace(ctx, y, titleLines.length * 5 + 3 + BODY_LINE_HEIGHT);
+  doc.setTextColor(...PDF_COLORS.text);
   doc.text(titleLines, 14, y);
   y += titleLines.length * 5 + 3;
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...PDF_COLORS.text);
-  const quotedBody = `"${insight.body}"`;
-  const bodyLines = doc.splitTextToSize(quotedBody, 180);
-  doc.text(bodyLines, 14, y);
-  y += bodyLines.length * 4.5 + 2;
+  const bodyLines: string[] = doc.splitTextToSize(`"${insight.body}"`, 180);
 
+  // Line by line, so a body longer than a whole page flows instead of overflowing.
+  for (const line of bodyLines) {
+    y = ensureSpace(ctx, y, BODY_LINE_HEIGHT);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...PDF_COLORS.text);
+    doc.text(line, 14, y);
+    y += BODY_LINE_HEIGHT;
+  }
+  y += 2;
+
+  const dataLine = `n = ${formatSampleSizeForDataLine(insight.sampleSize)}, generated ${formatGeneratedDate(insight.generatedAt, timezone)}`;
+  y = ensureSpace(ctx, y, 4);
   doc.setFontSize(7);
   doc.setTextColor(...PDF_COLORS.textMuted);
-  const dataLine = `n = ${formatSampleSizeForDataLine(insight.sampleSize)}, generated ${formatGeneratedDate(insight.generatedAt, timezone)}`;
   doc.text(dataLine, 14, y);
   y += 8;
 
@@ -139,12 +183,14 @@ export function renderExecutiveSummaryPage(
     y += 10;
   } else {
     for (const insight of mainInsights) {
-      y = renderInsightBlock(doc, insight, y, input.timezone);
+      y = renderInsightBlock(ctx, insight, y, input.timezone);
     }
   }
 
   if (includeSafeguarding && wellbeingInsights.length > 0) {
-    y += 4;
+    // Divider + header + the first insight's opening lines have to land together, or the
+    // wellbeing section announces itself at the very bottom of a page and starts on the next.
+    y = ensureSpace(ctx, y + 4, 24);
     doc.setDrawColor(...PDF_COLORS.border);
     doc.setLineWidth(0.3);
     doc.line(14, y, 196, y);
@@ -158,7 +204,7 @@ export function renderExecutiveSummaryPage(
     y += 2;
 
     for (const insight of wellbeingInsights) {
-      y = renderInsightBlock(doc, insight, y, input.timezone);
+      y = renderInsightBlock(ctx, insight, y, input.timezone);
     }
   }
 }

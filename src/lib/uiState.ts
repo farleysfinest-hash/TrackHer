@@ -12,8 +12,34 @@ type UiState = Record<string, unknown>;
  */
 let cachedState: UiState = {};
 
+/** Whose ui_state `cachedState` currently holds. Null before first hydrate and after sign-out. */
+let cachedProfileId: string | null = null;
+
+/**
+ * Merge for the same user; replace on any user change.
+ *
+ * High-churn keys are written with `mirrorToProfile: false`, so between the optimistic cache
+ * write and the `merge_ui_state` RPC landing, the new value exists *only* here. A wholesale
+ * assignment on any intervening `fetchProfile` dropped it — which made `viewed_insights`
+ * unreliable, so safeguarding and bleeding cards could reappear as unread.
+ *
+ * Merging unconditionally would be worse than the bug: on sign-out the profile goes null, and
+ * the next user would inherit the previous user's flags. So the merge is scoped to one identity
+ * and anything else resets the cache outright.
+ */
 function hydrate(profile: Profile | null): void {
-  cachedState = ((profile?.ui_state ?? {}) as UiState);
+  const incoming = (profile?.ui_state ?? {}) as UiState;
+  const incomingId = profile?.id ?? null;
+
+  if (incomingId === null || incomingId !== cachedProfileId) {
+    cachedProfileId = incomingId;
+    cachedState = incoming;
+    return;
+  }
+
+  // Same user: server keys win on conflict, local-only keys (an in-flight optimistic write)
+  // have no server counterpart and survive.
+  cachedState = { ...cachedState, ...incoming };
 }
 
 hydrate(useAuthStore.getState().profile);
@@ -61,9 +87,17 @@ export function setUiValues(
     }
   }
 
-  void supabase.rpc('merge_ui_state', { p_patch: patch }).then(({ error }) => {
-    if (error) console.error('Failed to persist ui_state patch:', error.message);
-  });
+  // A transport failure rejects rather than resolving with `error`, so this needs a catch as
+  // well as the error check — a bare `.then` would surface it as an unhandled rejection.
+  // (The builder is only PromiseLike, so `.catch` is not available on it directly.)
+  void (async () => {
+    try {
+      const { error } = await supabase.rpc('merge_ui_state', { p_patch: patch });
+      if (error) console.error('Failed to persist ui_state patch:', error.message);
+    } catch (e) {
+      console.error('Failed to persist ui_state patch:', e instanceof Error ? e.message : e);
+    }
+  })();
 }
 
 export function setUiFlag(key: string): void {

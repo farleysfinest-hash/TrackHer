@@ -3,6 +3,7 @@ import { AlertTriangle } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { resolveStepForOpenChange, type DeleteAccountStep } from './deleteAccountSteps';
 
 interface DeleteAccountModalProps {
   isOpen: boolean;
@@ -11,20 +12,22 @@ interface DeleteAccountModalProps {
 }
 
 export function DeleteAccountModal({ isOpen, onClose, onDelete }: DeleteAccountModalProps) {
-  const [step, setStep] = useState<'warning' | 'confirm' | 'deleted' | null>(null);
+  const [step, setStep] = useState<DeleteAccountStep>(null);
   const [confirmText, setConfirmText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // `step` must NOT be a dependency. It was, and advancing to 'confirm' changed a dep, re-ran the
+  // effect with isOpen still true, and reset straight back to 'warning' — the typed-DELETE step
+  // was unreachable and account deletion could not be completed. The functional updater reads the
+  // previous step without the closure needing it as a dependency.
   useEffect(() => {
+    setStep((prev) => resolveStepForOpenChange(isOpen, prev));
     if (isOpen) {
-      setStep('warning');
       setConfirmText('');
       setError(null);
-    } else if (step !== 'deleted') {
-      setStep(null);
     }
-  }, [isOpen, step]);
+  }, [isOpen]);
 
   const handleClose = () => {
     setConfirmText('');

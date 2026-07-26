@@ -38,10 +38,24 @@ export interface FetchOptions {
   force?: boolean;
 }
 
-async function fetchMedicationById(id: string): Promise<Medication | null> {
-  const { data, error } = await supabase.from('medications').select('*').eq('id', id).single();
-  if (error || !data) return null;
-  return data as Medication;
+/**
+ * Distinguishes "no such row" from "the lookup failed".
+ *
+ * Collapsing both into `null` meant a dropped connection during a dose change surfaced as
+ * "Medication not found" — which reads as *someone deleted this*, and invites the user to
+ * re-add a medication that still exists rather than simply retry.
+ */
+async function fetchMedicationById(
+  id: string,
+): Promise<{ ok: true; medication: Medication | null } | { ok: false; error: string }> {
+  const { data, error } = await supabase
+    .from('medications')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, medication: (data as Medication | null) ?? null };
 }
 
 function notifyMedicationsChanged() {
@@ -206,7 +220,13 @@ export const useMedicationsStore = create<MedicationsState>((set, get) => ({
       return { ok: false, error: message };
     }
 
-    const currentMed = await fetchMedicationById(id);
+    const lookup = await fetchMedicationById(id);
+    if (!lookup.ok) {
+      const message = `Couldn't load this medication: ${lookup.error}`;
+      set({ error: message });
+      return { ok: false, error: message };
+    }
+    const currentMed = lookup.medication;
     if (!currentMed) {
       const message = 'Medication not found';
       set({ error: message });
@@ -270,7 +290,13 @@ export const useMedicationsStore = create<MedicationsState>((set, get) => ({
     ),
 
   changeFrequency: async (id, newFrequency, frequencyDetails, effectiveDate, notes) => {
-    const currentMed = await fetchMedicationById(id);
+    const lookup = await fetchMedicationById(id);
+    if (!lookup.ok) {
+      const message = `Couldn't load this medication: ${lookup.error}`;
+      set({ error: message });
+      return { ok: false, error: message };
+    }
+    const currentMed = lookup.medication;
     if (!currentMed) {
       const message = 'Medication not found';
       set({ error: message });

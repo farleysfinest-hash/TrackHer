@@ -12,7 +12,7 @@ import type { DateRange } from '../stores/dashboardStore';
 import { formatChartDateLong } from './chartHelpers';
 import { todayISO } from './localDate';
 import type { PdfPageContext } from './report/pdfTheme';
-import { addPageFooter, addNewPage, setTotalPages } from './report/pdfTheme';
+import { addNewPage, stampAllPageFooters } from './report/pdfTheme';
 import { renderExecutiveSummaryPage } from './report/sections/executiveSummary';
 import { renderPatientSummaryPage } from './report/sections/patientSummary';
 import { renderMrsAssessmentPage } from './report/sections/mrsAssessment';
@@ -39,28 +39,18 @@ export interface ProviderReportData {
   includeSafeguarding: boolean;
 }
 
-function countReportPages(data: ProviderReportData): number {
-  let pages = 4; // executive summary, patient summary, MRS, extended symptoms
-  if (hasLabResultsInRange(data.labResults, data.dateRange)) pages += 1;
-  if (hasMedicationsInRange(data.medications, data.dateRange)) pages += 1;
-  return pages;
-}
-
 export async function generateProviderReport(data: ProviderReportData): Promise<Blob> {
   const doc = new jsPDF();
   const patientName = data.profile.display_name ?? 'Patient';
   const reportDate = formatChartDateLong(todayISO(data.timezone));
-  const totalPages = countReportPages(data);
-
   const ctx: PdfPageContext = {
     doc,
     patientName,
     reportDate,
     pageNum: 1,
-    totalPages,
+    // Real total is stamped after layout by `stampAllPageFooters`; sections may add pages.
+    totalPages: 0,
   };
-
-  setTotalPages(ctx, totalPages);
 
   const sortedCheckins = [...data.checkins]
     .filter((c) => c.checkin_date >= data.dateRange.start && c.checkin_date <= data.dateRange.end)
@@ -80,8 +70,6 @@ export async function generateProviderReport(data: ProviderReportData): Promise<
     timezone: data.timezone,
     includeSafeguarding: data.includeSafeguarding,
   });
-  addPageFooter(ctx);
-
   addNewPage(ctx);
   renderPatientSummaryPage(
     ctx,
@@ -91,8 +79,6 @@ export async function generateProviderReport(data: ProviderReportData): Promise<
     data.dateRange,
     data.timezone,
   );
-  addPageFooter(ctx);
-
   addNewPage(ctx);
   renderMrsAssessmentPage(
     ctx,
@@ -101,8 +87,6 @@ export async function generateProviderReport(data: ProviderReportData): Promise<
     data.medications,
     data.dateRange,
   );
-  addPageFooter(ctx);
-
   addNewPage(ctx);
   renderExtendedSymptomsPage(
     ctx,
@@ -112,12 +96,10 @@ export async function generateProviderReport(data: ProviderReportData): Promise<
     data.dateRange,
     data.timezone,
   );
-  addPageFooter(ctx);
 
   if (hasLabResultsInRange(data.labResults, data.dateRange)) {
     addNewPage(ctx);
     renderLabResultsPage(ctx, data.labResults, data.dateRange);
-    addPageFooter(ctx);
   }
 
   if (hasMedicationsInRange(data.medications, data.dateRange)) {
@@ -129,8 +111,9 @@ export async function generateProviderReport(data: ProviderReportData): Promise<
       data.checkins,
       data.dateRange,
     );
-    addPageFooter(ctx);
   }
+
+  stampAllPageFooters(ctx);
 
   return doc.output('blob');
 }

@@ -4,6 +4,7 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { useAuth } from '../../hooks/useAuth';
 import { useAuthStore } from '../../stores/authStore';
+import { setSessionPersistence } from '../../lib/supabase';
 import { validators, validateFields } from '../../utils/validation';
 
 export function LoginForm() {
@@ -30,13 +31,26 @@ export function LoginForm() {
     }
     setErrors({});
 
+    // Before signIn, so the auth token is written to the store the user actually chose.
+    setSessionPersistence(rememberMe);
+
     const result = await signIn(email, password);
-    if (result.success) {
-      const currentProfile = useAuthStore.getState().profile;
-      navigate(currentProfile?.onboarding_completed ? '/dashboard' : '/onboarding');
-    } else {
+    if (!result.success) {
       setFormError(result.error ?? 'Failed to sign in');
+      return;
     }
+
+    // A null profile here means the fetch failed, not that onboarding is outstanding. Routing an
+    // established user to /onboarding on a transient network error would walk her back through
+    // staging — and `submitStaging` calls `initSymptomsForStage`, which overwrites her tracked
+    // symptoms. Send her to the dashboard and let ProtectedRoute redirect if onboarding really
+    // is incomplete; it gates on a profile it has actually loaded.
+    const { profile: currentProfile, profileLoadFailed } = useAuthStore.getState();
+    if (!currentProfile && profileLoadFailed) {
+      navigate('/dashboard');
+      return;
+    }
+    navigate(currentProfile?.onboarding_completed ? '/dashboard' : '/onboarding');
   };
 
   return (

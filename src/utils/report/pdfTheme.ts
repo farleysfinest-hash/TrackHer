@@ -22,12 +22,18 @@ export interface PdfPageContext {
   totalPages: number;
 }
 
-export function setTotalPages(ctx: PdfPageContext, total: number): void {
-  ctx.totalPages = total;
+/** Y coordinate of the footer rule. Content must stay above this. */
+export function footerRuleY(doc: jsPDF): number {
+  return doc.internal.pageSize.height - 18;
 }
 
-export function addPageFooter(ctx: PdfPageContext): void {
-  const { doc, patientName, reportDate, pageNum, totalPages } = ctx;
+/** Lowest Y a section may draw at before it has to break to a new page. */
+export function contentBottomLimit(doc: jsPDF): number {
+  return footerRuleY(doc) - 6;
+}
+
+function drawPageFooter(ctx: PdfPageContext, pageNum: number, totalPages: number): void {
+  const { doc, patientName, reportDate } = ctx;
   const pageHeight = doc.internal.pageSize.height;
   const pageWidth = doc.internal.pageSize.width;
 
@@ -36,11 +42,31 @@ export function addPageFooter(ctx: PdfPageContext): void {
   doc.line(14, pageHeight - 18, pageWidth - 14, pageHeight - 18);
 
   doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
   doc.setTextColor(...PDF_COLORS.textMuted);
   doc.text(`${patientName} · Report generated ${reportDate}`, 14, pageHeight - 12);
   doc.text(`Page ${pageNum} of ${totalPages}`, pageWidth - 14, pageHeight - 12, {
     align: 'right',
   });
+}
+
+/**
+ * Stamps every footer in one pass, after all content is laid out.
+ *
+ * Footers used to be drawn inline against a total estimated up front by `countReportPages`,
+ * which assumed one page per section. The executive summary can now flow onto extra pages, so
+ * any such estimate would be wrong — and "Page 3 of 6" on a seven-page clinical document is the
+ * kind of error that makes a provider distrust the rest of it. Reading the total from the
+ * document after the fact cannot drift.
+ */
+export function stampAllPageFooters(ctx: PdfPageContext): void {
+  const { doc } = ctx;
+  const totalPages = doc.getNumberOfPages();
+  for (let page = 1; page <= totalPages; page++) {
+    doc.setPage(page);
+    drawPageFooter(ctx, page, totalPages);
+  }
+  ctx.totalPages = totalPages;
 }
 
 export function addNewPage(ctx: PdfPageContext): void {

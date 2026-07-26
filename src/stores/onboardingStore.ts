@@ -312,7 +312,9 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
 
   reset: () => {
     set({
-      currentStep: 1,
+      // Must match the store's initial `currentStep: 0`. It was 1, so a post-reset user rejoined
+      // onboarding one step in, skipping the welcome step entirely.
+      currentStep: 0,
       stagingSubStep: 'q1',
       formData: initialFormData,
       isSubmitting: false,
