@@ -1,11 +1,13 @@
 import UIKit
 import Capacitor
 
-/// Matches CSS `--color-sand-50`: white in light mode, warm plum-charcoal `#171114` in dark.
+/// Matches CSS `--color-sand-50`: white in light mode, neutral graphite `#242124` in dark.
 /// Do not use `.systemBackground` — pure black is too harsh for this app.
+/// Keep in lockstep with index.css, the dark `theme-color` meta, BridgeViewController, and
+/// `--iconBackgroundColorDark` in package.json, or overscroll seams against the web surface.
 private let appBackground = UIColor { traits in
     traits.userInterfaceStyle == .dark
-        ? UIColor(red: 0.09, green: 0.067, blue: 0.078, alpha: 1) // #171114
+        ? UIColor(red: 36.0 / 255.0, green: 33.0 / 255.0, blue: 36.0 / 255.0, alpha: 1) // #242124
         : .white
 }
 

@@ -90,32 +90,45 @@
 }
 
 /*
- * Warm plum-charcoal dark scheme. No dark: utilities — utilities read these vars.
+ * Neutral-graphite dark scheme. No dark: utilities — utilities read these vars.
  * Surfaces sink; text/accent stops rise. Same room at night.
+ *
+ * Surfaces are near-neutral by design. The previous ramp was plum-tinted and sat close to
+ * black, which pushed the rose accents to read as neon — the fix is to lift and desaturate
+ * the ground, not to mute the brand. Every accent stop below is unchanged from that scheme.
+ *
+ * Surface stops interleave and the order matters: sand-50 (page) < sand-100 (card) <
+ * sage-50 (hover) < sand-200 (border) < sage-100 < sage-200 < sand-300 < sage-300 <
+ * sand-400 < sage-400. Break that and hover states darken instead of lifting.
+ *
+ * `--color-sand-50` is duplicated in four places outside this file — the dark `theme-color`
+ * meta in index.html, `appBackground` in AppDelegate.swift and BridgeViewController.swift,
+ * and `--iconBackgroundColorDark` in package.json. All five must move together or the
+ * native window seams during rubber-band overscroll.
  */
 .dark {
-  --color-sage-50: #241a20;
-  --color-sage-100: #2e2129;
-  --color-sage-200: #3c2b35;
-  --color-sage-300: #57404c;
-  --color-sage-400: #8a6478;
+  --color-sage-50: #302c30;
+  --color-sage-100: #3a363a;
+  --color-sage-200: #474247;
+  --color-sage-300: #635c63;
+  --color-sage-400: #8e858e;
   --color-sage-500: #c98ca9;
   --color-sage-600: #d6a3bc;
   --color-sage-700: #e2bccf;
   --color-sage-800: #efd7e2;
   --color-sage-900: #f8ecf2;
 
-  --color-sand-50: #171114;
-  --color-sand-100: #1e161a;
-  --color-sand-200: #2a1f25;
-  --color-sand-300: #3a2c33;
-  --color-sand-400: #6b5761;
+  --color-sand-50: #242124;
+  --color-sand-100: #2b282b;
+  --color-sand-200: #383438;
+  --color-sand-300: #4a454a;
+  --color-sand-400: #7c757c;
 
   --color-clay-400: #b5788f;
   --color-clay-500: #c98ca9;
   --color-clay-600: #daa9c0;
 
-  --color-moss-100: #232b1d;
+  --color-moss-100: #2b3226;
   --color-moss-300: #4a5a3c;
   --color-moss-500: #93a67c;
   --color-moss-600: #a9bb90;
@@ -149,13 +162,13 @@
   --color-chart-dot: #daa9c0;
   --color-chart-pulse: #c98ca9;
   --color-chart-marker: #daa9c0;
-  --color-chart-grid: #3a2c33;
+  --color-chart-grid: #4a454a;
   --color-chart-axis: #a88898;
   --color-chart-observation: #c098ac;
   --color-chart-band-conventional: #8a6478;
   --color-chart-urogenital: #b892a8;
   --color-chart-line-secondary: #d4a0b8;
-  --color-chart-med-muted: #3c2b35;
+  --color-chart-med-muted: #474247;
 
   --color-on-accent: #ffffff;
 

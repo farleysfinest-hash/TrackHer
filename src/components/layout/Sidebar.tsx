@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
   Pill,
@@ -82,6 +82,15 @@ export function Sidebar() {
         >
           Need Help?
         </a>
+        <p className="mt-2 text-xs text-sage-400">
+          <Link to="/privacy" className="underline hover:text-sage-600">
+            Privacy
+          </Link>
+          {' · '}
+          <Link to="/terms" className="underline hover:text-sage-600">
+            Terms
+          </Link>
+        </p>
         <p className="mt-1 text-xs text-sage-400">v{APP_VERSION}</p>
       </div>
     </aside>
