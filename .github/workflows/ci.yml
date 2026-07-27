@@ -1,0 +1,43 @@
+# Compile and test. This workflow does NOT prove the bundle can boot in production.
+#
+# src/lib/supabase.ts throws at module load when VITE_SUPABASE_* are missing or
+# still placeholders. vite build never executes that guard, so a green job here
+# with empty secrets would still ship a first-paint crash. Secrets below are
+# required for `npm run build`; tests inject their own values via vitest.config.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Typecheck and production build
+        env:
+          # Placeholder-shaped values that pass the supabase.ts guard so vite can
+          # emit a bundle. They are not real credentials; deploy still needs the
+          # Cloudflare / Capacitor env. Do not treat a green build as deployable
+          # without those secrets configured in the host environment.
+          VITE_SUPABASE_URL: https://ci-placeholder.supabase.co
+          VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ci-placeholder-anon-key
+        run: npm run build
