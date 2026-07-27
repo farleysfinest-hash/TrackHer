@@ -1,6 +1,6 @@
 import { memo, useMemo } from 'react';
 import { ChartCard } from '../ui/ChartCard';
-import { buildDailyIndexedWeeklyChart, weeklyChartWindow } from '../../utils/weeklyChartSeries';
+import { buildDailyIndexedWeeklyChart } from '../../utils/weeklyChartSeries';
 import { MRS_SUBSCALES } from '../../data/mrsSubscales';
 import { ChartReadoutDock } from './ChartReadoutDock';
 import {
@@ -18,6 +18,10 @@ import { useChartSelection } from '../../hooks/useChartSelection';
 interface SubscaleChartProps {
   data: SymptomTrendPoint[];
   changes?: MedicationChange[];
+  windowStart: string;
+  windowEnd: string;
+  /** Show a single check-in as a recorded point (default true). */
+  allowSparse?: boolean;
 }
 
 const SUBSCALE_VALUE_KEYS = MRS_SUBSCALES.map((s) => s.dataKey);
@@ -86,15 +90,20 @@ function SubscaleBody({
   return <ChartReadoutDock plot={bands} readout={readout} />;
 }
 
-function SubscaleChartComponent({ data, changes = [] }: SubscaleChartProps) {
-  const isEmpty = data.length < 2;
+function SubscaleChartComponent({
+  data,
+  changes = [],
+  windowStart,
+  windowEnd,
+  allowSparse = true,
+}: SubscaleChartProps) {
+  const isEmpty = allowSparse ? data.length < 1 : data.length < 2;
 
-  const { dailyRows, weeklySegmentKeys, chartWindow } = useMemo(() => {
-    if (data.length < 2) {
+  const { dailyRows, weeklySegmentKeys } = useMemo(() => {
+    if (data.length < 1 || (!allowSparse && data.length < 2)) {
       return {
         dailyRows: [] as SymptomBandRow[],
         weeklySegmentKeys: {} as Record<string, string[]>,
-        chartWindow: { start: '', end: '' },
       };
     }
 
@@ -106,27 +115,31 @@ function SubscaleChartComponent({ data, changes = [] }: SubscaleChartProps) {
       urogenital: point.urogenital ?? null,
     }));
 
-    const dates = data.map((d) => d.date);
-    const window = weeklyChartWindow(dates, dates[0], dates[dates.length - 1]);
-    const indexed = buildDailyIndexedWeeklyChart(sparseRows, window.start, window.end, SUBSCALE_VALUE_KEYS);
+    const indexed = buildDailyIndexedWeeklyChart(
+      sparseRows,
+      windowStart,
+      windowEnd,
+      SUBSCALE_VALUE_KEYS,
+    );
     return {
       dailyRows: indexed.dailyRows as SymptomBandRow[],
       weeklySegmentKeys: indexed.weeklySegmentKeys,
-      chartWindow: window,
     };
-  }, [data]);
+  }, [allowSparse, data, windowEnd, windowStart]);
 
-  const windowRegions = useMemo(() => {
-    if (!chartWindow.start || !chartWindow.end) return [];
-    return observationWindowRegions(changes, chartWindow.start, chartWindow.end);
-  }, [changes, chartWindow.start, chartWindow.end]);
+  const windowRegions = useMemo(
+    () => observationWindowRegions(changes, windowStart, windowEnd),
+    [changes, windowStart, windowEnd],
+  );
 
   return (
     <ChartCard
       title="MRS Subscale Breakdown"
       description="Three parts of your MRS score (total 0–44)"
       isEmpty={isEmpty}
-      emptyState={{ message: 'Need at least 2 check-ins to show subscale trends.' }}
+      emptyState={{
+        message: 'Complete a weekly check-in to see subscale scores here.',
+      }}
       minHeight="210px"
       expandable
       expandedMinHeight="60vh"

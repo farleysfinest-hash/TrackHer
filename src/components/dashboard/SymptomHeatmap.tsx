@@ -5,6 +5,7 @@ import { getSymptomByKey } from '../../data/symptoms';
 import type { HeatmapRow } from '../../hooks/useChartData';
 import { ChartCard } from '../ui/ChartCard';
 import { SEVERITY_LABELS } from '../../utils/checkinHelpers';
+import { heatmapRangeCaption } from '../../utils/heatmapSlots';
 
 /** Leave most width for the day columns; shortLabels handle the names. */
 const LABEL_COLUMN_WIDTH = 'minmax(4rem, 5rem)';
@@ -12,6 +13,8 @@ const LABEL_COLUMN_WIDTH = 'minmax(4rem, 5rem)';
 interface SymptomHeatmapProps {
   rows: HeatmapRow[];
 }
+
+type HeatmapCellView = HeatmapRow['cells'][number];
 
 function heatmapDisplayLabel(symptomKey: string, fallbackLabel: string): string {
   const symptom = getSymptomByKey(symptomKey);
@@ -26,43 +29,40 @@ function monthTickLabel(dateStr: string): string {
   });
 }
 
-/** Month label only when the calendar month changes (first column always). */
-function monthLabelAt(dates: Array<{ date: string }>, index: number): string | null {
-  const current = dates[index]?.date;
-  if (!current) return null;
-  if (index === 0) return monthTickLabel(current);
-  const prev = dates[index - 1]?.date;
-  if (!prev) return monthTickLabel(current);
-  const curParts = parseISODate(current);
-  const prevParts = parseISODate(prev);
+/** Month label only when the calendar month changes (first filled column always). */
+function monthLabelAt(dates: HeatmapCellView[], index: number): string | null {
+  const current = dates[index];
+  if (!current || current.placeholder) return null;
+  if (index === 0) return monthTickLabel(current.date);
+  // Find previous filled column for month comparison
+  let prevIdx = index - 1;
+  while (prevIdx >= 0 && dates[prevIdx]?.placeholder) prevIdx -= 1;
+  if (prevIdx < 0) return monthTickLabel(current.date);
+  const prev = dates[prevIdx];
+  const curParts = parseISODate(current.date);
+  const prevParts = parseISODate(prev.date);
   if (curParts.year !== prevParts.year || curParts.month !== prevParts.month) {
-    return monthTickLabel(current);
+    return monthTickLabel(current.date);
   }
   return null;
 }
 
 function SymptomHeatmapComponent({ rows }: SymptomHeatmapProps) {
-  const isEmpty = rows.length === 0 || rows[0]?.cells.length === 0;
+  const isEmpty = rows.length === 0;
   const dates = rows[0]?.cells ?? [];
+  const hasAnyFilled = dates.some((d) => !d.placeholder);
 
-  const rangeLabel = useMemo(() => {
-    if (dates.length === 0) return null;
-    const first = dates[0].date;
-    const last = dates[dates.length - 1].date;
-    if (first === last) return formatChartDate(first);
-    return `${formatChartDate(first)} – ${formatChartDate(last)}`;
+  const description = useMemo(() => {
+    if (dates.length === 0) return 'Worst symptoms at top · weekly check-in slots';
+    return heatmapRangeCaption(dates);
   }, [dates]);
 
   return (
     <ChartCard
       title="Symptom Heatmap"
-      description={
-        rangeLabel
-          ? `Worst symptoms at top · last ${dates.length} check-ins · ${rangeLabel}`
-          : 'Worst symptoms at top · last 8 check-ins'
-      }
+      description={description}
       isEmpty={isEmpty}
-      emptyState={{ message: 'Complete check-ins to see your symptom heatmap.' }}
+      emptyState={{ message: 'Complete a weekly check-in to see your symptom heatmap.' }}
       minHeight="320px"
       // Not expandable: the grid is fixed-height (h-8 rows, no Recharts), so the modal
       // reproduces the same cells with no scrub, no tooltips and barely more size —
@@ -85,7 +85,7 @@ function SymptomHeatmapComponent({ rows }: SymptomHeatmapProps) {
                 <div
                   key={`m-${d.date}`}
                   className="overflow-hidden px-0.5 pt-2 text-center text-[9px] font-medium leading-none text-sage-500"
-                  title={month ? formatChartDate(d.date) : undefined}
+                  title={!d.placeholder && month ? formatChartDate(d.date) : undefined}
                 >
                   {month ?? '\u00a0'}
                 </div>
@@ -94,6 +94,17 @@ function SymptomHeatmapComponent({ rows }: SymptomHeatmapProps) {
 
             <div className="bg-sand-50 px-1 pb-1 pt-1 text-xs font-medium text-sage-500">Symptom</div>
             {dates.map((d) => {
+              if (d.placeholder) {
+                return (
+                  <div
+                    key={d.date}
+                    className="flex items-end justify-center overflow-hidden px-0.5 pb-1 pt-0.5 text-center text-[10px] leading-none text-sage-300"
+                    title="Fills with your next weekly check-in"
+                  >
+                    ·
+                  </div>
+                );
+              }
               const day = parseISODate(d.date).day;
               return (
                 <div
@@ -118,6 +129,16 @@ function SymptomHeatmapComponent({ rows }: SymptomHeatmapProps) {
                     <span className="truncate whitespace-nowrap">{displayLabel}</span>
                   </div>
                   {row.cells.map((cell) => {
+                    if (cell.placeholder) {
+                      return (
+                        <div
+                          key={`${row.symptomKey}-${cell.date}`}
+                          className="h-8 min-w-0 rounded-sm border border-dashed border-sand-200 bg-[var(--color-heat-empty)]"
+                          title="Empty slot — fills with your next weekly check-in"
+                          aria-label={`${row.label}: not yet logged`}
+                        />
+                      );
+                    }
                     const bg =
                       cell.score === null
                         ? 'var(--color-heat-empty)'
@@ -148,6 +169,11 @@ function SymptomHeatmapComponent({ rows }: SymptomHeatmapProps) {
               );
             })}
           </div>
+          {!hasAnyFilled && (
+            <p className="mt-3 text-sm leading-relaxed text-sage-500">
+              Empty squares fill as you complete weekly check-ins.
+            </p>
+          )}
         </div>
       )}
     </ChartCard>

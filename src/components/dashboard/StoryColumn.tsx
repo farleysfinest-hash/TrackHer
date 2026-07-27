@@ -31,6 +31,8 @@ interface StoryColumnProps {
   windowStart: string;
   windowEnd: string;
   insights: Insight[];
+  /** Show a single check-in as a recorded point (default true). */
+  allowSparse?: boolean;
 }
 
 function StoryColumnComponent({
@@ -40,8 +42,9 @@ function StoryColumnComponent({
   windowStart,
   windowEnd,
   insights,
+  allowSparse = true,
 }: StoryColumnProps) {
-  const isEmpty = data.length < 2;
+  const isEmpty = allowSparse ? data.length < 1 : data.length < 2;
 
   const pulseDefaults = useMemo(
     () => resolvePulsePanelDefaults(insights, data.map((d) => d.checkin), medicationChanges),
@@ -109,7 +112,7 @@ function StoryColumnComponent({
       description="Your score, daily pulse, and medications on one timeline"
       isEmpty={isEmpty}
       emptyState={{
-        message: 'Check in at least twice to see your symptom trends here.',
+        message: 'Complete a weekly check-in to start your symptom story here.',
         actionLabel: 'Go to Check In',
         onAction: () => {
           window.location.href = '/checkin';

@@ -70,6 +70,21 @@ const RAW_SYMPTOM_CATALOG: RawSymptom[] = [
   {
     key: 'irritability',
     label: 'Irritability',
+    searchTerms: [
+      'grumpy',
+      'grumpiness',
+      'cranky',
+      'annoyed',
+      'snappy',
+      'on edge',
+      'short tempered',
+      // Common misspellings — people type these and get a blank search.
+      'irateablity',
+      'iratability',
+      'irritablity',
+      'irratibility',
+      'irritabile',
+    ],
     description:
       'Feeling easily annoyed, snapping at people, inner tension, or feeling on edge.',
     category: 'mind',
@@ -833,6 +848,7 @@ const RAW_SYMPTOM_CATALOG: RawSymptom[] = [
   {
     key: 'mood_swings',
     label: 'Mood Swings',
+    searchTerms: ['grumpy', 'grumpiness', 'emotional swings', 'mood changes'],
     description:
       'Rapid shifts between emotional states—happy to tearful, calm to angry—often without a clear trigger. Classic perimenopause pattern driven by hormonal volatility.',
     category: 'mind',

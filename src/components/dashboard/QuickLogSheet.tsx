@@ -13,7 +13,7 @@ import type { SymptomBodySystem } from '../../types/symptoms';
 import type { QuickLogTriggerTag } from '../../types/database';
 import { Button } from '../ui/Button';
 import { useAuthStore } from '../../stores/authStore';
-import { getResolvedTimezone } from '../../utils/checkinHelpers';
+import { getResolvedTimezone, isMRSCanonicalKey } from '../../utils/checkinHelpers';
 import { tapLight } from '../../lib/haptics';
 import {
   applyDragResistance,
@@ -113,6 +113,8 @@ export function QuickLogSheet() {
     () => (searchQuery.trim() ? searchSymptomCatalog(searchQuery, 20) : []),
     [searchQuery],
   );
+  const selectedIsMrs =
+    selectedSymptomId !== null && isMRSCanonicalKey(selectedSymptomId);
 
   const isOneOff =
     selectedSymptomId !== null && !trackedSymptomIds.includes(selectedSymptomId);
@@ -316,9 +318,16 @@ export function QuickLogSheet() {
           data-sheet-drag-handle
           className="flex shrink-0 items-center justify-between border-b border-sand-100 px-5 pb-4"
         >
-          <h2 id="quick-log-title" className="font-display text-lg text-sage-800">
-            {symptom ? symptom.label : 'Quick log'}
-          </h2>
+          <div>
+            <h2 id="quick-log-title" className="font-display text-lg text-sage-800">
+              {symptom ? symptom.label : 'Quick log'}
+            </h2>
+            {selectedIsMrs && (
+              <p className="mt-1 text-xs leading-relaxed text-sage-500">
+                In-the-moment log — doesn&apos;t replace your weekly MRS score.
+              </p>
+            )}
+          </div>
           <button
             type="button"
             onClick={handleClose}
@@ -390,26 +399,31 @@ export function QuickLogSheet() {
                       <p className="px-3 py-4 text-sm text-sage-400">No symptoms match.</p>
                     ) : (
                       <ul>
-                        {searchResults.map((s) => (
-                          <li key={s.key}>
-                            <button
-                              type="button"
-                              onClick={() => handleSelectSymptom(s.key)}
-                              className={[
-                                'flex w-full items-center gap-1.5 px-3 py-2.5 text-left text-sm hover:bg-sand-50',
-                                selectedSymptomId === s.key ? 'bg-sage-50' : '',
-                              ].join(' ')}
-                            >
-                              {identityDot(s.bodySystem)}
-                              <span className="flex flex-col items-start">
-                                <span className="font-medium text-sage-800">{s.label}</span>
-                                <span className="text-xs text-sage-400">
-                                  {SYMPTOM_BODY_SYSTEM_LABELS[s.bodySystem]}
+                        {searchResults.map((s) => {
+                          const isMrs = s.isMRSCore || isMRSCanonicalKey(s.key);
+                          return (
+                            <li key={s.key}>
+                              <button
+                                type="button"
+                                onClick={() => handleSelectSymptom(s.key)}
+                                className={[
+                                  'flex w-full items-center gap-1.5 px-3 py-2.5 text-left text-sm hover:bg-sand-50',
+                                  selectedSymptomId === s.key ? 'bg-sage-50' : '',
+                                ].join(' ')}
+                              >
+                                {identityDot(s.bodySystem)}
+                                <span className="flex min-w-0 flex-1 flex-col items-start">
+                                  <span className="font-medium text-sage-800">{s.label}</span>
+                                  <span className="text-xs text-sage-400">
+                                    {isMrs
+                                      ? 'Weekly MRS · also fine to log here anytime'
+                                      : SYMPTOM_BODY_SYSTEM_LABELS[s.bodySystem]}
+                                  </span>
                                 </span>
-                              </span>
-                            </button>
-                          </li>
-                        ))}
+                              </button>
+                            </li>
+                          );
+                        })}
                       </ul>
                     )}
                   </div>

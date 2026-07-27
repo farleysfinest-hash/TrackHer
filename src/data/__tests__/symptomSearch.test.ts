@@ -88,6 +88,9 @@ describe('searchSymptomCatalog', () => {
     ['pins and needles', 'tingling_limbs'],
     ['painful sex', 'painful_intercourse'],
     ['hot flushes', 'hot_flashes'],
+    ['grumpy', 'irritability'],
+    ['grumpiness', 'mood_swings'],
+    ['irateablity', 'irritability'],
   ])('matches everyday search term "%s"', (query, expectedKey) => {
     expect(searchSymptomCatalog(query).map((result) => result.key)).toContain(expectedKey);
   });

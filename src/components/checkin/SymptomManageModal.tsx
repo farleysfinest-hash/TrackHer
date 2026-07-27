@@ -97,6 +97,13 @@ export function SymptomManageModal({
     );
   }, [query, searching, showingLibrary, trackedSymptoms]);
 
+  const mrsSearchHits = useMemo(() => {
+    if (!searching) return [];
+    return searchSymptomCatalog(query, 8).filter(
+      (symptom) => symptom.isMRSCore || isMRSCanonicalKey(symptom.key),
+    );
+  }, [query, searching]);
+
   const groups = useMemo(() => groupByBodySystem(availableSymptoms), [availableSymptoms]);
 
   const toggleTracked = (id: string) => {
@@ -179,10 +186,39 @@ export function SymptomManageModal({
       )}
 
       <div className="mt-4 max-h-[50dvh] space-y-5 overflow-y-auto pr-1">
+        {mrsSearchHits.length > 0 && (
+          <section>
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-sage-500">
+              Already in weekly check-in
+            </h3>
+            <ul className="space-y-2">
+              {mrsSearchHits.map((symptom) => (
+                <li
+                  key={symptom.key}
+                  className="rounded-xl border border-sand-200 bg-sand-50 px-3 py-3 text-sm"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-sage-600">{symptom.label}</span>
+                    <span className="shrink-0 rounded-full bg-sand-100 px-2 py-0.5 text-xs text-sage-500">
+                      MRS
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs leading-relaxed text-sage-500">
+                    Rate this on Check In → Weekly check-in. Personal tracking is for extra
+                    symptoms beyond the standard 11.
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         {availableSymptoms.length === 0 ? (
           <p className="rounded-lg border border-sand-200 px-4 py-6 text-center text-sm text-sage-500">
             {searching
-              ? 'No matching symptoms. Try a different everyday or clinical term.'
+              ? mrsSearchHits.length > 0
+                ? 'Looking for something else? Try Mood Swings or another everyday term.'
+                : 'No matching symptoms. Try a different everyday or clinical term.'
               : 'No personal symptoms yet. Choose “Add from library” to pick the concerns you want to follow.'}
           </p>
         ) : (

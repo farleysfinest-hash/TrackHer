@@ -8,6 +8,7 @@ import { MRS_CANONICAL_SYMPTOMS } from '../data/symptoms';
 import type { MRSSymptomKey } from '../utils/checkinHelpers';
 import { hasMRSData, getDailySignal, getTrustedMrsTotal } from '../utils/checkinHelpers';
 import { formatChartDate, filterByDateRange, meanHeatmapSeverity, recentHeatmapSeverity, sortHeatmapRows } from '../utils/chartHelpers';
+import { HEATMAP_SLOT_COUNT, padHeatmapSlots } from '../utils/heatmapSlots';
 import { getBiomarkerValue } from '../utils/labHelpers';
 import type { DateRange } from '../stores/dashboardStore';
 
@@ -36,7 +37,12 @@ export interface HeatmapRow {
   label: string;
   avgSeverity: number;
   recentSeverity: number;
-  cells: Array<{ date: string; dateLabel: string; score: number | null }>;
+  cells: Array<{
+    date: string;
+    dateLabel: string;
+    score: number | null;
+    placeholder?: boolean;
+  }>;
 }
 
 export interface LabTrendPoint {
@@ -138,26 +144,29 @@ export function useChartData(dateRange: DateRange) {
     }));
   }, [filteredChanges, medications]);
 
-  /** The heatmap is a "right now" instrument: it shows the most recent check-ins only,
-   *  and it ranks on exactly the columns it displays. Do not widen this to the global
-   *  date range — a ranking computed from off-screen data is what broke this surface. */
-  const HEATMAP_WINDOW = 8;
-
+  /** The heatmap is a "right now" instrument: most recent check-ins as columns,
+   *  padded to a fixed slot count so sparse history still reads as a grid. */
   const getHeatmapData = useCallback((): HeatmapRow[] => {
     const windowCheckins = [...mrsCheckins]
       .sort((a, b) => a.checkin_date.localeCompare(b.checkin_date))
-      .slice(-HEATMAP_WINDOW);
+      .slice(-HEATMAP_SLOT_COUNT);
 
     const rows = MRS_CANONICAL_SYMPTOMS.map((symptom) => {
       const key = symptom.key as MRSSymptomKey;
-      const cells = windowCheckins.map((c) => ({
+      const ratedCells = windowCheckins.map((c) => ({
         date: c.checkin_date,
         dateLabel: formatChartDate(c.checkin_date),
         score: c[key] as number | null,
       }));
-      const avg = meanHeatmapSeverity(cells);
-      const recent = recentHeatmapSeverity(cells);
-      return { symptomKey: key, label: symptom.label, avgSeverity: avg, recentSeverity: recent, cells };
+      const avg = meanHeatmapSeverity(ratedCells);
+      const recent = recentHeatmapSeverity(ratedCells);
+      return {
+        symptomKey: key,
+        label: symptom.label,
+        avgSeverity: avg,
+        recentSeverity: recent,
+        cells: padHeatmapSlots(ratedCells),
+      };
     });
 
     return sortHeatmapRows(rows);

@@ -107,6 +107,7 @@ export function PersistentTabs() {
             hidden={!active}
             aria-hidden={!active}
             className={active ? undefined : 'hidden'}
+            style={active ? undefined : { contentVisibility: 'hidden' }}
           >
             <RouteErrorBoundary>
               <Suspense fallback={<TabFallback />}>

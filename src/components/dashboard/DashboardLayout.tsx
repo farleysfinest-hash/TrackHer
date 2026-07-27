@@ -27,10 +27,8 @@ import { UnlockProgress } from './UnlockProgress';
 import { GhostChartFrame } from './GhostChartFrame';
 import { PullToRefresh } from '../ui/PullToRefresh';
 import { useQuickLogStore } from '../../stores/quickLogStore';
-
-const FULL_DASHBOARD_CHECKINS = 7;
-
-type DashboardMode = 'full' | 'early';
+import { storyChartWindow } from '../../utils/earlyStoryChartWindow';
+import { hasMRSData } from '../../utils/checkinHelpers';
 
 export function DashboardLayout() {
   const { pathname } = useLocation();
@@ -62,9 +60,9 @@ export function DashboardLayout() {
   }, [refreshAll]);
 
   const [biomarkerKey, setBiomarkerKey] = useState('estradiol');
-  // Stick the early/full branch after first resolve so date-range refetches
-  // don't unmount the page (and reset scroll) while isLoading flips true.
-  const [dashboardMode, setDashboardMode] = useState<DashboardMode | null>(null);
+  // Stick past the first resolve so date-range refetches don't flash empty
+  // while isLoading flips true.
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     void refreshAll();
@@ -88,8 +86,8 @@ export function DashboardLayout() {
 
   useEffect(() => {
     if (checkinsLoading) return;
-    setDashboardMode(mrsCheckinCount >= FULL_DASHBOARD_CHECKINS ? 'full' : 'early');
-  }, [checkinsLoading, mrsCheckinCount]);
+    setReady(true);
+  }, [checkinsLoading]);
 
   const symptomTrend = useMemo(() => getSymptomTrendData(), [getSymptomTrendData]);
   const changeMarkers = useMemo(() => getMedicationChangeMarkers(), [getMedicationChangeMarkers]);
@@ -103,14 +101,21 @@ export function DashboardLayout() {
     [checkins],
   );
 
-  const isFullDashboard = dashboardMode === 'full';
-  const isEarlyDashboard = dashboardMode === 'early';
+  const mrsDates = useMemo(
+    () => checkins.filter(hasMRSData).map((c) => c.checkin_date),
+    [checkins],
+  );
+
+  // Progressive domain from weekly MRS density (not pulse or med history).
+  // Med lanes clip into this window — they do not stretch the axis.
+  const chartWindow = useMemo(
+    () => storyChartWindow(dateRange, mrsDates),
+    [dateRange, mrsDates],
+  );
 
   const stageProfile = useStageProfile();
   const stageTrackingPhrase = getStageTrackingPhrase(stageProfile);
 
-  // Same gate WeeklyCheckinPromptCard uses for the owed/open CTA path:
-  // isDue is false once hasFullMrsToday or weeklyMinimumMet.
   const weeklyCheckinOpen = checkinStatus.isDue;
   const subtitle = weeklyCheckinOpen
     ? 'Your weekly check-in is open — takes about 2 minutes.'
@@ -126,126 +131,107 @@ export function DashboardLayout() {
     />
   ));
 
+  const showCharts = mrsCheckinCount > 0;
+
   return (
     <PullToRefresh
       enabled={pathname === '/dashboard' && !quickLogOpen}
       onRefresh={handlePullRefresh}
     >
-    <div className="mx-auto min-w-0 max-w-6xl space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-display text-3xl text-sage-800">Dashboard</h1>
-          <p className="mt-1 text-sage-500">{subtitle}</p>
+      <div className="mx-auto min-w-0 max-w-6xl space-y-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="font-display text-3xl text-sage-800">Dashboard</h1>
+            <p className="mt-1 text-sage-500">{subtitle}</p>
+          </div>
         </div>
-      </div>
 
-      {isFullDashboard ? (
-        <>
-          {safeguardingCards}
+        {!ready ? null : (
+          <>
+            {safeguardingCards}
 
-          <QuickLogWidget />
+            <QuickLogWidget />
 
-          <UnlockProgress checkinCount={mrsCheckinCount} />
+            <UnlockProgress checkinCount={mrsCheckinCount} />
 
-          <ScoreSummaryCards checkins={summaryCheckins} dateRange={dateRange} />
+            <WelcomeMessage />
 
-          <StrawStageCard />
+            {showCharts ? (
+              <ScoreSummaryCards checkins={summaryCheckins} dateRange={dateRange} />
+            ) : null}
 
-          <StoryColumn
-            data={symptomTrend}
-            medications={medications}
-            medicationChanges={changes}
-            windowStart={dateRange.start}
-            windowEnd={dateRange.end}
-            insights={insights}
-          />
+            <StrawStageCard />
 
-          <PersonalSymptomTrends checkins={checkins} extendedLogs={extendedSymptoms} />
-
-          <div className="grid min-w-0 gap-6 lg:grid-cols-2">
-            <div className="min-w-0">
-              <SubscaleChart data={symptomTrend} changes={changes} />
-            </div>
-            <div className="min-w-0">
-              <SymptomHeatmap rows={heatmapRows} />
-            </div>
-          </div>
-
-          <LabTrendChart
-            data={labTrend}
-            biomarkerKey={biomarkerKey}
-            labResults={labResults}
-            onBiomarkerChange={setBiomarkerKey}
-          />
-
-          <div className="grid gap-6 lg:grid-cols-2">
-            <ActiveMedicationsSummary medications={medications} />
-            <LabSummaryWidget labResults={allLabResults} />
-          </div>
-
-          <DrillDownControls
-            checkinDates={checkinDates}
-            getDrillDownData={getDrillDownData}
-            medications={medications}
-            changeMarkers={changeMarkers}
-          />
-
-          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <AppointmentCountdownCard earliestCheckinDate={earliestCheckinDate} />
-            <ProviderReportButton />
-          </div>
-        </>
-      ) : isEarlyDashboard ? (
-        <>
-          {safeguardingCards}
-
-          <QuickLogWidget />
-
-          <UnlockProgress checkinCount={mrsCheckinCount} />
-
-          <WelcomeMessage />
-
-          {mrsCheckinCount === 0 ? (
-            <>
-              <GhostChartFrame
-                title="Symptom story"
-                caption={`Your symptom story unlocks after ${FULL_DASHBOARD_CHECKINS} weekly check-ins · ${mrsCheckinCount} done`}
-              />
-              <GhostChartFrame
-                title="Symptom domains"
-                caption={`Your symptom domains unlock after ${FULL_DASHBOARD_CHECKINS} weekly check-ins · ${mrsCheckinCount} done`}
-              />
-            </>
-          ) : (
-            <>
-              <div className="space-y-2">
+            {showCharts ? (
+              <>
                 <StoryColumn
                   data={symptomTrend}
                   medications={medications}
                   medicationChanges={changes}
-                  windowStart={dateRange.start}
-                  windowEnd={dateRange.end}
+                  windowStart={chartWindow.start}
+                  windowEnd={chartWindow.end}
                   insights={insights}
                 />
-                <p className="text-sm text-sage-500">
-                  More check-ins will sharpen this — {mrsCheckinCount} of {FULL_DASHBOARD_CHECKINS}.
-                </p>
-              </div>
-              <div className="space-y-2">
-                <SubscaleChart data={symptomTrend} changes={changes} />
-                <p className="text-sm text-sage-500">
-                  More check-ins will sharpen this — {mrsCheckinCount} of {FULL_DASHBOARD_CHECKINS}.
-                </p>
-              </div>
-            </>
-          )}
 
-          <StrawStageCard />
+                <PersonalSymptomTrends checkins={checkins} extendedLogs={extendedSymptoms} />
 
-          <ActiveMedicationsSummary medications={medications} />
-        </>
-      ) : null}
-    </div>
+                <div className="grid min-w-0 gap-6 lg:grid-cols-2">
+                  <div className="min-w-0">
+                    <SubscaleChart
+                      data={symptomTrend}
+                      changes={changes}
+                      windowStart={chartWindow.start}
+                      windowEnd={chartWindow.end}
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <SymptomHeatmap rows={heatmapRows} />
+                  </div>
+                </div>
+
+                <LabTrendChart
+                  data={labTrend}
+                  biomarkerKey={biomarkerKey}
+                  labResults={labResults}
+                  onBiomarkerChange={setBiomarkerKey}
+                />
+
+                <div className="grid gap-6 lg:grid-cols-2">
+                  <ActiveMedicationsSummary medications={medications} />
+                  <LabSummaryWidget labResults={allLabResults} />
+                </div>
+
+                <DrillDownControls
+                  checkinDates={checkinDates}
+                  getDrillDownData={getDrillDownData}
+                  medications={medications}
+                  changeMarkers={changeMarkers}
+                />
+
+                <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <AppointmentCountdownCard earliestCheckinDate={earliestCheckinDate} />
+                  <ProviderReportButton />
+                </div>
+              </>
+            ) : (
+              <>
+                <GhostChartFrame
+                  title="Symptom story"
+                  caption="Your first weekly check-in starts your symptom story here."
+                />
+                <div className="grid min-w-0 gap-6 lg:grid-cols-2">
+                  <GhostChartFrame
+                    title="Symptom domains"
+                    caption="Subscale scores appear with your first weekly check-in."
+                  />
+                  <SymptomHeatmap rows={heatmapRows} />
+                </div>
+                <ActiveMedicationsSummary medications={medications} />
+              </>
+            )}
+          </>
+        )}
+      </div>
     </PullToRefresh>
   );
 }
