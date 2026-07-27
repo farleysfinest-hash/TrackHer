@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom';
 import { useEffect, useId, useRef } from 'react';
 import { X } from 'lucide-react';
+import { FOCUSABLE_SELECTOR, trapTabKey } from '../../lib/focusTrap';
 
 type ModalSize = 'sm' | 'md' | 'lg' | 'full';
 
@@ -20,9 +21,6 @@ const sizeClasses: Record<ModalSize, string> = {
   lg: 'max-w-[720px] max-h-[85dvh]',
   full: 'h-[100dvh] w-[100dvw] max-h-none max-w-none rounded-none border-0 shadow-none',
 };
-
-const FOCUSABLE =
-  'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
 
 export function Modal({
   isOpen,
@@ -45,9 +43,8 @@ export function Modal({
 
     previousFocusRef.current = document.activeElement as HTMLElement | null;
 
-    // Move focus into the dialog: first focusable element, else the panel itself.
     const panel = contentRef.current;
-    const firstFocusable = panel?.querySelector<HTMLElement>(FOCUSABLE);
+    const firstFocusable = panel?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
     (firstFocusable ?? panel)?.focus();
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -55,26 +52,7 @@ export function Modal({
         onCloseRef.current();
         return;
       }
-      if (e.key !== 'Tab' || !contentRef.current) return;
-
-      // Trap Tab inside the dialog.
-      const focusables = Array.from(
-        contentRef.current.querySelectorAll<HTMLElement>(FOCUSABLE),
-      );
-      if (focusables.length === 0) {
-        e.preventDefault();
-        return;
-      }
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
-      const active = document.activeElement;
-      if (e.shiftKey && (active === first || active === contentRef.current)) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && active === last) {
-        e.preventDefault();
-        first.focus();
-      }
+      trapTabKey(e, contentRef.current);
     };
 
     document.body.style.overflow = 'hidden';
@@ -142,9 +120,7 @@ export function Modal({
         <div
           className={[
             'min-h-0 flex-1 overflow-y-auto',
-            isFullScreen
-              ? 'safe-area-modal-body pt-4'
-              : 'p-6',
+            isFullScreen ? 'safe-area-modal-body pt-4' : 'p-6',
           ].join(' ')}
         >
           {children}

@@ -71,7 +71,14 @@ export function useQuickLog() {
   );
 
   const deleteEvent = useCallback(async (id: string): Promise<boolean> => {
-    const { error: deleteError } = await supabase.from('quick_log_events').delete().eq('id', id);
+    const userId = getUserId();
+    if (!userId) return false;
+
+    const { error: deleteError } = await supabase
+      .from('quick_log_events')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId);
     if (deleteError) {
       setError(deleteError.message);
       return false;

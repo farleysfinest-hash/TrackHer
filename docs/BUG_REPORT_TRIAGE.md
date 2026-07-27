@@ -130,39 +130,11 @@ and the two cases produce different messages. Also switched `.single()` to `.may
 
 ## Real, but deliberately not fixed here
 
-### H4 — Provider report engine never receives administrations · High
+*(Section emptied — M5/M8/M1 closed in the follow-up pass; H4 closed with migration `029`.)*
 
-Verified: `administrations: []` is a literal at `executiveSummary.ts:108`. Dose-adherence and
-administration-backed correlations cannot fire in the PDF.
+### M5 / M8 / M1 / H4
 
-Not fixed because it is **not the one-line wiring the report implies**. `ProviderReportData` has
-no `administrations` field at all — the provider-report data pipeline never fetches them. Doing
-this properly means threading them through `ProviderReportData`, both loaders in
-`providerReportData.ts` (the RPC snapshot *and* the table fallback), and extending
-`get_provider_report_snapshot` — a migration `029`.
-
-That is the exact surface that broke once already and was repaired by `028`. Wiring only the
-fallback path would leave the RPC path silently returning nothing, which is the same class of
-divergence that caused the original outage. **This needs a migration you apply by hand, so it is
-your call, and it should be done as one deliberate change.**
-
-### M5 — Administrations fetch is unbounded
-
-`useInsights.ts` bounds by date (90 days) but sets no row limit, so PostgREST's 1000-row cap can
-truncate silently for a heavy logger with many medications. Real — but it is one of the 32 sites
-already logged as `CODE_AUDIT.md` M3. Fixing a single site inconsistently is worse than fixing
-the class; `dataExport.ts` has the paging pattern to extract.
-
-### M8 — Fullscreen dialogs lack a focus trap
-
-Real a11y defect across `QuickLogSheet`, `CheckinFlow`, `LabEntryForm`, `MedicationEntryWizard`.
-Deferred per your call — it is a render-structure change across four components and wants
-verification with an actual screen reader.
-
-### M1 — Mutations omit a `user_id` filter
-
-Accurate as described, but this is defence-in-depth, not a defect. RLS is enabled and enforcing
-on all 15 tables. Worth doing; not a bug.
+See “Closed in the follow-up pass” under Still open.
 
 ---
 
@@ -271,19 +243,24 @@ src/utils/__tests__/reportPagination.test.ts                   (new)
 
 ## Still open, ranked
 
-1. **Apply migration `029`** (and `028` if needed) so the RPC path returns administrations.
-   Client + fallback are wired; without SQL the RPC key is absent and trough insights stay
-   missing on that path.
-2. **M8** — focus trap across four fullscreen dialogs.
-3. **M5** — unbounded reads, as part of `CODE_AUDIT.md` M3 rather than piecemeal.
-4. **M1** — `user_id` filters on mutations, as hardening.
-5. **No component-test setup.** `vitest.config.ts` includes only `src/**/*.test.ts` and runs in
-   the node environment, so no `.tsx` can be tested. C1 was a component bug that a single render
-   test would have caught, and the workaround here was to extract the logic. Adding jsdom and
-   testing-library is the durable fix.
+1. **No component-test setup.** `vitest.config.ts` includes only `src/**/*.test.ts` and runs in
+   the node environment, so no `.tsx` can be tested. Adding jsdom and testing-library remains the
+   durable fix for modal/step-machine regressions.
+2. **Remaining unbounded reads** outside the sites already migrated to `fetchAllPages`
+   (insights administrations, lab list, data export). Same pattern — extend when touching those
+   call sites.
 
-### H4 status (updated)
+Migrations `028` / `029` — applied by hand (2026-07-26).
 
-**Fixed in app code** this pass: `ProviderReportData`, both loaders, executive summary, and
-migration `029`. Until `029` is applied, the RPC omits the key and the client coerces to `[]`;
-the table fallback already returns real administrations when the RPC is unavailable.
+### Closed in the follow-up pass
+
+| ID | Fix |
+|---|---|
+| **M8** | Shared `focusTrap` + `useFocusTrap` on CheckinFlow, QuickLogSheet, LabEntryForm, MedicationEntryWizard; Modal uses the same helper |
+| **M5** | `pagedQuery.fetchAllPages` extracted; used by data export, insights administrations, lab list |
+| **M1** | `user_id` on check-in / lab / medication / quick-log / dose-undo mutations and check-in detail fetch |
+| **L1** | Restore purchases only when not already Pro |
+| **L6** | Already addressed — heatmap day row uses calendar day numbers, not truncated `formatChartDate` |
+| **H4** | App + `029` live |
+
+The interactive canvas bug report was deleted so it cannot compete with this triage doc.

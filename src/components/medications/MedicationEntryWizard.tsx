@@ -1,5 +1,7 @@
+import { useRef } from 'react';
 import { X } from 'lucide-react';
 import { useMedicationEntryStore } from '../../stores/medicationEntryStore';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { StepIndicator } from '../ui/StepIndicator';
 import { StepHormoneCategory } from './StepHormoneCategory';
 import { StepDeliveryMethod } from './StepDeliveryMethod';
@@ -24,12 +26,16 @@ export function MedicationEntryWizard({ isOpen, onClose, onComplete }: Medicatio
     reset,
   } = useMedicationEntryStore();
 
-  if (!isOpen) return null;
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   const handleClose = () => {
     reset();
     onClose();
   };
+
+  useFocusTrap(isOpen, dialogRef, handleClose);
+
+  if (!isOpen) return null;
 
   const handleSuccess = () => {
     reset();
@@ -50,7 +56,9 @@ export function MedicationEntryWizard({ isOpen, onClose, onComplete }: Medicatio
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col bg-sand-50"
+      ref={dialogRef}
+      tabIndex={-1}
+      className="fixed inset-0 z-50 flex flex-col bg-sand-50 outline-none"
       role="dialog"
       aria-modal="true"
       aria-label="Add medication"

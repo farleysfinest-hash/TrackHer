@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useCheckinStore } from '../../stores/checkinStore';
 import { useAuthStore } from '../../stores/authStore';
 import { getPrimaryInstrument } from '../../data/instruments/registry';
 import { getLocalDateISO, getResolvedTimezone } from '../../utils/checkinHelpers';
 import { formatLoggingDate } from '../../utils/formatters';
 import { clearCheckinDraft, saveCheckinDraft } from '../../lib/checkinDraft';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { StepIndicator } from '../ui/StepIndicator';
 import { DailyChannels } from './DailyChannels';
 import { MRSSection } from './MRSSection';
@@ -122,6 +123,9 @@ export function CheckinFlow({ onClose, onComplete }: CheckinFlowProps) {
     onClose();
   };
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(true, dialogRef, handleClose);
+
   const handleDiscard = () => {
     const s = useCheckinStore.getState();
     if (userId) {
@@ -169,7 +173,9 @@ export function CheckinFlow({ onClose, onComplete }: CheckinFlowProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col bg-sand-50"
+      ref={dialogRef}
+      tabIndex={-1}
+      className="fixed inset-0 z-50 flex flex-col bg-sand-50 outline-none"
       role="dialog"
       aria-modal="true"
       aria-label={mode === 'quick' ? 'Quick pulse' : 'Full check-in'}

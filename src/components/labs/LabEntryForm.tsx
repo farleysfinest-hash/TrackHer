@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { useLabEntryStore } from '../../stores/labEntryStore';
 import { useLabResults } from '../../hooks/useLabResults';
 import { useToast } from '../../stores/toastStore';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { getBiomarkersByCategory } from '../../data/labRanges';
 import { LAB_CATEGORIES } from '../../utils/labHelpers';
 import { LabPanelSection } from './LabPanelSection';
@@ -92,9 +93,14 @@ export function LabEntryForm({ onClose, onSuccess }: LabEntryFormProps) {
     onClose();
   };
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(true, dialogRef, handleClose);
+
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col bg-sand-50"
+      ref={dialogRef}
+      tabIndex={-1}
+      className="fixed inset-0 z-50 flex flex-col bg-sand-50 outline-none"
       role="dialog"
       aria-modal="true"
       aria-label={isEditing ? 'Edit lab results' : 'Add lab results'}

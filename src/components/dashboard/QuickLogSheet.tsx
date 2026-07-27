@@ -5,6 +5,7 @@ import { useQuickLogStore } from '../../stores/quickLogStore';
 import { useQuickLog } from '../../hooks/useQuickLog';
 import { useSymptomSelections } from '../../hooks/useSymptomSelections';
 import { useToast } from '../../stores/toastStore';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { buildQuickLogEcho } from '../../utils/echoHelpers';
 import { getSymptomByKey, getSymptomChipLabel, searchSymptomCatalog } from '../../data/symptoms';
 import { SYMPTOM_BODY_SYSTEM_COLORS, SYMPTOM_BODY_SYSTEM_LABELS } from '../../types/symptoms';
@@ -172,6 +173,8 @@ export function QuickLogSheet() {
     closeSheet();
   }, [closeSheet, resetForm]);
 
+  useFocusTrap(isOpen, sheetRef, handleClose);
+
   const setOffset = (y: number) => {
     offsetYRef.current = y;
     setOffsetY(y);
@@ -320,8 +323,9 @@ export function QuickLogSheet() {
       <div
         ref={sheetRef}
         role="dialog"
-        aria-modal
+        aria-modal="true"
         aria-labelledby="quick-log-title"
+        tabIndex={-1}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -332,7 +336,7 @@ export function QuickLogSheet() {
           transition: sheetTransition,
           touchAction: offsetY > 0 ? 'none' : undefined,
         }}
-        className="relative z-10 flex w-full max-w-lg flex-col animate-slide-up rounded-t-2xl border border-sand-200 bg-sand-50 shadow-2xl sm:m-4 sm:rounded-2xl max-h-[min(90vh,640px)]"
+        className="relative z-10 flex w-full max-w-lg flex-col animate-slide-up rounded-t-2xl border border-sand-200 bg-sand-50 outline-none shadow-2xl sm:m-4 sm:rounded-2xl max-h-[min(90vh,640px)]"
       >
         <div
           data-sheet-drag-handle

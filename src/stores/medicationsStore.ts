@@ -200,7 +200,17 @@ export const useMedicationsStore = create<MedicationsState>((set, get) => ({
   },
 
   updateMedication: async (id, updates) => {
-    const { error: updateError } = await supabase.from('medications').update(updates).eq('id', id);
+    const userId = getUserId();
+    if (!userId) {
+      set({ error: 'Not authenticated' });
+      return false;
+    }
+
+    const { error: updateError } = await supabase
+      .from('medications')
+      .update(updates)
+      .eq('id', id)
+      .eq('user_id', userId);
 
     if (updateError) {
       set({ error: updateError.message });

@@ -8,6 +8,7 @@ import { useLabResults } from './useLabResults';
 import { useAuthStore } from '../stores/authStore';
 import { getResolvedTimezone } from '../utils/checkinHelpers';
 import { supabase } from '../lib/supabase';
+import { fetchAllPages } from '../utils/pagedQuery';
 import type {
   ExtendedSymptomLog,
   MedicationAdministration,
@@ -124,15 +125,28 @@ export function useInsights() {
     cutoff.setDate(cutoff.getDate() - ADMINISTRATIONS_DAYS);
     const cutoffISO = cutoff.toISOString();
 
-    void supabase
-      .from('medication_administrations')
-      .select('*')
-      .eq('user_id', userId)
-      .gte('taken_at', cutoffISO)
-      .order('taken_at', { ascending: false })
-      .then(({ data }) => {
+    void fetchAllPages<MedicationAdministration>(async (from, to) => {
+      const { data, error } = await supabase
+        .from('medication_administrations')
+        .select('*')
+        .eq('user_id', userId)
+        .gte('taken_at', cutoffISO)
+        .order('taken_at', { ascending: false })
+        .range(from, to);
+      return { data: data as MedicationAdministration[] | null, error };
+    })
+      .then((rows) => {
         if (cancelled) return;
-        setAdministrations((data as MedicationAdministration[]) ?? []);
+        setAdministrations(rows);
+        setAdministrationsLoading(false);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        console.error(
+          'Failed to load administrations for insights:',
+          err instanceof Error ? err.message : err,
+        );
+        setAdministrations([]);
         setAdministrationsLoading(false);
       });
 

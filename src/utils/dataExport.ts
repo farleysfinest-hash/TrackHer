@@ -1,10 +1,8 @@
 import { supabase } from '../lib/supabase';
 import { saveOrShareBlob } from './nativeExport';
 import { getProfileAvatarStamp, getProfileAvatarUrl } from './profileAvatar';
+import { fetchAllPages } from './pagedQuery';
 import type { Profile } from '../types/database';
-
-/** PostgREST default max is 1000; page below that and walk until a short page. */
-const PAGE_SIZE = 500;
 
 export interface ExportBundle {
   exported_at: string;
@@ -36,22 +34,19 @@ async function checkedQuery(
   table: string,
   orderCol?: string,
 ): Promise<Record<string, unknown>[]> {
-  const rows: Record<string, unknown>[] = [];
-
-  for (let offset = 0; ; offset += PAGE_SIZE) {
-    let query = supabase.from(table).select('*').eq('user_id', userId);
-    if (orderCol) {
-      query = query.order(orderCol, { ascending: true });
-    }
-    const { data, error } = await query.range(offset, offset + PAGE_SIZE - 1);
-    if (error) throw new Error(`Failed to export ${table}: ${error.message}`);
-
-    const page = (data as Record<string, unknown>[] | null) ?? [];
-    rows.push(...page);
-    if (page.length < PAGE_SIZE) break;
+  try {
+    return await fetchAllPages<Record<string, unknown>>(async (from, to) => {
+      let query = supabase.from(table).select('*').eq('user_id', userId);
+      if (orderCol) {
+        query = query.order(orderCol, { ascending: true });
+      }
+      const { data, error } = await query.range(from, to);
+      return { data: data as Record<string, unknown>[] | null, error };
+    });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    throw new Error(`Failed to export ${table}: ${message}`);
   }
-
-  return rows;
 }
 
 export async function exportUserData(): Promise<ExportBundle> {

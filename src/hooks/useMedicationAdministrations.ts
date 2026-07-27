@@ -84,10 +84,14 @@ export function useMedicationAdministrations() {
 
     if (!latest) return false;
 
+    const userId = useAuthStore.getState().user?.id;
+    if (!userId) return false;
+
     const { error: deleteError } = await supabase
       .from('medication_administrations')
       .delete()
-      .eq('id', latest.id);
+      .eq('id', latest.id)
+      .eq('user_id', userId);
 
     if (deleteError) {
       setError(deleteError.message);

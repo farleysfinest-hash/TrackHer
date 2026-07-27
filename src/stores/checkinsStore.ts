@@ -336,18 +336,23 @@ export const useCheckinsStore = create<CheckinsState>((set, get) => ({
   },
 
   fetchCheckinDetail: async (id) => {
+    const userId = getUserId();
+    if (!userId) return null;
+
     const { data: checkin, error: checkinError } = await supabase
       .from('symptom_checkins')
       .select('*')
       .eq('id', id)
-      .single();
+      .eq('user_id', userId)
+      .maybeSingle();
 
     if (checkinError || !checkin) return null;
 
     const { data: extended } = await supabase
       .from('extended_symptom_logs')
       .select('*')
-      .eq('checkin_id', id);
+      .eq('checkin_id', id)
+      .eq('user_id', userId);
 
     return {
       checkin: checkin as SymptomCheckin,
@@ -482,7 +487,16 @@ export const useCheckinsStore = create<CheckinsState>((set, get) => ({
   },
 
   deleteCheckin: async (id) => {
-    const { error: deleteError } = await supabase.from('symptom_checkins').delete().eq('id', id);
+    const userId = getUserId();
+    if (!userId) {
+      set({ error: 'Not authenticated' });
+      return false;
+    }
+    const { error: deleteError } = await supabase
+      .from('symptom_checkins')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId);
     if (deleteError) {
       set({ error: deleteError.message });
       return false;

@@ -37,7 +37,7 @@ export function SubscriptionSettingsCard() {
       </p>
 
       {!isPro && (
-        <div className="mt-4">
+        <div className="mt-4 space-y-3">
           <Button
             fullWidth
             onClick={() =>
@@ -48,17 +48,15 @@ export function SubscriptionSettingsCard() {
           >
             View plans
           </Button>
+          <Button
+            variant="secondary"
+            fullWidth
+            onClick={() => openPaywall('Restore a previous TrackHer Pro purchase.')}
+          >
+            Restore purchases
+          </Button>
         </div>
       )}
-
-      <div className="mt-4">
-        <Button
-          variant="secondary"
-          onClick={() => openPaywall('Restore a previous TrackHer Pro purchase.')}
-        >
-          Restore purchases
-        </Button>
-      </div>
 
       <PaywallModal isOpen={paywallOpen} onClose={closePaywall} reason={paywallReason} />
     </Card>

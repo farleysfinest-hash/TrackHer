@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuthStore } from './authStore';
 import type { LabResult } from '../types/database';
 import { BIOMARKER_KEYS, getBiomarkerValue } from '../utils/labHelpers';
+import { fetchAllPages } from '../utils/pagedQuery';
 import type { FetchOptions } from './medicationsStore';
 
 export interface LabResultInput {
@@ -77,17 +78,21 @@ export const useLabResultsStore = create<LabResultsState>((set, get) => ({
     fetchLabResultsPromise = (async () => {
       set({ isLoading: true, error: null });
 
-      const { data, error: fetchError } = await supabase
-        .from('lab_results')
-        .select('*')
-        .eq('user_id', userId)
-        .order('draw_date', { ascending: false });
-
-      if (fetchError) {
-        set({ isLoading: false, error: fetchError.message });
-        return;
+      try {
+        const rows = await fetchAllPages<LabResult>(async (from, to) => {
+          const { data, error } = await supabase
+            .from('lab_results')
+            .select('*')
+            .eq('user_id', userId)
+            .order('draw_date', { ascending: false })
+            .range(from, to);
+          return { data: data as LabResult[] | null, error };
+        });
+        set({ labResults: rows, isLoading: false, hasFetched: true });
+      } catch (e) {
+        const message = e instanceof Error ? e.message : 'Failed to load lab results';
+        set({ isLoading: false, error: message });
       }
-      set({ labResults: (data as LabResult[]) ?? [], isLoading: false, hasFetched: true });
     })();
 
     try {
@@ -153,7 +158,8 @@ export const useLabResultsStore = create<LabResultsState>((set, get) => ({
     const { error: updateError } = await supabase
       .from('lab_results')
       .update(payload)
-      .eq('id', id);
+      .eq('id', id)
+      .eq('user_id', userId);
 
     if (updateError) {
       set({ error: updateError.message });
@@ -165,7 +171,14 @@ export const useLabResultsStore = create<LabResultsState>((set, get) => ({
   },
 
   deleteLabResult: async (id) => {
-    const { error: deleteError } = await supabase.from('lab_results').delete().eq('id', id);
+    const userId = getUserId();
+    if (!userId) return false;
+
+    const { error: deleteError } = await supabase
+      .from('lab_results')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId);
     if (deleteError) {
       set({ error: deleteError.message });
       return false;
