@@ -64,8 +64,9 @@ function SymptomHeatmapComponent({ rows }: SymptomHeatmapProps) {
       isEmpty={isEmpty}
       emptyState={{ message: 'Complete check-ins to see your symptom heatmap.' }}
       minHeight="320px"
-      expandable
-      expandedMinHeight="70vh"
+      // Not expandable: the grid is fixed-height (h-8 rows, no Recharts), so the modal
+      // reproduces the same cells with no scrub, no tooltips and barely more size —
+      // and it advertises "Press and drag to explore", which does nothing here.
     >
       {!isEmpty && (
         <div className="min-w-0 w-full overflow-hidden">

@@ -101,15 +101,17 @@ Now distinguishes "profile failed to load" from "onboarding incomplete" and rout
 
 ### M3 — "Remember me" was a dead control · Medium
 
-`LoginForm.tsx` held `rememberMe` in state and never read it. Per your call, backed rather than
-removed: `supabase.ts` now uses a switchable storage adapter, so unchecked puts the auth token in
-`sessionStorage` (dies with the tab) and checked keeps `localStorage`. `setSessionPersistence` is
-called *before* `signIn` so the token is written to the intended store and no migration of an
-existing token is needed, and it purges `sb-` keys from the store no longer in use so a stale
-token cannot resurrect a session the user asked not to keep. The preference itself lives in
-`localStorage`, because on a cold start we must know which store to read before a session exists.
+`LoginForm.tsx` held `rememberMe` in state and never read it.
 
-Default is unchanged (`local`), so existing users are unaffected.
+Wired up first, then reversed on the product call: staying signed in is the intended behaviour on
+web and required on iOS, where being logged out of a native app is simply wrong. That makes the
+checkbox itself the defect — it offered a choice the app should not act on. **Removed**, and
+`supabase.ts` is back to plain persistent sessions. Signing out stays explicit, from Settings.
+
+Recorded because the intermediate state shipped in `a01e92c`: that commit added a
+sessionStorage-backed adapter and a `trackher.auth.persistence` key. Both are gone. Anyone who
+signed in from that build with the box unchecked has a token in `sessionStorage` that is no
+longer read, so they will be signed out once; the orphaned preference key is inert.
 
 ### M4 — `reset()` skipped the welcome step · Medium
 
@@ -256,8 +258,8 @@ src/utils/report/pdfTheme.ts                          H3 (deferred footer stampi
 src/utils/report/sections/executiveSummary.ts         H3 (content flow)
 src/utils/pdfReport.ts                                H3 (drop countReportPages)
 src/utils/validation.ts                               H5
-src/components/auth/LoginForm.tsx                     H1-real + M3
-src/lib/supabase.ts                                   M3 (switchable session storage)
+src/components/auth/LoginForm.tsx                     H1-real + M3 (checkbox removed)
+src/lib/supabase.ts                                   M3 (reverted to persistent sessions)
 src/stores/onboardingStore.ts                         M4
 src/stores/medicationsStore.ts                        M9
 

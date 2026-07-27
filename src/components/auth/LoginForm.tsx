@@ -4,7 +4,6 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { useAuth } from '../../hooks/useAuth';
 import { useAuthStore } from '../../stores/authStore';
-import { setSessionPersistence } from '../../lib/supabase';
 import { validators, validateFields } from '../../utils/validation';
 
 export function LoginForm() {
@@ -12,7 +11,6 @@ export function LoginForm() {
   const { signIn, isLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState('');
 
@@ -30,9 +28,6 @@ export function LoginForm() {
       return;
     }
     setErrors({});
-
-    // Before signIn, so the auth token is written to the store the user actually chose.
-    setSessionPersistence(rememberMe);
 
     const result = await signIn(email, password);
     if (!result.success) {
@@ -83,16 +78,9 @@ export function LoginForm() {
         error={errors.password}
       />
 
-      <div className="flex items-center justify-between">
-        <label className="flex items-center gap-2 text-sm text-sage-600">
-          <input
-            type="checkbox"
-            checked={rememberMe}
-            onChange={(e) => setRememberMe(e.target.checked)}
-            className="rounded border-sand-300 text-sage-500 focus:ring-sage-500"
-          />
-          Remember me
-        </label>
+      {/* No "Remember me": the session always persists, so a checkbox here would offer a choice
+          the app does not act on. Signing out is explicit, from Settings. */}
+      <div className="flex justify-end">
         <Link to="/forgot-password" className="text-sm text-sage-600 hover:text-sage-800">
           Forgot your password?
         </Link>
