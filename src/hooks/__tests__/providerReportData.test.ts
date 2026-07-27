@@ -66,6 +66,7 @@ describe('createFreshProviderReportBlob', () => {
       labResults: [makeLabResult('fresh-lab', '2026-07-04')],
       quickLogEvents: [makeQuickLogEvent('fresh-quick', '2026-07-05T09:00:00Z')],
       extendedSymptomLogs: [makeExtendedLog('fresh-ext')],
+      administrations: [{ id: 'admin-1', user_id: USER_ID, medication_id: 'fresh-med', taken_at: '2026-07-03T12:00:00Z' } as never],
     };
 
     const loader = vi.fn(async () => snapshot);
@@ -87,6 +88,7 @@ describe('createFreshProviderReportBlob', () => {
       labResults: snapshot.labResults,
       extendedSymptomLogs: snapshot.extendedSymptomLogs,
       quickLogEvents: snapshot.quickLogEvents,
+      administrations: snapshot.administrations,
       dateRange,
       timezone,
       includeSafeguarding: true,
@@ -96,7 +98,11 @@ describe('createFreshProviderReportBlob', () => {
 
   it('reloads snapshot data on every report generation', async () => {
     const empty = {
-      medicationChanges: [], labResults: [], quickLogEvents: [], extendedSymptomLogs: [],
+      medicationChanges: [],
+      labResults: [],
+      quickLogEvents: [],
+      extendedSymptomLogs: [],
+      administrations: [],
     };
     const snapshotA: ProviderReportSnapshot = {
       ...empty,

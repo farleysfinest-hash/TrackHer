@@ -1,6 +1,7 @@
 import type {
   Profile,
   Medication,
+  MedicationAdministration,
   MedicationChange,
   SymptomCheckin,
   LabResult,
@@ -31,6 +32,7 @@ export interface ExecutiveSummaryInput {
   medications: Medication[];
   medicationChanges: MedicationChange[];
   extendedSymptomLogs: ExtendedSymptomLog[];
+  administrations: MedicationAdministration[];
   dateRange: DateRange;
   timezone: string;
   includeSafeguarding: boolean;
@@ -149,7 +151,7 @@ export function renderExecutiveSummaryPage(
     medicationChanges: input.medicationChanges.filter(
       (c) => c.change_date >= dateRange.start && c.change_date <= dateRange.end,
     ),
-    administrations: [],
+    administrations: input.administrations,
     labResults: input.labResults.filter(
       (l) => l.draw_date >= dateRange.start && l.draw_date <= dateRange.end,
     ),

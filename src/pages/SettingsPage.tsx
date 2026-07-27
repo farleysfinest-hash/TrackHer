@@ -20,7 +20,7 @@ import { getLocalDateISO, getResolvedTimezone } from '../utils/checkinHelpers';
 import { TimezoneSelect } from '../components/ui/TimezoneSelect';
 import { getActiveTimezone, isValidTimeZone } from '../utils/localDate';
 import { deriveUterusAnswer, uterusAnswerToValue, type UterusAnswer } from '../utils/uterusAnswer';
-import { downloadJson, exportUserData } from '../utils/dataExport';
+import { downloadCsv, downloadJson, exportUserData } from '../utils/dataExport';
 import {
   getHapticRuntimeStatus,
   selectionTick,
@@ -78,6 +78,7 @@ export function SettingsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingCsv, setIsExportingCsv] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [hapticTestResult, setHapticTestResult] = useState<string | null>(null);
 
@@ -177,6 +178,20 @@ export function SettingsPage() {
       setExportError(err instanceof Error ? err.message : 'Export failed. Please try again.');
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const handleExportCsv = async () => {
+    setIsExportingCsv(true);
+    setExportError(null);
+    try {
+      const data = await exportUserData();
+      const dateStr = new Date().toISOString().slice(0, 10);
+      await downloadCsv(data, `trackher-export-${dateStr}.csv`);
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : 'Export failed. Please try again.');
+    } finally {
+      setIsExportingCsv(false);
     }
   };
 
@@ -489,16 +504,30 @@ export function SettingsPage() {
         <h2 className="font-display text-xl text-sage-800">Data</h2>
         <div className="mt-4 space-y-4">
           <div>
-            <Button
-              variant="secondary"
-              onClick={handleExportData}
-              isLoading={isExporting}
-              loadingText="Exporting..."
-            >
-              Export My Data
-            </Button>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                variant="secondary"
+                onClick={() => void handleExportData()}
+                isLoading={isExporting}
+                loadingText="Exporting..."
+                disabled={isExportingCsv}
+              >
+                Export My Data (JSON)
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => void handleExportCsv()}
+                isLoading={isExportingCsv}
+                loadingText="Exporting..."
+                disabled={isExporting}
+              >
+                Export spreadsheet (CSV)
+              </Button>
+            </div>
             <p className="mt-1 text-xs text-sage-500">
-              Downloads all your TrackHer data as a JSON file.
+              JSON is the complete archive. CSV is a convenience view of check-ins, medications,
+              doses, labs, and logs for Excel — free-text cells are escaped so formulas cannot
+              run when the file opens.
             </p>
             {exportError && <p className="mt-1 text-sm text-danger">{exportError}</p>}
           </div>

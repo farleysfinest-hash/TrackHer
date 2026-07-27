@@ -121,3 +121,67 @@ export async function downloadJson(data: ExportBundle, filename: string): Promis
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   await saveOrShareBlob(blob, filename);
 }
+
+/**
+ * Neutralise CSV formula injection. Excel / Sheets treat a cell starting with
+ * `=`, `+`, `-`, or `@` as a formula when the file opens. Free-text notes flow
+ * straight into exports, so prefix those values with a single quote.
+ */
+export function escapeCsvCell(value: unknown): string {
+  let text: string;
+  if (value === null || value === undefined) {
+    text = '';
+  } else if (typeof value === 'object') {
+    text = JSON.stringify(value);
+  } else {
+    text = String(value);
+  }
+
+  if (/^[=+\-@]/.test(text)) {
+    text = `'${text}`;
+  }
+
+  if (/[",\n\r]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
+}
+
+export function rowsToCsv(rows: Record<string, unknown>[]): string {
+  if (rows.length === 0) return '';
+  const columns = [...new Set(rows.flatMap((row) => Object.keys(row)))];
+  const header = columns.map(escapeCsvCell).join(',');
+  const body = rows.map((row) => columns.map((col) => escapeCsvCell(row[col])).join(','));
+  return [header, ...body].join('\n');
+}
+
+/** Tables included in the spreadsheet-friendly export (convenience; JSON remains complete). */
+const CSV_TABLES: Array<{ key: keyof ExportBundle; filename: string }> = [
+  { key: 'symptom_checkins', filename: 'symptom_checkins.csv' },
+  { key: 'medications', filename: 'medications.csv' },
+  { key: 'medication_administrations', filename: 'medication_administrations.csv' },
+  { key: 'lab_results', filename: 'lab_results.csv' },
+  { key: 'quick_log_events', filename: 'quick_log_events.csv' },
+  { key: 'extended_symptom_logs', filename: 'extended_symptom_logs.csv' },
+];
+
+/**
+ * One CSV file with a leading `table` column so Excel can filter without a zip dependency.
+ * Formula-dangerous cells are escaped via {@link escapeCsvCell}.
+ */
+export function buildCombinedCsv(data: ExportBundle): string {
+  const chunks: string[] = [];
+  for (const { key } of CSV_TABLES) {
+    const rows = data[key];
+    if (!Array.isArray(rows) || rows.length === 0) continue;
+    const withTable = rows.map((row) => ({ table: key, ...row }));
+    chunks.push(rowsToCsv(withTable));
+  }
+  return chunks.join('\n\n');
+}
+
+export async function downloadCsv(data: ExportBundle, filename: string): Promise<void> {
+  const csv = buildCombinedCsv(data);
+  const blob = new Blob([csv || 'table\n'], { type: 'text/csv;charset=utf-8' });
+  await saveOrShareBlob(blob, filename);
+}

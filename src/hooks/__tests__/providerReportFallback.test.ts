@@ -73,6 +73,7 @@ const EMPTY_SNAPSHOT: ProviderReportSnapshot = {
   labResults: [],
   quickLogEvents: [],
   extendedSymptomLogs: [],
+  administrations: [],
 };
 
 describe('loadProviderReportSnapshotFromTables', () => {
@@ -97,6 +98,32 @@ describe('loadProviderReportSnapshotFromTables', () => {
     expect(filtersFor('medication_changes')).toEqual(
       expect.arrayContaining([{ op: 'gte', column: 'change_date', value: RANGE.start }]),
     );
+    expect(filtersFor('medication_administrations')).toEqual(
+      expect.arrayContaining([
+        { op: 'eq', column: 'user_id', value: USER_ID },
+        { op: 'gte', column: 'taken_at', value: '2026-03-31T00:00:00.000Z' },
+        { op: 'lte', column: 'taken_at', value: '2026-07-26T23:59:59.999Z' },
+      ]),
+    );
+  });
+
+  it('narrows padded administrations to the range by taken_at in the report timezone', async () => {
+    const { client } = makeTableClient({
+      medication_administrations: {
+        data: [
+          // 8pm Jul 25 in New York — keep.
+          { id: 'in-range', taken_at: '2026-07-26T00:00:00Z', medication_id: 'med-1' },
+          // Local date Jul 26 — outside RANGE.end.
+          { id: 'out-of-range', taken_at: '2026-07-27T00:00:00Z', medication_id: 'med-1' },
+        ],
+      },
+    });
+
+    const snapshot = await loadProviderReportSnapshotFromTables(USER_ID, RANGE, ZONE, {
+      tableClient: client,
+    });
+
+    expect(snapshot.administrations.map((a) => a.id)).toEqual(['in-range']);
   });
 
   it('pads the timestamp window so a late-evening local log is not dropped', async () => {

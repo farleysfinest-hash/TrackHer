@@ -4,6 +4,7 @@ import type {
   ExtendedSymptomLog,
   LabResult,
   Medication,
+  MedicationAdministration,
   MedicationChange,
   Profile,
   QuickLogEvent,
@@ -11,7 +12,12 @@ import type {
 } from '../types/database';
 import type { DateRange } from '../stores/dashboardStore';
 import type { ProviderReportData } from '../utils/pdfReport';
-import { addDaysISO, daysBetweenISO, resolveEventLocalDate } from '../utils/localDate';
+import {
+  addDaysISO,
+  dateISOInTimeZone,
+  daysBetweenISO,
+  resolveEventLocalDate,
+} from '../utils/localDate';
 
 export interface ProviderReportSnapshot {
   checkins: SymptomCheckin[];
@@ -20,6 +26,7 @@ export interface ProviderReportSnapshot {
   labResults: LabResult[];
   quickLogEvents: QuickLogEvent[];
   extendedSymptomLogs: ExtendedSymptomLog[];
+  administrations: MedicationAdministration[];
 }
 
 export type ProviderReportDataSource =
@@ -29,7 +36,8 @@ export type ProviderReportDataSource =
   | 'medication_changes'
   | 'lab_results'
   | 'quick_log_events'
-  | 'extended_symptom_logs';
+  | 'extended_symptom_logs'
+  | 'medication_administrations';
 
 export const PROVIDER_REPORT_LOAD_ERROR_MESSAGE =
   'We couldn’t load all of the data needed for your provider report. No report was downloaded. Please try again.';
@@ -76,6 +84,7 @@ interface ProviderReportRpcPayload {
   labResults?: LabResult[];
   quickLogEvents?: QuickLogEvent[];
   extendedSymptomLogs?: ExtendedSymptomLog[];
+  administrations?: MedicationAdministration[];
 }
 
 export interface ProviderReportRpcClient {
@@ -146,6 +155,10 @@ export async function loadProviderReportSnapshotFromRpc(
     labResults: payload.labResults ?? [],
     quickLogEvents: payload.quickLogEvents ?? [],
     extendedSymptomLogs: payload.extendedSymptomLogs ?? [],
+    // Absent key (pre-029 RPC) must not look like "loaded zero doses" — treat as empty so
+    // the engine stays quiet rather than inventing trough insights from nothing. After 029
+    // the key is always present (possibly []).
+    administrations: payload.administrations ?? [],
   };
 }
 
@@ -193,43 +206,57 @@ export async function loadProviderReportSnapshotFromTables(
   const paddedStart = addDaysISO(dateRange.start, -1);
   const paddedEnd = addDaysISO(dateRange.end, 1);
 
-  const [checkinsResult, medicationsResult, changesResult, labsResult, quickLogResult] =
-    await Promise.all([
-      client
-        .from('symptom_checkins')
-        .select('*')
-        .eq('user_id', userId)
-        .gte('checkin_date', dateRange.start)
-        .lte('checkin_date', dateRange.end)
-        .order('checkin_date', { ascending: false }),
-      client
-        .from('medications')
-        .select('*')
-        .eq('user_id', userId)
-        .lte('start_date', dateRange.end)
-        .order('start_date', { ascending: false }),
-      client
-        .from('medication_changes')
-        .select('*')
-        .eq('user_id', userId)
-        .gte('change_date', dateRange.start)
-        .lte('change_date', dateRange.end)
-        .order('change_date', { ascending: false }),
-      client
-        .from('lab_results')
-        .select('*')
-        .eq('user_id', userId)
-        .gte('draw_date', dateRange.start)
-        .lte('draw_date', dateRange.end)
-        .order('draw_date', { ascending: false }),
-      client
-        .from('quick_log_events')
-        .select('*')
-        .eq('user_id', userId)
-        .gte('logged_at', `${paddedStart}T00:00:00.000Z`)
-        .lte('logged_at', `${paddedEnd}T23:59:59.999Z`)
-        .order('logged_at', { ascending: false }),
-    ]);
+  const [
+    checkinsResult,
+    medicationsResult,
+    changesResult,
+    labsResult,
+    quickLogResult,
+    administrationsResult,
+  ] = await Promise.all([
+    client
+      .from('symptom_checkins')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('checkin_date', dateRange.start)
+      .lte('checkin_date', dateRange.end)
+      .order('checkin_date', { ascending: false }),
+    client
+      .from('medications')
+      .select('*')
+      .eq('user_id', userId)
+      .lte('start_date', dateRange.end)
+      .order('start_date', { ascending: false }),
+    client
+      .from('medication_changes')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('change_date', dateRange.start)
+      .lte('change_date', dateRange.end)
+      .order('change_date', { ascending: false }),
+    client
+      .from('lab_results')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('draw_date', dateRange.start)
+      .lte('draw_date', dateRange.end)
+      .order('draw_date', { ascending: false }),
+    client
+      .from('quick_log_events')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('logged_at', `${paddedStart}T00:00:00.000Z`)
+      .lte('logged_at', `${paddedEnd}T23:59:59.999Z`)
+      .order('logged_at', { ascending: false }),
+    // Same pad-then-narrow pattern as quick logs: taken_at is timestamptz.
+    client
+      .from('medication_administrations')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('taken_at', `${paddedStart}T00:00:00.000Z`)
+      .lte('taken_at', `${paddedEnd}T23:59:59.999Z`)
+      .order('taken_at', { ascending: false }),
+  ]);
 
   // Extended symptoms hang off check-ins, so they are narrowed once the check-ins land.
   const extendedResult = await client
@@ -243,6 +270,7 @@ export async function loadProviderReportSnapshotFromTables(
     { source: 'medication_changes', result: changesResult },
     { source: 'lab_results', result: labsResult },
     { source: 'quick_log_events', result: quickLogResult },
+    { source: 'medication_administrations', result: administrationsResult },
     { source: 'extended_symptom_logs', result: extendedResult },
   ];
 
@@ -280,6 +308,13 @@ export async function loadProviderReportSnapshotFromTables(
     return localDate >= dateRange.start && localDate <= dateRange.end;
   });
 
+  const administrations = rowsOf<MedicationAdministration>(administrationsResult).filter(
+    (row) => {
+      const localDate = dateISOInTimeZone(row.taken_at, timezone);
+      return localDate >= dateRange.start && localDate <= dateRange.end;
+    },
+  );
+
   return {
     checkins,
     medications,
@@ -289,6 +324,7 @@ export async function loadProviderReportSnapshotFromTables(
     extendedSymptomLogs: rowsOf<ExtendedSymptomLog>(extendedResult).filter((log) =>
       checkinIds.has(log.checkin_id),
     ),
+    administrations,
   };
 }
 
@@ -396,6 +432,7 @@ export async function createFreshProviderReportBlob(
     labResults: snapshot.labResults,
     extendedSymptomLogs: snapshot.extendedSymptomLogs,
     quickLogEvents: snapshot.quickLogEvents,
+    administrations: snapshot.administrations,
     dateRange: params.dateRange,
     timezone: params.timezone,
     includeSafeguarding: params.includeSafeguarding,

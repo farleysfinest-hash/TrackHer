@@ -35,13 +35,40 @@ describe('provider report snapshot RPC', () => {
       p_timezone: 'Europe/Berlin',
     });
     expect(snapshot.quickLogEvents).toEqual([{ id: 'quick-1' }]);
+    expect(snapshot.administrations).toEqual([]);
+  });
+
+  it('passes administrations from the RPC into the snapshot', async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: {
+        checkins: [],
+        medications: [],
+        medicationChanges: [],
+        labResults: [],
+        quickLogEvents: [],
+        extendedSymptomLogs: [],
+        administrations: [{ id: 'admin-1', taken_at: '2026-07-01T12:00:00Z' }],
+      },
+      error: null,
+    });
+
+    const snapshot = await loadProviderReportSnapshotFromRpc('user-1', RANGE, 'Europe/Berlin', {
+      rpcClient: { rpc } as ProviderReportRpcClient,
+    });
+
+    expect(snapshot.administrations).toEqual([{ id: 'admin-1', taken_at: '2026-07-01T12:00:00Z' }]);
   });
 
   it('supports an honest multi-year All range without a client-side cap', async () => {
     const rpc = vi.fn().mockResolvedValue({
       data: {
-        checkins: [], medications: [], medicationChanges: [], labResults: [],
-        quickLogEvents: [], extendedSymptomLogs: [],
+        checkins: [],
+        medications: [],
+        medicationChanges: [],
+        labResults: [],
+        quickLogEvents: [],
+        extendedSymptomLogs: [],
+        administrations: [],
       },
       error: null,
     });

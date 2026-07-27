@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import type {
   Profile,
   Medication,
+  MedicationAdministration,
   MedicationChange,
   SymptomCheckin,
   LabResult,
@@ -34,6 +35,8 @@ export interface ProviderReportData {
   labResults: LabResult[];
   extendedSymptomLogs: ExtendedSymptomLog[];
   quickLogEvents: QuickLogEvent[];
+  /** Dose logs — required so trough-timing insights match the in-app engine. */
+  administrations: MedicationAdministration[];
   dateRange: DateRange;
   timezone: string;
   includeSafeguarding: boolean;
@@ -66,6 +69,7 @@ export async function generateProviderReport(data: ProviderReportData): Promise<
     medications: data.medications,
     medicationChanges: data.medicationChanges,
     extendedSymptomLogs: data.extendedSymptomLogs,
+    administrations: data.administrations,
     dateRange: data.dateRange,
     timezone: data.timezone,
     includeSafeguarding: data.includeSafeguarding,

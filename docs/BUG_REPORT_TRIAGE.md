@@ -271,7 +271,9 @@ src/utils/__tests__/reportPagination.test.ts                   (new)
 
 ## Still open, ranked
 
-1. **H4** — provider report administrations. Needs migration `029`. Your call.
+1. **Apply migration `029`** (and `028` if needed) so the RPC path returns administrations.
+   Client + fallback are wired; without SQL the RPC key is absent and trough insights stay
+   missing on that path.
 2. **M8** — focus trap across four fullscreen dialogs.
 3. **M5** — unbounded reads, as part of `CODE_AUDIT.md` M3 rather than piecemeal.
 4. **M1** — `user_id` filters on mutations, as hardening.
@@ -279,3 +281,9 @@ src/utils/__tests__/reportPagination.test.ts                   (new)
    the node environment, so no `.tsx` can be tested. C1 was a component bug that a single render
    test would have caught, and the workaround here was to extract the logic. Adding jsdom and
    testing-library is the durable fix.
+
+### H4 status (updated)
+
+**Fixed in app code** this pass: `ProviderReportData`, both loaders, executive summary, and
+migration `029`. Until `029` is applied, the RPC omits the key and the client coerces to `[]`;
+the table fallback already returns real administrations when the RPC is unavailable.
