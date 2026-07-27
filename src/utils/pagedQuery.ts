@@ -1,6 +1,10 @@
 /**
- * Paginated PostgREST reads. Supabase's default max rows is 1000 and a truncated
- * page returns 200 with a short array — no error. Walk until a short page.
+ * Paginated PostgREST reads.
+ *
+ * Hosted Supabase defaults to max 1000 rows per request (API settings → Max rows). That is
+ * still the platform default — it is not unlimited unless you raised it in the dashboard.
+ * This repo's local `supabase/config.toml` also sets `max_rows = 1000`. A truncated page
+ * returns HTTP 200 with a short array and no error, so walks until a short page.
  */
 
 export const DEFAULT_PAGE_SIZE = 500;

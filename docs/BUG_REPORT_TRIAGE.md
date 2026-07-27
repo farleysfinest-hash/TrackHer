@@ -243,14 +243,16 @@ src/utils/__tests__/reportPagination.test.ts                   (new)
 
 ## Still open, ranked
 
-1. **No component-test setup.** `vitest.config.ts` includes only `src/**/*.test.ts` and runs in
-   the node environment, so no `.tsx` can be tested. Adding jsdom and testing-library remains the
-   durable fix for modal/step-machine regressions.
-2. **Remaining unbounded reads** outside the sites already migrated to `fetchAllPages`
+1. **Remaining unbounded reads** outside the sites already migrated to `fetchAllPages`
    (insights administrations, lab list, data export). Same pattern — extend when touching those
-   call sites.
+   call sites. Note: PostgREST's default max is still **1000 rows** unless raised in the
+   project's API settings; this repo's `supabase/config.toml` still has `max_rows = 1000`.
+   Raising the dashboard cap reduces risk but does not make silent truncation impossible.
 
 Migrations `028` / `029` — applied by hand (2026-07-26).
+
+**Component tests:** permanent. Vitest runs in `jsdom`; `src/**/*.test.tsx` is included.
+`DeleteAccountModal.test.tsx` locks the C1 regression (confirm step must stay open).
 
 ### Closed in the follow-up pass
 
