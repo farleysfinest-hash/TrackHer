@@ -47,6 +47,10 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>NSCameraUsageDescription</key>
+	<string>TrackHer only uses the camera if you choose to take a profile photo. Photos stay in your account.</string>
 	<key>NSUserNotificationsUsageDescription</key>
 	<string>TrackHer sends local reminders for your HRT doses and weekly check-ins. These stay on your device.</string>
 </dict>
