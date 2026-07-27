@@ -200,10 +200,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         if (healError) {
           console.error('Failed to recreate missing profile:', healError.message);
+          set({ profileLoadFailed: true });
+          return;
+        }
+        if (!upserted) {
+          console.error('Profile heal returned no row for user:', userId);
+          set({ profileLoadFailed: true });
           return;
         }
         console.warn('Missing profile row recreated for user:', userId);
-        set({ profile: upserted as Profile });
+        set({ profile: upserted as Profile, profileLoadFailed: false });
         return;
       }
 

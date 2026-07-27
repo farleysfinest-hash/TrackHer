@@ -105,6 +105,9 @@ export function DoseTapWidget({ title, hideWhenNothingDue = false }: DoseTapWidg
   };
 
   const runChipTap = async (med: Medication, status: DoseStatus) => {
+    // Off-cycle / not-yet-started chips are informational — never log or undo.
+    if (status.state === 'not_due_today') return;
+
     const latest = administrations
       .filter((a) => a.medication_id === med.id)
       .sort((a, b) => b.taken_at.localeCompare(a.taken_at))[0];

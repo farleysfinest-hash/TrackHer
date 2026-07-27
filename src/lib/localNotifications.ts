@@ -82,8 +82,9 @@ export function medicationNotificationId(medicationId: string, slot = 0): number
   for (let i = 0; i < medicationId.length; i++) {
     hash = (hash * 31 + medicationId.charCodeAt(i)) | 0;
   }
-  const positive = Math.abs(hash) % 900;
-  return MED_NOTIFICATION_ID_BASE + positive + slot * 10;
+  const positive = Math.abs(hash) % 800;
+  // Slot stride 1000 keeps multi-dose slots out of other meds' hash ranges (was slot*10).
+  return MED_NOTIFICATION_ID_BASE + positive + slot * 1000;
 }
 
 export async function getReminderPermissionState(): Promise<ReminderPermissionState> {

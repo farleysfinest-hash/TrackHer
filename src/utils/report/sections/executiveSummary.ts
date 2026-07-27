@@ -56,7 +56,7 @@ function isWellbeingSafetyInsight(insight: Insight): boolean {
 
 function nonSafeguardingInsights(result: ReturnType<typeof runPatternEngine>): Insight[] {
   return [...result.primary, ...result.more]
-    .filter((insight) => !isWellbeingSafetyInsight(insight))
+    .filter((insight) => !isWellbeingSafetyInsight(insight) && !insight.demotedToMore)
     .slice(0, 6);
 }
 

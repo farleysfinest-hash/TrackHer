@@ -9,7 +9,7 @@ import { CheckCircle } from 'lucide-react';
 
 export function ResetPasswordForm() {
   const navigate = useNavigate();
-  const { updatePassword, isLoading } = useAuth();
+  const { updatePassword, signOut, isLoading } = useAuth();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -36,6 +36,7 @@ export function ResetPasswordForm() {
     const result = await updatePassword(password);
     if (result.success) {
       setSuccess(true);
+      await signOut();
       setTimeout(() => navigate('/login', { state: { message: 'Password updated successfully' } }), 2000);
     } else {
       setFormError(result.error ?? 'Failed to update password');

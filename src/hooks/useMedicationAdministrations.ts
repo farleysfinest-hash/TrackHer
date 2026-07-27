@@ -4,6 +4,7 @@ import { useAuthStore } from '../stores/authStore';
 import type { MedicationAdministration } from '../types/database';
 import { getActiveTimezone, getEventLocalMetadata } from '../utils/localDate';
 import { DOSE_HISTORY_DAYS } from '../utils/doseSchedule';
+import { fetchAllPages } from '../utils/pagedQuery';
 
 export function useMedicationAdministrations() {
   const [administrations, setAdministrations] = useState<MedicationAdministration[]>([]);
@@ -23,20 +24,25 @@ export function useMedicationAdministrations() {
     cutoff.setDate(cutoff.getDate() - days);
     const cutoffISO = cutoff.toISOString();
 
-    const { data, error: fetchError } = await supabase
-      .from('medication_administrations')
-      .select('*')
-      .eq('user_id', userId)
-      .gte('taken_at', cutoffISO)
-      .order('taken_at', { ascending: false });
-
-    setIsLoading(false);
-
-    if (fetchError) {
-      setError(fetchError.message);
-      return;
+    try {
+      const rows = await fetchAllPages<MedicationAdministration>(async (from, to) => {
+        const { data, error: fetchError } = await supabase
+          .from('medication_administrations')
+          .select('*')
+          .eq('user_id', userId)
+          .gte('taken_at', cutoffISO)
+          .order('taken_at', { ascending: false })
+          .range(from, to);
+        return { data: data as MedicationAdministration[] | null, error: fetchError };
+      });
+      if (getUserId() !== userId) return;
+      setAdministrations(rows);
+    } catch (e) {
+      if (getUserId() !== userId) return;
+      setError(e instanceof Error ? e.message : 'Failed to load doses');
+    } finally {
+      if (getUserId() === userId) setIsLoading(false);
     }
-    setAdministrations((data as MedicationAdministration[]) ?? []);
   }, []);
 
   useEffect(() => {

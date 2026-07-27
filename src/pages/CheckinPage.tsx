@@ -92,7 +92,11 @@ export function CheckinPage() {
         await startFullFromPulse(existing);
         return;
       }
-      setPendingMode(mode);
+      // Never open a quick-pulse overwrite on a day that already has a full MRS check-in —
+      // pulse payloads null every MRS field and wipe assessments.
+      const safeMode =
+        existing.checkin_type !== 'pulse' && mode === 'quick' ? 'full' : mode;
+      setPendingMode(safeMode);
       setDuplicateDate(targetDate);
       setShowDuplicatePrompt(true);
       return;

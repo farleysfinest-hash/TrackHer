@@ -105,6 +105,8 @@ interface MedicationsState {
 }
 
 let fetchMedicationsPromise: Promise<void> | null = null;
+let medicationsFetchGeneration = 0;
+let medicationsForceQueued = false;
 
 export const useMedicationsStore = create<MedicationsState>((set, get) => ({
   medications: [],
@@ -113,7 +115,9 @@ export const useMedicationsStore = create<MedicationsState>((set, get) => ({
   hasFetched: false,
 
   reset: () => {
+    medicationsFetchGeneration += 1;
     fetchMedicationsPromise = null;
+    medicationsForceQueued = false;
     set({ medications: [], isLoading: false, error: null, hasFetched: false });
   },
 
@@ -123,11 +127,17 @@ export const useMedicationsStore = create<MedicationsState>((set, get) => ({
     if (!userId) return;
 
     if (fetchMedicationsPromise) {
+      if (force) medicationsForceQueued = true;
       await fetchMedicationsPromise;
+      if (medicationsForceQueued) {
+        medicationsForceQueued = false;
+        await get().fetchMedications({ force: true });
+      }
       return;
     }
     if (get().hasFetched && !force) return;
 
+    const generation = medicationsFetchGeneration;
     fetchMedicationsPromise = (async () => {
       set({ isLoading: true, error: null });
 
@@ -137,6 +147,8 @@ export const useMedicationsStore = create<MedicationsState>((set, get) => ({
         .eq('user_id', userId)
         .order('is_active', { ascending: false })
         .order('start_date', { ascending: false });
+
+      if (generation !== medicationsFetchGeneration || getUserId() !== userId) return;
 
       if (fetchError) {
         set({ isLoading: false, error: fetchError.message });

@@ -22,6 +22,8 @@ interface MedicationChangesState {
 }
 
 let fetchChangesPromise: Promise<void> | null = null;
+let medicationChangesFetchGeneration = 0;
+let medicationChangesForceQueued = false;
 
 export const useMedicationChangesStore = create<MedicationChangesState>((set, get) => ({
   changes: [],
@@ -30,7 +32,9 @@ export const useMedicationChangesStore = create<MedicationChangesState>((set, ge
   hasFetched: false,
 
   reset: () => {
+    medicationChangesFetchGeneration += 1;
     fetchChangesPromise = null;
+    medicationChangesForceQueued = false;
     set({ changes: [], isLoading: false, error: null, hasFetched: false });
   },
 
@@ -40,11 +44,17 @@ export const useMedicationChangesStore = create<MedicationChangesState>((set, ge
     if (!userId) return;
 
     if (fetchChangesPromise) {
+      if (force) medicationChangesForceQueued = true;
       await fetchChangesPromise;
+      if (medicationChangesForceQueued) {
+        medicationChangesForceQueued = false;
+        await get().fetchChanges({ force: true });
+      }
       return;
     }
     if (get().hasFetched && !force) return;
 
+    const generation = medicationChangesFetchGeneration;
     fetchChangesPromise = (async () => {
       set({ isLoading: true, error: null });
 
@@ -55,6 +65,8 @@ export const useMedicationChangesStore = create<MedicationChangesState>((set, ge
         .order('change_date', { ascending: false })
         .order('created_at', { ascending: false });
 
+      if (generation !== medicationChangesFetchGeneration || getUserId() !== userId) return;
+
       if (fetchError) {
         set({ isLoading: false, error: fetchError.message });
         return;
@@ -64,6 +76,8 @@ export const useMedicationChangesStore = create<MedicationChangesState>((set, ge
         .from('medications')
         .select('*')
         .eq('user_id', userId);
+
+      if (generation !== medicationChangesFetchGeneration || getUserId() !== userId) return;
 
       const medMap = new Map((medsData as Medication[] | null)?.map((m) => [m.id, m]) ?? []);
 

@@ -37,7 +37,12 @@ export function ProtectedRoute({ children, requireOnboarding = true }: Protected
     );
   }
 
-  if (requireOnboarding && profile && !profile.onboarding_completed) {
+  // Authenticated but profile still loading (deferred fetch after SIGNED_IN).
+  if (!profile) {
+    return <PageLoader />;
+  }
+
+  if (requireOnboarding && !profile.onboarding_completed) {
     return <Navigate to="/onboarding" replace />;
   }
 

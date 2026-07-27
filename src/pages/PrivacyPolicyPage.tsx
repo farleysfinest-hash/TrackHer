@@ -6,7 +6,7 @@ export function PrivacyPolicyPage() {
   return (
     <LegalPageLayout>
       <h1 className="font-display text-3xl font-semibold text-sage-800">Privacy Policy</h1>
-      <p className="mt-2 text-sm text-sage-400">Effective Date: July 6, 2026 · Last Updated: July 19, 2026</p>
+      <p className="mt-2 text-sm text-sage-400">Effective Date: July 6, 2026 · Last Updated: July 27, 2026</p>
 
       <div className="mt-8 space-y-8 text-sage-700 text-[15px] leading-relaxed">
 
@@ -15,10 +15,9 @@ export function PrivacyPolicyPage() {
           <h2 className="font-display text-xl font-semibold text-sage-800 mb-3">Introduction</h2>
           <p>
             TrackHer ("we," "us," or "our") operates the TrackHer application (the "App"), available
-            as a web application. (An iOS app is planned; this policy will apply to it equally when it ships.)
-            TrackHer is a personal wellness tool designed to help individuals track symptoms,
-            medications, and lab results related to menopause, perimenopause, and hormone replacement
-            therapy (HRT/BHRT).
+            as a web application and as an iOS app. TrackHer is a personal wellness tool designed to
+            help individuals track symptoms, medications, and lab results related to menopause,
+            perimenopause, and hormone replacement therapy (HRT/BHRT).
           </p>
           <p className="mt-3">
             We understand that the health information you enter into TrackHer is deeply personal.
@@ -127,7 +126,7 @@ export function PrivacyPolicyPage() {
             <li>To store and display the health data you enter so you can track patterns over time.</li>
             <li>To calculate symptom scores, generate trend charts, and surface correlations between your medications, symptoms, and lab results. All pattern analysis runs inside the App itself — your health data is never sent to any external analysis or artificial-intelligence service.</li>
             <li>To generate provider-ready PDF reports from your own data, which you control and share at your discretion.</li>
-            <li>If we add optional check-in reminders, they will be scheduled locally on your device and never sent through an external notification service.</li>
+            <li>Optional check-in and medication reminders, when you enable them, are scheduled locally on your device and are not sent through an external notification marketing service.</li>
             <li>To respond to your support requests.</li>
           </ul>
           <p className="mt-3 font-medium text-sage-800">

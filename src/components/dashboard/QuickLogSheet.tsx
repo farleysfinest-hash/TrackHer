@@ -14,8 +14,14 @@ import type { QuickLogTriggerTag } from '../../types/database';
 import { Button } from '../ui/Button';
 import { useAuthStore } from '../../stores/authStore';
 import { getResolvedTimezone } from '../../utils/checkinHelpers';
-import { dateISOInTimeZone } from '../../utils/localDate';
 import { tapLight } from '../../lib/haptics';
+import {
+  applyDragResistance,
+  buildQuickLogTimeOptions,
+  prefersReducedMotion,
+  resolveQuickLogLoggedAt,
+  type QuickLogTimeOptionId,
+} from '../../utils/quickLogSheetHelpers';
 
 const TRIGGER_TAGS: { id: QuickLogTriggerTag; label: string }[] = [
   { id: 'stress', label: 'Stress' },
@@ -58,39 +64,6 @@ const DISMISS_DISTANCE_PX = 120;
 /** px per ms — flick dismiss */
 const DISMISS_VELOCITY = 0.55;
 
-type TimeOptionId = 'now' | '30min' | `hours_${number}`;
-
-function prefersReducedMotion(): boolean {
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
-
-function applyDragResistance(deltaY: number): number {
-  if (deltaY <= 0) return 0;
-  return deltaY / (1 + deltaY / 450);
-}
-
-function buildTimeOptions(timezone: string): { id: TimeOptionId; label: string; getIso: () => string }[] {
-  const now = new Date();
-  const options: { id: TimeOptionId; label: string; getIso: () => string }[] = [
-    { id: 'now', label: 'Just now', getIso: () => new Date().toISOString() },
-    {
-      id: '30min',
-      label: '30 min ago',
-      getIso: () => new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-    },
-  ];
-  for (let hours = 1; hours <= 12; hours++) {
-    const past = new Date(now.getTime() - hours * 60 * 60 * 1000);
-    if (dateISOInTimeZone(past, timezone) !== dateISOInTimeZone(now, timezone)) break;
-    options.push({
-      id: `hours_${hours}`,
-      label: hours === 1 ? '1 hour ago' : `${hours} hours ago`,
-      getIso: () => new Date(Date.now() - hours * 60 * 60 * 1000).toISOString(),
-    });
-  }
-  return options;
-}
-
 const identityDot = (bodySystem: SymptomBodySystem) => (
   <span
     aria-hidden="true"
@@ -98,14 +71,6 @@ const identityDot = (bodySystem: SymptomBodySystem) => (
     style={{ backgroundColor: SYMPTOM_BODY_SYSTEM_COLORS[bodySystem] }}
   />
 );
-
-function resolveLoggedAt(
-  timeId: TimeOptionId,
-  timeOptions: ReturnType<typeof buildTimeOptions>,
-): string {
-  const opt = timeOptions.find((o) => o.id === timeId);
-  return opt ? opt.getIso() : new Date().toISOString();
-}
 
 export function QuickLogSheet() {
   const isOpen = useQuickLogStore((s) => s.isSheetOpen);
@@ -116,11 +81,11 @@ export function QuickLogSheet() {
   const { watchSymptomIds, trackedSymptomIds } = useSymptomSelections();
   const toast = useToast();
   const timezone = getResolvedTimezone(useAuthStore((state) => state.profile?.timezone));
-  const timeOptions = buildTimeOptions(timezone);
+  const timeOptions = buildQuickLogTimeOptions(timezone);
 
   const [severity, setSeverity] = useState<number | null>(null);
   const [severityTouched, setSeverityTouched] = useState(false);
-  const [selectedTimeId, setSelectedTimeId] = useState<TimeOptionId>('now');
+  const [selectedTimeId, setSelectedTimeId] = useState<QuickLogTimeOptionId>('now');
   const [durationMinutes, setDurationMinutes] = useState<number | null | undefined>(undefined);
   const [triggerTag, setTriggerTag] = useState<QuickLogTriggerTag | null>(null);
   const [notes, setNotes] = useState('');
@@ -207,7 +172,7 @@ export function QuickLogSheet() {
     const result = await createEvent({
       symptom_id: selectedSymptomId,
       severity: severityTouched ? severity : null,
-      logged_at: resolveLoggedAt(selectedTimeId, timeOptions),
+      logged_at: resolveQuickLogLoggedAt(selectedTimeId, timeOptions),
       duration_minutes: durationMinutes === undefined ? null : durationMinutes,
       trigger_tag: triggerTag,
       notes: notes.trim() || null,

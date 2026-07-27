@@ -52,6 +52,8 @@ interface LabResultsState {
 }
 
 let fetchLabResultsPromise: Promise<void> | null = null;
+let labResultsFetchGeneration = 0;
+let labResultsForceQueued = false;
 
 export const useLabResultsStore = create<LabResultsState>((set, get) => ({
   labResults: [],
@@ -60,7 +62,9 @@ export const useLabResultsStore = create<LabResultsState>((set, get) => ({
   hasFetched: false,
 
   reset: () => {
+    labResultsFetchGeneration += 1;
     fetchLabResultsPromise = null;
+    labResultsForceQueued = false;
     set({ labResults: [], isLoading: false, error: null, hasFetched: false });
   },
 
@@ -70,11 +74,17 @@ export const useLabResultsStore = create<LabResultsState>((set, get) => ({
     if (!userId) return;
 
     if (fetchLabResultsPromise) {
+      if (force) labResultsForceQueued = true;
       await fetchLabResultsPromise;
+      if (labResultsForceQueued) {
+        labResultsForceQueued = false;
+        await get().fetchLabResults({ force: true });
+      }
       return;
     }
     if (get().hasFetched && !force) return;
 
+    const generation = labResultsFetchGeneration;
     fetchLabResultsPromise = (async () => {
       set({ isLoading: true, error: null });
 
@@ -88,8 +98,10 @@ export const useLabResultsStore = create<LabResultsState>((set, get) => ({
             .range(from, to);
           return { data: data as LabResult[] | null, error };
         });
+        if (generation !== labResultsFetchGeneration || getUserId() !== userId) return;
         set({ labResults: rows, isLoading: false, hasFetched: true });
       } catch (e) {
+        if (generation !== labResultsFetchGeneration || getUserId() !== userId) return;
         const message = e instanceof Error ? e.message : 'Failed to load lab results';
         set({ isLoading: false, error: message });
       }

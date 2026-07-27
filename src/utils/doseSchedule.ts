@@ -382,7 +382,7 @@ export function getDoseStatus(
     expectedToday: 0,
     nextDueDate: null,
     satisfied: takenToday > 0,
-    tapLogsDose: takenToday === 0,
+    tapLogsDose: true,
     detail: takenToday > 0 ? `${takenToday} today` : 'Tap if taken',
   };
 }
