@@ -1,11 +1,6 @@
-import '@testing-library/jest-dom/vitest';
-import { cleanup } from '@testing-library/react';
-import { afterEach, vi } from 'vitest';
+import { vi } from 'vitest';
 
-afterEach(() => {
-  cleanup();
-});
-
+/** Shared by node + jsdom projects. Keep this free of DOM-only imports. */
 vi.stubGlobal(
   'fetch',
   vi.fn(async (input: RequestInfo | URL) => {
