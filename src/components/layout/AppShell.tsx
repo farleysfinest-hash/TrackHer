@@ -68,7 +68,7 @@ export function AppShell() {
   const onMainTab = isMainTabPath(pathname);
 
   return (
-    <div className="flex min-h-screen max-w-[100vw] overflow-x-clip bg-sand-50">
+    <div className="flex min-h-screen max-w-[100vw] bg-sand-50">
       <Sidebar />
       <div className="safe-area-sidebar-offset flex min-w-0 max-w-full flex-1 flex-col">
         <Header />

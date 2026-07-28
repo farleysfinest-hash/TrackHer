@@ -44,18 +44,19 @@ export function Header() {
   const avatarUrl = useProfileAvatarUrl();
 
   return (
-    <header className="safe-area-top safe-area-header-x sticky top-0 z-20 flex min-w-0 items-center justify-between gap-3 overflow-x-hidden border-b border-sand-200 bg-sand-50/95 pb-4 backdrop-blur-sm">
-      <div className="flex min-w-0 items-center gap-2 md:hidden">
+    <header className="safe-area-top safe-area-header-x sticky top-0 z-40 flex min-w-0 items-center justify-between gap-3 border-b border-sand-200 bg-sand-50/95 pb-4 backdrop-blur-sm">
+      <div className="flex min-w-0 items-center gap-2 overflow-hidden md:hidden">
         <Logo size="sm" className="truncate" />
-        <LogoMark size={36} className="h-9 w-9" />
+        <LogoMark size={36} className="h-9 w-9 shrink-0" />
       </div>
       <div className="hidden md:block" />
 
-      <div className="relative shrink-0" ref={menuRef}>
+      <div className="relative z-50 shrink-0" ref={menuRef}>
         <button
           type="button"
-          onClick={() => setMenuOpen(!menuOpen)}
+          onClick={() => setMenuOpen((open) => !open)}
           aria-expanded={menuOpen}
+          aria-haspopup="menu"
           className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-sage-50"
         >
           <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-sage-500 text-sm font-medium text-on-accent">
@@ -76,8 +77,12 @@ export function Header() {
         </button>
 
         {menuOpen && (
-          <div className="absolute right-0 mt-2 w-48 rounded-xl border border-sand-200 bg-sand-50 py-1 shadow-lg">
+          <div
+            role="menu"
+            className="absolute right-0 top-full z-50 mt-2 w-48 rounded-xl border border-sand-200 bg-sand-50 py-1 shadow-lg"
+          >
             <Link
+              role="menuitem"
               to="/settings"
               className="flex items-center gap-2 px-4 py-2.5 text-sm text-sage-700 hover:bg-sage-50"
               onClick={() => setMenuOpen(false)}
@@ -86,6 +91,7 @@ export function Header() {
               Settings
             </Link>
             <button
+              role="menuitem"
               type="button"
               onClick={handleSignOut}
               className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-sage-700 hover:bg-sage-50"
