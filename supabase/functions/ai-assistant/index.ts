@@ -42,7 +42,8 @@ type AiAction =
   | 'symptom_translate'
   | 'explain_insight'
   | 'visit_prep'
-  | 'journal_extract';
+  | 'journal_extract'
+  | 'dose_watch';
 
 type RequestBody = {
   action?: AiAction;
@@ -108,6 +109,8 @@ Deno.serve(async (req) => {
         return await handleVisitPrep(openaiKey, user.id, body);
       case 'journal_extract':
         return await handleJournalExtract(openaiKey, user.id, body);
+      case 'dose_watch':
+        return await handleDoseWatch(openaiKey, user.id, body);
       default:
         return json({ error: `Unsupported action: ${action}` }, 400);
     }
@@ -563,6 +566,43 @@ Extract what she might want to log from free text.
     : [];
 
   return json({ symptoms, events, model: MODEL, userId });
+}
+
+async function handleDoseWatch(openaiKey: string, userId: string, body: RequestBody) {
+  const factsJson = requireFacts(body.facts);
+  if (typeof factsJson !== 'string') return factsJson;
+
+  const raw = await complete(openaiKey, {
+    system: `${COMPANION_BASE}
+Return ONLY valid JSON (no markdown):
+{"note":"...","watchFor":["..."]}
+
+Look at recentDoseChanges (latest) in the facts packet.
+- note: about 2 sentences, describe-only ("some women notice sleep shifts in the first two weeks").
+- watchFor: up to 4 plain observations to log. NEVER thresholds, dose advice, or diagnoses.
+If there is no recent dose change, return {"note":"","watchFor":[]}.`,
+    messages: [{ role: 'user', content: `FACTS_PACKET:\n${factsJson}` }],
+    temperature: 0.35,
+    maxTokens: 400,
+  });
+  if (raw.error) return json({ error: raw.error }, raw.status ?? 502);
+
+  const parsed = parseJsonObject(raw.text);
+  const note =
+    typeof parsed?.note === 'string' && parsed.note.trim()
+      ? parsed.note.trim().slice(0, 500)
+      : '';
+  if (!note) {
+    return json({ note: '', watchFor: [], model: MODEL, userId });
+  }
+  const watchFor = Array.isArray(parsed?.watchFor)
+    ? parsed.watchFor
+        .filter((s): s is string => typeof s === 'string' && s.trim().length > 0)
+        .map((s) => s.trim().slice(0, 160))
+        .slice(0, 4)
+    : [];
+
+  return json({ note, watchFor, model: MODEL, userId });
 }
 
 function requireFacts(facts: unknown): string | Response {

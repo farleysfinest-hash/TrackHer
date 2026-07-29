@@ -11,6 +11,7 @@ import { DiscontinueModal } from '../components/medications/DiscontinueModal';
 import { MedicationHistory } from '../components/medications/MedicationHistory';
 import { DoseTapWidget } from '../components/medications/DoseTapWidget';
 import { ExperimentWindowCard } from '../components/medications/ExperimentWindowCard';
+import { DoseWatchCard } from '../components/medications/DoseWatchCard';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Button } from '../components/ui/Button';
 import type { Medication } from '../types/database';
@@ -62,6 +63,8 @@ export function MedicationsPage() {
         insights={insights}
         hasCheckedInToday={hasCheckedInToday}
       />
+
+      <DoseWatchCard />
 
       <section
         id="manage-medications"

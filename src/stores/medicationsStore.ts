@@ -8,6 +8,11 @@ import type {
   MedicationUpdate,
 } from '../types/database';
 import { getEffectiveDailyDose, todayISO } from '../utils/medicationHelpers';
+import {
+  loadMinimalAiContextForMonitor,
+} from '../utils/aiMonitorTrigger';
+import { triggerAiDoseWatch } from '../utils/aiDoseWatchTrigger';
+import { getResolvedTimezone } from '../utils/checkinHelpers';
 
 export interface MedicationDoseUpdate {
   dose_amount: number;
@@ -300,6 +305,14 @@ export const useMedicationsStore = create<MedicationsState>((set, get) => ({
 
     await get().fetchMedications({ force: true });
     notifyMedicationsChanged();
+
+    if (update.doseChanged) {
+      const timezone = getResolvedTimezone(useAuthStore.getState().profile?.timezone);
+      void loadMinimalAiContextForMonitor(userId, timezone).then((ctx) => {
+        if (ctx) triggerAiDoseWatch(ctx, effectiveDate, currentMed.name);
+      });
+    }
+
     return { ok: true };
   },
 

@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import type { AiFactsPacket } from '../utils/aiFactsPacket';
 import { clampVisitPrepPack, type VisitPrepPack } from '../utils/aiVisitPrep';
 import type { JournalExtractResult } from '../utils/aiJournalExtract';
+import { clampDoseWatchPack, type DoseWatchPack } from '../utils/aiDoseWatch';
 
 export type AiChatTurn = { role: 'user' | 'assistant'; content: string };
 
@@ -14,7 +15,8 @@ export type AiAction =
   | 'symptom_translate'
   | 'explain_insight'
   | 'visit_prep'
-  | 'journal_extract';
+  | 'journal_extract'
+  | 'dose_watch';
 
 interface ChatResult {
   reply: string;
@@ -182,6 +184,15 @@ export async function invokeJournalExtract(
     symptoms: Array.isArray(data.symptoms) ? data.symptoms : [],
     events: Array.isArray(data.events) ? data.events : [],
   };
+}
+
+export async function invokeDoseWatch(facts: AiFactsPacket): Promise<DoseWatchPack | null> {
+  const { data, error } = await invokeAiAssistant<DoseWatchPack>({
+    action: 'dose_watch',
+    facts,
+  });
+  if (error || !data) return null;
+  return clampDoseWatchPack(data);
 }
 
 export function useAiAssistant() {
