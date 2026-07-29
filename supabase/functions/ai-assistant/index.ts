@@ -45,7 +45,8 @@ type AiAction =
   | 'journal_extract'
   | 'dose_watch'
   | 'visit_debrief'
-  | 'daily_line';
+  | 'daily_line'
+  | 'stage_explain';
 
 type RequestBody = {
   action?: AiAction;
@@ -117,6 +118,8 @@ Deno.serve(async (req) => {
         return await handleVisitDebrief(openaiKey, user.id, body);
       case 'daily_line':
         return await handleDailyLine(openaiKey, user.id, body);
+      case 'stage_explain':
+        return await handleStageExplain(openaiKey, user.id, body);
       default:
         return json({ error: `Unsupported action: ${action}` }, 400);
     }
@@ -684,6 +687,29 @@ Example tone: "Sleep has been climbing since the 18th — quietly good news."`,
   if (reply.error) return json({ error: reply.error }, reply.status ?? 502);
   const line = reply.text.replace(/\s+/g, ' ').trim().slice(0, 140);
   return json({ line, model: MODEL, userId });
+}
+
+async function handleStageExplain(openaiKey: string, userId: string, body: RequestBody) {
+  const factsJson = requireFacts(body.facts);
+  if (typeof factsJson !== 'string') return factsJson;
+
+  const reply = await complete(openaiKey, {
+    system: `${COMPANION_BASE}
+Return plain text only — at most 5 short sentences.
+Explain what her STRAW / menopause stage in the facts packet means, in companion voice, and what tracking will show her next.
+Never re-stage her. Never contradict the profile stage. No diagnoses or dose advice.`,
+    messages: [
+      {
+        role: 'user',
+        content: `FACTS_PACKET:\n${factsJson}\n\nExplain her stage warmly.`,
+      },
+    ],
+    temperature: 0.4,
+    maxTokens: 400,
+  });
+  if (reply.error) return json({ error: reply.error }, reply.status ?? 502);
+  const text = reply.text.trim().slice(0, 1200);
+  return json({ text, model: MODEL, userId });
 }
 
 function requireFacts(facts: unknown): string | Response {

@@ -5,6 +5,10 @@ import { useOnboardingStore } from '../../stores/onboardingStore';
 import { useReminderSettings } from '../../hooks/useReminderSync';
 import { isNativeNotificationsAvailable } from '../../lib/localNotifications';
 import { Button } from '../ui/Button';
+import { StageExplainCard } from './StageExplainCard';
+import { useAuthStore } from '../../stores/authStore';
+import { getResolvedTimezone } from '../../utils/checkinHelpers';
+import type { AiFactsPacketInput } from '../../utils/aiFactsPacket';
 
 interface OnboardingCompleteProps {
   onGoToDashboard: () => void;
@@ -26,6 +30,24 @@ export function OnboardingComplete({ onGoToDashboard }: OnboardingCompleteProps)
   const stageLabel =
     formData.stagingResult?.strawStageLabel ??
     (formData.stagingResult?.strawStage ? `Stage ${formData.stagingResult.strawStage}` : 'Not specified');
+
+  const stageKey = formData.stagingResult?.strawStage ?? null;
+  const profile = useAuthStore((s) => s.profile);
+  const stageContext: AiFactsPacketInput = {
+    timezone: getResolvedTimezone(profile?.timezone),
+    profile: profile
+      ? {
+          ...profile,
+          straw_stage: stageKey ?? profile.straw_stage,
+          straw_stage_label: formData.stagingResult?.strawStageLabel ?? profile.straw_stage_label,
+        }
+      : profile,
+    checkins: [],
+    medications: [],
+    medicationChanges: [],
+    labResults: [],
+    insights: [],
+  };
 
   const checkinDayLabel = (() => {
     // Convention: 0 = Sunday ... 6 = Saturday (matches JS Date#getDay()).
@@ -99,6 +121,10 @@ export function OnboardingComplete({ onGoToDashboard }: OnboardingCompleteProps)
           )}
         </dl>
       </div>
+
+      {stageKey && (
+        <StageExplainCard context={stageContext} stageOverride={String(stageKey)} />
+      )}
 
       {showReminderPrompt && (
         <div className="rounded-xl border border-sage-200 bg-sage-50 p-5 text-left">

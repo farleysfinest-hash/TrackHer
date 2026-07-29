@@ -18,6 +18,8 @@ import {
 import { Camera, Trash2 } from 'lucide-react';
 import { useProfileAvatarUrl } from '../../hooks/useProfileAvatarUrl';
 import { setUiValue } from '../../lib/uiState';
+import { StageExplainCard } from '../onboarding/StageExplainCard';
+import type { AiFactsPacketInput } from '../../utils/aiFactsPacket';
 
 const DAY_OPTIONS: Array<{ label: string; value: number }> = [
   { label: 'Mon', value: 1 },
@@ -207,6 +209,24 @@ export function ProfileSettingsCard() {
               ? 'Worked out from your onboarding answers. This drives your provider report and your insights — tell your provider if it looks wrong.'
               : 'Not recorded yet. Your provider report will show “Not specified” until this is set.'}
           </p>
+          {profile?.straw_stage && (
+            <div className="mt-3">
+              <StageExplainCard
+                context={
+                  {
+                    timezone: getResolvedTimezone(profile.timezone),
+                    profile,
+                    checkins: [],
+                    medications: [],
+                    medicationChanges: [],
+                    labResults: [],
+                    insights: [],
+                  } satisfies AiFactsPacketInput
+                }
+                stageOverride={profile.straw_stage}
+              />
+            </div>
+          )}
         </div>
         <Select
           label="Weekly check-in day"

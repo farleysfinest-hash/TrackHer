@@ -19,7 +19,8 @@ export type AiAction =
   | 'journal_extract'
   | 'dose_watch'
   | 'visit_debrief'
-  | 'daily_line';
+  | 'daily_line'
+  | 'stage_explain';
 
 interface ChatResult {
   reply: string;
@@ -218,6 +219,17 @@ export async function invokeDailyLine(facts: AiFactsPacket): Promise<string | nu
   });
   if (error || !data) return null;
   if (typeof data.line === 'string') return data.line;
+  if (typeof data.reply === 'string') return data.reply;
+  return null;
+}
+
+export async function invokeStageExplain(facts: AiFactsPacket): Promise<string | null> {
+  const { data, error } = await invokeAiAssistant<{ text?: string; reply?: string }>({
+    action: 'stage_explain',
+    facts,
+  });
+  if (error || !data) return null;
+  if (typeof data.text === 'string') return data.text;
   if (typeof data.reply === 'string') return data.reply;
   return null;
 }
