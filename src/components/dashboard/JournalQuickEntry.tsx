@@ -33,7 +33,7 @@ export function JournalQuickEntry() {
   }, [open, fetchActiveMedications]);
 
   const activeMeds = medications.filter((m) => m.is_active && !m.end_date);
-  const medNames = activeMeds.map((m) => m.name);
+  const medNames = activeMeds.map((m) => m.medication_name);
 
   const reset = () => {
     setText('');
@@ -72,7 +72,7 @@ export function JournalQuickEntry() {
     const today = getLocalDateISO(timezone);
     const med =
       e.medicationName != null
-        ? activeMeds.find((m) => m.name === e.medicationName)
+        ? activeMeds.find((m) => m.medication_name === e.medicationName)
         : activeMeds.length === 1
           ? activeMeds[0]
           : null;

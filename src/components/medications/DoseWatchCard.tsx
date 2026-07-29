@@ -60,7 +60,10 @@ export function DoseWatchCard() {
     }
     setDismissed(false);
     let cancelled = false;
-    const hash = doseWatchCacheKey(activeChange.change_date, activeChange.medication.name);
+    const hash = doseWatchCacheKey(
+      activeChange.change_date,
+      activeChange.medication.medication_name,
+    );
     void readAiInsightCache<DoseWatchPack>(userId, 'dose_watch', hash).then((cached) => {
       if (cancelled) return;
       setPack(clampDoseWatchPack(cached));
