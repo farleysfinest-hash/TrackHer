@@ -19,6 +19,7 @@ import { ActiveMedicationsSummary } from './ActiveMedicationsSummary';
 import { LabSummaryWidget } from './LabSummaryWidget';
 import { AppointmentCountdownCard } from './AppointmentCountdownCard';
 import { ProviderReportButton } from './ProviderReportButton';
+import { DailyCompanionLine } from './DailyCompanionLine';
 import { SafeguardingCard } from '../insights/SafeguardingCard';
 import { QuickLogWidget } from './QuickLogWidget';
 import { PersonalSymptomTrends } from './PersonalSymptomTrends';
@@ -36,7 +37,7 @@ export function DashboardLayout() {
   const dateRange = useDashboardStore((s) => s.dateRange);
   const refreshDateRange = useDashboardStore((s) => s.refreshDateRange);
   const checkinStatus = useCheckinStatus();
-  const { insights, safeguardingInsights, dismissInsight, extendedSymptoms } = useInsights();
+  const { insights, safeguardingInsights, dismissInsight, extendedSymptoms, aiContext } = useInsights();
   const {
     getSymptomTrendData,
     getMedicationChangeMarkers,
@@ -143,6 +144,7 @@ export function DashboardLayout() {
           <div>
             <h1 className="font-display text-3xl text-sage-800">Dashboard</h1>
             <p className="mt-1 text-sage-500">{subtitle}</p>
+            <DailyCompanionLine context={aiContext} />
           </div>
         </div>
 

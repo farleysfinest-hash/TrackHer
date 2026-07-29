@@ -18,7 +18,8 @@ export type AiAction =
   | 'visit_prep'
   | 'journal_extract'
   | 'dose_watch'
-  | 'visit_debrief';
+  | 'visit_debrief'
+  | 'daily_line';
 
 interface ChatResult {
   reply: string;
@@ -208,6 +209,17 @@ export async function invokeVisitDebrief(
   });
   if (error || !data) return null;
   return clampVisitDebriefPack(data);
+}
+
+export async function invokeDailyLine(facts: AiFactsPacket): Promise<string | null> {
+  const { data, error } = await invokeAiAssistant<{ line?: string; reply?: string }>({
+    action: 'daily_line',
+    facts,
+  });
+  if (error || !data) return null;
+  if (typeof data.line === 'string') return data.line;
+  if (typeof data.reply === 'string') return data.reply;
+  return null;
 }
 
 export function useAiAssistant() {

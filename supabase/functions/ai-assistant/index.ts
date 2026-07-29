@@ -44,7 +44,8 @@ type AiAction =
   | 'visit_prep'
   | 'journal_extract'
   | 'dose_watch'
-  | 'visit_debrief';
+  | 'visit_debrief'
+  | 'daily_line';
 
 type RequestBody = {
   action?: AiAction;
@@ -114,6 +115,8 @@ Deno.serve(async (req) => {
         return await handleDoseWatch(openaiKey, user.id, body);
       case 'visit_debrief':
         return await handleVisitDebrief(openaiKey, user.id, body);
+      case 'daily_line':
+        return await handleDailyLine(openaiKey, user.id, body);
       default:
         return json({ error: `Unsupported action: ${action}` }, 400);
     }
@@ -662,6 +665,25 @@ Never invent follow-ups she did not mention. Never dose advice.`,
     : [];
 
   return json({ planSummary, followUps, model: MODEL, userId });
+}
+
+async function handleDailyLine(openaiKey: string, userId: string, body: RequestBody) {
+  const factsJson = requireFacts(body.facts);
+  if (typeof factsJson !== 'string') return factsJson;
+
+  const reply = await complete(openaiKey, {
+    system: `${COMPANION_BASE}
+Return plain text only — ONE sentence, max 140 characters.
+Ground in the packet's most recent real change (pulse, MRS, dose change).
+No advice. No numbers she didn't log. Never touch safeguarding / psych / cardiac / bleeding categories.
+Example tone: "Sleep has been climbing since the 18th — quietly good news."`,
+    messages: [{ role: 'user', content: `FACTS_PACKET:\n${factsJson}\n\nOne warm sentence.` }],
+    temperature: 0.45,
+    maxTokens: 80,
+  });
+  if (reply.error) return json({ error: reply.error }, reply.status ?? 502);
+  const line = reply.text.replace(/\s+/g, ' ').trim().slice(0, 140);
+  return json({ line, model: MODEL, userId });
 }
 
 function requireFacts(facts: unknown): string | Response {
