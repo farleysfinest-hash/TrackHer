@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { FileText } from 'lucide-react';
+import { FileText, HeartHandshake } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { useProviderReport } from '../../hooks/useProviderReport';
 import { useDashboardStore } from '../../stores/dashboardStore';
 import { Card } from '../ui/Card';
 import { PaywallModal } from '../subscription/PaywallModal';
 import { useProGate } from '../../hooks/useProGate';
+import { PartnerLetterSheet } from '../insights/PartnerLetterSheet';
+import { useInsights } from '../../hooks/useInsights';
 
 interface ProviderReportButtonProps {
   compact?: boolean;
@@ -15,7 +17,9 @@ export function ProviderReportButton({ compact = false }: ProviderReportButtonPr
   const { generateReport, isGenerating, error } = useProviderReport();
   const dateRange = useDashboardStore((s) => s.dateRange);
   const [includeSafety, setIncludeSafety] = useState(false);
+  const [partnerOpen, setPartnerOpen] = useState(false);
   const { requirePro, paywallOpen, paywallReason, closePaywall } = useProGate();
+  const { aiContext } = useInsights();
 
   const onGenerate = (withSafety: boolean) => {
     requirePro(
@@ -61,6 +65,17 @@ export function ProviderReportButton({ compact = false }: ProviderReportButtonPr
           {isGenerating ? 'Generating…' : 'Generate Provider Report'}
         </Button>
 
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          className="mx-auto"
+          onClick={() => setPartnerOpen(true)}
+        >
+          <HeartHandshake className="mr-2 h-4 w-4" />
+          Letter for a loved one
+        </Button>
+
         <label className="flex min-w-0 items-start gap-2 text-sm text-sage-600">
           <input
             type="checkbox"
@@ -80,6 +95,11 @@ export function ProviderReportButton({ compact = false }: ProviderReportButtonPr
         </label>
       </div>
       <PaywallModal isOpen={paywallOpen} onClose={closePaywall} reason={paywallReason} />
+      <PartnerLetterSheet
+        context={aiContext}
+        open={partnerOpen}
+        onClose={() => setPartnerOpen(false)}
+      />
     </Card>
   );
 }

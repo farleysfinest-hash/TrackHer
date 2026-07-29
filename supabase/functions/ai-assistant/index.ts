@@ -46,7 +46,8 @@ type AiAction =
   | 'dose_watch'
   | 'visit_debrief'
   | 'daily_line'
-  | 'stage_explain';
+  | 'stage_explain'
+  | 'partner_letter';
 
 type RequestBody = {
   action?: AiAction;
@@ -120,6 +121,8 @@ Deno.serve(async (req) => {
         return await handleDailyLine(openaiKey, user.id, body);
       case 'stage_explain':
         return await handleStageExplain(openaiKey, user.id, body);
+      case 'partner_letter':
+        return await handlePartnerLetter(openaiKey, user.id, body);
       default:
         return json({ error: `Unsupported action: ${action}` }, 400);
     }
@@ -710,6 +713,35 @@ Never re-stage her. Never contradict the profile stage. No diagnoses or dose adv
   if (reply.error) return json({ error: reply.error }, reply.status ?? 502);
   const text = reply.text.trim().slice(0, 1200);
   return json({ text, model: MODEL, userId });
+}
+
+async function handlePartnerLetter(openaiKey: string, userId: string, body: RequestBody) {
+  const factsJson = requireFacts(body.facts);
+  if (typeof factsJson !== 'string') return factsJson;
+  const freeText = typeof body.freeText === 'string' ? body.freeText.trim().slice(0, 2000) : '';
+
+  const reply = await complete(openaiKey, {
+    system: `${COMPANION_BASE}
+Write a one-page letter to a partner or family member explaining what she is experiencing.
+- Plain warm language. Ground in her real logged symptoms (names, not scores).
+- Explicitly say disbelief is common and the data is real.
+- No diagnoses. No invented numbers or dates.
+- Optional notes from her may be woven in if provided.
+Return plain text only.`,
+    messages: [
+      {
+        role: 'user',
+        content: `FACTS_PACKET:\n${factsJson}${
+          freeText ? `\n\nHER_NOTES_TO_INCLUDE:\n${freeText}` : ''
+        }\n\nDraft the partner letter.`,
+      },
+    ],
+    temperature: 0.4,
+    maxTokens: 900,
+  });
+  if (reply.error) return json({ error: reply.error }, reply.status ?? 502);
+  const letter = reply.text.trim().slice(0, 6000);
+  return json({ letter, model: MODEL, userId });
 }
 
 function requireFacts(facts: unknown): string | Response {

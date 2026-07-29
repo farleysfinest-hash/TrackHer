@@ -20,7 +20,8 @@ export type AiAction =
   | 'dose_watch'
   | 'visit_debrief'
   | 'daily_line'
-  | 'stage_explain';
+  | 'stage_explain'
+  | 'partner_letter';
 
 interface ChatResult {
   reply: string;
@@ -230,6 +231,21 @@ export async function invokeStageExplain(facts: AiFactsPacket): Promise<string |
   });
   if (error || !data) return null;
   if (typeof data.text === 'string') return data.text;
+  if (typeof data.reply === 'string') return data.reply;
+  return null;
+}
+
+export async function invokePartnerLetter(
+  facts: AiFactsPacket,
+  freeText?: string,
+): Promise<string | null> {
+  const { data, error } = await invokeAiAssistant<{ letter?: string; reply?: string }>({
+    action: 'partner_letter',
+    facts,
+    freeText,
+  });
+  if (error || !data) return null;
+  if (typeof data.letter === 'string') return data.letter;
   if (typeof data.reply === 'string') return data.reply;
   return null;
 }
