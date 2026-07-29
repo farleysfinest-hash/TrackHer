@@ -1,4 +1,10 @@
-import { hasMRSData, hasPartialMRSData, getDailySignal } from '../../utils/checkinHelpers';
+import {
+  hasMRSData,
+  hasPartialMRSData,
+  getDailySignal,
+  formatDailyChannels,
+  hasNewDailyChannels,
+} from '../../utils/checkinHelpers';
 import type { SymptomCheckin } from '../../types/database';
 import type { DateRange, DateRangePreset } from '../../stores/dashboardStore';
 
@@ -84,14 +90,11 @@ export function buildScoreSummary(
     .filter((n): n is number => n != null);
   const energyAverage = average(energySignals);
 
-  const latestChannelSubtext = latest
-    ? [
-        latest.mood_level != null ? `Mood ${latest.mood_level}` : null,
-        latest.sleep_quality != null ? `Sleep ${latest.sleep_quality}/5` : null,
-      ]
-        .filter(Boolean)
-        .join(' · ')
-    : '';
+  const latestChannelSubtext =
+    latest &&
+    (hasNewDailyChannels(latest) || latest.overall_wellbeing != null)
+      ? formatDailyChannels(latest)
+      : '';
 
   return {
     mrsValue: latestMrs

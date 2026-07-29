@@ -50,6 +50,7 @@ describe('buildScoreSummary', () => {
     expect(summary.mrsValue).toBe(24);
     expect(summary.daysLogged).toBe(2);
     expect(summary.energyValue).toBe('3.5');
+    expect(summary.energySubtext).toContain('latest Energy 3/5 · Mood 3/5 · Sleep 2/5');
   });
 
   it('changes period trend when the window includes an earlier MRS', () => {

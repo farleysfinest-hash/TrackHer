@@ -280,13 +280,14 @@ export function hasNewDailyChannels(checkin: SymptomCheckin): boolean {
   );
 }
 
-/** Compact display: `Energy 4 · Mood 3 · Sleep 2/5`, or legacy `Wellbeing 7/10`. */
+/** Compact display: `Energy 4/5 · Mood 3/5 · Sleep 2/5`, or legacy `Wellbeing 7/10`. */
 export function formatDailyChannels(checkin: SymptomCheckin): string {
   if (!hasNewDailyChannels(checkin) && checkin.overall_wellbeing !== null) {
     return `Wellbeing ${checkin.overall_wellbeing}/10`;
   }
-  const energy = checkin.energy_level !== null ? String(checkin.energy_level) : '—';
-  const mood = checkin.mood_level !== null ? String(checkin.mood_level) : '—';
+  const energy =
+    checkin.energy_level !== null ? `${checkin.energy_level}/5` : '—';
+  const mood = checkin.mood_level !== null ? `${checkin.mood_level}/5` : '—';
   const sleep =
     checkin.sleep_quality !== null ? `${checkin.sleep_quality}/5` : '—';
   return `Energy ${energy} · Mood ${mood} · Sleep ${sleep}`;
