@@ -1,4 +1,4 @@
--- Widen ai_insights cache types for the companion layer, and scaffold herd consent
+ Widen ai_insights cache types for the companion layer, and scaffold herd consent
 -- + aggregate snapshots (no writers yet — personal AI only this pass).
 
 ALTER TABLE public.ai_insights
@@ -6,7 +6,7 @@ ALTER TABLE public.ai_insights
 
 ALTER TABLE public.ai_insights
   ADD CONSTRAINT ai_insights_insight_type_check CHECK (
-    insight_type IN (
+    insight_type IN (--
       'dose_correlation',
       'symptom_cluster',
       'lab_discordance',
@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS public.ai_herd_consent (
 
 ALTER TABLE public.ai_herd_consent ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "ai_herd_consent_own" ON public.ai_herd_consent;
 CREATE POLICY "ai_herd_consent_own"
   ON public.ai_herd_consent
   FOR ALL
