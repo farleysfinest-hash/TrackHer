@@ -16,6 +16,7 @@ import {
   type AiCandidate,
   type PolishedInsight,
 } from './useAiAssistant';
+import { logAiCandidateEvent } from '../utils/aiCandidateEventLog';
 
 export interface AiNoticedCandidate extends AiCandidate {
   id: string;
@@ -27,6 +28,7 @@ interface ImproveCachePayload {
 }
 
 const POLISH_SESSION_KEY = 'trackher_ai_polish_hash';
+const SHOWN_SESSION_PREFIX = 'trackher_ai_candidate_shown:';
 
 /**
  * Background companion layer: polish engine copy + soft "AI noticed" candidates.
@@ -72,7 +74,7 @@ export function useAiInsightLayer(
         if (cancelled) return;
 
         if (cached) {
-          applyImprove(cached, dataHash);
+          applyImprove(cached, dataHash, userId);
           lastHashRef.current = dataHash;
           setIsPolishing(false);
           return;
@@ -98,7 +100,7 @@ export function useAiInsightLayer(
             polished: result.polished,
             candidates: result.candidates,
           };
-          applyImprove(payload, dataHash);
+          applyImprove(payload, dataHash, userId);
           lastHashRef.current = dataHash;
           try {
             sessionStorage.setItem(POLISH_SESSION_KEY, dataHash);
@@ -120,7 +122,7 @@ export function useAiInsightLayer(
       })();
     }, 1500);
 
-    function applyImprove(payload: ImproveCachePayload, hash: string) {
+    function applyImprove(payload: ImproveCachePayload, hash: string, uid: string) {
       const current = insightsRef.current;
       const allowedIds = new Set(
         current.filter((i) => !isAiForbiddenCategory(i.category)).map((i) => i.id),
@@ -132,15 +134,26 @@ export function useAiInsightLayer(
         }
       }
       setPolishMap(map);
-      setCandidates(
-        (payload.candidates ?? [])
-          .filter((c) => c.title?.trim() && c.body?.trim())
-          .slice(0, 3)
-          .map((c, i) => ({
-            ...c,
-            id: `ai-noticed-${hash.slice(0, 8)}-${i}`,
-          })),
-      );
+      const next = (payload.candidates ?? [])
+        .filter((c) => c.title?.trim() && c.body?.trim())
+        .slice(0, 3)
+        .map((c, i) => ({
+          ...c,
+          id: `ai-noticed-${hash.slice(0, 8)}-${i}`,
+        }));
+      setCandidates(next);
+
+      // Log "shown" once per title per browser session.
+      for (const c of next) {
+        try {
+          const key = `${SHOWN_SESSION_PREFIX}${c.title.trim().toLowerCase()}`;
+          if (sessionStorage.getItem(key) === '1') continue;
+          sessionStorage.setItem(key, '1');
+          logAiCandidateEvent(uid, c.title, 'shown');
+        } catch {
+          logAiCandidateEvent(uid, c.title, 'shown');
+        }
+      }
     }
 
     return () => {
@@ -158,11 +171,20 @@ export function useAiInsightLayer(
     });
   }, [insights, polishMap]);
 
+  const dismissCandidate = (id: string) => {
+    setCandidates((prev) => {
+      const target = prev.find((c) => c.id === id);
+      if (target && userId) logAiCandidateEvent(userId, target.title, 'dismissed');
+      return prev.filter((c) => c.id !== id);
+    });
+  };
+
   return {
     polishedInsights,
     candidates,
     isPolishing,
     facts,
     dataHash,
+    dismissCandidate,
   };
 }

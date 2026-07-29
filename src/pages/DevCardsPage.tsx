@@ -28,6 +28,7 @@ import { analyzeBleedingRedFlag } from '../engine/bleedingRedFlag';
 import { analyzeSafeguarding } from '../engine/safeguarding';
 import { InsightCard } from '../components/insights/InsightCard';
 import { SafeguardingCard } from '../components/insights/SafeguardingCard';
+import { AiCandidateTrackerPanel } from '../components/dev/AiCandidateTrackerPanel';
 import { addDaysISO, todayISO } from '../utils/localDate';
 
 const TZ = 'UTC';
@@ -321,6 +322,8 @@ export function DevCardsPage() {
             render={(insight) => <InsightCard insight={insight} onDismiss={() => {}} />}
           />
         </div>
+
+        <AiCandidateTrackerPanel />
       </div>
     </div>
   );

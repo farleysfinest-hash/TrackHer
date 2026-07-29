@@ -39,7 +39,7 @@ export function InsightsPage() {
     gapHint: string | null;
   } | null>(null);
 
-  const { polishedInsights, candidates } = useAiInsightLayer(
+  const { polishedInsights, candidates, dismissCandidate } = useAiInsightLayer(
     aiContext,
     insights,
     !isLoading,
@@ -171,6 +171,7 @@ export function InsightsPage() {
       {activeFilter === 'all' && (
         <AiNoticedList
           candidates={candidates}
+          onDismiss={dismissCandidate}
           onTalkAbout={(c) => setAskSeed({ noticed: { title: c.title, body: c.body } })}
         />
       )}

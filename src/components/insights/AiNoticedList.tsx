@@ -1,14 +1,19 @@
-import { Sparkles } from 'lucide-react';
+import { Sparkles, X } from 'lucide-react';
 import type { AiNoticedCandidate } from '../../hooks/useAiInsightLayer';
 import { Card } from '../ui/Card';
+import { useAuthStore } from '../../stores/authStore';
+import { logAiCandidateEvent } from '../../utils/aiCandidateEventLog';
 
 interface AiNoticedListProps {
   candidates: AiNoticedCandidate[];
   onTalkAbout?: (candidate: AiNoticedCandidate) => void;
+  onDismiss?: (id: string) => void;
 }
 
 /** Soft companion observations — clearly labeled, not engine clinical cards. */
-export function AiNoticedList({ candidates, onTalkAbout }: AiNoticedListProps) {
+export function AiNoticedList({ candidates, onTalkAbout, onDismiss }: AiNoticedListProps) {
+  const userId = useAuthStore((s) => s.user?.id);
+
   if (candidates.length === 0) return null;
 
   return (
@@ -27,9 +32,21 @@ export function AiNoticedList({ candidates, onTalkAbout }: AiNoticedListProps) {
               <Sparkles className="h-4 w-4" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-medium uppercase tracking-wide text-sage-400">
-                Companion observation
-              </p>
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-xs font-medium uppercase tracking-wide text-sage-400">
+                  Companion observation
+                </p>
+                {onDismiss && (
+                  <button
+                    type="button"
+                    className="rounded p-1 text-sage-400 hover:bg-sage-50 hover:text-sage-600"
+                    aria-label="Dismiss"
+                    onClick={() => onDismiss(c.id)}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
               <h3 className="mt-1 font-display text-base text-sage-800">{c.title}</h3>
               <p className="mt-1 text-sm leading-relaxed text-sage-600">{c.body}</p>
               {c.citedFacts.length > 0 && (
@@ -43,7 +60,10 @@ export function AiNoticedList({ candidates, onTalkAbout }: AiNoticedListProps) {
                 <button
                   type="button"
                   className="mt-3 text-sm font-medium text-sage-600 underline-offset-2 hover:underline"
-                  onClick={() => onTalkAbout(c)}
+                  onClick={() => {
+                    if (userId) logAiCandidateEvent(userId, c.title, 'opened');
+                    onTalkAbout(c);
+                  }}
                 >
                   Talk about this
                 </button>
