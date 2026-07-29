@@ -85,7 +85,12 @@ export type InsightType =
   | 'insight_polish'
   | 'ai_candidate'
   | 'monitor_note'
-  | 'gap_coach';
+  | 'gap_coach'
+  | 'visit_prep'
+  | 'dose_watch'
+  | 'daily_line'
+  | 'stage_explain'
+  | 'partner_letter';
 
 export type ReminderType = 'checkin' | 'medication' | 'lab_due';
 
