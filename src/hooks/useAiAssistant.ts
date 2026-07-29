@@ -4,6 +4,7 @@ import type { AiFactsPacket } from '../utils/aiFactsPacket';
 import { clampVisitPrepPack, type VisitPrepPack } from '../utils/aiVisitPrep';
 import type { JournalExtractResult } from '../utils/aiJournalExtract';
 import { clampDoseWatchPack, type DoseWatchPack } from '../utils/aiDoseWatch';
+import { clampVisitDebriefPack, type VisitDebriefPack } from '../utils/aiVisitDebrief';
 
 export type AiChatTurn = { role: 'user' | 'assistant'; content: string };
 
@@ -16,7 +17,8 @@ export type AiAction =
   | 'explain_insight'
   | 'visit_prep'
   | 'journal_extract'
-  | 'dose_watch';
+  | 'dose_watch'
+  | 'visit_debrief';
 
 interface ChatResult {
   reply: string;
@@ -193,6 +195,19 @@ export async function invokeDoseWatch(facts: AiFactsPacket): Promise<DoseWatchPa
   });
   if (error || !data) return null;
   return clampDoseWatchPack(data);
+}
+
+export async function invokeVisitDebrief(
+  freeText: string,
+  facts: AiFactsPacket,
+): Promise<VisitDebriefPack | null> {
+  const { data, error } = await invokeAiAssistant<VisitDebriefPack>({
+    action: 'visit_debrief',
+    freeText,
+    facts,
+  });
+  if (error || !data) return null;
+  return clampVisitDebriefPack(data);
 }
 
 export function useAiAssistant() {

@@ -43,7 +43,8 @@ type AiAction =
   | 'explain_insight'
   | 'visit_prep'
   | 'journal_extract'
-  | 'dose_watch';
+  | 'dose_watch'
+  | 'visit_debrief';
 
 type RequestBody = {
   action?: AiAction;
@@ -111,6 +112,8 @@ Deno.serve(async (req) => {
         return await handleJournalExtract(openaiKey, user.id, body);
       case 'dose_watch':
         return await handleDoseWatch(openaiKey, user.id, body);
+      case 'visit_debrief':
+        return await handleVisitDebrief(openaiKey, user.id, body);
       default:
         return json({ error: `Unsupported action: ${action}` }, 400);
     }
@@ -603,6 +606,62 @@ If there is no recent dose change, return {"note":"","watchFor":[]}.`,
     : [];
 
   return json({ note, watchFor, model: MODEL, userId });
+}
+
+async function handleVisitDebrief(openaiKey: string, userId: string, body: RequestBody) {
+  const freeText = body.freeText?.trim();
+  if (!freeText) return json({ error: 'freeText is required' }, 400);
+  const factsJson = requireFacts(body.facts);
+  if (typeof factsJson !== 'string') return factsJson;
+
+  const raw = await complete(openaiKey, {
+    system: `${COMPANION_BASE}
+Return ONLY valid JSON (no markdown):
+{"planSummary":"...","followUps":[{"label":"...","timeframe":"...or null"}]}
+
+Restate her appointment plan warmly from her paste + facts packet only.
+- planSummary: ≤4 sentences. No additions beyond her text + packet.
+- followUps: max 5 checklist items derived only from her text ("book labs in 6 weeks").
+Never invent follow-ups she did not mention. Never dose advice.`,
+    messages: [
+      {
+        role: 'user',
+        content: `WHAT_SHE_PASTED:\n${freeText.slice(0, 4000)}\n\nFACTS_PACKET:\n${factsJson}`,
+      },
+    ],
+    temperature: 0.3,
+    maxTokens: 600,
+  });
+  if (raw.error) return json({ error: raw.error }, raw.status ?? 502);
+
+  const parsed = parseJsonObject(raw.text);
+  const planSummary =
+    typeof parsed?.planSummary === 'string' && parsed.planSummary.trim()
+      ? parsed.planSummary.trim().slice(0, 1200)
+      : '';
+  if (!planSummary) {
+    return json({ error: 'Could not draft visit debrief' }, 502);
+  }
+  const followUps = Array.isArray(parsed?.followUps)
+    ? parsed.followUps
+        .filter((f): f is Record<string, unknown> => !!f && typeof f === 'object')
+        .map((f) => {
+          const label =
+            typeof f.label === 'string' && f.label.trim()
+              ? f.label.trim().slice(0, 200)
+              : '';
+          if (!label) return null;
+          const timeframe =
+            typeof f.timeframe === 'string' && f.timeframe.trim()
+              ? f.timeframe.trim().slice(0, 80)
+              : null;
+          return { label, timeframe };
+        })
+        .filter((f): f is { label: string; timeframe: string | null } => f !== null)
+        .slice(0, 5)
+    : [];
+
+  return json({ planSummary, followUps, model: MODEL, userId });
 }
 
 function requireFacts(facts: unknown): string | Response {
