@@ -22,6 +22,10 @@ import {
   getCheckinErrorMessage,
   type CheckinInput,
 } from './checkinPayload';
+import {
+  loadMinimalAiContextForMonitor,
+  triggerAiMonitorAfterMrsCheckin,
+} from '../utils/aiMonitorTrigger';
 
 export type { CheckinInput } from './checkinPayload';
 
@@ -372,6 +376,11 @@ export const useCheckinsStore = create<CheckinsState>((set, get) => ({
         await refreshCheckinStatusForCurrentUser();
         await resyncRemindersForCurrentUser();
       })();
+      if (payload.checkin_type !== 'pulse' && payload.mrs_complete === true) {
+        void loadMinimalAiContextForMonitor(userId, getTimezone()).then((ctx) => {
+          if (ctx) triggerAiMonitorAfterMrsCheckin(ctx);
+        });
+      }
       return checkin;
     } catch (saveError) {
       set({ error: getCheckinErrorMessage(saveError) });
@@ -406,6 +415,11 @@ export const useCheckinsStore = create<CheckinsState>((set, get) => ({
         await refreshCheckinStatusForCurrentUser();
         await resyncRemindersForCurrentUser();
       })();
+      if (payload.checkin_type !== 'pulse' && payload.mrs_complete === true) {
+        void loadMinimalAiContextForMonitor(userId, getTimezone()).then((ctx) => {
+          if (ctx) triggerAiMonitorAfterMrsCheckin(ctx);
+        });
+      }
       return true;
     } catch (saveError) {
       set({ error: getCheckinErrorMessage(saveError) });

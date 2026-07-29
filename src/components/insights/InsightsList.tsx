@@ -13,6 +13,7 @@ interface InsightsListProps {
   stageProfile?: StageProfile | null;
   emptyTitle?: string;
   emptyDescription?: string;
+  onTalkAbout?: (insight: Insight) => void;
 }
 
 export function InsightsList({
@@ -23,6 +24,7 @@ export function InsightsList({
   stageProfile,
   emptyTitle = 'No insights yet',
   emptyDescription = 'Your first check-in unlocks your baseline reading.',
+  onTalkAbout,
 }: InsightsListProps) {
   if (isLoading) {
     return (
@@ -51,6 +53,7 @@ export function InsightsList({
           compact={compact}
           onDismiss={onDismiss}
           stageProfile={stageProfile}
+          onTalkAbout={onTalkAbout}
         />
       ))}
     </div>

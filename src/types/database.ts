@@ -81,7 +81,11 @@ export type InsightType =
   | 'lab_discordance'
   | 'trend_alert'
   | 'monthly_summary'
-  | 'report_narrative';
+  | 'report_narrative'
+  | 'insight_polish'
+  | 'ai_candidate'
+  | 'monitor_note'
+  | 'gap_coach';
 
 export type ReminderType = 'checkin' | 'medication' | 'lab_due';
 

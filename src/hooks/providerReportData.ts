@@ -18,6 +18,11 @@ import {
   daysBetweenISO,
   resolveEventLocalDate,
 } from '../utils/localDate';
+import { buildAiFactsPacket } from '../utils/aiFactsPacket';
+import { hashAiFactsPacket, readAiInsightCache, writeAiInsightCache } from '../utils/aiInsightsCache';
+import { invokeReportNarrative } from './useAiAssistant';
+import { runPatternEngine } from '../engine/patternEngine';
+import { isAiForbiddenCategory } from '../utils/aiForbiddenCategories';
 
 export interface ProviderReportSnapshot {
   checkins: SymptomCheckin[];
@@ -413,6 +418,11 @@ export interface CreateFreshProviderReportBlobDependencies {
     timezone: string,
   ) => Promise<ProviderReportSnapshot>;
   generateReport?: (data: ProviderReportData) => Promise<Blob>;
+  /** Injected in tests; default fetches/caches companion PDF narrative. */
+  loadCompanionNarrative?: (
+    params: CreateFreshProviderReportBlobParams,
+    snapshot: ProviderReportSnapshot,
+  ) => Promise<string | null>;
 }
 
 export async function createFreshProviderReportBlob(
@@ -421,8 +431,11 @@ export async function createFreshProviderReportBlob(
 ): Promise<Blob> {
   const loadSnapshot = deps.loadSnapshot ?? loadProviderReportSnapshot;
   const generateReportFn = deps.generateReport ?? generateProviderReport;
+  const loadNarrative = deps.loadCompanionNarrative ?? loadCompanionNarrativeForReport;
 
   const snapshot = await loadSnapshot(params.userId, params.dateRange, params.timezone);
+
+  const companionNarrative = await loadNarrative(params, snapshot);
 
   return generateReportFn({
     profile: params.profile,
@@ -436,5 +449,58 @@ export async function createFreshProviderReportBlob(
     dateRange: params.dateRange,
     timezone: params.timezone,
     includeSafeguarding: params.includeSafeguarding,
+    companionNarrative,
   });
+}
+
+async function loadCompanionNarrativeForReport(
+  params: CreateFreshProviderReportBlobParams,
+  snapshot: ProviderReportSnapshot,
+): Promise<string | null> {
+  try {
+    const checkinsInRange = snapshot.checkins.filter(
+      (c) => c.checkin_date >= params.dateRange.start && c.checkin_date <= params.dateRange.end,
+    );
+    const engine = runPatternEngine({
+      checkins: checkinsInRange,
+      extendedSymptoms: snapshot.extendedSymptomLogs,
+      medications: snapshot.medications,
+      medicationChanges: snapshot.medicationChanges,
+      administrations: snapshot.administrations,
+      labResults: snapshot.labResults,
+      profile: params.profile,
+      timezone: params.timezone,
+    });
+    const insights = engine.all.filter((i) => !isAiForbiddenCategory(i.category));
+    const facts = buildAiFactsPacket({
+      timezone: params.timezone,
+      profile: params.profile,
+      checkins: checkinsInRange,
+      medications: snapshot.medications,
+      medicationChanges: snapshot.medicationChanges,
+      labResults: snapshot.labResults,
+      insights,
+    });
+    const hash = hashAiFactsPacket(facts);
+    const cached = await readAiInsightCache<{ narrative: string }>(
+      params.userId,
+      'report_narrative',
+      hash,
+    );
+    if (cached?.narrative?.trim()) return cached.narrative.trim();
+
+    const result = await invokeReportNarrative(facts);
+    if (!result?.narrative?.trim()) return null;
+    void writeAiInsightCache(
+      params.userId,
+      'report_narrative',
+      hash,
+      { narrative: result.narrative },
+      7,
+    );
+    return result.narrative.trim();
+  } catch (e) {
+    console.warn('Companion narrative skipped:', e);
+    return null;
+  }
 }

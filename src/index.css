@@ -459,8 +459,23 @@
   position: absolute;
   inset: 0;
   border-radius: 9999px;
-  border: 2px solid var(--color-sage-300);
+  border: 2px solid var(--color-on-accent);
   animation: checkin-capsule-settle 1.2s ease-out 3;
+}
+
+/* Soft breathe — presence without alarm-red urgency. */
+@keyframes checkin-due-breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-sage-500) 35%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-sage-500) 0%, transparent);
+  }
+}
+
+.checkin-due-nav {
+  animation: checkin-due-breathe 2.4s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -481,5 +496,9 @@
   .checkin-capsule-settle {
     animation: none;
     display: none;
+  }
+
+  .checkin-due-nav {
+    animation: none;
   }
 }

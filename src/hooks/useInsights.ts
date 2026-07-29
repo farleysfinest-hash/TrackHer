@@ -281,6 +281,27 @@ export function useInsights() {
     administrationsLoading ||
     dismissalsLoading;
 
+  const aiContext = useMemo(
+    () => ({
+      checkins: engineCheckins,
+      medications,
+      medicationChanges,
+      labResults,
+      profile,
+      timezone,
+      insights,
+    }),
+    [
+      engineCheckins,
+      medications,
+      medicationChanges,
+      labResults,
+      profile,
+      timezone,
+      insights,
+    ],
+  );
+
   return {
     insights,
     primaryInsights,
@@ -291,6 +312,8 @@ export function useInsights() {
     isLoading,
     dismissInsight,
     extendedSymptoms,
+    /** Raw context for the AI facts packet (Ask about my data). */
+    aiContext,
   };
 }
 

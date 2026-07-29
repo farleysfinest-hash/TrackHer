@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Sparkles, X } from 'lucide-react';
+import { MessageCircle, Sparkles, X } from 'lucide-react';
 import type { Insight } from '../../engine/types';
 import { formatConfidenceLine } from '../../engine/confidence';
 import type { StageProfile } from '../../engine/stageProfile';
 import { markInsightAsViewed } from '../../utils/insightReadState';
+import { isAiForbiddenCategory } from '../../utils/aiForbiddenCategories';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
@@ -22,9 +23,16 @@ interface InsightCardProps {
   onDismiss?: (insightId: string) => void;
   /** Stage context for future insight copy — plumbing only in this slice. */
   stageProfile?: StageProfile | null;
+  onTalkAbout?: (insight: Insight) => void;
 }
 
-export function InsightCard({ insight, compact = false, onDismiss, stageProfile }: InsightCardProps) {
+export function InsightCard({
+  insight,
+  compact = false,
+  onDismiss,
+  stageProfile,
+  onTalkAbout,
+}: InsightCardProps) {
   const [showDetail, setShowDetail] = useState(false);
 
   useEffect(() => {
@@ -91,14 +99,27 @@ export function InsightCard({ insight, compact = false, onDismiss, stageProfile 
               </p>
             )}
 
-            <Button
-              variant="ghost"
-              size="sm"
-              className="mt-3 px-0"
-              onClick={() => setShowDetail(true)}
-            >
-              View supporting data
-            </Button>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="px-0"
+                onClick={() => setShowDetail(true)}
+              >
+                View supporting data
+              </Button>
+              {onTalkAbout && !isAiForbiddenCategory(insight.category) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="px-0 text-sage-600"
+                  onClick={() => onTalkAbout(insight)}
+                >
+                  <MessageCircle className="mr-1.5 h-4 w-4" />
+                  Talk about this
+                </Button>
+              )}
+            </div>
 
             {!compact && (
               <p className="mt-4 border-t border-sand-200 pt-3 text-xs text-sage-400">
@@ -114,6 +135,7 @@ export function InsightCard({ insight, compact = false, onDismiss, stageProfile 
         isOpen={showDetail}
         onClose={() => setShowDetail(false)}
         stageProfile={stageProfile}
+        onTalkAbout={onTalkAbout}
       />
     </>
   );

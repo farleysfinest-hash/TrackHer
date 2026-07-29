@@ -13,6 +13,7 @@ import {
   type SymptomDefinition,
 } from '../../types/symptoms';
 import { isMRSCanonicalKey } from '../../utils/checkinHelpers';
+import { useSymptomAiSuggestions } from '../../hooks/useSymptomAiSuggestions';
 
 interface SymptomManageModalProps {
   isOpen: boolean;
@@ -103,6 +104,12 @@ export function SymptomManageModal({
       (symptom) => symptom.isMRSCore || isMRSCanonicalKey(symptom.key),
     );
   }, [query, searching]);
+
+  const { suggestions: aiSuggestions, isLoading: aiSuggestLoading } = useSymptomAiSuggestions(
+    query,
+    availableSymptoms.length + mrsSearchHits.length,
+    isOpen && searching,
+  );
 
   const groups = useMemo(() => groupByBodySystem(availableSymptoms), [availableSymptoms]);
 
@@ -214,13 +221,38 @@ export function SymptomManageModal({
         )}
 
         {availableSymptoms.length === 0 ? (
-          <p className="rounded-lg border border-sand-200 px-4 py-6 text-center text-sm text-sage-500">
-            {searching
-              ? mrsSearchHits.length > 0
-                ? 'Looking for something else? Try Mood Swings or another everyday term.'
-                : 'No matching symptoms. Try a different everyday or clinical term.'
-              : 'No personal symptoms yet. Choose “Add from library” to pick the concerns you want to follow.'}
-          </p>
+          <div className="rounded-lg border border-sand-200 px-4 py-6 text-center text-sm text-sage-500">
+            <p>
+              {searching
+                ? mrsSearchHits.length > 0
+                  ? 'Looking for something else? Try Mood Swings or another everyday term.'
+                  : 'No matching symptoms. Try a different everyday or clinical term.'
+                : 'No personal symptoms yet. Choose “Add from library” to pick the concerns you want to follow.'}
+            </p>
+            {searching && aiSuggestLoading && (
+              <p className="mt-2 text-xs text-sage-400">Asking your companion…</p>
+            )}
+            {searching && aiSuggestions.length > 0 && (
+              <ul className="mt-3 space-y-1 text-left">
+                {aiSuggestions
+                  .filter((s) => !isMRSCanonicalKey(s.key))
+                  .map((s) => (
+                    <li key={s.key}>
+                      <button
+                        type="button"
+                        onClick={() => toggleTracked(s.key)}
+                        className="w-full rounded-lg border border-sand-200 px-3 py-2 text-left text-sm text-sage-700 hover:bg-sage-50"
+                      >
+                        <span className="font-medium">{s.label}</span>
+                        {s.reason ? (
+                          <span className="mt-0.5 block text-xs text-sage-400">{s.reason}</span>
+                        ) : null}
+                      </button>
+                    </li>
+                  ))}
+              </ul>
+            )}
+          </div>
         ) : (
           BODY_SYSTEM_ORDER.map((system) => {
             const symptoms = groups.get(system) ?? [];

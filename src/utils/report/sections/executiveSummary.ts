@@ -36,6 +36,7 @@ export interface ExecutiveSummaryInput {
   dateRange: DateRange;
   timezone: string;
   includeSafeguarding: boolean;
+  companionNarrative?: string | null;
 }
 
 function formatSampleSizeForDataLine(sampleSize: InsightSampleSize): string {
@@ -173,6 +174,32 @@ export function renderExecutiveSummaryPage(
     `${formatReportDateRange(dateRange.start, dateRange.end)} · ${checkinsInRange.length} check-in${checkinsInRange.length === 1 ? '' : 's'} in range`,
     y,
   );
+
+  const narrative = input.companionNarrative?.trim();
+  if (narrative) {
+    y = ensureSpace(ctx, y, 16);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'italic');
+    doc.setTextColor(...PDF_COLORS.textMuted);
+    doc.text(
+      'Companion narrative (drafted from logged data — not a clinical opinion)',
+      14,
+      y,
+    );
+    y += 6;
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...PDF_COLORS.text);
+    const narrativeLines: string[] = doc.splitTextToSize(narrative, 180);
+    for (const line of narrativeLines) {
+      y = ensureSpace(ctx, y, BODY_LINE_HEIGHT);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...PDF_COLORS.text);
+      doc.text(line, 14, y);
+      y += BODY_LINE_HEIGHT;
+    }
+    y += 8;
+  }
 
   if (mainInsights.length === 0) {
     doc.setFontSize(9);

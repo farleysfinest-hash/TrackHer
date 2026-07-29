@@ -11,6 +11,10 @@ import {
 } from 'lucide-react';
 import { useCheckinStatus } from '../../hooks/useCheckinStatus';
 import { CheckinDueTooltip } from './CheckinDueTooltip';
+import {
+  CHECKIN_DUE_NAV,
+  CheckinDueDot,
+} from './navDueStyles';
 
 const navItems: Array<{
   path: string;
@@ -107,11 +111,18 @@ export function MobileNav() {
               key={path}
               to={path}
               ref={isCheckin ? checkinRef : undefined}
+              aria-label={
+                showDue
+                  ? isDue
+                    ? `${label}, weekly check-in due`
+                    : `${label}, daily check-in due`
+                  : undefined
+              }
               className={({ isActive }) =>
                 [
                   'relative flex flex-col items-center gap-0.5 py-1 text-xs transition-colors',
                   showDue
-                    ? 'rounded-full bg-sage-100 px-3 font-medium text-sage-600'
+                    ? `${CHECKIN_DUE_NAV} px-3`
                     : [
                         'px-2 font-medium',
                         isActive ? 'text-sage-500' : 'text-sage-400',
@@ -122,7 +133,10 @@ export function MobileNav() {
               {showDue && runSettle && (
                 <span className="checkin-capsule-settle" aria-hidden />
               )}
-              <Icon className="h-5 w-5" />
+              <span className="relative">
+                <Icon className="h-5 w-5" />
+                {showDue && <CheckinDueDot />}
+              </span>
               <span>{label}</span>
             </NavLink>
           );

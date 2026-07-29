@@ -12,6 +12,11 @@ import { Logo } from '../ui/Logo';
 import { LogoMark } from '../ui/LogoMark';
 import { APP_VERSION, SUPPORT_EMAIL } from '../../lib/constants';
 import { useCheckinStatus } from '../../hooks/useCheckinStatus';
+import {
+  CHECKIN_DUE_NAV,
+  CheckinDueDot,
+  checkinDueWord,
+} from './navDueStyles';
 
 const navItems: Array<{
   path: string;
@@ -48,16 +53,24 @@ export function Sidebar() {
           const Icon = resolveIcon ? resolveIcon(needsCheckin) : icon;
           const isCheckin = path === '/checkin';
           const showDue = isCheckin && needsCheckin;
+          const dueWord = checkinDueWord();
 
           return (
             <NavLink
               key={path}
               to={path}
+              aria-label={
+                showDue
+                  ? isDue
+                    ? `${label}, weekly check-in due`
+                    : `${label}, daily check-in due`
+                  : undefined
+              }
               className={({ isActive }) =>
                 [
                   'flex items-center gap-3 py-2.5 text-sm transition-colors',
                   showDue
-                    ? 'rounded-full bg-sage-100 px-4 font-medium text-sage-600'
+                    ? `${CHECKIN_DUE_NAV} px-4`
                     : [
                         'rounded-lg px-3 font-medium',
                         isActive
@@ -67,8 +80,11 @@ export function Sidebar() {
                 ].join(' ')
               }
             >
-              <Icon className="h-5 w-5" />
-              {label}
+              <span className="relative shrink-0">
+                <Icon className="h-5 w-5" />
+                {showDue && <CheckinDueDot />}
+              </span>
+              {showDue ? dueWord : label}
             </NavLink>
           );
         })}

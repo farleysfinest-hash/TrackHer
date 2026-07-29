@@ -75,7 +75,11 @@ describe('createFreshProviderReportBlob', () => {
 
     const blob = await createFreshProviderReportBlob(
       { userId: USER_ID, profile, dateRange, timezone, includeSafeguarding: true },
-      { loadSnapshot: loader, generateReport },
+      {
+        loadSnapshot: loader,
+        generateReport,
+        loadCompanionNarrative: async () => null,
+      },
     );
 
     expect(loader).toHaveBeenCalledOnce();
@@ -92,6 +96,7 @@ describe('createFreshProviderReportBlob', () => {
       dateRange,
       timezone,
       includeSafeguarding: true,
+      companionNarrative: null,
     });
     expect(blob).toBe(expectedBlob);
   });
@@ -126,8 +131,16 @@ describe('createFreshProviderReportBlob', () => {
       includeSafeguarding: false,
     };
 
-    await createFreshProviderReportBlob(params, { loadSnapshot: loader, generateReport });
-    await createFreshProviderReportBlob(params, { loadSnapshot: loader, generateReport });
+    await createFreshProviderReportBlob(params, {
+      loadSnapshot: loader,
+      generateReport,
+      loadCompanionNarrative: async () => null,
+    });
+    await createFreshProviderReportBlob(params, {
+      loadSnapshot: loader,
+      generateReport,
+      loadCompanionNarrative: async () => null,
+    });
 
     expect(loader).toHaveBeenCalledTimes(2);
     expect(generateReport.mock.calls[1]![0].checkins).toBe(snapshotB.checkins);
@@ -152,7 +165,11 @@ describe('createFreshProviderReportBlob', () => {
           timezone: 'America/Los_Angeles',
           includeSafeguarding: false,
         },
-        { loadSnapshot: loader, generateReport },
+        {
+          loadSnapshot: loader,
+          generateReport,
+          loadCompanionNarrative: async () => null,
+        },
       ),
     ).rejects.toBeInstanceOf(ProviderReportDataLoadError);
     expect(generateReport).not.toHaveBeenCalled();

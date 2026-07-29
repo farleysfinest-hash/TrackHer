@@ -2,9 +2,12 @@ import type { Insight } from '../../engine/types';
 import type { StageProfile } from '../../engine/stageProfile';
 import { Modal } from '../ui/Modal';
 import { Badge } from '../ui/Badge';
+import { Button } from '../ui/Button';
 import { formatDateLong } from '../../utils/formatters';
 import { getCategoryLabel, getPriorityLabel, getPriorityBadgeVariant } from '../../utils/insightHelpers';
 import { formatConfidenceLine } from '../../engine/confidence';
+import { isAiForbiddenCategory } from '../../utils/aiForbiddenCategories';
+import { MessageCircle } from 'lucide-react';
 
 interface InsightDetailModalProps {
   insight: Insight;
@@ -12,6 +15,7 @@ interface InsightDetailModalProps {
   onClose: () => void;
   /** Stage context for future insight copy — plumbing only in this slice. */
   stageProfile?: StageProfile | null;
+  onTalkAbout?: (insight: Insight) => void;
 }
 
 export function InsightDetailModal({
@@ -19,6 +23,7 @@ export function InsightDetailModal({
   isOpen,
   onClose,
   stageProfile,
+  onTalkAbout,
 }: InsightDetailModalProps) {
   void stageProfile;
   const { supportingData } = insight;
@@ -137,6 +142,20 @@ export function InsightDetailModal({
               {insight.actionSuggestion}
             </p>
           </section>
+        )}
+
+        {onTalkAbout && !isAiForbiddenCategory(insight.category) && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              onTalkAbout(insight);
+              onClose();
+            }}
+          >
+            <MessageCircle className="mr-1.5 h-4 w-4" />
+            Talk about this
+          </Button>
         )}
 
         <p className="text-xs text-sage-400">{insight.disclaimer}</p>

@@ -22,6 +22,7 @@ import {
   resolveQuickLogLoggedAt,
   type QuickLogTimeOptionId,
 } from '../../utils/quickLogSheetHelpers';
+import { useSymptomAiSuggestions } from '../../hooks/useSymptomAiSuggestions';
 
 const TRIGGER_TAGS: { id: QuickLogTriggerTag; label: string }[] = [
   { id: 'stress', label: 'Stress' },
@@ -112,6 +113,11 @@ export function QuickLogSheet() {
   const searchResults = useMemo(
     () => (searchQuery.trim() ? searchSymptomCatalog(searchQuery, 20) : []),
     [searchQuery],
+  );
+  const { suggestions: aiSuggestions, isLoading: aiSuggestLoading } = useSymptomAiSuggestions(
+    searchQuery,
+    searchResults.length,
+    searchOpen,
   );
   const selectedIsMrs =
     selectedSymptomId !== null && isMRSCanonicalKey(selectedSymptomId);
@@ -396,7 +402,32 @@ export function QuickLogSheet() {
                 {searchQuery.trim() && (
                   <div className="max-h-52 overflow-y-auto rounded-lg border border-sand-200">
                     {searchResults.length === 0 ? (
-                      <p className="px-3 py-4 text-sm text-sage-400">No symptoms match.</p>
+                      <div className="px-3 py-3">
+                        <p className="text-sm text-sage-400">No exact catalog match.</p>
+                        {aiSuggestLoading && (
+                          <p className="mt-2 text-xs text-sage-400">Asking your companion…</p>
+                        )}
+                        {aiSuggestions.length > 0 && (
+                          <ul className="mt-2 space-y-1">
+                            {aiSuggestions.map((s) => (
+                              <li key={s.key}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSelectSymptom(s.key)}
+                                  className="w-full rounded-lg px-2 py-2 text-left text-sm hover:bg-sand-50"
+                                >
+                                  <span className="font-medium text-sage-800">{s.label}</span>
+                                  {s.reason ? (
+                                    <span className="mt-0.5 block text-xs text-sage-400">
+                                      {s.reason}
+                                    </span>
+                                  ) : null}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
                     ) : (
                       <ul>
                         {searchResults.map((s) => {
@@ -426,6 +457,26 @@ export function QuickLogSheet() {
                         })}
                       </ul>
                     )}
+                    {searchResults.length > 0 &&
+                      searchResults.length < 2 &&
+                      aiSuggestions.length > 0 && (
+                        <div className="border-t border-sand-100 px-3 py-2">
+                          <p className="mb-1 text-xs text-sage-400">Also maybe…</p>
+                          <ul>
+                            {aiSuggestions.map((s) => (
+                              <li key={`ai-${s.key}`}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSelectSymptom(s.key)}
+                                  className="w-full py-2 text-left text-sm text-sage-700 hover:bg-sand-50"
+                                >
+                                  {s.label}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                   </div>
                 )}
               </div>

@@ -40,6 +40,8 @@ export interface ProviderReportData {
   dateRange: DateRange;
   timezone: string;
   includeSafeguarding: boolean;
+  /** Optional companion-drafted prose for the executive summary. */
+  companionNarrative?: string | null;
 }
 
 export async function generateProviderReport(data: ProviderReportData): Promise<Blob> {
@@ -73,6 +75,7 @@ export async function generateProviderReport(data: ProviderReportData): Promise<
     dateRange: data.dateRange,
     timezone: data.timezone,
     includeSafeguarding: data.includeSafeguarding,
+    companionNarrative: data.companionNarrative ?? null,
   });
   addNewPage(ctx);
   renderPatientSummaryPage(
