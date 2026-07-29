@@ -809,6 +809,7 @@ export function buildCompanionScriptReply(
       `I’m sorry you’re carrying that — not being believed about your body is exhausting.`,
       patternBits || medLine,
       `Your logs can help: share a short report and say you need support, not debate.`,
+      `On Insights, open “Preparing for an appointment?” for a short visit-prep pack you can bring.`,
     ),
   };
 }

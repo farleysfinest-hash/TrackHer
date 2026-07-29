@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import type { AiFactsPacket } from '../utils/aiFactsPacket';
+import { clampVisitPrepPack, type VisitPrepPack } from '../utils/aiVisitPrep';
 
 export type AiChatTurn = { role: 'user' | 'assistant'; content: string };
 
@@ -10,7 +11,8 @@ export type AiAction =
   | 'monitor'
   | 'report_narrative'
   | 'symptom_translate'
-  | 'explain_insight';
+  | 'explain_insight'
+  | 'visit_prep';
 
 interface ChatResult {
   reply: string;
@@ -147,6 +149,19 @@ export async function invokeExplainInsight(
   });
   if (error || !data || typeof data.reply !== 'string') return null;
   return { reply: data.reply, model: data.model };
+}
+
+export async function invokeVisitPrep(
+  facts: AiFactsPacket,
+  history?: AiChatTurn[],
+): Promise<VisitPrepPack | null> {
+  const { data, error } = await invokeAiAssistant<VisitPrepPack>({
+    action: 'visit_prep',
+    facts,
+    history,
+  });
+  if (error || !data) return null;
+  return clampVisitPrepPack(data);
 }
 
 export function useAiAssistant() {

@@ -8,6 +8,7 @@ import { InsightsList } from '../components/insights/InsightsList';
 import { AskDataSheet, type AskDataSeed } from '../components/insights/AskDataSheet';
 import { AiNoticedList } from '../components/insights/AiNoticedList';
 import { CompanionMonitorCard } from '../components/insights/CompanionMonitorCard';
+import { VisitPrepCard } from '../components/insights/VisitPrepCard';
 import {
   GapCoachCard,
   buildGapCoachMessage,
@@ -133,6 +134,8 @@ export function InsightsPage() {
         seed={askSeed}
         onSeedConsumed={() => setAskSeed(null)}
       />
+
+      <VisitPrepCard context={aiContext} />
 
       {monitorNote && (
         <CompanionMonitorCard note={monitorNote.note} gapHint={monitorNote.gapHint} />

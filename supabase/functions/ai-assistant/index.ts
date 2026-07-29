@@ -40,7 +40,8 @@ type AiAction =
   | 'monitor'
   | 'report_narrative'
   | 'symptom_translate'
-  | 'explain_insight';
+  | 'explain_insight'
+  | 'visit_prep';
 
 type RequestBody = {
   action?: AiAction;
@@ -101,6 +102,8 @@ Deno.serve(async (req) => {
         return await handleNarrative(openaiKey, user.id, body);
       case 'symptom_translate':
         return await handleTranslate(openaiKey, user.id, body);
+      case 'visit_prep':
+        return await handleVisitPrep(openaiKey, user.id, body);
       default:
         return json({ error: `Unsupported action: ${action}` }, 400);
     }
@@ -354,6 +357,66 @@ Write a 2–4 paragraph plain-language story of her recent tracking for a clinic
   });
   if (reply.error) return json({ error: reply.error }, reply.status ?? 502);
   return json({ narrative: reply.text, model: MODEL, userId });
+}
+
+async function handleVisitPrep(openaiKey: string, userId: string, body: RequestBody) {
+  const factsJson = requireFacts(body.facts);
+  if (typeof factsJson !== 'string') return factsJson;
+  const history = sanitizeHistory(body.history);
+
+  const historyBlock =
+    history.length > 0
+      ? `\n\nRECENT_CHAT (optional context only — still ground in FACTS_PACKET):\n${JSON.stringify(history)}`
+      : '';
+
+  const raw = await complete(openaiKey, {
+    system: `${COMPANION_BASE}
+Return ONLY valid JSON (no markdown):
+{"summary":"...","symptomsToRaise":["..."],"questions":["..."],"watchSince":"...or null"}
+
+You are drafting a visit-prep pack she can bring to a clinician appointment.
+- summary: 2–3 sentences of her recent story, grounded only in the facts packet.
+- symptomsToRaise: up to 5 items; each must cite a packet fact (date + score or dose change). No invented numbers.
+- questions: up to 4 clinician questions in her voice. Never suggest dose amounts — prefer "what range are we aiming for" style.
+- watchSince: one line if a recent dose change deserves follow-up; otherwise null.
+Never diagnose. Never prescribe.`,
+    messages: [
+      {
+        role: 'user',
+        content: `FACTS_PACKET:\n${factsJson}${historyBlock}\n\nDraft the visit prep pack.`,
+      },
+    ],
+    temperature: 0.35,
+    maxTokens: 700,
+  });
+  if (raw.error) return json({ error: raw.error }, raw.status ?? 502);
+
+  const parsed = parseJsonObject(raw.text);
+  const summary =
+    typeof parsed?.summary === 'string' && parsed.summary.trim()
+      ? parsed.summary.trim().slice(0, 800)
+      : '';
+  if (!summary) {
+    return json({ error: 'Could not draft visit prep' }, 502);
+  }
+  const symptomsToRaise = Array.isArray(parsed?.symptomsToRaise)
+    ? parsed.symptomsToRaise
+        .filter((s): s is string => typeof s === 'string' && s.trim().length > 0)
+        .map((s) => s.trim().slice(0, 240))
+        .slice(0, 5)
+    : [];
+  const questions = Array.isArray(parsed?.questions)
+    ? parsed.questions
+        .filter((s): s is string => typeof s === 'string' && s.trim().length > 0)
+        .map((s) => s.trim().slice(0, 240))
+        .slice(0, 4)
+    : [];
+  const watchSince =
+    typeof parsed?.watchSince === 'string' && parsed.watchSince.trim()
+      ? parsed.watchSince.trim().slice(0, 240)
+      : null;
+
+  return json({ summary, symptomsToRaise, questions, watchSince, model: MODEL, userId });
 }
 
 async function handleTranslate(openaiKey: string, userId: string, body: RequestBody) {
