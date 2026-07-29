@@ -57,7 +57,7 @@ export interface TranslateResult {
   model?: string;
 }
 
-async function invokeAiAssistant<T extends Record<string, unknown>>(
+async function invokeAiAssistant<T>(
   body: Record<string, unknown>,
 ): Promise<{ data: T | null; error: string | null }> {
   try {

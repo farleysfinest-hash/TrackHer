@@ -32,7 +32,7 @@ export function useSymptomAiSuggestions(
       const catalog = SYMPTOM_CATALOG.slice(0, 80).map((s) => ({
         key: s.key,
         label: s.label,
-        searchTerms: s.searchTerms.slice(0, 6),
+        searchTerms: (s.searchTerms ?? []).slice(0, 6),
       }));
       void invokeSymptomTranslate(trimmed, catalog).then((result) => {
         if (cancelled) return;

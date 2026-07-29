@@ -170,12 +170,12 @@ Never invent a personal dose increase, lab target, diagnosis, or emergency clear
   return json({ reply: reply.text, model: MODEL, userId });
 }
 
-const RISK_TIER_SYSTEM = `You label ONE message from a woman chatting in a menopause-tracking app for suicide/self-harm risk. Typos, slang, euphemisms ("unalive", "never wake up"), and non-English text all count. Recent turns are context only — label the LAST user message.
+const RISK_TIER_SYSTEM = `You label ONE message from a woman chatting in a menopause-tracking app for suicide/self-harm risk. Typos, slang, euphemisms ("unalive", "never wake up"), and non-English text all count. Recent turns give context — label the LAST user message in light of them.
 Reply with exactly one word:
-imminent — intent to act with a timeframe, method, plan, or "going to do it"
-ideation — wants to die / suicidal or self-harm thoughts, no plan or timeframe stated
-decline — serious low mood, hopelessness, despair, without a stated death wish
-none — everything else, including figures of speech like "this heat is killing me"`;
+imminent — intent to act with a timeframe, method, plan, "going to do it", or asking what amount of medication would harm/kill her
+ideation — wants to die / suicidal or self-harm thoughts, no plan or timeframe stated. ALSO use this when earlier turns show she voiced suicidal thoughts and the last message continues that thread (pushback like "stop giving me hotlines", "just talk to me")
+decline — serious low mood, hopelessness, despair without a stated death wish; or PAST suicidal feelings she says have eased ("last month I wanted to end it but I'm doing better")
+none — everything else: figures of speech ("this heat is killing me"), and risk that is about someone ELSE (her child, friend — not the writer herself)`;
 
 async function classifyRiskTier(
   openaiKey: string,

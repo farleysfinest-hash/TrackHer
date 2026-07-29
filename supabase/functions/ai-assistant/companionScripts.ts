@@ -25,7 +25,8 @@ export type ScriptShape =
   | 'staging'
   | 'comparison'
   | 'thin_or_broken'
-  | 'life_support';
+  | 'life_support'
+  | 'loved_one_crisis';
 
 export type CrisisTier = 'mental_decline' | 'crisis' | 'crisis_imminent';
 
@@ -123,20 +124,38 @@ export function classifyCrisisTier(message: string): CrisisTier | null {
   const aboutToAct =
     /\b(going to|gonna|about to) do it\b/.test(m) ||
     /\b(have a plan|wrote a note|said goodbye)\b/.test(m);
-  const imminent = hasTimeframe || hasMethod || aboutToAct;
+  // Asking what amount of her meds would harm her = method-seeking, not a dose question.
+  const overdoseSeek =
+    /\b(how (many|much)|max(imum)?|enough)\b/.test(m) &&
+    /\b(pills?|tablets?|dose|mg|mcg|patches?)\b/.test(m) &&
+    /\b(to (die|not wake up|never wake up|end it|end my life|kill)|would it take|enough to|overdose|(that|which) would (hurt|harm|kill) me)\b/.test(
+      m,
+    );
+  const imminent = hasTimeframe || hasMethod || aboutToAct || overdoseSeek;
 
   const ideation =
-    /\b(kill my ?self|end my life|want to die|suicid|hurt myself|self[- ]?harm|unalive)\b/.test(
+    /\b(kil+ my ?self|end my life|want to die|suicid|hurt myself|self[- ]?harm|unalive)\b/.test(
       m,
     ) ||
     /\b(don'?t|dont) want to (be )?(alive|wake up)\b/.test(m) ||
     /\b(better off|be better) without me\b/.test(m) ||
     /\bno reason to (live|keep going)\b/.test(m) ||
+    /\bthink(ing)? about (ending it( all)?|kil+ing my ?self|suicide|not being here)\b/.test(m) ||
+    /\b(want(ed)? to|gonna|going to) end it( all)?\b/.test(m) ||
     /\bi('m| am) going to (kill|end)\b/.test(m);
 
-  if (imminent && (ideation || /\b(do it|kill|end|die|gun)\b/.test(m))) {
+  if (imminent && (ideation || overdoseSeek || /\b(do it|kill|end|die|gun)\b/.test(m))) {
     return 'crisis_imminent';
   }
+
+  // Past-tense SI she says has eased ("last month i wanted to end it all but im doing
+  // better now") — honor the recovery, don't blast the full crisis script at it.
+  const recovery =
+    /\b(doing better|better now|feeling better|i'?m (ok|okay) now|not any ?more|no longer)\b/.test(
+      m,
+    ) && /\b(want(ed)? to|used to|last (week|month|year)|back then)\b/.test(m);
+  if (ideation && recovery) return 'mental_decline';
+
   if (ideation) return 'crisis';
 
   // Mental decline without active SI — still serious, different script
@@ -167,6 +186,16 @@ export function classifyCompanionShape(message: string): ScriptShape | null {
   const hormoneish =
     estrogen ||
     /\b(dose|hrt|patch|cream|gel|progesterone|prometrium|testosterone)\b/.test(m);
+
+  // Someone SHE loves is at risk — check before her own crisis tiers so
+  // "my daughter wants to die" never gets a script addressed to the wrong person.
+  if (
+    /\b(my|our) (daughter|son|kid|child|teen(ager)?|friend|sister|brother|mom|mother|dad|father|husband|wife|partner|niece|nephew)\b[\s\S]{0,60}\b(kil+ (her|him|them)self|suicid|want(s|ed)? to die|end (her|his|their) life|hurt(s|ing)? (her|him|them)self)\b/.test(
+      m,
+    )
+  ) {
+    return 'loved_one_crisis';
+  }
 
   const crisisTier = classifyCrisisTier(message);
   if (crisisTier === 'crisis_imminent') return 'crisis_imminent';
@@ -414,9 +443,11 @@ function buildCrisisReply(
   const m = normalize(message);
   const namedMethod = /\b(gun|rifle|pistol|firearm)\b/.test(m)
     ? 'a firearm'
-    : /\b(tonight|today|right now)\b/.test(m)
-      ? 'a timeframe tonight/today'
-      : null;
+    : /\b(pills?|tablets?|overdose)\b/.test(m)
+      ? 'an overdose'
+      : /\b(tonight|today|right now)\b/.test(m)
+        ? 'a timeframe tonight/today'
+        : null;
 
   // Alternate the closing line by reply count so even repeated identical messages
   // never get two identical consecutive replies.
@@ -486,7 +517,9 @@ function buildMentalDeclineReply(message: string, facts: FactsLite): string {
   const trend = mrsTrendLine(facts);
   // Mirror HER words — never quote a phrase she didn’t type.
   const mDecline = normalize(message);
-  const opener = /can'?t fix/.test(mDecline)
+  const opener = /\b(doing better|better now|feeling better)\b/.test(mDecline)
+    ? `It means a lot that you told me where you’ve been — and I’m glad things feel a little lighter than they did.`
+    : /can'?t fix/.test(mDecline)
     ? `I’m sorry you’re in this much pain — “I can’t fix this” is a heavy place to sit.`
     : /hopeless/.test(mDecline)
       ? `Hopeless is a heavy word to be carrying — I’m glad you told me instead of holding it alone.`
@@ -538,7 +571,21 @@ export function buildCompanionScriptReply(
   opts?: ScriptBuildOpts,
 ): { reply: string; shape: ScriptShape } | null {
   const shape = classifyCompanionShape(message);
-  if (!shape) return null;
+  if (!shape) {
+    // "stop giving me hotlines just talk to me" after a crisis reply has no crisis
+    // keywords — but dropping out of crisis mode into a data dump here is the worst
+    // possible move. Stay in the conversation she's actually having.
+    const priorCrisis = priorCrisisReplyCount(opts?.history);
+    if (
+      priorCrisis > 0 &&
+      /\b(stop (giving|sending|telling)|no (more )?hotlines?|not (another|a) hotline|just talk to me|talk to me\b|be real with me|you'?re not listening|that doesn'?t help)\b/.test(
+        normalize(message),
+      )
+    ) {
+      return { shape: 'crisis', reply: buildCrisisReply('crisis', message, opts?.history) };
+    }
+    return null;
+  }
 
   const demand = opts?.demand ?? isDemandPush(message);
   const history = opts?.history;
@@ -567,6 +614,18 @@ export function buildCompanionScriptReply(
 
   if (shape === 'mental_decline') {
     return { shape, reply: buildMentalDeclineReply(message, facts) };
+  }
+
+  if (shape === 'loved_one_crisis') {
+    return {
+      shape,
+      reply: join(
+        `That’s a frightening thing to hear from someone you love — and you did the right thing by taking it seriously.`,
+        `Ask them directly if they’re thinking of acting on it, stay close, and if you safely can, remove anything they could use to hurt themselves.`,
+        `988 (call or text) supports worried family and friends too — they’ll coach you through what to say. If they’re in immediate danger, call your local emergency number.`,
+        `You don’t have to handle this perfectly. Staying with them and getting trained help involved is the win.`,
+      ),
+    };
   }
 
   if (shape === 'med_effect') {
