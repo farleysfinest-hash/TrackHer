@@ -18,6 +18,7 @@ import {
 } from '../../utils/aiPartnerLetter';
 import { useAuthStore } from '../../stores/authStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useKeyboardBottomInset } from '../../hooks/useKeyboardBottomInset';
 
 interface PartnerLetterSheetProps {
   context: AiFactsPacketInput;
@@ -33,6 +34,7 @@ export function PartnerLetterSheet({ context, open, onClose }: PartnerLetterShee
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
+  const keyboardInset = useKeyboardBottomInset();
   useFocusTrap(open, sheetRef, onClose);
 
   const facts = useMemo(() => buildAiFactsPacket(context), [context]);
@@ -106,7 +108,10 @@ export function PartnerLetterSheet({ context, open, onClose }: PartnerLetterShee
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+      style={keyboardInset > 0 ? { paddingBottom: keyboardInset } : undefined}
+    >
       <button
         type="button"
         className="absolute inset-0 bg-sage-900/40"

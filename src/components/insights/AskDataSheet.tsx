@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { MessageCircle, X } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { useAiAssistant, type AiChatTurn } from '../../hooks/useAiAssistant';
@@ -7,6 +8,8 @@ import {
   type AiFactsPacketInput,
 } from '../../utils/aiFactsPacket';
 import type { Insight } from '../../engine/types';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useKeyboardBottomInset } from '../../hooks/useKeyboardBottomInset';
 
 export interface AskDataSeed {
   message?: string;
@@ -51,6 +54,9 @@ export function AskDataSheet({
   const seedHandled = useRef<string | null>(null);
   /** When set, the next Send uses explain_insight instead of free chat. */
   const pendingInsightRef = useRef<AskDataSeed['insight'] | null>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const keyboardInset = useKeyboardBottomInset();
 
   const facts = useMemo(() => buildAiFactsPacket(context), [context]);
   const thinData = facts.mrs.length < 1 && facts.engineInsights.length === 0;
@@ -73,6 +79,8 @@ export function AskDataSheet({
     seedHandled.current = null;
   };
 
+  useFocusTrap(open, sheetRef, closeSheet);
+
   // Talk about this / AI noticed: open sheet and prefill only — never auto-send.
   useEffect(() => {
     if (!seed) return;
@@ -88,6 +96,12 @@ export function AskDataSheet({
     onSeedConsumed?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to new seed payloads
   }, [seed]);
+
+  // Keep the composer above the keyboard when it opens.
+  useEffect(() => {
+    if (!open || keyboardInset <= 0) return;
+    inputRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [open, keyboardInset]);
 
   const send = async () => {
     const message = input.trim();
@@ -113,26 +127,12 @@ export function AskDataSheet({
     }
   };
 
-  return (
-    <>
-      {!hideLauncher && (
-        <button
-          type="button"
-          onClick={openFresh}
-          className="flex w-full items-center gap-3 rounded-xl border border-sand-200 bg-sand-50 px-4 py-3 text-left transition-colors hover:border-sage-300 hover:bg-sage-50/40"
+  const sheet = open
+    ? createPortal(
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+          style={keyboardInset > 0 ? { paddingBottom: keyboardInset } : undefined}
         >
-          <MessageCircle className="h-5 w-5 shrink-0 text-sage-500" />
-          <div>
-            <p className="text-sm font-medium text-sage-800">Ask about your data</p>
-            <p className="text-xs text-sage-500">
-              A gentle companion grounded in your check-ins, meds, and labs
-            </p>
-          </div>
-        </button>
-      )}
-
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
           <button
             type="button"
             className="absolute inset-0 bg-black/40"
@@ -140,12 +140,20 @@ export function AskDataSheet({
             onClick={closeSheet}
           />
           <div
+            ref={sheetRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="ask-data-title"
-            className="relative z-10 flex max-h-[min(90vh,640px)] w-full max-w-lg flex-col rounded-t-2xl border border-sand-200 bg-sand-50 shadow-2xl sm:m-4 sm:rounded-2xl"
+            tabIndex={-1}
+            className="relative z-10 flex w-full max-w-lg flex-col rounded-t-2xl border border-sand-200 bg-sand-50 shadow-2xl outline-none sm:m-4 sm:rounded-2xl"
+            style={{
+              maxHeight:
+                keyboardInset > 0
+                  ? `min(90vh, calc(640px - ${keyboardInset}px))`
+                  : 'min(90vh, 640px)',
+            }}
           >
-            <div className="flex items-center justify-between border-b border-sand-100 px-5 py-4">
+            <div className="flex shrink-0 items-center justify-between border-b border-sand-100 px-5 py-4">
               <h2 id="ask-data-title" className="font-display text-lg text-sage-800">
                 Ask about your data
               </h2>
@@ -159,7 +167,7 @@ export function AskDataSheet({
               </button>
             </div>
 
-            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-4">
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-5 py-4">
               <p className="text-xs leading-relaxed text-sage-500">
                 Answers use your logged TrackHer data only — not medical advice.
               </p>
@@ -175,19 +183,18 @@ export function AskDataSheet({
                     'Has my sleep or energy shifted with my symptoms?',
                     'Help me put words to what I’d tell my doctor.',
                   ].map((suggestion) => (
-                      <button
-                        key={suggestion}
-                        type="button"
-                        className="block w-full rounded-lg border border-sand-200 px-3 py-2 text-left text-sm text-sage-700 hover:bg-sage-50"
-                        onClick={() => {
-                          pendingInsightRef.current = null;
-                          setInput(suggestion);
-                        }}
-                      >
-                        {suggestion}
-                      </button>
-                    ),
-                  )}
+                    <button
+                      key={suggestion}
+                      type="button"
+                      className="block w-full rounded-lg border border-sand-200 px-3 py-2 text-left text-sm text-sage-700 hover:bg-sage-50"
+                      onClick={() => {
+                        pendingInsightRef.current = null;
+                        setInput(suggestion);
+                      }}
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
                 </div>
               )}
               {turns.map((turn, i) => (
@@ -212,12 +219,18 @@ export function AskDataSheet({
               )}
             </div>
 
-            <div className="border-t border-sand-100 px-5 py-4">
+            <div className="shrink-0 border-t border-sand-100 bg-sand-50 px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
               <div className="flex gap-2">
                 <input
+                  ref={inputRef}
                   type="text"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
+                  onFocus={() => {
+                    window.setTimeout(() => {
+                      inputRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                    }, 50);
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') void send();
                   }}
@@ -235,8 +248,29 @@ export function AskDataSheet({
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
+      )
+    : null;
+
+  return (
+    <>
+      {!hideLauncher && (
+        <button
+          type="button"
+          onClick={openFresh}
+          className="flex w-full items-center gap-3 rounded-xl border border-sand-200 bg-sand-50 px-4 py-3 text-left transition-colors hover:border-sage-300 hover:bg-sage-50/40"
+        >
+          <MessageCircle className="h-5 w-5 shrink-0 text-sage-500" />
+          <div>
+            <p className="text-sm font-medium text-sage-800">Ask about your data</p>
+            <p className="text-xs text-sage-500">
+              A gentle companion grounded in your check-ins, meds, and labs
+            </p>
+          </div>
+        </button>
       )}
+      {sheet}
     </>
   );
 }
