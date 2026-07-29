@@ -26,7 +26,7 @@ export function clampVisitDebriefPack(raw: unknown): VisitDebriefPack | null {
           (f): f is { label?: unknown; timeframe?: unknown; done?: unknown } =>
             !!f && typeof f === 'object',
         )
-        .map((f) => {
+        .map((f): VisitDebriefFollowUp | null => {
           const label =
             typeof f.label === 'string' && f.label.trim()
               ? f.label.trim().slice(0, 200)

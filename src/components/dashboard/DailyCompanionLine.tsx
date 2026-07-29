@@ -35,7 +35,7 @@ export function DailyCompanionLine({ context }: DailyCompanionLineProps) {
   const factsHash = useMemo(() => hashAiFactsPacket(facts), [facts]);
   const skip = shouldSkipDailyLine({
     mrsCount: facts.mrs.length,
-    pulseCount: facts.pulseRecent.length,
+    pulseCount: facts.pulseRecent.daysSampled,
     medCount: facts.medications.length,
   });
 

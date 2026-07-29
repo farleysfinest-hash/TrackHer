@@ -53,7 +53,7 @@ export function VisitPrepCard({ context }: VisitPrepCardProps) {
 
   const facts = useMemo(() => buildAiFactsPacket(context), [context]);
   const dataHash = useMemo(() => hashAiFactsPacket(facts), [facts]);
-  const thin = facts.mrs.length < 1 && facts.pulseRecent.length < 1 && facts.medications.length < 1;
+  const thin = facts.mrs.length < 1 && facts.pulseRecent.daysSampled < 1 && facts.medications.length < 1;
 
   const loadPack = useCallback(async () => {
     if (!userId || thin) return;

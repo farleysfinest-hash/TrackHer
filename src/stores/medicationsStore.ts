@@ -309,7 +309,7 @@ export const useMedicationsStore = create<MedicationsState>((set, get) => ({
     if (update.doseChanged) {
       const timezone = getResolvedTimezone(useAuthStore.getState().profile?.timezone);
       void loadMinimalAiContextForMonitor(userId, timezone).then((ctx) => {
-        if (ctx) triggerAiDoseWatch(ctx, effectiveDate, currentMed.name);
+        if (ctx) triggerAiDoseWatch(ctx, effectiveDate, currentMed.medication_name);
       });
     }
 

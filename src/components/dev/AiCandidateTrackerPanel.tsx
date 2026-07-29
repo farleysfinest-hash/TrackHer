@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
-import { useAuthStore } from '../stores/authStore';
+import { supabase } from '../../lib/supabase';
+import { useAuthStore } from '../../stores/authStore';
 
 interface CandidateFreqRow {
   candidate_hash: string;
