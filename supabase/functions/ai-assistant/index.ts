@@ -41,7 +41,8 @@ type AiAction =
   | 'report_narrative'
   | 'symptom_translate'
   | 'explain_insight'
-  | 'visit_prep';
+  | 'visit_prep'
+  | 'journal_extract';
 
 type RequestBody = {
   action?: AiAction;
@@ -51,6 +52,7 @@ type RequestBody = {
   insight?: { id?: string; title?: string; body?: string; category?: string };
   freeText?: string;
   catalog?: Array<{ key: string; label: string; searchTerms?: string[] }>;
+  medications?: string[];
 };
 
 Deno.serve(async (req) => {
@@ -104,6 +106,8 @@ Deno.serve(async (req) => {
         return await handleTranslate(openaiKey, user.id, body);
       case 'visit_prep':
         return await handleVisitPrep(openaiKey, user.id, body);
+      case 'journal_extract':
+        return await handleJournalExtract(openaiKey, user.id, body);
       default:
         return json({ error: `Unsupported action: ${action}` }, 400);
     }
@@ -471,6 +475,94 @@ Map her everyday phrase to 1–5 catalog entries. key MUST be copied exactly fro
     : [];
 
   return json({ suggestions, model: MODEL, userId });
+}
+
+async function handleJournalExtract(openaiKey: string, userId: string, body: RequestBody) {
+  const freeText = body.freeText?.trim();
+  if (!freeText) return json({ error: 'freeText is required' }, 400);
+  const catalog = Array.isArray(body.catalog) ? body.catalog.slice(0, 80) : [];
+  if (catalog.length === 0) return json({ error: 'catalog is required' }, 400);
+  const medications = Array.isArray(body.medications)
+    ? body.medications.filter((m): m is string => typeof m === 'string' && m.trim().length > 0)
+        .map((m) => m.trim())
+        .slice(0, 40)
+    : [];
+
+  const catalogJson = JSON.stringify(
+    catalog.map((c) => ({
+      key: c.key,
+      label: c.label,
+      searchTerms: (c.searchTerms ?? []).slice(0, 8),
+    })),
+  );
+  if (catalogJson.length > 40_000) {
+    return json({ error: 'catalog too large' }, 400);
+  }
+
+  const raw = await complete(openaiKey, {
+    system: `${COMPANION_BASE}
+Return ONLY valid JSON (no markdown):
+{"symptoms":[{"key":"...","label":"...","reason":"..."}],"events":[{"type":"missed_dose"|"note","medicationName":"...or null","note":"..."}]}
+
+Extract what she might want to log from free text.
+- symptom keys MUST be copied exactly from the catalog. Max 6.
+- events: max 3. type is missed_dose or note. medicationName must match a provided med name or be null.
+- Never invent catalog keys. If unclear, omit.`,
+    messages: [
+      {
+        role: 'user',
+        content: `JOURNAL:\n${freeText.slice(0, 4000)}\n\nCATALOG:\n${catalogJson}\n\nMEDICATIONS:\n${JSON.stringify(medications)}`,
+      },
+    ],
+    temperature: 0.2,
+    maxTokens: 500,
+  });
+  if (raw.error) return json({ error: raw.error }, raw.status ?? 502);
+
+  const allowed = new Map(catalog.map((c) => [c.key, c.label]));
+  const allowedMeds = new Set(medications);
+  const parsed = parseJsonObject(raw.text);
+
+  const symptoms = Array.isArray(parsed?.symptoms)
+    ? parsed.symptoms
+        .filter(
+          (s): s is { key: string; label?: string; reason?: string } =>
+            !!s && typeof s === 'object' && typeof (s as { key?: unknown }).key === 'string',
+        )
+        .filter((s) => allowed.has(s.key))
+        .slice(0, 6)
+        .map((s) => ({
+          key: s.key,
+          label: allowed.get(s.key) ?? s.label ?? s.key,
+          reason: typeof s.reason === 'string' ? s.reason.slice(0, 160) : '',
+        }))
+    : [];
+
+  const events = Array.isArray(parsed?.events)
+    ? parsed.events
+        .filter((e): e is Record<string, unknown> => !!e && typeof e === 'object')
+        .map((e) => {
+          const type = e.type === 'missed_dose' || e.type === 'note' ? e.type : null;
+          if (!type) return null;
+          const rawName =
+            typeof e.medicationName === 'string' && e.medicationName.trim()
+              ? e.medicationName.trim()
+              : null;
+          const medicationName = rawName && allowedMeds.has(rawName) ? rawName : null;
+          const note =
+            typeof e.note === 'string' && e.note.trim()
+              ? e.note.trim().slice(0, 240)
+              : type === 'missed_dose'
+                ? 'Missed dose'
+                : '';
+          if (!note && type === 'note') return null;
+          return { type, medicationName, note };
+        })
+        .filter((e): e is { type: 'missed_dose' | 'note'; medicationName: string | null; note: string } => e !== null)
+        .slice(0, 3)
+    : [];
+
+  return json({ symptoms, events, model: MODEL, userId });
 }
 
 function requireFacts(facts: unknown): string | Response {

@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import type { AiFactsPacket } from '../utils/aiFactsPacket';
 import { clampVisitPrepPack, type VisitPrepPack } from '../utils/aiVisitPrep';
+import type { JournalExtractResult } from '../utils/aiJournalExtract';
 
 export type AiChatTurn = { role: 'user' | 'assistant'; content: string };
 
@@ -12,7 +13,8 @@ export type AiAction =
   | 'report_narrative'
   | 'symptom_translate'
   | 'explain_insight'
-  | 'visit_prep';
+  | 'visit_prep'
+  | 'journal_extract';
 
 interface ChatResult {
   reply: string;
@@ -162,6 +164,24 @@ export async function invokeVisitPrep(
   });
   if (error || !data) return null;
   return clampVisitPrepPack(data);
+}
+
+export async function invokeJournalExtract(
+  freeText: string,
+  catalog: Array<{ key: string; label: string; searchTerms?: string[] }>,
+  medications: string[],
+): Promise<JournalExtractResult | null> {
+  const { data, error } = await invokeAiAssistant<JournalExtractResult>({
+    action: 'journal_extract',
+    freeText,
+    catalog,
+    medications,
+  });
+  if (error || !data) return null;
+  return {
+    symptoms: Array.isArray(data.symptoms) ? data.symptoms : [],
+    events: Array.isArray(data.events) ? data.events : [],
+  };
 }
 
 export function useAiAssistant() {

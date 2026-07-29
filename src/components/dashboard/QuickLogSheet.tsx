@@ -23,6 +23,7 @@ import {
   type QuickLogTimeOptionId,
 } from '../../utils/quickLogSheetHelpers';
 import { useSymptomAiSuggestions } from '../../hooks/useSymptomAiSuggestions';
+import { JournalQuickEntry } from './JournalQuickEntry';
 
 const TRIGGER_TAGS: { id: QuickLogTriggerTag; label: string }[] = [
   { id: 'stress', label: 'Stress' },
@@ -379,6 +380,8 @@ export function QuickLogSheet() {
               </div>
             </div>
           )}
+
+          <JournalQuickEntry />
 
           <div className="mb-4">
             {!searchOpen ? (
