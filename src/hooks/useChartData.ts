@@ -205,14 +205,14 @@ export function useChartData(dateRange: DateRange) {
     [mrsCheckins],
   );
 
-  const refreshAll = useCallback(async () => {
+  const refreshAll = useCallback(async (opts?: { force?: boolean }) => {
     await Promise.all([
       // Chart series filter to the selected range; summary cards compute period
       // start→end trends from the same fetched window.
-      fetchCheckinsRange(dateRange.start, dateRange.end),
-      fetchMedications(),
-      fetchChanges(),
-      fetchLabResults(),
+      fetchCheckinsRange(dateRange.start, dateRange.end, opts),
+      fetchMedications(opts),
+      fetchChanges(opts),
+      fetchLabResults(opts),
     ]);
   }, [dateRange.end, dateRange.start, fetchCheckinsRange, fetchMedications, fetchChanges, fetchLabResults]);
 

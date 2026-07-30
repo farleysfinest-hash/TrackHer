@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { RouteErrorBoundary } from '../ui/ErrorBoundary';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { DashboardPage } from '../../pages/DashboardPage';
+import { TabActiveProvider } from './TabActiveContext';
 
 const loadMedicationsPage = () =>
   import('../../pages/MedicationsPage').then((m) => ({ default: m.MedicationsPage }));
@@ -107,10 +108,6 @@ export function PersistentTabs() {
     if (isMainTabPath(pathname)) {
       const y = scrollByPath.current.get(pathname) ?? 0;
       window.scrollTo(0, y);
-      // Recharts ResponsiveContainer sizes to 0 while display:none; nudge on show.
-      requestAnimationFrame(() => {
-        window.dispatchEvent(new Event('resize'));
-      });
     } else {
       window.scrollTo(0, 0);
     }
@@ -136,11 +133,13 @@ export function PersistentTabs() {
             className={active ? undefined : 'hidden'}
             style={active ? undefined : { contentVisibility: 'hidden' }}
           >
-            <RouteErrorBoundary>
-              <Suspense fallback={<TabFallback />}>
-                <Page />
-              </Suspense>
-            </RouteErrorBoundary>
+            <TabActiveProvider active={active}>
+              <RouteErrorBoundary>
+                <Suspense fallback={<TabFallback />}>
+                  <Page />
+                </Suspense>
+              </RouteErrorBoundary>
+            </TabActiveProvider>
           </div>
         );
       })}

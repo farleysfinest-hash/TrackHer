@@ -292,18 +292,32 @@ function useInsightsState(): InsightsValue {
     ],
   );
 
-  return {
-    insights,
-    primaryInsights,
-    moreInsights,
-    safeguardingInsights,
-    highPriority,
-    positive,
-    isLoading,
-    dismissInsight,
-    extendedSymptoms,
-    aiContext,
-  };
+  return useMemo(
+    () => ({
+      insights,
+      primaryInsights,
+      moreInsights,
+      safeguardingInsights,
+      highPriority,
+      positive,
+      isLoading,
+      dismissInsight,
+      extendedSymptoms,
+      aiContext,
+    }),
+    [
+      insights,
+      primaryInsights,
+      moreInsights,
+      safeguardingInsights,
+      highPriority,
+      positive,
+      isLoading,
+      dismissInsight,
+      extendedSymptoms,
+      aiContext,
+    ],
+  );
 }
 
 /** One insights pipeline for the whole shell — Dashboard / Meds / Insights / reports share it. */

@@ -39,5 +39,11 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   setDatePreset: (preset) =>
     set({ datePreset: preset, dateRange: getDateRangeFromPreset(preset) }),
   refreshDateRange: () =>
-    set((state) => ({ dateRange: getDateRangeFromPreset(state.datePreset) })),
+    set((state) => {
+      const next = getDateRangeFromPreset(state.datePreset);
+      if (next.start === state.dateRange.start && next.end === state.dateRange.end) {
+        return state;
+      }
+      return { dateRange: next };
+    }),
 }));

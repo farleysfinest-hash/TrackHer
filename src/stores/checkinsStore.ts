@@ -48,8 +48,10 @@ interface CheckinsState {
   hasFetched: boolean;
   /** Largest `limit` fetched so far, so a smaller request can be served from cache. */
   fetchedLimit: number;
+  /** Last successful `start:end` for fetchCheckinsRange — skip repeat pulls. */
+  fetchedRangeKey: string | null;
   fetchCheckins: (limit?: number, options?: FetchOptions) => Promise<void>;
-  fetchCheckinsRange: (start: string, end: string) => Promise<void>;
+  fetchCheckinsRange: (start: string, end: string, options?: FetchOptions) => Promise<void>;
   fetchCheckinsPage: (
     offset: number,
     pageSize?: number,
@@ -86,6 +88,7 @@ export const useCheckinsStore = create<CheckinsState>((set, get) => ({
   error: null,
   hasFetched: false,
   fetchedLimit: 0,
+  fetchedRangeKey: null,
 
   reset: () => {
     latestListRequest += 1;
@@ -99,6 +102,7 @@ export const useCheckinsStore = create<CheckinsState>((set, get) => ({
       error: null,
       hasFetched: false,
       fetchedLimit: 0,
+      fetchedRangeKey: null,
     });
   },
 
@@ -167,11 +171,14 @@ export const useCheckinsStore = create<CheckinsState>((set, get) => ({
     }
   },
 
-  fetchCheckinsRange: async (start, end) => {
+  fetchCheckinsRange: async (start, end, options) => {
+    const force = options?.force ?? false;
     const userId = getUserId();
     if (!userId) return;
 
     const key = `range:${start}:${end}`;
+    if (!force && get().hasFetched && get().fetchedRangeKey === key) return;
+
     const inFlight = inFlightByKey.get(key);
     if (inFlight) {
       await inFlight;
@@ -180,7 +187,12 @@ export const useCheckinsStore = create<CheckinsState>((set, get) => ({
 
     const promise = (async () => {
       const requestId = ++latestRangeRequest;
-      set({ isLoading: true, error: null });
+      const warmSameRange = get().hasFetched && get().fetchedRangeKey === key;
+      if (!warmSameRange) {
+        set({ isLoading: true, error: null });
+      } else {
+        set({ error: null });
+      }
 
       const [countResult, earliestResult] = await Promise.all([
         supabase
@@ -241,6 +253,7 @@ export const useCheckinsStore = create<CheckinsState>((set, get) => ({
         hasFetched: true,
         // Keep list prefetch from immediately re-fetching a shorter window.
         fetchedLimit: Math.max(get().fetchedLimit, rows.length, DEFAULT_CHECKINS_LIMIT),
+        fetchedRangeKey: key,
       });
     })();
 

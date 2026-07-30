@@ -12,7 +12,7 @@ import { Logo } from '../ui/Logo';
 import { LogoMark } from '../ui/LogoMark';
 import { APP_VERSION, SUPPORT_EMAIL } from '../../lib/constants';
 import { useCheckinStatus } from '../../hooks/useCheckinStatus';
-import { useDosesDue } from '../../hooks/useDosesDue';
+import { useNavDosesDue } from './NavDueContext';
 import {
   CHECKIN_DUE_NAV,
   CheckinDueDot,
@@ -39,7 +39,7 @@ const navItems: Array<{
 
 export function Sidebar() {
   const { hasCheckedInToday, isDue, isLoading } = useCheckinStatus();
-  const { needsDoses } = useDosesDue();
+  const { needsDoses } = useNavDosesDue();
   // Pulse, weekly MRS, or doses owed — Check-In owns the daily action stack.
   const needsCheckin =
     !isLoading && (!hasCheckedInToday || isDue || needsDoses);

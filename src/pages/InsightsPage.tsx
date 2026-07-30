@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useInsights } from '../hooks/useInsights';
 import { useStageProfile } from '../hooks/useStageProfile';
 import { useAiInsightLayer } from '../hooks/useAiInsightLayer';
+import { useTabActive } from '../components/layout/TabActiveContext';
 import { MedicalDisclaimer } from '../components/ui/MedicalDisclaimer';
 import { InsightCategoryFilter } from '../components/insights/InsightCategoryFilter';
 import { InsightsList } from '../components/insights/InsightsList';
@@ -26,6 +27,7 @@ import { supabase } from '../lib/supabase';
 const PRO_FILTERS = new Set<InsightFilterGroup>(['correlations']);
 
 export function InsightsPage() {
+  const tabActive = useTabActive();
   const { insights, isLoading, dismissInsight, aiContext } = useInsights();
   const stageProfile = useStageProfile();
   const [activeFilter, setActiveFilter] = useState<InsightFilterGroup>('all');
@@ -40,12 +42,12 @@ export function InsightsPage() {
   const { polishedInsights, candidates, dismissCandidate } = useAiInsightLayer(
     aiContext,
     insights,
-    !isLoading,
+    tabActive && !isLoading,
   );
 
   useEffect(() => {
-    if (!userId) {
-      setMonitorNote(null);
+    if (!tabActive || !userId) {
+      if (!userId) setMonitorNote(null);
       return;
     }
     let cancelled = false;
@@ -67,7 +69,7 @@ export function InsightsPage() {
     return () => {
       cancelled = true;
     };
-  }, [userId, insights.length]);
+  }, [tabActive, userId, insights.length]);
 
   const visibleInsights = useMemo(() => {
     if (isPro) return polishedInsights;

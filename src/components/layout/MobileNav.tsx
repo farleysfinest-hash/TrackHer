@@ -10,7 +10,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useCheckinStatus } from '../../hooks/useCheckinStatus';
-import { useDosesDue } from '../../hooks/useDosesDue';
+import { useNavDosesDue } from './NavDueContext';
 import { CheckinDueTooltip } from './CheckinDueTooltip';
 import {
   CHECKIN_DUE_NAV,
@@ -47,7 +47,7 @@ function prefersReducedMotion(): boolean {
 
 export function MobileNav() {
   const { hasCheckedInToday, isDue, isLoading } = useCheckinStatus();
-  const { needsDoses } = useDosesDue();
+  const { needsDoses } = useNavDosesDue();
   const needsCheckin =
     !isLoading && (!hasCheckedInToday || isDue || needsDoses);
 

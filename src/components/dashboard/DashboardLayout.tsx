@@ -7,6 +7,7 @@ import { useInsights } from '../../hooks/useInsights';
 import { useStageProfile } from '../../hooks/useStageProfile';
 import { getStageTrackingPhrase } from '../../engine/stageProfile';
 import { refreshCheckinStatusForCurrentUser } from '../../stores/checkinStatusStore';
+import { useTabActive } from '../layout/TabActiveContext';
 import { ScoreSummaryCards } from './ScoreSummaryCards';
 import { WelcomeMessage } from './WelcomeMessage';
 import { StoryColumn } from './StoryColumn';
@@ -33,6 +34,7 @@ import { hasMRSData } from '../../utils/checkinHelpers';
 
 export function DashboardLayout() {
   const { pathname } = useLocation();
+  const tabActive = useTabActive();
   const quickLogOpen = useQuickLogStore((s) => s.isSheetOpen);
   const dateRange = useDashboardStore((s) => s.dateRange);
   const refreshDateRange = useDashboardStore((s) => s.refreshDateRange);
@@ -57,7 +59,7 @@ export function DashboardLayout() {
   } = useChartData(dateRange);
 
   const handlePullRefresh = useCallback(async () => {
-    await Promise.all([refreshAll(), refreshCheckinStatusForCurrentUser()]);
+    await Promise.all([refreshAll({ force: true }), refreshCheckinStatusForCurrentUser()]);
   }, [refreshAll]);
 
   const [biomarkerKey, setBiomarkerKey] = useState('estradiol');
@@ -144,11 +146,15 @@ export function DashboardLayout() {
           <div>
             <h1 className="font-display text-3xl text-sage-800">Dashboard</h1>
             <p className="mt-1 text-sage-500">{subtitle}</p>
-            <DailyCompanionLine context={aiContext} />
+            {tabActive ? <DailyCompanionLine context={aiContext} /> : null}
           </div>
         </div>
 
-        {!ready ? null : (
+        {!ready ? null : !tabActive ? (
+          // Keep page mounted for scroll restore, but unmount ~12 Recharts trees
+          // while another tab is active so switches stay cheap.
+          <div className="min-h-[70vh]" aria-hidden />
+        ) : (
           <>
             {safeguardingCards}
 
