@@ -5,6 +5,7 @@ import {
   classifyCompanionShape,
   classifyCrisisTier,
   parseRiskTierWord,
+  parseRiskTierLabel,
   shouldForceDemandFromHistory,
 } from '../aiCompanionScripts';
 
@@ -174,7 +175,7 @@ describe('phrase coverage — soft SI and typos', () => {
 });
 
 describe('LLM tier backstop plumbing (Edge classifyRiskTier → scripts)', () => {
-  it('parses model output words into tiers, fail-open otherwise', () => {
+  it('parses model output words into tiers; unclear labels stay null', () => {
     expect(parseRiskTierWord('imminent')).toBe('crisis_imminent');
     expect(parseRiskTierWord(' Ideation\n')).toBe('crisis');
     expect(parseRiskTierWord('decline')).toBe('mental_decline');
@@ -182,6 +183,15 @@ describe('LLM tier backstop plumbing (Edge classifyRiskTier → scripts)', () =>
     expect(parseRiskTierWord('probably ideation')).toBeNull();
     expect(parseRiskTierWord(undefined)).toBeNull();
     expect(parseRiskTierWord('')).toBeNull();
+  });
+
+  it('distinguishes explicit none from unusable labels for fail-closed Edge paths', () => {
+    expect(parseRiskTierLabel('none')).toBe('none');
+    expect(parseRiskTierLabel('None please')).toBe('none');
+    expect(parseRiskTierLabel('ideation')).toBe('crisis');
+    expect(parseRiskTierLabel('probably ideation')).toBeNull();
+    expect(parseRiskTierLabel('')).toBeNull();
+    expect(parseRiskTierLabel(undefined)).toBeNull();
   });
 
   it('builds scripted crisis replies for phrasings regex will never enumerate', () => {

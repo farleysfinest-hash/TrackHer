@@ -11,7 +11,7 @@ import {
   buildCompanionScriptReply,
   buildTierScriptReply,
   classifyCompanionShape,
-  parseRiskTierWord,
+  parseRiskTierLabel,
   shouldForceDemandFromHistory,
   type CrisisTier,
   type FactsLite,
@@ -19,6 +19,23 @@ import {
 
 const MODEL = 'gpt-4o-mini';
 const MAX_OUTPUT_TOKENS = 800;
+
+/** Categories the companion must never explain, polish, or receive in the facts packet. */
+const AI_FORBIDDEN_CATEGORIES = new Set([
+  'safeguarding',
+  'psych_trajectory',
+  'cardiac_persistence',
+  'bleeding_red_flag',
+]);
+
+/** Soft reply when the risk-tier backstop cannot run (API error / unusable label). */
+const RISK_CLASSIFIER_UNAVAILABLE_REPLY =
+  "I'm having a brief glitch checking how you're doing, so I won't keep chatting on autopilot right now. If you're in a hard place, please reach out — call or text 988 in the US, or findahelpline.com for a local line. Try me again in a moment when you're ready.";
+
+/** Per-isolate sliding window — enough headroom for polish + chat + cards, blocks abuse. */
+const AI_RATE_LIMIT_MAX = 45;
+const AI_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const aiRateBuckets = new Map<string, number[]>();
 
 const COMPANION_BASE = `You are TrackHer's gentle companion for a woman tracking menopause / HRT symptoms — a kind friend for the journey who happens to know her logs. Soft, feminine, clear. Warm but not fluffy. Never dodge a direct question with a wall of generic empathy.
 
@@ -93,6 +110,13 @@ Deno.serve(async (req) => {
       return json({ error: 'Unauthorized' }, 401);
     }
 
+    if (!allowAiRequest(user.id)) {
+      return json(
+        { error: 'Too many AI requests. Please wait a few minutes and try again.' },
+        429,
+      );
+    }
+
     const body = (await req.json()) as RequestBody;
     const action: AiAction = body.action ?? 'chat';
 
@@ -161,9 +185,17 @@ async function handleChat(openaiKey: string, userId: string, body: RequestBody) 
   // it picks the door, the deterministic scripts still write every word.
   // Catches phrasings the regex can't enumerate (euphemisms, typos, non-English).
   if (!finalScript) {
-    const tier = await classifyRiskTier(openaiKey, message, history);
-    if (tier) {
-      finalScript = buildTierScriptReply(tier, message, facts, history);
+    const classification = await classifyRiskTier(openaiKey, message, history);
+    if (classification.status === 'unavailable') {
+      return json({
+        reply: RISK_CLASSIFIER_UNAVAILABLE_REPLY,
+        model: 'trackher-companion-script',
+        shape: 'risk_classifier_unavailable',
+        userId,
+      });
+    }
+    if (classification.tier) {
+      finalScript = buildTierScriptReply(classification.tier, message, facts, history);
     }
   }
 
@@ -192,6 +224,10 @@ Never invent a personal dose increase, lab target, diagnosis, or emergency clear
   return json({ reply: reply.text, model: MODEL, userId });
 }
 
+type RiskClassification =
+  | { status: 'ok'; tier: CrisisTier | null }
+  | { status: 'unavailable' };
+
 const RISK_TIER_SYSTEM = `You label ONE message from a woman chatting in a menopause-tracking app for suicide/self-harm risk. Typos, slang, euphemisms ("unalive", "never wake up"), and non-English text all count. Recent turns give context — label the LAST user message in light of them.
 Reply with exactly one word:
 imminent — intent to act with a timeframe, method, plan, "going to do it", or asking what amount of medication would harm/kill her
@@ -203,7 +239,7 @@ async function classifyRiskTier(
   openaiKey: string,
   message: string,
   history: ChatMessage[],
-): Promise<CrisisTier | null> {
+): Promise<RiskClassification> {
   const context = history
     .slice(-4)
     .map((h) => `${h.role}: ${h.content.slice(0, 300)}`)
@@ -219,8 +255,12 @@ async function classifyRiskTier(
     temperature: 0,
     maxTokens: 5,
   });
-  if (res.error) return null; // fail-open to normal companion chat
-  return parseRiskTierWord(res.text);
+  // Fail closed: never drop into free-form companion chat when we couldn't label risk.
+  if (res.error) return { status: 'unavailable' };
+  const label = parseRiskTierLabel(res.text);
+  if (label === null) return { status: 'unavailable' };
+  if (label === 'none') return { status: 'ok', tier: null };
+  return { status: 'ok', tier: label };
 }
 
 async function handleExplain(openaiKey: string, userId: string, body: RequestBody) {
@@ -228,6 +268,17 @@ async function handleExplain(openaiKey: string, userId: string, body: RequestBod
   if (typeof factsJson !== 'string') return factsJson;
   if (!body.insight || typeof body.insight !== 'object') {
     return json({ error: 'insight is required' }, 400);
+  }
+
+  const category = body.insight.category;
+  if (typeof category === 'string' && AI_FORBIDDEN_CATEGORIES.has(category)) {
+    return json(
+      {
+        error:
+          'This insight is handled by TrackHer safety layer and cannot be explained by the companion.',
+      },
+      403,
+    );
   }
 
   const reply = await complete(openaiKey, {
@@ -247,6 +298,16 @@ Explain one insight card in plain, warm language. Ground every claim in the fact
 async function handleImprove(openaiKey: string, userId: string, body: RequestBody) {
   const factsJson = requireFacts(body.facts);
   if (typeof factsJson !== 'string') return factsJson;
+
+  const allowedIds = new Set<string>();
+  try {
+    const cleaned = JSON.parse(factsJson) as { engineInsights?: Array<{ id?: string }> };
+    for (const i of cleaned.engineInsights ?? []) {
+      if (i?.id) allowedIds.add(i.id);
+    }
+  } catch {
+    // polished will drop if we cannot read ids
+  }
 
   const raw = await complete(openaiKey, {
     system: `${COMPANION_BASE}
@@ -293,7 +354,8 @@ Rules for candidates ("AI noticed"):
             typeof p === 'object' &&
             typeof (p as { id?: unknown }).id === 'string' &&
             typeof (p as { title?: unknown }).title === 'string' &&
-            typeof (p as { body?: unknown }).body === 'string',
+            typeof (p as { body?: unknown }).body === 'string' &&
+            allowedIds.has((p as { id: string }).id),
         )
         .map((p) => ({
           id: p.id,
@@ -746,15 +808,44 @@ Return plain text only.`,
   return json({ letter, model: MODEL, userId });
 }
 
+function stripForbiddenEngineInsights(facts: Record<string, unknown>): Record<string, unknown> {
+  const engineInsights = facts.engineInsights;
+  if (!Array.isArray(engineInsights)) return facts;
+  return {
+    ...facts,
+    engineInsights: engineInsights.filter((insight) => {
+      if (!insight || typeof insight !== 'object') return false;
+      const category = (insight as { category?: unknown }).category;
+      return typeof category !== 'string' || !AI_FORBIDDEN_CATEGORIES.has(category);
+    }),
+  };
+}
+
 function requireFacts(facts: unknown): string | Response {
   if (!facts || typeof facts !== 'object') {
     return json({ error: 'facts packet is required' }, 400);
   }
-  const factsJson = JSON.stringify(facts);
+  const cleaned = stripForbiddenEngineInsights(facts as Record<string, unknown>);
+  const factsJson = JSON.stringify(cleaned);
   if (factsJson.length > 24_000) {
     return json({ error: 'facts packet too large' }, 400);
   }
   return factsJson;
+}
+
+/** In-memory per-user sliding window (resets on cold start; still stops burst abuse). */
+function allowAiRequest(userId: string): boolean {
+  const now = Date.now();
+  const prior = (aiRateBuckets.get(userId) ?? []).filter(
+    (t) => now - t < AI_RATE_LIMIT_WINDOW_MS,
+  );
+  if (prior.length >= AI_RATE_LIMIT_MAX) {
+    aiRateBuckets.set(userId, prior);
+    return false;
+  }
+  prior.push(now);
+  aiRateBuckets.set(userId, prior);
+  return true;
 }
 
 function sanitizeHistory(history: ChatMessage[] | undefined): ChatMessage[] {

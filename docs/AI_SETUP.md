@@ -84,6 +84,12 @@ Keep `src/utils/aiCompanionScripts.ts` and `supabase/functions/ai-assistant/comp
 
 Dose/lab demands (“just tell me”) after a script get a shorter, firmer version. Crisis demands do **not** replay the identical 988 paragraph — they escalate via `priorCrisisReplyCount`.
 
+### Safety hardening (Edge)
+
+- **Risk classifier fail-closed:** if the one-word risk-tier call errors or returns an unusable label, chat returns a soft safety reply (988 / findahelpline) instead of free-form companion chat.
+- **Rate limit:** ~45 authenticated requests per user per 10 minutes (in-memory per isolate).
+- **Forbidden explain:** `explain_insight` returns 403 when `insight.category` is in the safeguarding family; facts packets also strip those categories before any model call.
+
 ## Cache
 
 `ai_insights` keyed by `user_id` + `insight_type` + `data_hash` (facts packet hash).

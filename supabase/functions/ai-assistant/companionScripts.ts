@@ -556,13 +556,26 @@ export function buildTierScriptReply(
   return { shape: tier, reply: buildCrisisReply(tier, message, history) };
 }
 
-/** Parse the one-word output of the risk-tier model call. Anything unclear → null (fail-open to normal chat). */
-export function parseRiskTierWord(text: string | null | undefined): CrisisTier | null {
+/**
+ * Parse the one-word risk-tier model output.
+ * Returns a known label, or null when the model answer is unusable (caller should fail closed).
+ */
+export type RiskTierLabel = CrisisTier | 'none';
+
+export function parseRiskTierLabel(text: string | null | undefined): RiskTierLabel | null {
   const w = (text ?? '').trim().toLowerCase();
   if (/^imminent\b/.test(w)) return 'crisis_imminent';
   if (/^ideation\b/.test(w)) return 'crisis';
   if (/^decline\b/.test(w)) return 'mental_decline';
+  if (/^none\b/.test(w)) return 'none';
   return null;
+}
+
+/** Maps a clear risk word to a crisis tier; `none` / unclear → null. Prefer parseRiskTierLabel for fail-closed paths. */
+export function parseRiskTierWord(text: string | null | undefined): CrisisTier | null {
+  const label = parseRiskTierLabel(text);
+  if (!label || label === 'none') return null;
+  return label;
 }
 
 export function buildCompanionScriptReply(
