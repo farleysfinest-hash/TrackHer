@@ -84,7 +84,7 @@ function doseLabel(med: Medication): string | null {
 }
 
 /**
- * Build a privacy-conscious facts packet for GPT-4o-mini.
+ * Build a privacy-conscious facts packet for GPT-5.6 Luna.
  * Omits safeguarding / psych / cardiac / bleeding-red-flag insight bodies
  * (engine keeps those — companion must never rewrite them).
  */

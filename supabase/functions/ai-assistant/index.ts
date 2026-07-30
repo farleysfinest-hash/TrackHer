@@ -1,5 +1,5 @@
 /**
- * TrackHer AI companion — GPT-4o-mini over a client-built facts packet.
+ * TrackHer AI companion — GPT-5.6 Luna over a client-built facts packet.
  *
  * Secrets (Dashboard → Edge Functions → Secrets, or CLI):
  *   OPENAI_API_KEY
@@ -19,7 +19,7 @@ import {
   type FactsLite,
 } from './companionScripts.ts';
 
-const MODEL = 'gpt-4o-mini';
+const MODEL = 'gpt-5.6-luna';
 const MAX_OUTPUT_TOKENS = 800;
 
 /** Categories the companion must never explain, polish, or receive in the facts packet. */
@@ -947,6 +947,7 @@ async function complete(
   opts: {
     system: string;
     messages: Array<{ role: 'user' | 'assistant'; content: string }>;
+    /** Kept for call-site clarity; GPT-5.6 Luna ignores custom temperature. */
     temperature?: number;
     maxTokens?: number;
   },
@@ -959,8 +960,9 @@ async function complete(
     },
     body: JSON.stringify({
       model: MODEL,
-      temperature: opts.temperature ?? 0.4,
-      max_tokens: opts.maxTokens ?? MAX_OUTPUT_TOKENS,
+      // GPT-5.6 rejects legacy max_tokens; Luna also rejects non-default temperature.
+      max_completion_tokens: opts.maxTokens ?? MAX_OUTPUT_TOKENS,
+      reasoning_effort: 'none',
       messages: [{ role: 'system', content: opts.system }, ...opts.messages],
     }),
   });

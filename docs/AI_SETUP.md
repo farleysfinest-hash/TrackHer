@@ -1,6 +1,6 @@
 # TrackHer AI companion
 
-Personal journey companion (GPT-4o-mini) via Supabase Edge Function `ai-assistant`.
+Personal journey companion (GPT-5.6 Luna) via Supabase Edge Function `ai-assistant`.
 The OpenAI key stays on the server — never in Vite `.env` or the iOS app.
 
 ## Product stance
