@@ -390,10 +390,15 @@ export const useCheckinsStore = create<CheckinsState>((set, get) => ({
         assessment: buildAssessmentPayload(data, checkinDate),
       });
 
-      await get().fetchCheckins(undefined, { force: true });
+      // Persist already succeeded — never fail the save because a list refresh hung.
       void (async () => {
-        await refreshCheckinStatusForCurrentUser();
-        await resyncRemindersForCurrentUser();
+        try {
+          await get().fetchCheckins(undefined, { force: true });
+          await refreshCheckinStatusForCurrentUser();
+          await resyncRemindersForCurrentUser();
+        } catch (refreshError) {
+          console.error('Post-save check-in refresh failed:', refreshError);
+        }
       })();
       if (payload.checkin_type !== 'pulse' && payload.mrs_complete === true) {
         void loadMinimalAiContextForMonitor(userId, getTimezone()).then((ctx) => {
@@ -429,10 +434,14 @@ export const useCheckinsStore = create<CheckinsState>((set, get) => ({
         assessment: buildAssessmentPayload(data, checkinDate),
       });
 
-      await get().fetchCheckins(undefined, { force: true });
       void (async () => {
-        await refreshCheckinStatusForCurrentUser();
-        await resyncRemindersForCurrentUser();
+        try {
+          await get().fetchCheckins(undefined, { force: true });
+          await refreshCheckinStatusForCurrentUser();
+          await resyncRemindersForCurrentUser();
+        } catch (refreshError) {
+          console.error('Post-save check-in refresh failed:', refreshError);
+        }
       })();
       if (payload.checkin_type !== 'pulse' && payload.mrs_complete === true) {
         void loadMinimalAiContextForMonitor(userId, getTimezone()).then((ctx) => {

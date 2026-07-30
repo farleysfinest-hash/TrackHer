@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useCheckinStore } from '../../stores/checkinStore';
 import { useAuthStore } from '../../stores/authStore';
 import { getPrimaryInstrument } from '../../data/instruments/registry';
@@ -171,7 +172,10 @@ export function CheckinFlow({ onClose, onComplete }: CheckinFlowProps) {
 
   const saveLine = saveIndicatorCopy(saveState);
 
-  return (
+  // Portal out of PersistentTabs: keep-alive panels use absolute/inert/opacity and
+  // live under main's overflow-x-clip. A fixed overlay left in-tree can collapse to
+  // a zero-height containing block so Save never receives taps.
+  return createPortal(
     <div
       ref={dialogRef}
       tabIndex={-1}
@@ -225,6 +229,7 @@ export function CheckinFlow({ onClose, onComplete }: CheckinFlowProps) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

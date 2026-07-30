@@ -73,48 +73,58 @@ export function CheckinSummary({ onBack, onSuccess }: CheckinSummaryProps) {
 
   const handleSave = async () => {
     setIsSaving(true);
-    const payload = {
-      energyLevel,
-      moodLevel,
-      sleepQuality,
-      bleedingFlow,
-      mrsScores: isPulse ? { ...INITIAL_MRS_SCORES } : mrsScores,
-      extendedSymptoms: isPulse
-        ? []
-        : extendedSymptoms.filter(
-            (s): s is { symptom_key: string; severity: MRSScore } => s.severity !== null,
-          ),
-      notes: isPulse ? '' : notes,
-      checkinDate: targetDate,
-      instrumentId,
-      checkinType: isPulse ? ('pulse' as const) : ('full' as const),
-    };
+    let ok = false;
+    try {
+      const payload = {
+        energyLevel,
+        moodLevel,
+        sleepQuality,
+        bleedingFlow,
+        mrsScores: isPulse ? { ...INITIAL_MRS_SCORES } : mrsScores,
+        extendedSymptoms: isPulse
+          ? []
+          : extendedSymptoms.filter(
+              (s): s is { symptom_key: string; severity: MRSScore } => s.severity !== null,
+            ),
+        notes: isPulse ? '' : notes,
+        checkinDate: targetDate,
+        instrumentId,
+        checkinType: isPulse ? ('pulse' as const) : ('full' as const),
+      };
 
-    let ok: boolean | null = false;
-    if (isEditing && editingCheckinId) {
-      ok = await updateCheckin(editingCheckinId, payload);
-    } else {
-      const result = await createCheckin(payload);
-      ok = !!result;
-    }
-
-    if (ok) {
-      const newFlares = flareSelected.filter((id) => !flarePreLogged.includes(id));
-      // Backdated check-ins stamp their flares at local noon of the target day,
-      // not "now" — otherwise a December check-in writes July flare events.
-      const flareLoggedAt = isBackdated
-        ? new Date(`${targetDate}T12:00:00`).toISOString()
-        : undefined;
-      for (const symptomId of newFlares) {
-        await createEvent({
-          symptom_id: symptomId,
-          severity: 0,
-          ...(flareLoggedAt !== undefined ? { logged_at: flareLoggedAt } : {}),
-        });
+      if (isEditing && editingCheckinId) {
+        ok = await updateCheckin(editingCheckinId, payload);
+      } else {
+        const result = await createCheckin(payload);
+        ok = !!result;
       }
+
+      if (ok) {
+        const newFlares = flareSelected.filter((id) => !flarePreLogged.includes(id));
+        // Backdated check-ins stamp their flares at local noon of the target day,
+        // not "now" — otherwise a December check-in writes July flare events.
+        const flareLoggedAt = isBackdated
+          ? new Date(`${targetDate}T12:00:00`).toISOString()
+          : undefined;
+        for (const symptomId of newFlares) {
+          try {
+            await createEvent({
+              symptom_id: symptomId,
+              severity: 0,
+              ...(flareLoggedAt !== undefined ? { logged_at: flareLoggedAt } : {}),
+            });
+          } catch (flareError) {
+            console.error('Flare log after check-in failed:', flareError);
+          }
+        }
+      }
+    } catch (saveError) {
+      console.error('Check-in save failed:', saveError);
+      ok = false;
+    } finally {
+      setIsSaving(false);
     }
 
-    setIsSaving(false);
     if (ok) {
       setUiFlag('first_checkin_done');
       if (!isPulse) {
