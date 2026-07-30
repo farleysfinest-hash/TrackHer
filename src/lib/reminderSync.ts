@@ -44,7 +44,7 @@ function hoursForFrequency(
 }
 
 export interface BuildReminderNotificationsOpts {
-  profile: Pick<Profile, 'checkin_day' | 'timezone'> | null;
+  profile: (Pick<Profile, 'checkin_day'> & { timezone?: string | null }) | null;
   medications: Pick<
     Medication,
     | 'id'

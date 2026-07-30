@@ -56,7 +56,7 @@ export function AskDataSheet({
   const pendingInsightRef = useRef<AskDataSeed['insight'] | null>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const { offsetTop, height: vvHeight } = useVisualViewportBounds();
+  const { offsetTop, height: vvHeight, inset: keyboardInset } = useVisualViewportBounds();
 
   const facts = useMemo(() => buildAiFactsPacket(context), [context]);
   const thinData = facts.mrs.length < 1 && facts.engineInsights.length === 0;

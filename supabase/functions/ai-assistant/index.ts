@@ -630,7 +630,9 @@ Return ONLY valid JSON (no markdown):
 
 Restate her appointment plan warmly from her paste + facts packet only.
 - planSummary: ≤4 sentences. No additions beyond her text + packet.
-- followUps: max 5 checklist items derived only from her text ("book labs in 6 weeks").
+- followUps: max 5 concrete checklist actions only (book labs, schedule follow-up, call if X).
+  Do NOT repeat soft advice already in planSummary (e.g. "monitor mood" when the summary
+  already asks her to track mood). Skip vague "ongoing" / "as needed" monitoring rows.
 Never invent follow-ups she did not mention. Never dose advice.`,
     messages: [
       {

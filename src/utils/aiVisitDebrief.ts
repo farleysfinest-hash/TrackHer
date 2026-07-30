@@ -14,6 +14,51 @@ export interface VisitDebriefPack {
 
 export const VISIT_DEBRIEF_STORAGE_KEY = 'trackher.visitDebrief.v1';
 
+const STOP_WORDS = new Set([
+  'the',
+  'a',
+  'an',
+  'and',
+  'or',
+  'to',
+  'of',
+  'in',
+  'on',
+  'for',
+  'with',
+  'your',
+  'any',
+  'as',
+  'if',
+  'at',
+  'be',
+  'is',
+  'are',
+  'was',
+  'were',
+]);
+
+function contentWords(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !STOP_WORDS.has(w));
+}
+
+/**
+ * Drop checklist rows that only restate the plan summary
+ * (e.g. "Monitor mood and energy" when the summary already says to track mood and energy).
+ */
+export function isFollowUpRedundantWithSummary(label: string, planSummary: string): boolean {
+  const labelWords = contentWords(label);
+  if (labelWords.length < 2) return false;
+  const summarySet = new Set(contentWords(planSummary));
+  if (summarySet.size === 0) return false;
+  const hits = labelWords.filter((w) => summarySet.has(w)).length;
+  return hits / labelWords.length >= 0.6;
+}
+
 export function clampVisitDebriefPack(raw: unknown): VisitDebriefPack | null {
   if (!raw || typeof raw !== 'object') return null;
   const o = raw as Record<string, unknown>;
@@ -43,6 +88,7 @@ export function clampVisitDebriefPack(raw: unknown): VisitDebriefPack | null {
           };
         })
         .filter((f): f is VisitDebriefFollowUp => f !== null)
+        .filter((f) => !isFollowUpRedundantWithSummary(f.label, planSummary))
         .slice(0, 5)
     : [];
   return {
@@ -64,9 +110,11 @@ export function readVisitDebriefFromStorage(): VisitDebriefPack | null {
 
 export function writeVisitDebriefToStorage(pack: VisitDebriefPack): void {
   try {
+    const clamped = clampVisitDebriefPack(pack);
+    if (!clamped) return;
     localStorage.setItem(
       VISIT_DEBRIEF_STORAGE_KEY,
-      JSON.stringify({ ...pack, savedAt: pack.savedAt ?? new Date().toISOString() }),
+      JSON.stringify({ ...clamped, savedAt: pack.savedAt ?? new Date().toISOString() }),
     );
   } catch {
     // ignore quota / private mode

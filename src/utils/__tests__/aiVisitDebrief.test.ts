@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { clampVisitDebriefPack } from '../aiVisitDebrief';
+import {
+  clampVisitDebriefPack,
+  isFollowUpRedundantWithSummary,
+} from '../aiVisitDebrief';
 
 describe('clampVisitDebriefPack', () => {
   it('returns null without planSummary', () => {
@@ -30,5 +33,41 @@ describe('clampVisitDebriefPack', () => {
       timeframe: null,
       done: false,
     });
+  });
+
+  it('drops checklist items that only restate the summary', () => {
+    const pack = clampVisitDebriefPack({
+      planSummary:
+        'Your clinician advised increasing progesterone. Please keep track of any changes in your mood and energy levels as you proceed.',
+      followUps: [
+        { label: 'Book labs in 6 weeks', timeframe: '6 weeks' },
+        { label: 'Monitor mood and energy levels', timeframe: 'ongoing' },
+        { label: 'Discuss any new symptoms with your clinician', timeframe: 'as needed' },
+      ],
+    });
+    expect(pack?.followUps.map((f) => f.label)).toEqual([
+      'Book labs in 6 weeks',
+      'Discuss any new symptoms with your clinician',
+    ]);
+  });
+});
+
+describe('isFollowUpRedundantWithSummary', () => {
+  it('flags mood/energy monitor when summary already says track mood and energy', () => {
+    expect(
+      isFollowUpRedundantWithSummary(
+        'Monitor mood and energy levels',
+        'Please keep track of any changes in your mood and energy levels as you proceed.',
+      ),
+    ).toBe(true);
+  });
+
+  it('keeps concrete booking actions', () => {
+    expect(
+      isFollowUpRedundantWithSummary(
+        'Book labs in 6 weeks',
+        'Please keep track of any changes in your mood and energy levels as you proceed.',
+      ),
+    ).toBe(false);
   });
 });

@@ -4,6 +4,7 @@ import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import {
   clearVisitDebriefStorage,
+  clampVisitDebriefPack,
   readVisitDebriefFromStorage,
   writeVisitDebriefToStorage,
   type VisitDebriefPack,
@@ -16,10 +17,15 @@ interface VisitDebriefCardProps {
 
 /** Checklist from a visit debrief — localStorage only. */
 export function VisitDebriefCard({ pack: initial, onCleared }: VisitDebriefCardProps) {
-  const [pack, setPack] = useState(initial);
+  const [pack, setPack] = useState(() => clampVisitDebriefPack(initial) ?? initial);
 
   useEffect(() => {
-    setPack(initial);
+    const next = clampVisitDebriefPack(initial) ?? initial;
+    setPack(next);
+    // Persist the cleaned checklist so the redundant row does not return.
+    if (next.followUps.length !== initial.followUps.length) {
+      writeVisitDebriefToStorage(next);
+    }
   }, [initial]);
 
   const toggle = (index: number) => {
