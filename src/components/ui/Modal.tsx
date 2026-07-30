@@ -2,7 +2,7 @@ import { createPortal } from 'react-dom';
 import { useEffect, useId, useRef } from 'react';
 import { X } from 'lucide-react';
 import { FOCUSABLE_SELECTOR, trapTabKey } from '../../lib/focusTrap';
-import { useKeyboardBottomInset } from '../../hooks/useKeyboardBottomInset';
+import { useVisualViewportBounds } from '../../hooks/useKeyboardBottomInset';
 
 type ModalSize = 'sm' | 'md' | 'lg' | 'full';
 
@@ -36,7 +36,7 @@ export function Modal({
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
   const titleId = useId();
-  const keyboardInset = useKeyboardBottomInset();
+  const { offsetTop, height: vvHeight } = useVisualViewportBounds();
 
   onCloseRef.current = onClose;
 
@@ -73,14 +73,17 @@ export function Modal({
 
   return createPortal(
     <div
+      data-vv-frame
       className={[
-        'fixed inset-0 z-50 flex',
+        'fixed inset-x-0 z-50 flex',
         isFullScreen
-          ? 'items-stretch justify-stretch p-0'
+          ? 'inset-0 items-stretch justify-stretch p-0'
           : 'items-end justify-center p-0 sm:items-center sm:p-4',
       ].join(' ')}
       style={
-        !isFullScreen && keyboardInset > 0 ? { paddingBottom: keyboardInset } : undefined
+        isFullScreen
+          ? undefined
+          : { top: offsetTop, height: vvHeight }
       }
     >
       <div
@@ -97,14 +100,9 @@ export function Modal({
         data-keyboard-scroll
         className={[
           'relative z-10 flex w-full flex-col overflow-hidden bg-sand-50 outline-none',
-          isFullScreen ? '' : 'rounded-t-xl border border-sand-200 shadow-xl sm:rounded-xl',
+          isFullScreen ? '' : 'max-h-full rounded-t-xl border border-sand-200 shadow-xl sm:rounded-xl',
           sizeClasses[size],
         ].join(' ')}
-        style={
-          !isFullScreen && keyboardInset > 0
-            ? { maxHeight: `calc(100dvh - ${keyboardInset}px - 1rem)` }
-            : undefined
-        }
       >
         {(title || showCloseButton) && (
           <div

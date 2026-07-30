@@ -8,37 +8,58 @@ function setCssInset(px: number) {
   document.documentElement.style.setProperty(KEYBOARD_INSET_VAR, `${Math.max(0, px)}px`);
 }
 
+export interface VisualViewportBounds {
+  /** Soft-keyboard coverage at the bottom of the layout viewport (px). */
+  inset: number;
+  /** visualViewport.offsetTop — iOS often shifts this when the keyboard opens. */
+  offsetTop: number;
+  /** Visible height of the visual viewport (px). */
+  height: number;
+}
+
+function readBounds(fallbackKeyboardHeight?: number): VisualViewportBounds {
+  const vv = window.visualViewport;
+  if (!vv) {
+    const inset =
+      typeof fallbackKeyboardHeight === 'number' && fallbackKeyboardHeight > 0
+        ? Math.round(fallbackKeyboardHeight)
+        : 0;
+    return { inset, offsetTop: 0, height: window.innerHeight - inset };
+  }
+
+  const offsetTop = Math.round(vv.offsetTop);
+  const vvInset = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+  const inset =
+    vvInset > 0
+      ? vvInset
+      : typeof fallbackKeyboardHeight === 'number' && fallbackKeyboardHeight > 0
+        ? Math.round(fallbackKeyboardHeight)
+        : 0;
+
+  return {
+    inset,
+    offsetTop,
+    height: Math.round(vv.height),
+  };
+}
+
 /**
- * Bottom inset (px) covered by the soft keyboard.
- *
- * Prefer visualViewport; fall back to Capacitor keyboardHeight. Also syncs
- * `--keyboard-inset` on :root so modals/sheets/pages can pad without each
- * mounting their own listeners.
+ * Tracks the on-screen viewport while the soft keyboard is open.
+ * Prefer this over inset-only math so fixed sheets snap into the visible frame
+ * instead of sitting under a scrolled layout viewport.
  */
-export function useKeyboardBottomInset(): number {
-  const [inset, setInset] = useState(0);
+export function useVisualViewportBounds(): VisualViewportBounds {
+  const [bounds, setBounds] = useState<VisualViewportBounds>(() => readBounds());
 
   useEffect(() => {
-    const vv = window.visualViewport;
-
-    const fromViewport = (): number => {
-      if (!vv) return 0;
-      return Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
-    };
-
     const apply = (fallbackHeight?: number) => {
-      const vvInset = fromViewport();
-      let next = 0;
-      if (vvInset > 0) next = vvInset;
-      else if (typeof fallbackHeight === 'number' && fallbackHeight > 0) {
-        next = Math.round(fallbackHeight);
-      }
-      setInset(next);
-      setCssInset(next);
+      const next = readBounds(fallbackHeight);
+      setBounds(next);
+      setCssInset(next.inset);
     };
 
     const onVv = () => apply();
-
+    const vv = window.visualViewport;
     vv?.addEventListener('resize', onVv);
     vv?.addEventListener('scroll', onVv);
 
@@ -50,8 +71,7 @@ export function useKeyboardBottomInset(): number {
       handles.push(Keyboard.addListener('keyboardDidShow', (info) => apply(info.keyboardHeight)));
       handles.push(
         Keyboard.addListener('keyboardWillHide', () => {
-          setInset(0);
-          setCssInset(0);
+          apply(0);
         }),
       );
     }
@@ -66,51 +86,53 @@ export function useKeyboardBottomInset(): number {
     };
   }, []);
 
-  return inset;
+  return bounds;
+}
+
+/** Bottom inset only — thin wrapper for call sites that only need padding. */
+export function useKeyboardBottomInset(): number {
+  return useVisualViewportBounds().inset;
 }
 
 /**
  * App-wide: keep the focused text field above the soft keyboard.
- * Call once from AppShell (or root layout).
+ * Call once from the app root.
  */
 export function useKeyboardAvoidance(): void {
-  const inset = useKeyboardBottomInset();
+  const { inset, offsetTop, height } = useVisualViewportBounds();
 
   useEffect(() => {
-    const scrollFocusedIntoView = () => {
+    const snapFocused = () => {
       const el = document.activeElement;
       if (!(el instanceof HTMLElement)) return;
       const tag = el.tagName;
       if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !el.isContentEditable) return;
 
-      // Leave room for the keyboard + a little breathing room above the caret.
-      const pad = inset > 0 ? inset + 24 : 24;
-      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      // Prefer snapping the sheet/dialog that owns the field into the visual frame.
+      const frame = el.closest<HTMLElement>('[data-vv-frame]');
+      if (frame) {
+        // Frame is already positioned to the visual viewport; just bring the
+        // composer into the frame's scrollport if needed.
+        el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        return;
+      }
 
-      // Extra nudge for fixed sheets that ignore scrollIntoView of the page.
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
       const rect = el.getBoundingClientRect();
-      const visibleBottom = window.innerHeight - pad;
+      const visibleBottom = offsetTop + height - 16;
       if (rect.bottom > visibleBottom) {
-        const delta = rect.bottom - visibleBottom;
-        const scroller =
-          el.closest<HTMLElement>('[data-keyboard-scroll], .overflow-y-auto, [role="dialog"]') ??
-          null;
-        if (scroller) {
-          scroller.scrollTop += delta;
-        } else {
-          window.scrollBy({ top: delta, behavior: 'smooth' });
-        }
+        window.scrollBy({ top: rect.bottom - visibleBottom, behavior: 'smooth' });
       }
     };
 
     const onFocusIn = () => {
-      window.setTimeout(scrollFocusedIntoView, 50);
-      window.setTimeout(scrollFocusedIntoView, 300);
+      window.setTimeout(snapFocused, 50);
+      window.setTimeout(snapFocused, 320);
     };
 
     document.addEventListener('focusin', onFocusIn);
     return () => document.removeEventListener('focusin', onFocusIn);
-  }, [inset]);
+  }, [inset, offsetTop, height]);
 
   useEffect(() => {
     if (inset <= 0) return;
@@ -119,7 +141,7 @@ export function useKeyboardAvoidance(): void {
     const tag = el.tagName;
     if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !el.isContentEditable) return;
     window.setTimeout(() => {
-      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     }, 16);
-  }, [inset]);
+  }, [inset, offsetTop, height]);
 }

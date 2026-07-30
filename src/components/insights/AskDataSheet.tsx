@@ -9,7 +9,7 @@ import {
 } from '../../utils/aiFactsPacket';
 import type { Insight } from '../../engine/types';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
-import { useKeyboardBottomInset } from '../../hooks/useKeyboardBottomInset';
+import { useVisualViewportBounds } from '../../hooks/useKeyboardBottomInset';
 
 export interface AskDataSeed {
   message?: string;
@@ -56,7 +56,7 @@ export function AskDataSheet({
   const pendingInsightRef = useRef<AskDataSeed['insight'] | null>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const keyboardInset = useKeyboardBottomInset();
+  const { offsetTop, height: vvHeight } = useVisualViewportBounds();
 
   const facts = useMemo(() => buildAiFactsPacket(context), [context]);
   const thinData = facts.mrs.length < 1 && facts.engineInsights.length === 0;
@@ -129,7 +129,11 @@ export function AskDataSheet({
 
   const sheet = open
     ? createPortal(
-        <div className="fixed inset-0 z-50 sm:flex sm:items-center sm:justify-center">
+        <div
+          data-vv-frame
+          className="fixed inset-x-0 z-50 sm:flex sm:items-center sm:justify-center"
+          style={{ top: offsetTop, height: vvHeight }}
+        >
           <button
             type="button"
             className="absolute inset-0 bg-black/40"
@@ -142,14 +146,9 @@ export function AskDataSheet({
             aria-modal="true"
             aria-labelledby="ask-data-title"
             tabIndex={-1}
-            className="absolute inset-x-0 bottom-0 z-10 mx-auto flex w-full max-w-lg flex-col rounded-t-2xl border border-sand-200 bg-sand-50 shadow-2xl outline-none sm:relative sm:bottom-auto sm:m-4 sm:rounded-2xl"
-            style={{
-              bottom: keyboardInset > 0 ? keyboardInset : undefined,
-              maxHeight:
-                keyboardInset > 0
-                  ? `calc(100dvh - ${keyboardInset}px)`
-                  : 'min(90dvh, 640px)',
-            }}
+            data-keyboard-scroll
+            className="absolute inset-x-0 bottom-0 z-10 mx-auto flex max-h-full w-full max-w-lg flex-col rounded-t-2xl border border-sand-200 bg-sand-50 shadow-2xl outline-none sm:relative sm:bottom-auto sm:m-4 sm:max-h-[min(90%,640px)] sm:rounded-2xl"
+            style={{ maxHeight: 'min(100%, 640px)' }}
           >
             <div className="flex shrink-0 items-center justify-between border-b border-sand-100 px-5 py-4">
               <h2 id="ask-data-title" className="font-display text-lg text-sage-800">
@@ -228,6 +227,9 @@ export function AskDataSheet({
                     window.setTimeout(() => {
                       inputRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
                     }, 50);
+                    window.setTimeout(() => {
+                      inputRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                    }, 320);
                   }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') void send();

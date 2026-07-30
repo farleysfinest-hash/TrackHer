@@ -18,7 +18,7 @@ import {
 } from '../../utils/aiPartnerLetter';
 import { useAuthStore } from '../../stores/authStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
-import { useKeyboardBottomInset } from '../../hooks/useKeyboardBottomInset';
+import { useVisualViewportBounds } from '../../hooks/useKeyboardBottomInset';
 
 interface PartnerLetterSheetProps {
   context: AiFactsPacketInput;
@@ -34,7 +34,7 @@ export function PartnerLetterSheet({ context, open, onClose }: PartnerLetterShee
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
-  const keyboardInset = useKeyboardBottomInset();
+  const { offsetTop, height: vvHeight } = useVisualViewportBounds();
   useFocusTrap(open, sheetRef, onClose);
 
   const facts = useMemo(() => buildAiFactsPacket(context), [context]);
@@ -108,7 +108,11 @@ export function PartnerLetterSheet({ context, open, onClose }: PartnerLetterShee
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-50 sm:flex sm:items-center sm:justify-center">
+    <div
+      data-vv-frame
+      className="fixed inset-x-0 z-50 sm:flex sm:items-center sm:justify-center"
+      style={{ top: offsetTop, height: vvHeight }}
+    >
       <button
         type="button"
         className="absolute inset-0 bg-sage-900/40"
@@ -121,12 +125,9 @@ export function PartnerLetterSheet({ context, open, onClose }: PartnerLetterShee
         aria-modal="true"
         aria-labelledby="partner-letter-title"
         tabIndex={-1}
-        className="absolute inset-x-0 bottom-0 z-10 mx-auto flex max-h-[90vh] w-full max-w-lg flex-col rounded-t-2xl border border-sand-200 bg-sand-50 shadow-2xl outline-none sm:relative sm:bottom-auto sm:m-4 sm:max-h-[90vh] sm:rounded-2xl"
-        style={{
-          bottom: keyboardInset > 0 ? keyboardInset : undefined,
-          maxHeight:
-            keyboardInset > 0 ? `calc(100dvh - ${keyboardInset}px)` : undefined,
-        }}
+        data-keyboard-scroll
+        className="absolute inset-x-0 bottom-0 z-10 mx-auto flex max-h-full w-full max-w-lg flex-col rounded-t-2xl border border-sand-200 bg-sand-50 shadow-2xl outline-none sm:relative sm:bottom-auto sm:m-4 sm:max-h-[min(90%,640px)] sm:rounded-2xl"
+        style={{ maxHeight: 'min(100%, 640px)' }}
       >
         <div className="flex items-center justify-between border-b border-sand-100 px-5 py-4">
           <div className="flex items-center gap-2">

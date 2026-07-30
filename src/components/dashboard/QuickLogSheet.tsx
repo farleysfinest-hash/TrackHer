@@ -6,7 +6,7 @@ import { useQuickLog } from '../../hooks/useQuickLog';
 import { useSymptomSelections } from '../../hooks/useSymptomSelections';
 import { useToast } from '../../stores/toastStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
-import { useKeyboardBottomInset } from '../../hooks/useKeyboardBottomInset';
+import { useVisualViewportBounds } from '../../hooks/useKeyboardBottomInset';
 import { buildQuickLogEcho } from '../../utils/echoHelpers';
 import { getSymptomByKey, getSymptomChipLabel, searchSymptomCatalog } from '../../data/symptoms';
 import { SYMPTOM_BODY_SYSTEM_COLORS, SYMPTOM_BODY_SYSTEM_LABELS } from '../../types/symptoms';
@@ -85,7 +85,7 @@ export function QuickLogSheet() {
   const toast = useToast();
   const timezone = getResolvedTimezone(useAuthStore((state) => state.profile?.timezone));
   const timeOptions = buildQuickLogTimeOptions(timezone);
-  const keyboardInset = useKeyboardBottomInset();
+  const { offsetTop, height: vvHeight } = useVisualViewportBounds();
 
   const [severity, setSeverity] = useState<number | null>(null);
   const [severityTouched, setSeverityTouched] = useState(false);
@@ -289,7 +289,11 @@ export function QuickLogSheet() {
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 sm:flex sm:items-center sm:justify-center">
+    <div
+      data-vv-frame
+      className="fixed inset-x-0 z-50 sm:flex sm:items-center sm:justify-center"
+      style={{ top: offsetTop, height: vvHeight }}
+    >
       <button
         type="button"
         className="absolute inset-0 bg-black/40 backdrop-blur-[1px] animate-fade-in"
@@ -312,11 +316,7 @@ export function QuickLogSheet() {
           transform: offsetY ? `translateY(${offsetY}px)` : undefined,
           transition: sheetTransition,
           touchAction: offsetY > 0 ? 'none' : undefined,
-          bottom: keyboardInset > 0 ? keyboardInset : undefined,
-          maxHeight:
-            keyboardInset > 0
-              ? `calc(100dvh - ${keyboardInset}px)`
-              : 'min(90dvh, 640px)',
+          maxHeight: 'min(100%, 640px)',
         }}
         className="absolute inset-x-0 bottom-0 z-10 mx-auto flex w-full max-w-lg flex-col animate-slide-up rounded-t-2xl border border-sand-200 bg-sand-50 outline-none shadow-2xl sm:relative sm:bottom-auto sm:m-4 sm:rounded-2xl"
       >
