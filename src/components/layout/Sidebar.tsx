@@ -18,6 +18,7 @@ import {
   CheckinDueDot,
   CHECKIN_DUE_WORD,
 } from './navDueStyles';
+import { useTabNavigate } from './useTabNavigate';
 
 const navItems: Array<{
   path: string;
@@ -40,6 +41,7 @@ const navItems: Array<{
 export function Sidebar() {
   const { hasCheckedInToday, isDue, isLoading } = useCheckinStatus();
   const { needsDoses } = useNavDosesDue();
+  const goTab = useTabNavigate();
   // Pulse, weekly MRS, or doses owed — Check-In owns the daily action stack.
   const needsCheckin =
     !isLoading && (!hasCheckedInToday || isDue || needsDoses);
@@ -62,6 +64,10 @@ export function Sidebar() {
             <NavLink
               key={path}
               to={path}
+              onClick={(e) => {
+                e.preventDefault();
+                goTab(path);
+              }}
               aria-label={
                 showDue
                   ? isDue

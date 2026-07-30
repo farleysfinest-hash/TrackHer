@@ -57,9 +57,9 @@ function TabFallback() {
 }
 
 /**
- * Keeps main shell tabs mounted after first visit and toggles visibility.
- * Avoids the remount/refetch flash that React Router's <Outlet /> causes on
- * every tab switch. Memory cost is fine for five phone-scale screens.
+ * Keeps main shell tabs mounted after first visit.
+ * Inactive tabs stay in an absolute layer (no display:none) so Recharts keeps
+ * width and returning to Dashboard does not remount ~12 chart trees.
  */
 export function PersistentTabs() {
   const { pathname } = useLocation();
@@ -120,7 +120,7 @@ export function PersistentTabs() {
   }
 
   return (
-    <>
+    <div className="relative min-w-0">
       {TAB_PATHS.map((path) => {
         if (!mounted.has(path)) return null;
         const active = pathname === path;
@@ -128,10 +128,14 @@ export function PersistentTabs() {
         return (
           <div
             key={path}
-            hidden={!active}
             aria-hidden={!active}
-            className={active ? undefined : 'hidden'}
-            style={active ? undefined : { contentVisibility: 'hidden' }}
+            inert={!active}
+            className={
+              active
+                ? 'relative min-w-0'
+                : // Keep width + chart trees warm — no display:none (Recharts RO collapses).
+                  'pointer-events-none absolute inset-x-0 top-0 -z-10 min-w-0 opacity-0'
+            }
           >
             <TabActiveProvider active={active}>
               <RouteErrorBoundary>
@@ -143,6 +147,6 @@ export function PersistentTabs() {
           </div>
         );
       })}
-    </>
+    </div>
   );
 }

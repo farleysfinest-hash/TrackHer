@@ -60,31 +60,38 @@ function useNotificationNavigation() {
   }, [navigate]);
 }
 
-export function AppShell() {
+/** Pathname-aware chrome — kept outside InsightsProvider so tab switches don't rebuild insights. */
+function AppShellChrome() {
   const { pathname } = useLocation();
+  const onMainTab = isMainTabPath(pathname);
+
+  return (
+    <div className="flex min-h-screen max-w-[100vw] bg-sand-50">
+      <Sidebar />
+      <div className="safe-area-sidebar-offset flex min-w-0 max-w-full flex-1 flex-col">
+        <Header />
+        <main className="safe-area-main-x min-w-0 max-w-full flex-1 overflow-x-clip py-6 pb-24 md:py-8 md:pb-8">
+          <div className="mx-auto min-w-0 max-w-[1200px]">
+            <PersistentTabs />
+            {!onMainTab && <Outlet />}
+          </div>
+        </main>
+        <MobileNav />
+      </div>
+    </div>
+  );
+}
+
+export function AppShell() {
   useReminderSync();
   useNotificationNavigation();
   useCoreDataPrefetch();
   useCheckinStatusVisibilityRefresh();
 
-  const onMainTab = isMainTabPath(pathname);
-
   return (
     <InsightsProvider>
       <NavDueProvider>
-        <div className="flex min-h-screen max-w-[100vw] bg-sand-50">
-          <Sidebar />
-          <div className="safe-area-sidebar-offset flex min-w-0 max-w-full flex-1 flex-col">
-            <Header />
-            <main className="safe-area-main-x min-w-0 max-w-full flex-1 overflow-x-clip py-6 pb-24 md:py-8 md:pb-8">
-              <div className="mx-auto min-w-0 max-w-[1200px]">
-                <PersistentTabs />
-                {!onMainTab && <Outlet />}
-              </div>
-            </main>
-            <MobileNav />
-          </div>
-        </div>
+        <AppShellChrome />
       </NavDueProvider>
     </InsightsProvider>
   );

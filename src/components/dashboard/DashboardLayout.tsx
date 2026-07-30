@@ -150,11 +150,7 @@ export function DashboardLayout() {
           </div>
         </div>
 
-        {!ready ? null : !tabActive ? (
-          // Keep page mounted for scroll restore, but unmount ~12 Recharts trees
-          // while another tab is active so switches stay cheap.
-          <div className="min-h-[70vh]" aria-hidden />
-        ) : (
+        {!ready ? null : (
           <>
             {safeguardingCards}
 
