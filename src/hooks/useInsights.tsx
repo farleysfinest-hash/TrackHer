@@ -1,17 +1,28 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import { runPatternEngine } from '../engine/patternEngine';
 import type { Insight } from '../engine/types';
 import { useCheckins } from './useCheckins';
 import { useMedications } from './useMedications';
 import { useMedicationChanges } from './useMedicationChanges';
 import { useLabResults } from './useLabResults';
+import { useMedicationAdministrations } from './useMedicationAdministrations';
 import { useAuthStore } from '../stores/authStore';
 import { getResolvedTimezone } from '../utils/checkinHelpers';
 import { supabase } from '../lib/supabase';
-import { fetchAllPages } from '../utils/pagedQuery';
 import type {
   ExtendedSymptomLog,
-  MedicationAdministration,
+  LabResult,
+  Medication,
+  MedicationChange,
+  Profile,
   SymptomCheckin,
 } from '../types/database';
 import type { DismissalRecord } from '../utils/insightHelpers';
@@ -19,12 +30,35 @@ import { filterDismissedInsights } from '../utils/insightHelpers';
 
 const EXTENDED_LOGS_DAYS = 120;
 const EXTENDED_LOGS_LIMIT = 500;
-const ADMINISTRATIONS_DAYS = 90;
 /** Daily pulse can crowd out weekly MRS in a mixed limit — keep a dedicated MRS lane. */
 const MIXED_CHECKIN_FETCH_LIMIT = 400;
 const MRS_CHECKIN_FETCH_LIMIT = 120;
 
-export function useInsights() {
+export interface InsightsValue {
+  insights: Insight[];
+  primaryInsights: Insight[];
+  moreInsights: Insight[];
+  safeguardingInsights: Insight[];
+  highPriority: Insight[];
+  positive: Insight[];
+  isLoading: boolean;
+  dismissInsight: (insightId: string) => Promise<void>;
+  extendedSymptoms: ExtendedSymptomLog[];
+  /** Raw context for the AI facts packet (Ask about my data). */
+  aiContext: {
+    checkins: SymptomCheckin[];
+    medications: Medication[];
+    medicationChanges: MedicationChange[];
+    labResults: LabResult[];
+    profile: Profile | null;
+    timezone: string;
+    insights: Insight[];
+  };
+}
+
+const InsightsContext = createContext<InsightsValue | null>(null);
+
+function useInsightsState(): InsightsValue {
   const profile = useAuthStore((s) => s.profile);
   const userId = useAuthStore((s) => s.user?.id);
   const timezone = getResolvedTimezone(profile?.timezone);
@@ -32,18 +66,18 @@ export function useInsights() {
   const { medications, fetchMedications, isLoading: medsLoading } = useMedications();
   const { changes, fetchChanges, isLoading: changesLoading } = useMedicationChanges();
   const { labResults, fetchLabResults, isLoading: labsLoading } = useLabResults();
+  const {
+    administrations,
+    isLoading: administrationsLoading,
+  } = useMedicationAdministrations();
   const [mrsCheckins, setMrsCheckins] = useState<SymptomCheckin[]>([]);
   const [mrsLoading, setMrsLoading] = useState(true);
   const [extendedSymptoms, setExtendedSymptoms] = useState<ExtendedSymptomLog[]>([]);
-  const [administrations, setAdministrations] = useState<MedicationAdministration[]>([]);
   const [extendedLoading, setExtendedLoading] = useState(true);
-  const [administrationsLoading, setAdministrationsLoading] = useState(true);
   const [dismissals, setDismissals] = useState<DismissalRecord[]>([]);
   const [dismissalsLoading, setDismissalsLoading] = useState(true);
 
   useEffect(() => {
-    // Pulse needs recent daily rows; Patterns/Trends need a deep MRS history that a
-    // mixed 100-row limit would starve once daily pulse fills the window.
     void fetchCheckins(MIXED_CHECKIN_FETCH_LIMIT);
     void fetchMedications();
     void fetchChanges();
@@ -104,50 +138,6 @@ export function useInsights() {
         if (cancelled) return;
         setExtendedSymptoms((data as ExtendedSymptomLog[]) ?? []);
         setExtendedLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [userId]);
-
-  useEffect(() => {
-    if (!userId) {
-      setAdministrations([]);
-      setAdministrationsLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setAdministrationsLoading(true);
-
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - ADMINISTRATIONS_DAYS);
-    const cutoffISO = cutoff.toISOString();
-
-    void fetchAllPages<MedicationAdministration>(async (from, to) => {
-      const { data, error } = await supabase
-        .from('medication_administrations')
-        .select('*')
-        .eq('user_id', userId)
-        .gte('taken_at', cutoffISO)
-        .order('taken_at', { ascending: false })
-        .range(from, to);
-      return { data: data as MedicationAdministration[] | null, error };
-    })
-      .then((rows) => {
-        if (cancelled) return;
-        setAdministrations(rows);
-        setAdministrationsLoading(false);
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        console.error(
-          'Failed to load administrations for insights:',
-          err instanceof Error ? err.message : err,
-        );
-        setAdministrations([]);
-        setAdministrationsLoading(false);
       });
 
     return () => {
@@ -312,9 +302,22 @@ export function useInsights() {
     isLoading,
     dismissInsight,
     extendedSymptoms,
-    /** Raw context for the AI facts packet (Ask about my data). */
     aiContext,
   };
+}
+
+/** One insights pipeline for the whole shell — Dashboard / Meds / Insights / reports share it. */
+export function InsightsProvider({ children }: { children: ReactNode }) {
+  const value = useInsightsState();
+  return <InsightsContext.Provider value={value}>{children}</InsightsContext.Provider>;
+}
+
+export function useInsights(): InsightsValue {
+  const ctx = useContext(InsightsContext);
+  if (!ctx) {
+    throw new Error('useInsights must be used within InsightsProvider');
+  }
+  return ctx;
 }
 
 export type { Insight };

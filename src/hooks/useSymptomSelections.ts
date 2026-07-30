@@ -1,106 +1,34 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { supabase } from '../lib/supabase';
-import { useAuthStore } from '../stores/authStore';
-import type { UserSymptomSelection } from '../types/database';
+import { useCallback, useEffect, useMemo } from 'react';
+import {
+  useSymptomSelectionsStore,
+  type SymptomSelection,
+} from '../stores/symptomSelectionsStore';
 
-export interface SymptomSelection {
-  symptom_id: string;
-  is_watch_symptom: boolean;
-}
+export type { SymptomSelection };
 
-const SELECTIONS_UPDATED_EVENT = 'trackher:symptom-selections-updated';
-
+/**
+ * Shared symptom-selection cache — Check-In, Quick Log, and manage modals
+ * share one fetch per session.
+ */
 export function useSymptomSelections() {
-  const [selections, setSelections] = useState<SymptomSelection[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const instanceIdRef = useRef(Symbol('symptom-selections'));
-
-  const getUserId = () => useAuthStore.getState().user?.id;
-
-  const fetchSelections = useCallback(async () => {
-    const userId = getUserId();
-    if (!userId) {
-      setSelections([]);
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
-    const { data, error: fetchError } = await supabase
-      .from('user_symptom_selections')
-      .select('symptom_id, is_watch_symptom')
-      .eq('user_id', userId);
-
-    setIsLoading(false);
-    if (fetchError) {
-      setError(fetchError.message);
-      return;
-    }
-
-    setSelections((data as Pick<UserSymptomSelection, 'symptom_id' | 'is_watch_symptom'>[]) ?? []);
-  }, []);
+  const selections = useSymptomSelectionsStore((s) => s.selections);
+  const isLoading = useSymptomSelectionsStore((s) => s.isLoading);
+  const error = useSymptomSelectionsStore((s) => s.error);
+  const fetchSelections = useSymptomSelectionsStore((s) => s.fetchSelections);
+  const saveSelectionsStore = useSymptomSelectionsStore((s) => s.saveSelections);
 
   useEffect(() => {
     void fetchSelections();
   }, [fetchSelections]);
 
-  useEffect(() => {
-    const handleSelectionsUpdated = (event: Event) => {
-      if (
-        event instanceof CustomEvent &&
-        event.detail === instanceIdRef.current
-      ) {
-        return;
-      }
-      void fetchSelections();
-    };
-    window.addEventListener(SELECTIONS_UPDATED_EVENT, handleSelectionsUpdated);
-    return () => window.removeEventListener(SELECTIONS_UPDATED_EVENT, handleSelectionsUpdated);
-  }, [fetchSelections]);
-
   const saveSelections = useCallback(
-    async (
-      newSelections: SymptomSelection[],
-      watchSymptoms: string[],
-    ): Promise<boolean> => {
-      const userId = getUserId();
-      if (!userId) return false;
-
-      // Tracked set is the Quick Log set. Watch ids mirror tracked for back-compat
-      // with is_watch_symptom column (callers may still pass a subset).
-      const symptomIds = [
-        ...new Set([...newSelections.map((selection) => selection.symptom_id), ...watchSymptoms]),
-      ];
-      const sanitizedWatchSymptoms = [
-        ...new Set(watchSymptoms.length > 0 ? watchSymptoms : symptomIds),
-      ].filter((id) => symptomIds.includes(id));
-
-      const { error: saveError } = await supabase.rpc('save_user_symptom_selections', {
-        p_symptom_ids: symptomIds,
-        p_watch_symptom_ids: sanitizedWatchSymptoms,
-      });
-
-      if (saveError) {
-        setError(saveError.message);
-        return false;
-      }
-
-      await fetchSelections();
-      window.dispatchEvent(
-        new CustomEvent(SELECTIONS_UPDATED_EVENT, { detail: instanceIdRef.current }),
-      );
-      return true;
-    },
-    [fetchSelections],
+    async (newSelections: SymptomSelection[], watchSymptoms: string[]) =>
+      saveSelectionsStore(newSelections, watchSymptoms),
+    [saveSelectionsStore],
   );
 
-  // Memoized because SymptomManageModal resets its in-progress edits from these
-  // arrays. Rebuilding them on every render of a consumer gave them a fresh
-  // identity each time, which re-fired that reset and silently discarded
-  // whatever the user had just tracked.
+  // Memoized because SymptomManageModal resets in-progress edits from these
+  // arrays — fresh identity each render silently discarded edits.
   const trackedSymptomIds = useMemo(
     () => selections.map((s) => s.symptom_id),
     [selections],

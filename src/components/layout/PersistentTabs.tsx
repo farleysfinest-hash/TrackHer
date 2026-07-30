@@ -4,18 +4,19 @@ import { RouteErrorBoundary } from '../ui/ErrorBoundary';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { DashboardPage } from '../../pages/DashboardPage';
 
-const MedicationsPage = lazy(() =>
-  import('../../pages/MedicationsPage').then((m) => ({ default: m.MedicationsPage })),
-);
-const CheckinPage = lazy(() =>
-  import('../../pages/CheckinPage').then((m) => ({ default: m.CheckinPage })),
-);
-const LabsPage = lazy(() =>
-  import('../../pages/LabsPage').then((m) => ({ default: m.LabsPage })),
-);
-const InsightsPage = lazy(() =>
-  import('../../pages/InsightsPage').then((m) => ({ default: m.InsightsPage })),
-);
+const loadMedicationsPage = () =>
+  import('../../pages/MedicationsPage').then((m) => ({ default: m.MedicationsPage }));
+const loadCheckinPage = () =>
+  import('../../pages/CheckinPage').then((m) => ({ default: m.CheckinPage }));
+const loadLabsPage = () =>
+  import('../../pages/LabsPage').then((m) => ({ default: m.LabsPage }));
+const loadInsightsPage = () =>
+  import('../../pages/InsightsPage').then((m) => ({ default: m.InsightsPage }));
+
+const MedicationsPage = lazy(loadMedicationsPage);
+const CheckinPage = lazy(loadCheckinPage);
+const LabsPage = lazy(loadLabsPage);
+const InsightsPage = lazy(loadInsightsPage);
 
 const TAB_PATHS = [
   '/dashboard',
@@ -34,6 +35,13 @@ const TAB_COMPONENTS: Record<TabPath, ComponentType> = {
   '/labs': LabsPage,
   '/insights': InsightsPage,
 };
+
+const TAB_PRELOADERS = [
+  loadMedicationsPage,
+  loadCheckinPage,
+  loadLabsPage,
+  loadInsightsPage,
+] as const;
 
 export function isMainTabPath(pathname: string): pathname is TabPath {
   return (TAB_PATHS as readonly string[]).includes(pathname);
@@ -59,6 +67,25 @@ export function PersistentTabs() {
   );
   const scrollByPath = useRef<Map<string, number>>(new Map());
   const prevPath = useRef(pathname);
+
+  // Warm lazy tab chunks while idle so the first switch skips Suspense.
+  useEffect(() => {
+    let cancelled = false;
+    const preload = () => {
+      if (cancelled) return;
+      for (const load of TAB_PRELOADERS) {
+        void load();
+      }
+    };
+    const ric = window.requestIdleCallback?.(preload, { timeout: 2500 });
+    const timeoutId =
+      typeof ric === 'number' ? undefined : window.setTimeout(preload, 800);
+    return () => {
+      cancelled = true;
+      if (typeof ric === 'number') window.cancelIdleCallback?.(ric);
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+    };
+  }, []);
 
   useEffect(() => {
     if (!isMainTabPath(pathname)) return;

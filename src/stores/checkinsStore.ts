@@ -123,7 +123,13 @@ export const useCheckinsStore = create<CheckinsState>((set, get) => ({
 
     const promise = (async () => {
       const requestId = ++latestListRequest;
-      set({ isLoading: true, error: null });
+      // Expanding an already-warm cache should not blank the UI with isLoading.
+      const expandingWarmCache = get().hasFetched && !force && limit > get().fetchedLimit;
+      if (!expandingWarmCache) {
+        set({ isLoading: true, error: null });
+      } else {
+        set({ error: null });
+      }
 
       const [listResult, countResult] = await Promise.all([
         supabase

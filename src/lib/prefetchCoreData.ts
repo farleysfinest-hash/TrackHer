@@ -2,6 +2,12 @@ import { useMedicationsStore } from '../stores/medicationsStore';
 import { useMedicationChangesStore } from '../stores/medicationChangesStore';
 import { useLabResultsStore } from '../stores/labResultsStore';
 import { useCheckinsStore } from '../stores/checkinsStore';
+import { useAdministrationsStore } from '../stores/administrationsStore';
+import { useSymptomSelectionsStore } from '../stores/symptomSelectionsStore';
+import { DOSE_HISTORY_DAYS } from '../utils/doseSchedule';
+
+/** Match Insights mixed check-in depth so first Insights visit does not expand cold. */
+const PREFETCH_CHECKINS_LIMIT = 400;
 
 /**
  * Warms the shared data stores once per authenticated session so every page/
@@ -13,7 +19,9 @@ export async function prefetchCoreData(): Promise<void> {
     useMedicationsStore.getState().fetchMedications(),
     useMedicationChangesStore.getState().fetchChanges(),
     useLabResultsStore.getState().fetchLabResults(),
-    useCheckinsStore.getState().fetchCheckins(),
+    useCheckinsStore.getState().fetchCheckins(PREFETCH_CHECKINS_LIMIT),
+    useAdministrationsStore.getState().fetchRecent(DOSE_HISTORY_DAYS),
+    useSymptomSelectionsStore.getState().fetchSelections(),
   ]);
 }
 
@@ -23,4 +31,6 @@ export function clearCoreDataCaches(): void {
   useMedicationChangesStore.getState().reset();
   useLabResultsStore.getState().reset();
   useCheckinsStore.getState().reset();
+  useAdministrationsStore.getState().reset();
+  useSymptomSelectionsStore.getState().reset();
 }

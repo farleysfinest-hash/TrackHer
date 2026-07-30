@@ -6,6 +6,7 @@ import { Sidebar } from './Sidebar';
 import { MobileNav } from './MobileNav';
 import { Header } from './Header';
 import { PersistentTabs, isMainTabPath } from './PersistentTabs';
+import { InsightsProvider } from '../../hooks/useInsights';
 import { useReminderSync } from '../../hooks/useReminderSync';
 import { useAuthStore } from '../../stores/authStore';
 import { refreshCheckinStatusForCurrentUser } from '../../stores/checkinStatusStore';
@@ -74,8 +75,10 @@ export function AppShell() {
         <Header />
         <main className="safe-area-main-x min-w-0 max-w-full flex-1 overflow-x-clip py-6 pb-24 md:py-8 md:pb-8">
           <div className="mx-auto min-w-0 max-w-[1200px]">
-            <PersistentTabs />
-            {!onMainTab && <Outlet />}
+            <InsightsProvider>
+              <PersistentTabs />
+              {!onMainTab && <Outlet />}
+            </InsightsProvider>
           </div>
         </main>
         <MobileNav />
