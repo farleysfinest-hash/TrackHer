@@ -6,7 +6,7 @@ export function PrivacyPolicyPage() {
   return (
     <LegalPageLayout>
       <h1 className="font-display text-3xl font-semibold text-sage-800">Privacy Policy</h1>
-      <p className="mt-2 text-sm text-sage-400">Effective Date: July 6, 2026 · Last Updated: July 27, 2026</p>
+      <p className="mt-2 text-sm text-sage-400">Effective Date: July 6, 2026 · Last Updated: July 29, 2026</p>
 
       <div className="mt-8 space-y-8 text-sage-700 text-[15px] leading-relaxed">
 
@@ -124,7 +124,10 @@ export function PrivacyPolicyPage() {
           <ul className="mt-2 ml-4 list-disc space-y-1 text-sage-600">
             <li>To authenticate your account and maintain your session.</li>
             <li>To store and display the health data you enter so you can track patterns over time.</li>
-            <li>To calculate symptom scores, generate trend charts, and surface correlations between your medications, symptoms, and lab results. All pattern analysis runs inside the App itself — your health data is never sent to any external analysis or artificial-intelligence service.</li>
+            <li>To calculate symptom scores, generate trend charts, and surface clinical-pattern cards between your medications, symptoms, and lab results. That pattern analysis runs inside the App (and our own servers) — it is not performed by a third-party AI model.</li>
+            <li>
+              To power optional companion features (for example Ask about your data, insight polish, visit prep/debrief, and related drafts). When you use those features, we send a limited summary of your recent logs — such as recent check-in scores, medication names and doses, recent lab values, and non-emergency insight text — through our Supabase Edge Function to OpenAI so a language model can generate a reply. We do not send Tier‑2 safeguarding cards or equivalent emergency insight bodies to that model. OpenAI processes that summary as our processor to return the companion text; it is not used to train a public model under our API use, subject to OpenAI&apos;s then-current API terms.
+            </li>
             <li>To generate provider-ready PDF reports from your own data, which you control and share at your discretion.</li>
             <li>Optional check-in and medication reminders, when you enable them, are scheduled locally on your device and are not sent through an external notification marketing service.</li>
             <li>To respond to your support requests.</li>
@@ -160,6 +163,13 @@ export function PrivacyPolicyPage() {
               frontend is served by Cloudflare. Cloudflare processes standard web request data
               (IP addresses, headers) to serve the App but does not have access to your health data,
               which is stored directly in Supabase.
+            </li>
+            <li>
+              <span className="font-medium text-sage-700">OpenAI</span> (optional companion features):
+              When you use companion features in the App, a limited health-data summary is sent via
+              our Supabase Edge Function to OpenAI&apos;s API so a language model can generate the
+              companion reply. OpenAI acts as a processor for that request. See &quot;How We Use Your
+              Information&quot; above for what is included and what is excluded.
             </li>
             <li>
               <span className="font-medium text-sage-700">Apple</span> (iOS distribution): When the iOS App is available: The iOS App
