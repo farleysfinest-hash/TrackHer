@@ -86,9 +86,10 @@ Dose/lab demands (“just tell me”) after a script get a shorter, firmer versi
 
 ### Safety hardening (Edge)
 
-- **Risk classifier fail-closed:** if the one-word risk-tier call errors or returns an unusable label, chat returns a soft safety reply (988 / findahelpline) instead of free-form companion chat.
+- **Risk classifier:** one retry on OpenAI blips; if still unavailable, soft 988/findahelpline reply only when the message looks risk-adjacent — hormone/vocab asks fail open to normal chat.
 - **Rate limit:** ~45 authenticated requests per user per 10 minutes (in-memory per isolate).
 - **Forbidden explain:** `explain_insight` returns 403 when `insight.category` is in the safeguarding family; facts packets also strip those categories before any model call.
+- **Journal / visit debrief:** `classifyCrisisTier` on free text returns a scripted `risk` + `riskReply` (no chip/plan generation) so SI disclosures are not treated as logging only.
 
 ## Cache
 

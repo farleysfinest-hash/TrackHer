@@ -8,6 +8,7 @@ import {
   writeVisitDebriefToStorage,
   type VisitDebriefPack,
 } from '../../utils/aiVisitDebrief';
+import { CompanionRiskNotice } from './CompanionRiskNotice';
 
 interface VisitDebriefCardProps {
   pack: VisitDebriefPack;
@@ -50,12 +51,15 @@ export function VisitDebriefCard({ pack: initial, onCleared }: VisitDebriefCardP
           <ClipboardList className="h-5 w-5" />
         </div>
         <div className="min-w-0 flex-1 space-y-3">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-sage-500">
-              After your visit
-            </p>
-            <p className="mt-1 text-sm leading-relaxed text-sage-700">{pack.planSummary}</p>
-          </div>
+          {pack.riskReply ? <CompanionRiskNotice reply={pack.riskReply} /> : null}
+          {pack.planSummary ? (
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-sage-500">
+                After your visit
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-sage-700">{pack.planSummary}</p>
+            </div>
+          ) : null}
           {pack.followUps.length > 0 && (
             <ul className="space-y-2">
               {pack.followUps.map((f, i) => (

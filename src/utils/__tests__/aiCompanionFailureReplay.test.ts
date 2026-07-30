@@ -6,6 +6,7 @@ import {
   classifyCrisisTier,
   parseRiskTierWord,
   parseRiskTierLabel,
+  looksRiskAdjacent,
   shouldForceDemandFromHistory,
 } from '../aiCompanionScripts';
 
@@ -192,6 +193,11 @@ describe('LLM tier backstop plumbing (Edge classifyRiskTier → scripts)', () =>
     expect(parseRiskTierLabel('probably ideation')).toBeNull();
     expect(parseRiskTierLabel('')).toBeNull();
     expect(parseRiskTierLabel(undefined)).toBeNull();
+  });
+
+  it('marks hormone vocab as non-risk-adjacent so classifier blips can fail open', () => {
+    expect(looksRiskAdjacent('what does estradiol actually do?')).toBe(false);
+    expect(looksRiskAdjacent('some nights i think about ending it')).toBe(true);
   });
 
   it('builds scripted crisis replies for phrasings regex will never enumerate', () => {

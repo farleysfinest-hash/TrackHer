@@ -173,6 +173,15 @@ export function classifyCrisisTier(message: string): CrisisTier | null {
   return null;
 }
 
+/** Loose risk-adjacent check for fail-open decisions when the tier classifier is down. */
+export function looksRiskAdjacent(message: string): boolean {
+  if (classifyCrisisTier(message)) return true;
+  const m = normalize(message);
+  return /\b(suicid|kill(ing)? (my|myself)|end (my life|it all)|hurt myself|self[- ]?harm|unalive|want to die|hopeless|worthless|not wake up|overdose|hang myself|cut myself|gun|rifle|988)\b/.test(
+    m,
+  );
+}
+
 /** @deprecated use classifyCompanionShape */
 export function classifyDoseShape(message: string): ScriptShape | null {
   const shape = classifyCompanionShape(message);

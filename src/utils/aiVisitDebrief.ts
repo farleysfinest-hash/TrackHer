@@ -1,5 +1,7 @@
 /** Visit debrief — client clamp matching Edge visit_debrief. */
 
+export type VisitDebriefRiskTier = 'mental_decline' | 'crisis' | 'crisis_imminent';
+
 export interface VisitDebriefFollowUp {
   label: string;
   timeframe: string | null;
@@ -10,6 +12,8 @@ export interface VisitDebriefPack {
   planSummary: string;
   followUps: VisitDebriefFollowUp[];
   savedAt?: string;
+  risk?: VisitDebriefRiskTier | null;
+  riskReply?: string | null;
 }
 
 export const VISIT_DEBRIEF_STORAGE_KEY = 'trackher.visitDebrief.v1';
@@ -62,6 +66,25 @@ export function isFollowUpRedundantWithSummary(label: string, planSummary: strin
 export function clampVisitDebriefPack(raw: unknown): VisitDebriefPack | null {
   if (!raw || typeof raw !== 'object') return null;
   const o = raw as Record<string, unknown>;
+  const risk =
+    o.risk === 'mental_decline' || o.risk === 'crisis' || o.risk === 'crisis_imminent'
+      ? o.risk
+      : null;
+  const riskReply =
+    typeof o.riskReply === 'string' && o.riskReply.trim()
+      ? o.riskReply.trim().slice(0, 2000)
+      : null;
+
+  if (risk && riskReply && !String(o.planSummary ?? '').trim()) {
+    return {
+      planSummary: '',
+      followUps: [],
+      risk,
+      riskReply,
+      savedAt: typeof o.savedAt === 'string' ? o.savedAt : undefined,
+    };
+  }
+
   const planSummary =
     typeof o.planSummary === 'string' ? o.planSummary.trim().slice(0, 1200) : '';
   if (!planSummary) return null;
@@ -94,6 +117,8 @@ export function clampVisitDebriefPack(raw: unknown): VisitDebriefPack | null {
   return {
     planSummary,
     followUps,
+    risk: risk && riskReply ? risk : null,
+    riskReply: risk && riskReply ? riskReply : null,
     savedAt: typeof o.savedAt === 'string' ? o.savedAt : undefined,
   };
 }

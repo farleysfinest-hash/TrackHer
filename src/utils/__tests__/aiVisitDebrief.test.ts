@@ -9,6 +9,18 @@ describe('clampVisitDebriefPack', () => {
     expect(clampVisitDebriefPack({ followUps: [] })).toBeNull();
   });
 
+  it('keeps risk-only packs when crisis screening fires', () => {
+    const pack = clampVisitDebriefPack({
+      planSummary: '',
+      followUps: [],
+      risk: 'crisis',
+      riskReply: 'Please call or text 988…',
+    });
+    expect(pack?.risk).toBe('crisis');
+    expect(pack?.riskReply).toMatch(/988/);
+    expect(pack?.planSummary).toBe('');
+  });
+
   it('clamps followUps and nulls empty timeframe', () => {
     const pack = clampVisitDebriefPack({
       planSummary: 'Stay on current patch; recheck labs.',

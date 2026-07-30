@@ -38,6 +38,10 @@ export function useJournalExtract() {
     }
     const clamped = clampJournalExtract(raw, allowed, medSet);
     setResult(clamped);
+    if (clamped.risk && clamped.riskReply) {
+      setError(null);
+      return clamped;
+    }
     if (clamped.symptoms.length === 0 && clamped.events.length === 0) {
       setError('Nothing clear to log from that — try naming a symptom or med.');
     }

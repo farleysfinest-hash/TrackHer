@@ -1,5 +1,7 @@
 /** Journal extract — client clamp matching Edge journal_extract validation. */
 
+export type JournalRiskTier = 'mental_decline' | 'crisis' | 'crisis_imminent';
+
 export interface JournalSymptomSuggestion {
   key: string;
   label: string;
@@ -15,6 +17,14 @@ export interface JournalEventSuggestion {
 export interface JournalExtractResult {
   symptoms: JournalSymptomSuggestion[];
   events: JournalEventSuggestion[];
+  risk?: JournalRiskTier | null;
+  riskReply?: string | null;
+}
+
+function parseRisk(raw: unknown): JournalRiskTier | null {
+  return raw === 'mental_decline' || raw === 'crisis' || raw === 'crisis_imminent'
+    ? raw
+    : null;
 }
 
 export function clampJournalExtract(
@@ -30,9 +40,18 @@ export function clampJournalExtract(
     allowedKeys instanceof Map ? allowedKeys.has(key) : allowedKeys.has(key);
 
   if (!raw || typeof raw !== 'object') {
-    return { symptoms: [], events: [] };
+    return { symptoms: [], events: [], risk: null, riskReply: null };
   }
   const o = raw as Record<string, unknown>;
+  const risk = parseRisk(o.risk);
+  const riskReply =
+    typeof o.riskReply === 'string' && o.riskReply.trim()
+      ? o.riskReply.trim().slice(0, 2000)
+      : null;
+
+  if (risk && riskReply) {
+    return { symptoms: [], events: [], risk, riskReply };
+  }
 
   const symptoms = Array.isArray(o.symptoms)
     ? o.symptoms
@@ -79,5 +98,5 @@ export function clampJournalExtract(
         .slice(0, 3)
     : [];
 
-  return { symptoms, events };
+  return { symptoms, events, risk: null, riskReply: null };
 }

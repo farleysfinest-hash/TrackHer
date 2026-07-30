@@ -11,6 +11,8 @@ import {
   buildCompanionScriptReply,
   buildTierScriptReply,
   classifyCompanionShape,
+  classifyCrisisTier,
+  looksRiskAdjacent,
   parseRiskTierLabel,
   shouldForceDemandFromHistory,
   type CrisisTier,
@@ -42,10 +44,13 @@ const COMPANION_BASE = `You are TrackHer's gentle companion for a woman tracking
 Global rules:
 - Ground personal claims in the facts packet only. Do not invent her numbers, dates, scores, labs, or dose changes.
 - Answer the question she asked in the first 1–2 sentences. Keep replies short (about 3–6 sentences) unless she asks for more.
+- Sentence 1 should mirror her words or intent when she is emotional or asking a direct question — do not open with stock lines like "I'm really sorry to hear…", "It sounds like…", or "I hear you…".
+- For purely emotional questions (fear, hope, "does this ever get better"), answer that human question first in plain language; only then offer a clinician handoff if needed. Prefer qualitative grounding ("sleep's been rough this week") over quoting numeric averages unless she asks about her numbers or scores.
 - Never prescribe dose changes. Never diagnose.
 - If she asks WHY a med change might have affected energy/mood: acknowledge the disappointment, cite any matching dose-change + pulse/MRS from the packet, note that progesterone can feel flattening/sedating for some women (correlation ≠ proof), and hand a clinician question. Do not ignore the emotional "supposed to help" part.
-- Low mood without suicide language: be caring, cite pulse/mood if present, encourage clinician follow-up; mention 988 only if she sounds hopeless or stuck — do not dump a full crisis script.
-- Active suicidal content is handled by a separate safety script — if you somehow see it, be warm, urge 988/emergency help, and do not counsel through a plan.
+- Low mood without suicide language: be caring, cite pulse/mood if present, encourage clinician follow-up; mention 988 Suicide & Crisis Lifeline only if she sounds hopeless or stuck — do not dump a full crisis script.
+- Active suicidal content is handled by a separate safety script — if you somehow see it, be warm, urge 988 Suicide & Crisis Lifeline / emergency help, and do not counsel through a plan.
+- Reply in the language she wrote in for free chat. Crisis and refusal scripts stay English.
 
 Thin history: say so gently. Use "you".`;
 
@@ -75,6 +80,12 @@ type RequestBody = {
   freeText?: string;
   catalog?: Array<{ key: string; label: string; searchTerms?: string[] }>;
   medications?: string[];
+  /** Pin dose_watch to a specific regimen change (client knows which one just saved). */
+  doseChange?: {
+    medicationName?: string;
+    changeDate?: string;
+    changeType?: string;
+  };
 };
 
 Deno.serve(async (req) => {
@@ -187,14 +198,17 @@ async function handleChat(openaiKey: string, userId: string, body: RequestBody) 
   if (!finalScript) {
     const classification = await classifyRiskTier(openaiKey, message, history);
     if (classification.status === 'unavailable') {
-      return json({
-        reply: RISK_CLASSIFIER_UNAVAILABLE_REPLY,
-        model: 'trackher-companion-script',
-        shape: 'risk_classifier_unavailable',
-        userId,
-      });
-    }
-    if (classification.tier) {
+      // Soft fail-closed only when the message looks risk-adjacent; hormone/vocab
+      // asks should still get a normal companion reply when the classifier blips.
+      if (looksRiskAdjacent(message)) {
+        return json({
+          reply: RISK_CLASSIFIER_UNAVAILABLE_REPLY,
+          model: 'trackher-companion-script',
+          shape: 'risk_classifier_unavailable',
+          userId,
+        });
+      }
+    } else if (classification.tier) {
       finalScript = buildTierScriptReply(classification.tier, message, facts, history);
     }
   }
@@ -244,18 +258,21 @@ async function classifyRiskTier(
     .slice(-4)
     .map((h) => `${h.role}: ${h.content.slice(0, 300)}`)
     .join('\n');
-  const res = await complete(openaiKey, {
-    system: RISK_TIER_SYSTEM,
-    messages: [
-      {
-        role: 'user',
-        content: `${context ? `RECENT TURNS:\n${context}\n\n` : ''}LAST USER MESSAGE:\n${message}`,
-      },
-    ],
-    temperature: 0,
-    maxTokens: 5,
-  });
-  // Fail closed: never drop into free-form companion chat when we couldn't label risk.
+  const userContent = `${context ? `RECENT TURNS:\n${context}\n\n` : ''}LAST USER MESSAGE:\n${message}`;
+
+  const attempt = () =>
+    complete(openaiKey, {
+      system: RISK_TIER_SYSTEM,
+      messages: [{ role: 'user', content: userContent }],
+      temperature: 0,
+      maxTokens: 5,
+    });
+
+  let res = await attempt();
+  if (res.error) {
+    res = await attempt(); // one retry on transient OpenAI blips
+  }
+  // Fail closed for risk-adjacent paths (caller decides); unusable label → unavailable.
   if (res.error) return { status: 'unavailable' };
   const label = parseRiskTierLabel(res.text);
   if (label === null) return { status: 'unavailable' };
@@ -557,6 +574,20 @@ Map her everyday phrase to 1–5 catalog entries. key MUST be copied exactly fro
 async function handleJournalExtract(openaiKey: string, userId: string, body: RequestBody) {
   const freeText = body.freeText?.trim();
   if (!freeText) return json({ error: 'freeText is required' }, 400);
+
+  const crisisTier = classifyCrisisTier(freeText);
+  if (crisisTier) {
+    const script = buildTierScriptReply(crisisTier, freeText, {}, []);
+    return json({
+      symptoms: [],
+      events: [],
+      risk: crisisTier,
+      riskReply: script.reply,
+      model: 'trackher-companion-script',
+      userId,
+    });
+  }
+
   const catalog = Array.isArray(body.catalog) ? body.catalog.slice(0, 80) : [];
   if (catalog.length === 0) return json({ error: 'catalog is required' }, 400);
   const medications = Array.isArray(body.medications)
@@ -639,23 +670,36 @@ Extract what she might want to log from free text.
         .slice(0, 3)
     : [];
 
-  return json({ symptoms, events, model: MODEL, userId });
+  return json({ symptoms, events, risk: null, riskReply: null, model: MODEL, userId });
 }
 
 async function handleDoseWatch(openaiKey: string, userId: string, body: RequestBody) {
   const factsJson = requireFacts(body.facts);
   if (typeof factsJson !== 'string') return factsJson;
 
+  const pinnedName =
+    typeof body.doseChange?.medicationName === 'string'
+      ? body.doseChange.medicationName.trim()
+      : '';
+  const pinnedDate =
+    typeof body.doseChange?.changeDate === 'string' ? body.doseChange.changeDate.trim() : '';
+  const pinnedType =
+    typeof body.doseChange?.changeType === 'string' ? body.doseChange.changeType.trim() : '';
+  const pinBlock =
+    pinnedName && pinnedDate
+      ? `\n\nFOCUS_CHANGE:\nmedicationName: ${pinnedName}\nchangeDate: ${pinnedDate}\nchangeType: ${pinnedType || 'dose_change'}\nWrite about THIS change only — do not narrate an older or different dose change.`
+      : '';
+
   const raw = await complete(openaiKey, {
     system: `${COMPANION_BASE}
 Return ONLY valid JSON (no markdown):
 {"note":"...","watchFor":["..."]}
 
-Look at recentDoseChanges (latest) in the facts packet.
+Look at the dose change identified in FOCUS_CHANGE when present; otherwise recentDoseChanges (latest) in the facts packet.
 - note: about 2 sentences, describe-only ("some women notice sleep shifts in the first two weeks").
 - watchFor: up to 4 plain observations to log. NEVER thresholds, dose advice, or diagnoses.
 If there is no recent dose change, return {"note":"","watchFor":[]}.`,
-    messages: [{ role: 'user', content: `FACTS_PACKET:\n${factsJson}` }],
+    messages: [{ role: 'user', content: `FACTS_PACKET:\n${factsJson}${pinBlock}` }],
     temperature: 0.35,
     maxTokens: 400,
   });
@@ -682,6 +726,20 @@ If there is no recent dose change, return {"note":"","watchFor":[]}.`,
 async function handleVisitDebrief(openaiKey: string, userId: string, body: RequestBody) {
   const freeText = body.freeText?.trim();
   if (!freeText) return json({ error: 'freeText is required' }, 400);
+
+  const crisisTier = classifyCrisisTier(freeText);
+  if (crisisTier) {
+    const script = buildTierScriptReply(crisisTier, freeText, {}, []);
+    return json({
+      planSummary: '',
+      followUps: [],
+      risk: crisisTier,
+      riskReply: script.reply,
+      model: 'trackher-companion-script',
+      userId,
+    });
+  }
+
   const factsJson = requireFacts(body.facts);
   if (typeof factsJson !== 'string') return factsJson;
 
@@ -734,7 +792,14 @@ Never invent follow-ups she did not mention. Never dose advice.`,
         .slice(0, 5)
     : [];
 
-  return json({ planSummary, followUps, model: MODEL, userId });
+  return json({
+    planSummary,
+    followUps,
+    risk: null,
+    riskReply: null,
+    model: MODEL,
+    userId,
+  });
 }
 
 async function handleDailyLine(openaiKey: string, userId: string, body: RequestBody) {
@@ -791,6 +856,7 @@ Write a one-page letter to a partner or family member explaining what she is exp
 - Explicitly say disbelief is common and the data is real.
 - No diagnoses. No invented numbers or dates.
 - Optional notes from her may be woven in if provided.
+- Close with a short provenance line such as: "Written with TrackHer from her logged data."
 Return plain text only.`,
     messages: [
       {

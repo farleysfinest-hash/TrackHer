@@ -47,4 +47,20 @@ describe('clampJournalExtract', () => {
       { type: 'note', medicationName: 'Estradiol', note: 'felt flat after patch' },
     ]);
   });
+
+  it('passes through crisis risk replies and clears chips', () => {
+    const result = clampJournalExtract(
+      {
+        symptoms: [{ key: 'anxiety', reason: 'should drop' }],
+        events: [],
+        risk: 'crisis',
+        riskReply: 'Please call or text 988…',
+      },
+      catalog,
+      meds,
+    );
+    expect(result.symptoms).toEqual([]);
+    expect(result.risk).toBe('crisis');
+    expect(result.riskReply).toMatch(/988/);
+  });
 });

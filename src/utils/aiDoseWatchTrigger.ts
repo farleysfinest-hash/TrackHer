@@ -10,6 +10,7 @@ export function triggerAiDoseWatch(
   input: AiFactsPacketInput,
   changeDate: string,
   medicationName: string,
+  changeType = 'dose_change',
 ): void {
   const userId = input.profile?.id;
   if (!userId || !medicationName.trim()) return;
@@ -17,7 +18,11 @@ export function triggerAiDoseWatch(
   void (async () => {
     try {
       const facts = buildAiFactsPacket(input);
-      const result = await invokeDoseWatch(facts);
+      const result = await invokeDoseWatch(facts, {
+        medicationName: medicationName.trim(),
+        changeDate,
+        changeType,
+      });
       const clamped = clampDoseWatchPack(result);
       if (!clamped) return;
       const hash = doseWatchCacheKey(changeDate, medicationName);

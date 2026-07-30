@@ -185,16 +185,17 @@ export async function invokeJournalExtract(
     medications,
   });
   if (error || !data) return null;
-  return {
-    symptoms: Array.isArray(data.symptoms) ? data.symptoms : [],
-    events: Array.isArray(data.events) ? data.events : [],
-  };
+  return data;
 }
 
-export async function invokeDoseWatch(facts: AiFactsPacket): Promise<DoseWatchPack | null> {
+export async function invokeDoseWatch(
+  facts: AiFactsPacket,
+  doseChange?: { medicationName: string; changeDate: string; changeType?: string },
+): Promise<DoseWatchPack | null> {
   const { data, error } = await invokeAiAssistant<DoseWatchPack>({
     action: 'dose_watch',
     facts,
+    doseChange,
   });
   if (error || !data) return null;
   return clampDoseWatchPack(data);

@@ -12,6 +12,7 @@ import type {
   JournalSymptomSuggestion,
 } from '../../utils/aiJournalExtract';
 import { tapLight } from '../../lib/haptics';
+import { CompanionRiskNotice } from '../insights/CompanionRiskNotice';
 
 /**
  * Secondary Quick Log mode: free text → confirm chips → store writes.
@@ -162,7 +163,9 @@ export function JournalQuickEntry() {
 
       {error && <p className="text-sm text-sage-600">{error}</p>}
 
-      {result && (result.symptoms.length > 0 || result.events.length > 0) && (
+      {result?.riskReply ? <CompanionRiskNotice reply={result.riskReply} /> : null}
+
+      {result && !result.riskReply && (result.symptoms.length > 0 || result.events.length > 0) && (
         <div className="space-y-3">
           {result.symptoms.length > 0 && (
             <div>
