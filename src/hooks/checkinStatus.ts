@@ -99,6 +99,40 @@ export function computeCheckinStatus(
   };
 }
 
+/**
+ * Whether the weekly MRS card should sit above daily pulse.
+ * Dose log always stays first separately.
+ *
+ * When the weekly minimum is unmet: prioritize on her preferred day, after that day
+ * later in the same calendar week (overdue), after a 7+ day gap, or when she has no
+ * preferred day. Before her day earlier in the week → pulse stays above weekly.
+ */
+export function weeklyTakesPriorityOverPulse(opts: {
+  weeklyMinimumMet: boolean;
+  hasFullMrsToday: boolean;
+  checkinDay: number | null;
+  /** JS getDay() for today, 0=Sun…6=Sat. */
+  todayWeekday: number;
+  daysSinceLastCheckin: number | null;
+}): boolean {
+  if (opts.weeklyMinimumMet || opts.hasFullMrsToday) return false;
+
+  const isComeback =
+    opts.daysSinceLastCheckin !== null && opts.daysSinceLastCheckin >= 7;
+  if (isComeback) return true;
+
+  if (opts.checkinDay === null) return true;
+
+  // On her preferred weekday.
+  if (opts.todayWeekday === opts.checkinDay) return true;
+
+  // Later in the same Sun–Sat week after her day → overdue for this week.
+  if (opts.todayWeekday > opts.checkinDay) return true;
+
+  // Earlier in the week than her day → pulse first; weekly still available below.
+  return false;
+}
+
 export type CheckinStatusSupabaseClient = typeof supabase;
 
 export interface LoadCheckinStatusSnapshotDependencies {

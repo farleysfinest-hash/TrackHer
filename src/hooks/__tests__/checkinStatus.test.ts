@@ -3,6 +3,7 @@ import {
   computeCheckinStatus,
   EMPTY_CHECKIN_STATUS,
   loadCheckinStatusSnapshot,
+  weeklyTakesPriorityOverPulse,
   type CheckinStatusSnapshot,
 } from '../checkinStatus';
 import type { MRSScore, SymptomCheckin } from '../../types/database';
@@ -560,4 +561,46 @@ describe('loadCheckinStatusSnapshot', () => {
       ).rejects.toThrow('Failed to load check-in status snapshot');
     },
   );
+});
+
+describe('weeklyTakesPriorityOverPulse', () => {
+  const base = {
+    weeklyMinimumMet: false,
+    hasFullMrsToday: false,
+    checkinDay: 5, // Friday
+    todayWeekday: 3, // Wednesday
+    daysSinceLastCheckin: 2,
+  };
+
+  it('keeps pulse above weekly when the weekly minimum is already met', () => {
+    expect(
+      weeklyTakesPriorityOverPulse({ ...base, weeklyMinimumMet: true, todayWeekday: 5 }),
+    ).toBe(false);
+  });
+
+  it('keeps pulse above weekly when a full MRS was already logged today', () => {
+    expect(weeklyTakesPriorityOverPulse({ ...base, hasFullMrsToday: true })).toBe(false);
+  });
+
+  it('prioritizes weekly on her preferred day', () => {
+    expect(weeklyTakesPriorityOverPulse({ ...base, todayWeekday: 5 })).toBe(true);
+  });
+
+  it('prioritizes weekly after her preferred day later in the week', () => {
+    expect(weeklyTakesPriorityOverPulse({ ...base, todayWeekday: 6 })).toBe(true);
+  });
+
+  it('keeps pulse above weekly earlier in the week before her day', () => {
+    expect(weeklyTakesPriorityOverPulse({ ...base, todayWeekday: 1 })).toBe(false);
+  });
+
+  it('prioritizes weekly after a 7+ day gap even before her day', () => {
+    expect(
+      weeklyTakesPriorityOverPulse({ ...base, todayWeekday: 1, daysSinceLastCheckin: 7 }),
+    ).toBe(true);
+  });
+
+  it('prioritizes weekly when she has no preferred day', () => {
+    expect(weeklyTakesPriorityOverPulse({ ...base, checkinDay: null })).toBe(true);
+  });
 });

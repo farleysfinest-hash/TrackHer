@@ -18,6 +18,7 @@ import { Card } from '../components/ui/Card';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
 import { getLocalDateISO, getResolvedTimezone } from '../utils/checkinHelpers';
+import { weeklyTakesPriorityOverPulse } from '../hooks/checkinStatus';
 import { formatLoggingDate } from '../utils/formatters';
 import { isValidCalendarDate } from '../utils/localDate';
 import type { SymptomCheckin, CheckinDraft } from '../types/database';
@@ -51,8 +52,20 @@ export function CheckinPage() {
   const loadExistingCheckin = useCheckinStore((s) => s.loadExistingCheckin);
   const hydrateFromDraft = useCheckinStore((s) => s.hydrateFromDraft);
   const userId = useAuthStore((s) => s.user?.id);
+  const checkinDay = useAuthStore((s) => s.profile?.checkin_day ?? null);
   const timezone = getResolvedTimezone(useAuthStore((s) => s.profile?.timezone));
   const todayStr = getLocalDateISO(timezone);
+  const todayWeekday = (() => {
+    const [y, m, d] = todayStr.split('-').map(Number);
+    return new Date(y, m - 1, d).getDay();
+  })();
+  const weeklyFirst = weeklyTakesPriorityOverPulse({
+    weeklyMinimumMet,
+    hasFullMrsToday,
+    checkinDay,
+    todayWeekday,
+    daysSinceLastCheckin,
+  });
 
   const [activeFlow, setActiveFlow] = useState(false);
   const [showDuplicatePrompt, setShowDuplicatePrompt] = useState(false);
@@ -200,10 +213,10 @@ export function CheckinPage() {
         </p>
       </div>
 
-      {/* Dose log always first. On weekly due day, MRS rises above daily pulse. */}
+      {/* 1) Dose log always first. 2) Weekly above pulse on her day / when overdue. */}
       <DoseTapWidget title="Did you take today's doses?" />
 
-      {isDue ? (
+      {weeklyFirst ? (
         <>
           <WeeklyCheckinPromptCard
             hasFullMrsToday={hasFullMrsToday}
@@ -212,6 +225,7 @@ export function CheckinPage() {
             todaysCheckin={todaysCheckin}
             daysSinceLastCheckin={daysSinceLastCheckin}
             isLoading={isLoading}
+            highlighted
             onStart={() => void startCheckin('full')}
           />
           <PulsePromptCard

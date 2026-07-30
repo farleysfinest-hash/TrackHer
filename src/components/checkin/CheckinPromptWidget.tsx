@@ -25,6 +25,8 @@ export interface WeeklyCheckinPromptCardProps {
   todaysCheckin: SymptomCheckin | null;
   daysSinceLastCheckin: number | null;
   isLoading?: boolean;
+  /** Soft emphasis when weekly is on her day or overdue (sits above pulse). */
+  highlighted?: boolean;
   /** When set (e.g. already on /checkin), start/edit the full flow instead of navigating. */
   onStart?: () => void;
 }
@@ -98,9 +100,14 @@ export function WeeklyCheckinPromptCard({
   todaysCheckin,
   daysSinceLastCheckin,
   isLoading = false,
+  highlighted = false,
   onStart,
 }: WeeklyCheckinPromptCardProps) {
   const isComeback = daysSinceLastCheckin !== null && daysSinceLastCheckin >= 7;
+  const emphasize = highlighted && !weeklyMinimumMet && !hasFullMrsToday;
+  const highlightClass = emphasize
+    ? 'border border-sage-400/70 ring-2 ring-sage-500/25'
+    : '';
 
   if (isLoading) {
     return (
@@ -112,7 +119,7 @@ export function WeeklyCheckinPromptCard({
 
   if (hasFullMrsToday && todaysCheckin) {
     return (
-      <Card variant="elevated" padding="lg">
+      <Card variant="elevated" padding="lg" className={highlightClass}>
         <DashboardCardHeader
           icon={ClipboardList}
           eyebrow="Weekly check-in"
@@ -144,7 +151,7 @@ export function WeeklyCheckinPromptCard({
 
   if (weeklyMinimumMet) {
     return (
-      <Card variant="elevated" padding="lg">
+      <Card variant="elevated" padding="lg" className={highlightClass}>
         <DashboardCardHeader
           icon={ClipboardList}
           eyebrow="Weekly check-in"
@@ -170,7 +177,7 @@ export function WeeklyCheckinPromptCard({
   }
 
   return (
-    <Card variant="elevated" padding="lg">
+    <Card variant="elevated" padding="lg" className={highlightClass}>
       <DashboardCardHeader
         icon={ClipboardList}
         eyebrow="Weekly check-in"

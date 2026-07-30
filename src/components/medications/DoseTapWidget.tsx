@@ -141,7 +141,21 @@ export function DoseTapWidget({ title }: DoseTapWidgetProps) {
     }
   };
 
-  if (medsLoading || adminsLoading) return null;
+  if (medsLoading || adminsLoading) {
+    return (
+      <Card variant="elevated">
+        <DashboardCardHeader
+          icon={Pill}
+          eyebrow="Dose log"
+          title={title ?? 'Tap when you take your dose'}
+          description="Loading today’s doses…"
+        />
+        <div className="mt-4 flex justify-center py-4">
+          <span className="h-5 w-5 animate-pulse rounded-full bg-sage-200" aria-hidden />
+        </div>
+      </Card>
+    );
+  }
   if (doseStatuses.length === 0) return null;
 
   return (
