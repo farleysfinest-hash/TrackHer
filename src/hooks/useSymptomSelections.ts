@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../stores/authStore';
 import type { UserSymptomSelection } from '../types/database';
-import { isMRSCanonicalKey } from '../utils/checkinHelpers';
 
 export interface SymptomSelection {
   symptom_id: string;
@@ -70,12 +69,15 @@ export function useSymptomSelections() {
       const userId = getUserId();
       if (!userId) return false;
 
+      // Tracked set is the Quick Log set. Watch ids mirror tracked for back-compat
+      // with is_watch_symptom column (callers may still pass a subset).
       const symptomIds = [
         ...new Set([...newSelections.map((selection) => selection.symptom_id), ...watchSymptoms]),
-      ].filter((id) => !isMRSCanonicalKey(id));
-      const sanitizedWatchSymptoms = [...new Set(watchSymptoms)].filter(
-        (id) => !isMRSCanonicalKey(id),
-      );
+      ];
+      const sanitizedWatchSymptoms = [
+        ...new Set(watchSymptoms.length > 0 ? watchSymptoms : symptomIds),
+      ].filter((id) => symptomIds.includes(id));
+
       const { error: saveError } = await supabase.rpc('save_user_symptom_selections', {
         p_symptom_ids: symptomIds,
         p_watch_symptom_ids: sanitizedWatchSymptoms,
@@ -98,20 +100,14 @@ export function useSymptomSelections() {
   // Memoized because SymptomManageModal resets its in-progress edits from these
   // arrays. Rebuilding them on every render of a consumer gave them a fresh
   // identity each time, which re-fired that reset and silently discarded
-  // whatever the user had just tracked or starred.
+  // whatever the user had just tracked.
   const trackedSymptomIds = useMemo(
-    () => selections.map((s) => s.symptom_id).filter((id) => !isMRSCanonicalKey(id)),
+    () => selections.map((s) => s.symptom_id),
     [selections],
   );
 
-  const watchSymptomIds = useMemo(
-    () =>
-      selections
-        .filter((s) => s.is_watch_symptom)
-        .map((s) => s.symptom_id)
-        .filter((id) => !isMRSCanonicalKey(id)),
-    [selections],
-  );
+  /** @deprecated Prefer trackedSymptomIds — Quick Log shows all tracked. */
+  const watchSymptomIds = useMemo(() => trackedSymptomIds, [trackedSymptomIds]);
 
   return {
     selections,

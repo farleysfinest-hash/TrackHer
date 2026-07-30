@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Star } from 'lucide-react';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { SYMPTOM_CATALOG } from '../../data/symptoms';
 import {
@@ -17,7 +16,6 @@ interface StepSymptomSelectionProps {
 }
 
 const MAX_SYMPTOMS = 8;
-const MAX_WATCH = 5;
 
 const BODY_SYSTEM_ORDER: SymptomBodySystem[] = [
   'vasomotor',
@@ -59,14 +57,12 @@ export function StepSymptomSelection({ onNext, onBack }: StepSymptomSelectionPro
   const {
     formData,
     toggleSymptom,
-    toggleWatchSymptom,
     initWatchSymptomsFromSelection,
     submitSymptomSelections,
     isSubmitting,
     error,
   } = useOnboardingStore();
 
-  const [phase, setPhase] = useState<'select' | 'star'>('select');
   const [collapsedOther, setCollapsedOther] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(BODY_SYSTEM_ORDER.map((s) => [s, true])),
   );
@@ -74,93 +70,15 @@ export function StepSymptomSelection({ onNext, onBack }: StepSymptomSelectionPro
   const stage = formData.stagingResult?.strawStage ?? null;
   const groups = groupSymptomsByBodySystem(stage);
   const selectedSymptoms = formData.selectedSymptoms;
-  const watchSymptoms = formData.watchSymptoms;
   const selectedCount = selectedSymptoms.length;
-  const watchCount = watchSymptoms.length;
   const atMax = selectedCount >= MAX_SYMPTOMS;
-  const canContinueSelect = selectedCount >= 1;
-  const canContinueStar = watchCount <= MAX_WATCH;
+  const canContinue = selectedCount >= 1;
 
-  const handleContinueSelect = () => {
+  const handleContinue = async () => {
     initWatchSymptomsFromSelection();
-    setPhase('star');
-  };
-
-  const handleContinueStar = async () => {
     const result = await submitSymptomSelections();
     if (result.success) onNext();
   };
-
-  const handleBack = () => {
-    if (phase === 'star') {
-      setPhase('select');
-      return;
-    }
-    onBack();
-  };
-
-  if (phase === 'star') {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="font-display text-3xl text-sage-800">Which of these hit you hardest?</h1>
-          <p className="mt-3 text-sage-500">
-            Star up to 5 — they become one-tap quick logs on your dashboard. You can also continue
-            without shortcuts.
-          </p>
-          <p className="mt-2 text-sm font-medium text-sage-600">
-            {watchCount} of {MAX_WATCH} starred
-          </p>
-        </div>
-
-        <div className="flex flex-wrap gap-3">
-          {selectedSymptoms.map((key) => {
-            const def = SYMPTOM_CATALOG.find((s) => s.key === key);
-            if (!def) return null;
-            const isStarred = watchSymptoms.includes(key);
-            return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => toggleWatchSymptom(key)}
-                className={[
-                  'inline-flex items-center gap-2 rounded-full border px-5 py-3 text-base font-medium transition-colors',
-                  isStarred
-                    ? 'border-sage-600 bg-sage-600 text-on-accent'
-                    : 'border-sand-200 bg-sand-50 text-sage-600 hover:border-sage-300',
-                ].join(' ')}
-              >
-                <Star
-                  className={['h-4 w-4', isStarred ? 'fill-current' : ''].join(' ')}
-                  aria-hidden
-                />
-                {def.label}
-              </button>
-            );
-          })}
-        </div>
-
-        {error && (
-          <div className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">{error}</div>
-        )}
-
-        <div className="flex gap-3">
-          <Button variant="secondary" onClick={handleBack} className="flex-1" disabled={isSubmitting}>
-            Back
-          </Button>
-          <Button
-            disabled={!canContinueStar}
-            isLoading={isSubmitting}
-            loadingText="Saving..."
-            onClick={() => void handleContinueStar()}
-            className="flex-1"
-          >
-            Continue
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -169,9 +87,8 @@ export function StepSymptomSelection({ onNext, onBack }: StepSymptomSelectionPro
           Select every symptom you experience — even ones that only show up sometimes.
         </h1>
         <p className="mt-3 text-sage-500">
-          Occasional symptoms are often the most revealing. The ones that come and go are exactly
-          where patterns hide, so the more you select, the more connections the engine can find for
-          you.
+          Occasional symptoms are often the most revealing. Everything you pick becomes a Quick Log
+          tap on your dashboard. You can add MRS items later too.
         </p>
         <p className="mt-2 text-sm font-medium text-sage-600">
           {selectedCount} of {MAX_SYMPTOMS} selected
@@ -260,8 +177,10 @@ export function StepSymptomSelection({ onNext, onBack }: StepSymptomSelectionPro
           Back
         </Button>
         <Button
-          disabled={!canContinueSelect}
-          onClick={handleContinueSelect}
+          disabled={!canContinue}
+          isLoading={isSubmitting}
+          loadingText="Saving..."
+          onClick={() => void handleContinue()}
           className="flex-1"
         >
           Continue

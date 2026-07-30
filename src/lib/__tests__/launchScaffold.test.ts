@@ -4,6 +4,7 @@ import {
   CHECKIN_NOTIFICATION_ID,
   medicationNotificationId,
   nextCheckinReminderAt,
+  nextDoseReminderAt,
   timeOfDayToHour,
   toCapacitorWeekday,
 } from '../localNotifications';
@@ -98,6 +99,28 @@ describe('nextCheckinReminderAt', () => {
   });
 });
 
+describe('nextDoseReminderAt', () => {
+  const morning = new Date(2026, 6, 22, 7, 0, 0, 0);
+
+  it('not done + before reminder → today', () => {
+    const at = nextDoseReminderAt({ hour: 8, done: false, now: morning });
+    expect(at.getDate()).toBe(22);
+    expect(at.getHours()).toBe(8);
+  });
+
+  it('done → tomorrow even before reminder time', () => {
+    const at = nextDoseReminderAt({ hour: 8, done: true, now: morning });
+    expect(at.getDate()).toBe(23);
+    expect(at.getHours()).toBe(8);
+  });
+
+  it('not done + after reminder → tomorrow', () => {
+    const evening = new Date(2026, 6, 22, 21, 0, 0, 0);
+    const at = nextDoseReminderAt({ hour: 8, done: false, now: evening });
+    expect(at.getDate()).toBe(23);
+  });
+});
+
 describe('buildReminderNotifications', () => {
   it('schedules one-shot check-in when enabled and day is set', () => {
     const now = new Date(2026, 6, 22, 10, 0, 0, 0); // Wed
@@ -140,7 +163,8 @@ describe('buildReminderNotifications', () => {
     expect(at.getDate()).toBe(29);
   });
 
-  it('schedules daily and twice-daily medication reminders', () => {
+  it('schedules one-shot daily and twice-daily medication reminders', () => {
+    const now = new Date(2026, 6, 22, 7, 0, 0, 0);
     const notifications = buildReminderNotifications({
       profile: { checkin_day: null },
       medications: [
@@ -150,6 +174,9 @@ describe('buildReminderNotifications', () => {
           frequency: 'daily',
           frequency_details: { time_of_day: 'morning' },
           is_active: true,
+          delivery_method: 'gel',
+          start_date: '2026-01-01',
+          end_date: null,
         },
         {
           id: 'med-twice',
@@ -157,6 +184,9 @@ describe('buildReminderNotifications', () => {
           frequency: 'twice_daily',
           frequency_details: null,
           is_active: true,
+          delivery_method: 'oral_capsule',
+          start_date: '2026-01-01',
+          end_date: null,
         },
         {
           id: 'med-prn',
@@ -164,6 +194,55 @@ describe('buildReminderNotifications', () => {
           frequency: 'as_needed',
           frequency_details: null,
           is_active: true,
+          delivery_method: 'oral_capsule',
+          start_date: '2026-01-01',
+          end_date: null,
+        },
+      ],
+      administrations: [],
+      prefs: {
+        checkinEnabled: false,
+        medsEnabled: true,
+        checkinTime: '18:00',
+        asked: true,
+      },
+      now,
+      today: '2026-07-22',
+    });
+
+    expect(notifications).toHaveLength(3);
+    expect(notifications.every((n) => n.schedule?.at instanceof Date)).toBe(true);
+    expect(notifications.every((n) => !n.schedule?.repeats)).toBe(true);
+    expect(notifications.some((n) => n.body?.includes('Estradiol gel'))).toBe(true);
+    expect(notifications.filter((n) => n.body?.includes('Progesterone'))).toHaveLength(2);
+  });
+
+  it('defers to tomorrow when today’s dose is already logged', () => {
+    const now = new Date(2026, 6, 22, 7, 0, 0, 0);
+    const notifications = buildReminderNotifications({
+      profile: null,
+      medications: [
+        {
+          id: 'med-daily',
+          medication_name: 'Estradiol gel',
+          frequency: 'daily',
+          frequency_details: { time_of_day: 'morning' },
+          is_active: true,
+          delivery_method: 'gel',
+          start_date: '2026-01-01',
+          end_date: null,
+        },
+      ],
+      administrations: [
+        {
+          id: 'a1',
+          medication_id: 'med-daily',
+          user_id: 'u1',
+          taken_at: '2026-07-22T12:00:00.000Z',
+          local_date: '2026-07-22',
+          event_timezone: 'America/Los_Angeles',
+          utc_offset_minutes: -420,
+          created_at: '2026-07-22T12:00:00.000Z',
         },
       ],
       prefs: {
@@ -172,11 +251,15 @@ describe('buildReminderNotifications', () => {
         checkinTime: '18:00',
         asked: true,
       },
+      now,
+      today: '2026-07-22',
+      timezone: 'America/Los_Angeles',
     });
 
-    expect(notifications).toHaveLength(3);
-    expect(notifications.some((n) => n.body?.includes('Estradiol gel'))).toBe(true);
-    expect(notifications.filter((n) => n.body?.includes('Progesterone'))).toHaveLength(2);
+    expect(notifications).toHaveLength(1);
+    const at = notifications[0].schedule?.at as Date;
+    expect(at.getDate()).toBe(23);
+    expect(at.getHours()).toBe(8);
   });
 
   it('skips inactive medications', () => {
@@ -189,6 +272,9 @@ describe('buildReminderNotifications', () => {
           frequency: 'weekly',
           frequency_details: null,
           is_active: false,
+          delivery_method: 'patch',
+          start_date: '2026-01-01',
+          end_date: null,
         },
       ],
       prefs: {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Check, Plus, Search, Star } from 'lucide-react';
+import { Check, Plus, Search } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import {
@@ -19,11 +19,10 @@ interface SymptomManageModalProps {
   isOpen: boolean;
   onClose: () => void;
   trackedIds: string[];
-  watchIds: string[];
+  /** Kept for call-site back-compat; ignored — tracked = Quick Log. */
+  watchIds?: string[];
   onSave: (trackedIds: string[], watchIds: string[]) => Promise<boolean>;
 }
-
-const MAX_SHORTCUTS = 5;
 
 const BODY_SYSTEM_ORDER: SymptomBodySystem[] = [
   'vasomotor',
@@ -40,10 +39,6 @@ const BODY_SYSTEM_ORDER: SymptomBodySystem[] = [
   'other',
 ];
 
-const PERSONAL_CATALOG = SYMPTOM_CATALOG.filter(
-  (symptom) => !symptom.isMRSCore && !isMRSCanonicalKey(symptom.key),
-);
-
 function groupByBodySystem(symptoms: SymptomDefinition[]) {
   const groups = new Map<SymptomBodySystem, SymptomDefinition[]>();
   for (const system of BODY_SYSTEM_ORDER) groups.set(system, []);
@@ -55,11 +50,9 @@ export function SymptomManageModal({
   isOpen,
   onClose,
   trackedIds,
-  watchIds,
   onSave,
 }: SymptomManageModalProps) {
   const [localTracked, setLocalTracked] = useState<string[]>(trackedIds);
-  const [localWatch, setLocalWatch] = useState<string[]>(watchIds);
   const [query, setQuery] = useState('');
   const [browseLibrary, setBrowseLibrary] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -68,11 +61,10 @@ export function SymptomManageModal({
   useEffect(() => {
     if (!isOpen) return;
     setLocalTracked(trackedIds);
-    setLocalWatch(watchIds.filter((id) => trackedIds.includes(id)));
     setQuery('');
     setBrowseLibrary(false);
     setSaveError(null);
-  }, [isOpen, trackedIds, watchIds]);
+  }, [isOpen, trackedIds]);
 
   const trackedSymptoms = useMemo(
     () =>
@@ -82,32 +74,22 @@ export function SymptomManageModal({
     [localTracked],
   );
 
-  // Opens on her own symptoms. The full 120-entry library is one tap away, and
-  // searching reaches it without the toggle.
   const searching = query.trim().length > 0;
   const showingLibrary = browseLibrary || searching;
 
   const availableSymptoms = useMemo(() => {
-    const base = showingLibrary ? PERSONAL_CATALOG : trackedSymptoms;
+    const base = showingLibrary ? SYMPTOM_CATALOG : trackedSymptoms;
     if (!searching) return base;
 
     const allowed = new Set(base.map((symptom) => symptom.key));
-    return searchSymptomCatalog(query, SYMPTOM_CATALOG.length).filter(
-      (symptom) =>
-        allowed.has(symptom.key) && !symptom.isMRSCore && !isMRSCanonicalKey(symptom.key),
+    return searchSymptomCatalog(query, SYMPTOM_CATALOG.length).filter((symptom) =>
+      allowed.has(symptom.key),
     );
   }, [query, searching, showingLibrary, trackedSymptoms]);
 
-  const mrsSearchHits = useMemo(() => {
-    if (!searching) return [];
-    return searchSymptomCatalog(query, 8).filter(
-      (symptom) => symptom.isMRSCore || isMRSCanonicalKey(symptom.key),
-    );
-  }, [query, searching]);
-
   const { suggestions: aiSuggestions, isLoading: aiSuggestLoading } = useSymptomAiSuggestions(
     query,
-    availableSymptoms.length + mrsSearchHits.length,
+    availableSymptoms.length,
     isOpen && searching,
   );
 
@@ -116,24 +98,15 @@ export function SymptomManageModal({
   const toggleTracked = (id: string) => {
     setLocalTracked((current) => {
       if (!current.includes(id)) return [...current, id];
-      setLocalWatch((watch) => watch.filter((watchId) => watchId !== id));
       return current.filter((trackedId) => trackedId !== id);
     });
   };
 
-  const toggleShortcut = (id: string) => {
-    setLocalWatch((current) => {
-      if (current.includes(id)) return current.filter((watchId) => watchId !== id);
-      if (current.length >= MAX_SHORTCUTS) return current;
-      return [...current, id];
-    });
-  };
-
   const handleSave = async () => {
-    const sanitizedWatch = localWatch.filter((id) => localTracked.includes(id));
     setIsSaving(true);
     setSaveError(null);
-    const ok = await onSave(localTracked, sanitizedWatch);
+    // Watch mirrors tracked — every tracked symptom is a Quick Log chip.
+    const ok = await onSave(localTracked, localTracked);
     setIsSaving(false);
     if (ok) {
       onClose();
@@ -145,16 +118,15 @@ export function SymptomManageModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Edit personal symptoms" size="lg">
       <div className="mb-5 rounded-xl border border-sage-200 bg-sage-50 p-4">
-        <h3 className="font-medium text-sage-800">Personal symptoms and Quick Log</h3>
+        <h3 className="font-medium text-sage-800">Symptoms for Quick Log</h3>
         <p className="mt-1 text-sm leading-relaxed text-sage-600">
-          Your weekly MRS questions are fixed and always included. Personal symptoms come from
-          TrackHer&apos;s full symptom library and help you follow concerns beyond the MRS. Star up
-          to five for one-tap Quick Log. Removing a Quick Log shortcut does not remove it from your
-          weekly tracking or delete its history. Removing a personal symptom stops future prompts
-          without deleting its history.
+          Everything you track here appears as a one-tap chip on Quick Log — including MRS
+          items like irritability if you want them daily. Weekly Check-In still asks the full
+          MRS scale on its own. Removing a symptom stops future prompts without deleting its
+          history.
         </p>
         <p className="mt-2 text-sm font-medium text-sage-700">
-          {localTracked.length} tracked · {localWatch.length} of {MAX_SHORTCUTS} starred
+          {localTracked.length} tracked
         </p>
       </div>
 
@@ -179,8 +151,8 @@ export function SymptomManageModal({
             {showingLibrary
               ? 'Browsing the full symptom library'
               : localTracked.length > 0
-                ? 'Your personal symptoms'
-                : 'You have no personal symptoms yet'}
+                ? 'Your tracked symptoms'
+                : 'You have no tracked symptoms yet'}
           </p>
           <button
             type="button"
@@ -193,63 +165,32 @@ export function SymptomManageModal({
       )}
 
       <div className="mt-4 max-h-[50dvh] space-y-5 overflow-y-auto pr-1">
-        {mrsSearchHits.length > 0 && (
-          <section>
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-sage-500">
-              Already in weekly check-in
-            </h3>
-            <ul className="space-y-2">
-              {mrsSearchHits.map((symptom) => (
-                <li
-                  key={symptom.key}
-                  className="rounded-xl border border-sand-200 bg-sand-50 px-3 py-3 text-sm"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium text-sage-600">{symptom.label}</span>
-                    <span className="shrink-0 rounded-full bg-sand-100 px-2 py-0.5 text-xs text-sage-500">
-                      MRS
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs leading-relaxed text-sage-500">
-                    Rate this on Check In → Weekly check-in. Personal tracking is for extra
-                    symptoms beyond the standard 11.
-                  </p>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
         {availableSymptoms.length === 0 ? (
           <div className="rounded-lg border border-sand-200 px-4 py-6 text-center text-sm text-sage-500">
             <p>
               {searching
-                ? mrsSearchHits.length > 0
-                  ? 'Looking for something else? Try Mood Swings or another everyday term.'
-                  : 'No matching symptoms. Try a different everyday or clinical term.'
-                : 'No personal symptoms yet. Choose “Add from library” to pick the concerns you want to follow.'}
+                ? 'No matching symptoms. Try a different everyday or clinical term.'
+                : 'No symptoms yet. Choose “Add from library” to pick the concerns you want to follow.'}
             </p>
             {searching && aiSuggestLoading && (
               <p className="mt-2 text-xs text-sage-400">Asking your companion…</p>
             )}
             {searching && aiSuggestions.length > 0 && (
               <ul className="mt-3 space-y-1 text-left">
-                {aiSuggestions
-                  .filter((s) => !isMRSCanonicalKey(s.key))
-                  .map((s) => (
-                    <li key={s.key}>
-                      <button
-                        type="button"
-                        onClick={() => toggleTracked(s.key)}
-                        className="w-full rounded-lg border border-sand-200 px-3 py-2 text-left text-sm text-sage-700 hover:bg-sage-50"
-                      >
-                        <span className="font-medium">{s.label}</span>
-                        {s.reason ? (
-                          <span className="mt-0.5 block text-xs text-sage-400">{s.reason}</span>
-                        ) : null}
-                      </button>
-                    </li>
-                  ))}
+                {aiSuggestions.map((s) => (
+                  <li key={s.key}>
+                    <button
+                      type="button"
+                      onClick={() => toggleTracked(s.key)}
+                      className="w-full rounded-lg border border-sand-200 px-3 py-2 text-left text-sm text-sage-700 hover:bg-sage-50"
+                    >
+                      <span className="font-medium">{s.label}</span>
+                      {s.reason ? (
+                        <span className="mt-0.5 block text-xs text-sage-400">{s.reason}</span>
+                      ) : null}
+                    </button>
+                  </li>
+                ))}
               </ul>
             )}
           </div>
@@ -265,8 +206,7 @@ export function SymptomManageModal({
                 <div className="space-y-2">
                   {symptoms.map((symptom) => {
                     const tracked = localTracked.includes(symptom.key);
-                    const starred = localWatch.includes(symptom.key);
-                    const shortcutLimitReached = !starred && localWatch.length >= MAX_SHORTCUTS;
+                    const isMrs = symptom.isMRSCore || isMRSCanonicalKey(symptom.key);
 
                     return (
                       <div
@@ -287,7 +227,7 @@ export function SymptomManageModal({
                           aria-label={
                             tracked
                               ? `Stop tracking ${symptom.label}`
-                              : `Track ${symptom.label} weekly`
+                              : `Track ${symptom.label}`
                           }
                           className="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-3 py-3 text-left"
                         >
@@ -301,7 +241,14 @@ export function SymptomManageModal({
                             {tracked ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
                           </span>
                           <span className="min-w-0">
-                            <span className="block font-medium text-sage-800">{symptom.label}</span>
+                            <span className="flex items-center gap-2">
+                              <span className="font-medium text-sage-800">{symptom.label}</span>
+                              {isMrs && (
+                                <span className="shrink-0 rounded-full bg-sand-100 px-2 py-0.5 text-xs text-sage-500">
+                                  MRS
+                                </span>
+                              )}
+                            </span>
                             {symptom.description && (
                               <span className="mt-0.5 line-clamp-2 block text-xs leading-relaxed text-sage-500">
                                 {symptom.description}
@@ -309,31 +256,6 @@ export function SymptomManageModal({
                             )}
                           </span>
                         </button>
-                        {tracked && (
-                          <button
-                            type="button"
-                            onClick={() => toggleShortcut(symptom.key)}
-                            disabled={shortcutLimitReached}
-                            aria-pressed={starred}
-                            aria-label={
-                              starred
-                                ? `Remove ${symptom.label} from Quick Log shortcuts`
-                                : `Add ${symptom.label} to Quick Log shortcuts`
-                            }
-                            className={[
-                              'mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors',
-                              starred
-                                ? 'bg-sage-500 text-on-accent'
-                                : 'bg-sand-100 text-sage-500 hover:bg-sage-100 hover:text-sage-700',
-                              shortcutLimitReached ? 'cursor-not-allowed opacity-45' : '',
-                            ].join(' ')}
-                          >
-                            <Star
-                              className={['h-5 w-5', starred ? 'fill-current' : ''].join(' ')}
-                              aria-hidden
-                            />
-                          </button>
-                        )}
                       </div>
                     );
                   })}

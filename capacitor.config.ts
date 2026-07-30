@@ -12,7 +12,9 @@ const config: CapacitorConfig = {
   },
   plugins: {
     Keyboard: {
-      resize: 'body',
+      // Avoid resizing the WebView under the keyboard — sheets pin themselves
+      // with visualViewport / Keyboard plugin insets instead.
+      resize: 'none',
     },
   },
 };

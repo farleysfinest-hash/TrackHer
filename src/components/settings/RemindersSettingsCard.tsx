@@ -40,7 +40,8 @@ export function RemindersSettingsCard() {
         <div className="min-w-0 flex-1">
           <h2 className="font-display text-xl text-sage-800">Reminders</h2>
           <p className="mt-1 text-sm text-sage-500">
-            Local reminders for your weekly check-in and daily doses. Free forever.
+            Local reminders for your weekly check-in and doses still owed — same
+            one-shot pattern for both. Already logged? We skip the nag. Free forever.
           </p>
         </div>
       </div>

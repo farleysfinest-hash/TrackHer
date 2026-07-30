@@ -129,10 +129,7 @@ export function AskDataSheet({
 
   const sheet = open
     ? createPortal(
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
-          style={keyboardInset > 0 ? { paddingBottom: keyboardInset } : undefined}
-        >
+        <div className="fixed inset-0 z-50 sm:flex sm:items-center sm:justify-center">
           <button
             type="button"
             className="absolute inset-0 bg-black/40"
@@ -145,12 +142,13 @@ export function AskDataSheet({
             aria-modal="true"
             aria-labelledby="ask-data-title"
             tabIndex={-1}
-            className="relative z-10 flex w-full max-w-lg flex-col rounded-t-2xl border border-sand-200 bg-sand-50 shadow-2xl outline-none sm:m-4 sm:rounded-2xl"
+            className="absolute inset-x-0 bottom-0 z-10 mx-auto flex w-full max-w-lg flex-col rounded-t-2xl border border-sand-200 bg-sand-50 shadow-2xl outline-none sm:relative sm:bottom-auto sm:m-4 sm:rounded-2xl"
             style={{
+              bottom: keyboardInset > 0 ? keyboardInset : undefined,
               maxHeight:
                 keyboardInset > 0
-                  ? `min(90vh, calc(640px - ${keyboardInset}px))`
-                  : 'min(90vh, 640px)',
+                  ? `calc(100dvh - ${keyboardInset}px)`
+                  : 'min(90dvh, 640px)',
             }}
           >
             <div className="flex shrink-0 items-center justify-between border-b border-sand-100 px-5 py-4">

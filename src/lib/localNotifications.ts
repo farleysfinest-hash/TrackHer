@@ -166,7 +166,7 @@ export function buildDailyMedicationNotification(opts: {
       repeats: true,
       allowWhileIdle: true,
     },
-    extra: { path: '/medications' },
+    extra: { path: '/checkin' },
   };
 }
 
@@ -190,6 +190,50 @@ export function buildWeeklyMedicationNotification(opts: {
       repeats: true,
       allowWhileIdle: true,
     },
-    extra: { path: '/medications' },
+    extra: { path: '/checkin' },
+  };
+}
+
+/**
+ * Next one-shot fire time for a medication dose slot — mirrors weekly MRS logic.
+ * - Not done + before reminder time → today
+ * - Done, or not done but at/after reminder time → tomorrow (same clock)
+ */
+export function nextDoseReminderAt(opts: {
+  hour: number;
+  minute?: number;
+  done: boolean;
+  now?: Date;
+}): Date {
+  const now = opts.now ?? new Date();
+  const minute = opts.minute ?? 0;
+  const todayAt = new Date(now);
+  todayAt.setHours(opts.hour, minute, 0, 0);
+
+  if (!opts.done && now.getTime() < todayAt.getTime()) {
+    return todayAt;
+  }
+
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(opts.hour, minute, 0, 0);
+  return tomorrow;
+}
+
+/** One-shot dose reminder (same schema as weekly check-in). */
+export function buildMedicationDoseNotification(opts: {
+  id: number;
+  medicationName: string;
+  at: Date;
+}): LocalNotificationSchema {
+  return {
+    id: opts.id,
+    title: 'Dose reminder',
+    body: `Time for ${opts.medicationName}. Tap to log it.`,
+    schedule: {
+      at: opts.at,
+      allowWhileIdle: true,
+    },
+    extra: { path: '/checkin' },
   };
 }

@@ -21,7 +21,7 @@ export function ExtendedSymptomsSection({ onNext, onBack, onSkip }: ExtendedSymp
   const addAdHocSymptom = useCheckinStore((s) => s.addAdHocSymptom);
   const dismissKeepWatch = useCheckinStore((s) => s.dismissKeepWatch);
   const initWatchSymptomsForCheckin = useCheckinStore((s) => s.initWatchSymptomsForCheckin);
-  const { watchSymptomIds, trackedSymptomIds, isLoading, saveSelections } = useSymptomSelections();
+  const { trackedSymptomIds, isLoading, saveSelections } = useSymptomSelections();
   const [pickerOpen, setPickerOpen] = useState(false);
   const extendedTrackedSymptomIds = useMemo(
     () => trackedSymptomIds.filter((id) => !isMRSCanonicalKey(id)),
@@ -52,11 +52,12 @@ export function ExtendedSymptomsSection({ onNext, onBack, onSkip }: ExtendedSymp
 
   const handleKeepWatch = async (symptomId: string) => {
     const trackedSet = new Set([...trackedSymptomIds, symptomId]);
-    const rows = [...trackedSet].map((id) => ({
+    const nextTracked = [...trackedSet];
+    const rows = nextTracked.map((id) => ({
       symptom_id: id,
-      is_watch_symptom: watchSymptomIds.includes(id),
+      is_watch_symptom: true,
     }));
-    const ok = await saveSelections(rows, watchSymptomIds);
+    const ok = await saveSelections(rows, nextTracked);
     if (ok) dismissKeepWatch(symptomId);
   };
 

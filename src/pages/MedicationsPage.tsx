@@ -9,7 +9,6 @@ import { MedicationEntryWizard } from '../components/medications/MedicationEntry
 import { MedicationDetailModal } from '../components/medications/MedicationDetailModal';
 import { DiscontinueModal } from '../components/medications/DiscontinueModal';
 import { MedicationHistory } from '../components/medications/MedicationHistory';
-import { DoseTapWidget } from '../components/medications/DoseTapWidget';
 import { ExperimentWindowCard } from '../components/medications/ExperimentWindowCard';
 import { DoseWatchCard } from '../components/medications/DoseWatchCard';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -56,8 +55,6 @@ export function MedicationsPage() {
           <p className="mt-1 text-sage-500">Track your HRT/BHRT regimen and dose changes over time.</p>
         </div>
       </div>
-
-      <DoseTapWidget />
 
       <ExperimentWindowCard
         insights={insights}

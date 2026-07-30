@@ -157,7 +157,7 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
       formData: {
         ...state.formData,
         selectedSymptoms: selected,
-        watchSymptoms: selected.length <= 5 ? [...selected] : [],
+        watchSymptoms: [...selected],
       },
     }));
   },
@@ -168,7 +168,8 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
       return {
         formData: {
           ...state.formData,
-          watchSymptoms: selectedSymptoms.length <= 5 ? [...selectedSymptoms] : [],
+          // Every selected symptom becomes a Quick Log chip.
+          watchSymptoms: [...selectedSymptoms],
         },
       };
     });
@@ -208,7 +209,6 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
           },
         };
       }
-      if (state.formData.watchSymptoms.length >= 5) return state;
       return {
         formData: {
           ...state.formData,

@@ -13,12 +13,14 @@ export function useMedicationAdministrations() {
 
   const getUserId = () => useAuthStore.getState().user?.id;
 
-  const fetchRecent = useCallback(async (days = DOSE_HISTORY_DAYS) => {
+  const fetchRecent = useCallback(async (days = DOSE_HISTORY_DAYS, opts?: { silent?: boolean }) => {
     const userId = getUserId();
     if (!userId) return;
 
-    setIsLoading(true);
-    setError(null);
+    if (!opts?.silent) {
+      setIsLoading(true);
+      setError(null);
+    }
 
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - days);
@@ -39,14 +41,30 @@ export function useMedicationAdministrations() {
       setAdministrations(rows);
     } catch (e) {
       if (getUserId() !== userId) return;
-      setError(e instanceof Error ? e.message : 'Failed to load doses');
+      if (!opts?.silent) {
+        setError(e instanceof Error ? e.message : 'Failed to load doses');
+      }
     } finally {
-      if (getUserId() === userId) setIsLoading(false);
+      if (getUserId() === userId && !opts?.silent) setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
     void fetchRecent(DOSE_HISTORY_DAYS);
+  }, [fetchRecent]);
+
+  useEffect(() => {
+    const onChange = () => {
+      void fetchRecent(DOSE_HISTORY_DAYS, { silent: true });
+    };
+    window.addEventListener('trackher:doses-changed', onChange);
+    window.addEventListener('trackher:medications-changed', onChange);
+    window.addEventListener('trackher:account-reset', onChange);
+    return () => {
+      window.removeEventListener('trackher:doses-changed', onChange);
+      window.removeEventListener('trackher:medications-changed', onChange);
+      window.removeEventListener('trackher:account-reset', onChange);
+    };
   }, [fetchRecent]);
 
   const logAdministration = useCallback(
@@ -78,6 +96,7 @@ export function useMedicationAdministrations() {
 
       const created = data as MedicationAdministration;
       setAdministrations((prev) => [created, ...prev]);
+      window.dispatchEvent(new CustomEvent('trackher:doses-changed'));
       return created;
     },
     [],
@@ -105,6 +124,7 @@ export function useMedicationAdministrations() {
     }
 
     setAdministrations((prev) => prev.filter((a) => a.id !== latest.id));
+    window.dispatchEvent(new CustomEvent('trackher:doses-changed'));
     return true;
   }, [administrations]);
 

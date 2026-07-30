@@ -5,7 +5,12 @@ import { AppShell } from './components/layout/AppShell';
 import { ToastContainer } from './components/ui/Toast';
 import { ErrorBoundary, RouteErrorBoundary } from './components/ui/ErrorBoundary';
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
+import { useKeyboardAvoidance } from './hooks/useKeyboardBottomInset';
 
+function KeyboardAvoidanceRoot() {
+  useKeyboardAvoidance();
+  return null;
+}
 const LoginPage = lazy(() =>
   import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })),
 );
@@ -56,6 +61,7 @@ function RouteFallback() {
 export function App() {
   return (
     <BrowserRouter>
+      <KeyboardAvoidanceRoot />
       <ToastContainer />
       <ErrorBoundary>
         <Suspense fallback={<RouteFallback />}>

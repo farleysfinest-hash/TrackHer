@@ -10,6 +10,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useCheckinStatus } from '../../hooks/useCheckinStatus';
+import { useDosesDue } from '../../hooks/useDosesDue';
 import { CheckinDueTooltip } from './CheckinDueTooltip';
 import {
   CHECKIN_DUE_NAV,
@@ -46,8 +47,9 @@ function prefersReducedMotion(): boolean {
 
 export function MobileNav() {
   const { hasCheckedInToday, isDue, isLoading } = useCheckinStatus();
-  // Mirror prompt cards: pulse owed if nothing logged today; weekly owed via isDue.
-  const needsCheckin = !isLoading && (!hasCheckedInToday || isDue);
+  const { needsDoses } = useDosesDue();
+  const needsCheckin =
+    !isLoading && (!hasCheckedInToday || isDue || needsDoses);
 
   const checkinRef = useRef<HTMLAnchorElement | null>(null);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -96,7 +98,11 @@ export function MobileNav() {
     return () => window.clearTimeout(timer);
   }, [runSettle]);
 
-  const tooltipLabel = isDue ? 'Weekly check-in due' : 'Daily check-in due';
+  const tooltipLabel = isDue
+    ? 'Weekly check-in due'
+    : needsDoses && hasCheckedInToday
+      ? 'Doses due today'
+      : 'Daily check-in due';
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-sand-200 bg-sand-50 md:hidden safe-area-bottom">
@@ -115,7 +121,9 @@ export function MobileNav() {
                 showDue
                   ? isDue
                     ? `${label}, weekly check-in due`
-                    : `${label}, daily check-in due`
+                    : needsDoses && hasCheckedInToday
+                      ? `${label}, doses due today`
+                      : `${label}, daily check-in due`
                   : undefined
               }
               className={({ isActive }) =>

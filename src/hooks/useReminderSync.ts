@@ -10,29 +10,60 @@ import { getReminderPrefs, setReminderPrefs, type ReminderPrefs } from '../lib/r
 import { syncLocalReminders } from '../lib/reminderSync';
 import { useAuthStore } from '../stores/authStore';
 import { useCheckinStatusStore } from '../stores/checkinStatusStore';
-import type { Medication } from '../types/database';
+import type { Medication, MedicationAdministration } from '../types/database';
+import { DOSE_HISTORY_DAYS } from '../utils/doseSchedule';
+import { fetchAllPages } from '../utils/pagedQuery';
 
 async function loadActiveMedications(userId: string): Promise<Medication[]> {
   const { data, error } = await supabase
     .from('medications')
-    .select('id, medication_name, frequency, frequency_details, is_active')
+    .select(
+      'id, medication_name, frequency, frequency_details, is_active, delivery_method, start_date, end_date',
+    )
     .eq('user_id', userId)
     .eq('is_active', true);
   if (error || !data) return [];
   return data as Medication[];
 }
 
+async function loadRecentAdministrations(
+  userId: string,
+): Promise<MedicationAdministration[]> {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - DOSE_HISTORY_DAYS);
+  const cutoffISO = cutoff.toISOString();
+  try {
+    return await fetchAllPages<MedicationAdministration>(async (from, to) => {
+      const { data, error } = await supabase
+        .from('medication_administrations')
+        .select('*')
+        .eq('user_id', userId)
+        .gte('taken_at', cutoffISO)
+        .order('taken_at', { ascending: false })
+        .range(from, to);
+      return { data: data as MedicationAdministration[] | null, error };
+    });
+  } catch {
+    return [];
+  }
+}
+
 export async function resyncRemindersForCurrentUser(): Promise<number> {
   const { user, profile } = useAuthStore.getState();
   if (!user?.id || !isNativeNotificationsAvailable()) return 0;
   const permission = await getReminderPermissionState();
-  const medications = await loadActiveMedications(user.id);
+  const [medications, administrations] = await Promise.all([
+    loadActiveMedications(user.id),
+    loadRecentAdministrations(user.id),
+  ]);
   const weeklyDone = useCheckinStatusStore.getState().status.weeklyMinimumMet;
   return syncLocalReminders({
     profile,
     medications,
+    administrations,
     prefs: getReminderPrefs(),
     weeklyDone,
+    timezone: profile?.timezone ?? undefined,
     permissionGranted: permission === 'granted',
   });
 }
@@ -56,9 +87,11 @@ export function useReminderSync() {
     };
     window.addEventListener('trackher:account-reset', onChange);
     window.addEventListener('trackher:medications-changed', onChange);
+    window.addEventListener('trackher:doses-changed', onChange);
     return () => {
       window.removeEventListener('trackher:account-reset', onChange);
       window.removeEventListener('trackher:medications-changed', onChange);
+      window.removeEventListener('trackher:doses-changed', onChange);
     };
   }, []);
 }

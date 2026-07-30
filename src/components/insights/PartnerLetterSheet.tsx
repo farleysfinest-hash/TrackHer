@@ -108,10 +108,7 @@ export function PartnerLetterSheet({ context, open, onClose }: PartnerLetterShee
   };
 
   return createPortal(
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
-      style={keyboardInset > 0 ? { paddingBottom: keyboardInset } : undefined}
-    >
+    <div className="fixed inset-0 z-50 sm:flex sm:items-center sm:justify-center">
       <button
         type="button"
         className="absolute inset-0 bg-sage-900/40"
@@ -124,7 +121,12 @@ export function PartnerLetterSheet({ context, open, onClose }: PartnerLetterShee
         aria-modal="true"
         aria-labelledby="partner-letter-title"
         tabIndex={-1}
-        className="relative z-10 flex max-h-[90vh] w-full max-w-lg flex-col rounded-t-2xl border border-sand-200 bg-sand-50 shadow-2xl outline-none sm:m-4 sm:rounded-2xl"
+        className="absolute inset-x-0 bottom-0 z-10 mx-auto flex max-h-[90vh] w-full max-w-lg flex-col rounded-t-2xl border border-sand-200 bg-sand-50 shadow-2xl outline-none sm:relative sm:bottom-auto sm:m-4 sm:max-h-[90vh] sm:rounded-2xl"
+        style={{
+          bottom: keyboardInset > 0 ? keyboardInset : undefined,
+          maxHeight:
+            keyboardInset > 0 ? `calc(100dvh - ${keyboardInset}px)` : undefined,
+        }}
       >
         <div className="flex items-center justify-between border-b border-sand-100 px-5 py-4">
           <div className="flex items-center gap-2">

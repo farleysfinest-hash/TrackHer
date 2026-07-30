@@ -2,6 +2,7 @@ import { createPortal } from 'react-dom';
 import { useEffect, useId, useRef } from 'react';
 import { X } from 'lucide-react';
 import { FOCUSABLE_SELECTOR, trapTabKey } from '../../lib/focusTrap';
+import { useKeyboardBottomInset } from '../../hooks/useKeyboardBottomInset';
 
 type ModalSize = 'sm' | 'md' | 'lg' | 'full';
 
@@ -35,6 +36,7 @@ export function Modal({
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
   const titleId = useId();
+  const keyboardInset = useKeyboardBottomInset();
 
   onCloseRef.current = onClose;
 
@@ -73,8 +75,13 @@ export function Modal({
     <div
       className={[
         'fixed inset-0 z-50 flex',
-        isFullScreen ? 'items-stretch justify-stretch p-0' : 'items-center justify-center p-4',
+        isFullScreen
+          ? 'items-stretch justify-stretch p-0'
+          : 'items-end justify-center p-0 sm:items-center sm:p-4',
       ].join(' ')}
+      style={
+        !isFullScreen && keyboardInset > 0 ? { paddingBottom: keyboardInset } : undefined
+      }
     >
       <div
         className="absolute inset-0 bg-black/40"
@@ -87,11 +94,17 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}
         tabIndex={-1}
+        data-keyboard-scroll
         className={[
           'relative z-10 flex w-full flex-col overflow-hidden bg-sand-50 outline-none',
-          isFullScreen ? '' : 'rounded-xl border border-sand-200 shadow-xl',
+          isFullScreen ? '' : 'rounded-t-xl border border-sand-200 shadow-xl sm:rounded-xl',
           sizeClasses[size],
         ].join(' ')}
+        style={
+          !isFullScreen && keyboardInset > 0
+            ? { maxHeight: `calc(100dvh - ${keyboardInset}px - 1rem)` }
+            : undefined
+        }
       >
         {(title || showCloseButton) && (
           <div

@@ -1,4 +1,4 @@
-/** Shared Check In due treatment — distinct from selected-tab chrome. */
+/** Shared due treatment — distinct from selected-tab chrome. */
 export const CHECKIN_DUE_NAV =
   'checkin-due-nav rounded-full bg-sage-500 font-semibold text-on-accent shadow-sm';
 

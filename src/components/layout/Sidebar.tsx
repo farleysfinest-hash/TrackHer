@@ -12,6 +12,7 @@ import { Logo } from '../ui/Logo';
 import { LogoMark } from '../ui/LogoMark';
 import { APP_VERSION, SUPPORT_EMAIL } from '../../lib/constants';
 import { useCheckinStatus } from '../../hooks/useCheckinStatus';
+import { useDosesDue } from '../../hooks/useDosesDue';
 import {
   CHECKIN_DUE_NAV,
   CheckinDueDot,
@@ -38,8 +39,10 @@ const navItems: Array<{
 
 export function Sidebar() {
   const { hasCheckedInToday, isDue, isLoading } = useCheckinStatus();
-  // Mirror prompt cards: pulse owed if nothing logged today; weekly owed via isDue.
-  const needsCheckin = !isLoading && (!hasCheckedInToday || isDue);
+  const { needsDoses } = useDosesDue();
+  // Pulse, weekly MRS, or doses owed — Check-In owns the daily action stack.
+  const needsCheckin =
+    !isLoading && (!hasCheckedInToday || isDue || needsDoses);
 
   return (
     <aside className="safe-area-sidebar fixed left-0 top-0 z-30 hidden h-screen flex-col border-r border-sand-200 bg-sand-50 md:flex">
@@ -63,7 +66,9 @@ export function Sidebar() {
                 showDue
                   ? isDue
                     ? `${label}, weekly check-in due`
-                    : `${label}, daily check-in due`
+                    : needsDoses && hasCheckedInToday
+                      ? `${label}, doses due today`
+                      : `${label}, daily check-in due`
                   : undefined
               }
               className={({ isActive }) =>

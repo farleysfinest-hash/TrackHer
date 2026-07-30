@@ -55,16 +55,15 @@ function packShortWithLong(ids: string[]): string[] {
 export function QuickLogWidget() {
   const openSheet = useQuickLogStore((s) => s.openSheet);
   const {
-    watchSymptomIds,
     trackedSymptomIds,
     isLoading,
     saveSelections,
   } = useSymptomSelections();
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
-  const packedWatchIds = useMemo(
-    () => packShortWithLong(watchSymptomIds),
-    [watchSymptomIds],
+  const packedIds = useMemo(
+    () => packShortWithLong(trackedSymptomIds),
+    [trackedSymptomIds],
   );
 
   if (isLoading) return null;
@@ -76,18 +75,11 @@ export function QuickLogWidget() {
           <Zap className="h-[18px] w-[18px] shrink-0 text-sage-500" aria-hidden />
           <p className="text-xs font-medium uppercase tracking-wide text-sage-500">Quick log</p>
           <span className="text-sm text-sage-400">in the moment · ~5 sec</span>
-          <button
-            type="button"
-            onClick={() => setShortcutsOpen(true)}
-            className="ml-auto text-sm font-medium text-sage-600 underline hover:text-sage-700"
-          >
-            Edit personal symptoms
-          </button>
         </div>
 
-        {watchSymptomIds.length > 0 ? (
+        {trackedSymptomIds.length > 0 ? (
           <div className="mt-2.5 grid grid-cols-2 gap-2">
-            {packedWatchIds.map((id) => {
+            {packedIds.map((id) => {
               const def = getSymptomByKey(id);
               if (!def) return null;
               return (
@@ -105,20 +97,38 @@ export function QuickLogWidget() {
           </div>
         ) : (
           <div className="mt-4 rounded-xl border border-dashed border-sage-200 bg-sage-50/50 p-4">
-            <p className="text-sm font-medium text-sage-700">No Quick Log shortcuts yet</p>
+            <p className="text-sm font-medium text-sage-700">No Quick Log symptoms yet</p>
             <p className="mt-1 text-sm text-sage-500">
-              {trackedSymptomIds.length > 0
-                ? 'Star up to five of your personal symptoms for one-tap logging, or search the full library for a one-off log.'
-                : 'Add the concerns you want to follow, then star up to five for one-tap logging.'}
+              Add the concerns you want to tap quickly — including MRS symptoms like irritability
+              if you track them day to day. Or search the library for a one-off log.
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <Button size="sm" onClick={() => setShortcutsOpen(true)}>
-                {trackedSymptomIds.length > 0 ? 'Manage personal symptoms' : 'Add personal symptoms'}
+                Add symptoms
               </Button>
               <Button size="sm" variant="secondary" onClick={() => openSheet()}>
                 Log something else
               </Button>
             </div>
+          </div>
+        )}
+
+        {trackedSymptomIds.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setShortcutsOpen(true)}
+              className="text-sm font-medium text-sage-600 underline hover:text-sage-700"
+            >
+              Edit personal symptoms
+            </button>
+            <button
+              type="button"
+              onClick={() => openSheet()}
+              className="text-sm font-medium text-sage-500 underline hover:text-sage-700"
+            >
+              Log something else
+            </button>
           </div>
         )}
 
@@ -129,14 +139,13 @@ export function QuickLogWidget() {
         isOpen={shortcutsOpen}
         onClose={() => setShortcutsOpen(false)}
         trackedIds={trackedSymptomIds}
-        watchIds={watchSymptomIds}
-        onSave={async (nextTrackedIds, nextWatchIds) =>
+        onSave={async (nextTrackedIds) =>
           saveSelections(
             nextTrackedIds.map((symptom_id) => ({
               symptom_id,
-              is_watch_symptom: nextWatchIds.includes(symptom_id),
+              is_watch_symptom: true,
             })),
-            nextWatchIds,
+            nextTrackedIds,
           )
         }
       />

@@ -42,7 +42,6 @@ export function CheckinPage() {
   const { fetchCheckinDetail, getCheckinForDate } = useCheckins();
   const {
     trackedSymptomIds,
-    watchSymptomIds,
     isLoading: symptomSelectionsLoading,
     saveSelections,
   } = useSymptomSelections();
@@ -201,16 +200,11 @@ export function CheckinPage() {
         </p>
       </div>
 
-      {weeklyMinimumMet ? (
+      {/* Dose log always first. On weekly due day, MRS rises above daily pulse. */}
+      <DoseTapWidget title="Did you take today's doses?" />
+
+      {isDue ? (
         <>
-          <PulsePromptCard
-            hasCheckedInToday={hasCheckedInToday}
-            hasPulseToday={hasPulseToday}
-            hasFullMrsToday={hasFullMrsToday}
-            todaysCheckin={todaysCheckin}
-            isLoading={isLoading}
-            onStart={() => void startCheckin('quick')}
-          />
           <WeeklyCheckinPromptCard
             hasFullMrsToday={hasFullMrsToday}
             weeklyMinimumMet={weeklyMinimumMet}
@@ -219,10 +213,26 @@ export function CheckinPage() {
             daysSinceLastCheckin={daysSinceLastCheckin}
             isLoading={isLoading}
             onStart={() => void startCheckin('full')}
+          />
+          <PulsePromptCard
+            hasCheckedInToday={hasCheckedInToday}
+            hasPulseToday={hasPulseToday}
+            hasFullMrsToday={hasFullMrsToday}
+            todaysCheckin={todaysCheckin}
+            isLoading={isLoading}
+            onStart={() => void startCheckin('quick')}
           />
         </>
       ) : (
         <>
+          <PulsePromptCard
+            hasCheckedInToday={hasCheckedInToday}
+            hasPulseToday={hasPulseToday}
+            hasFullMrsToday={hasFullMrsToday}
+            todaysCheckin={todaysCheckin}
+            isLoading={isLoading}
+            onStart={() => void startCheckin('quick')}
+          />
           <WeeklyCheckinPromptCard
             hasFullMrsToday={hasFullMrsToday}
             weeklyMinimumMet={weeklyMinimumMet}
@@ -232,19 +242,8 @@ export function CheckinPage() {
             isLoading={isLoading}
             onStart={() => void startCheckin('full')}
           />
-          <PulsePromptCard
-            hasCheckedInToday={hasCheckedInToday}
-            hasPulseToday={hasPulseToday}
-            hasFullMrsToday={hasFullMrsToday}
-            todaysCheckin={todaysCheckin}
-            isLoading={isLoading}
-            onStart={() => void startCheckin('quick')}
-          />
         </>
       )}
-
-      {/* Doses are part of the daily picture, so the check-in surface asks for them too. */}
-      <DoseTapWidget title="Did you take today's doses?" />
 
       <Card variant="outlined" padding="sm">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -345,14 +344,13 @@ export function CheckinPage() {
         isOpen={personalSymptomsOpen}
         onClose={() => setPersonalSymptomsOpen(false)}
         trackedIds={trackedSymptomIds}
-        watchIds={watchSymptomIds}
-        onSave={async (nextTrackedIds, nextWatchIds) =>
+        onSave={async (nextTrackedIds) =>
           saveSelections(
             nextTrackedIds.map((symptom_id) => ({
               symptom_id,
-              is_watch_symptom: nextWatchIds.includes(symptom_id),
+              is_watch_symptom: true,
             })),
-            nextWatchIds,
+            nextTrackedIds,
           )
         }
       />
