@@ -97,7 +97,7 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}
         tabIndex={-1}
-        data-keyboard-scroll
+
         className={[
           'relative z-10 flex w-full flex-col overflow-hidden bg-sand-50 outline-none',
           isFullScreen ? '' : 'max-h-full rounded-t-xl border border-sand-200 shadow-xl sm:rounded-xl',

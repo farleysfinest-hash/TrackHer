@@ -39,6 +39,7 @@ export function InsightCard({
     markInsightAsViewed(insight);
     // Depend on identity/content, not object identity — useInsights rebuilds
     // Insight objects whenever profile-backed memos invalidate.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- insight fields above
   }, [insight.id, insight.title, insight.body]);
 
   if (insight.category === 'safeguarding') {

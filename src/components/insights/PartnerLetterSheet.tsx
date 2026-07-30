@@ -125,7 +125,7 @@ export function PartnerLetterSheet({ context, open, onClose }: PartnerLetterShee
         aria-modal="true"
         aria-labelledby="partner-letter-title"
         tabIndex={-1}
-        data-keyboard-scroll
+
         className="absolute inset-x-0 bottom-0 z-10 mx-auto flex max-h-full w-full max-w-lg flex-col rounded-t-2xl border border-sand-200 bg-sand-50 shadow-2xl outline-none sm:relative sm:bottom-auto sm:m-4 sm:max-h-[min(90%,640px)] sm:rounded-2xl"
         style={{ maxHeight: 'min(100%, 640px)' }}
       >

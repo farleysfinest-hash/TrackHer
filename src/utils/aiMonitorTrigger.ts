@@ -2,7 +2,7 @@ import { supabase } from '../lib/supabase';
 import { buildAiFactsPacket, type AiFactsPacketInput } from './aiFactsPacket';
 import { hashAiFactsPacket, writeAiInsightCache } from './aiInsightsCache';
 import { invokeMonitor } from '../hooks/useAiAssistant';
-import { buildGapCoachMessage } from '../components/insights/GapCoachCard';
+import { buildGapCoachMessage } from './gapCoach';
 import { hasMRSData } from './checkinHelpers';
 
 const MONITOR_DAY_KEY = 'trackher_ai_monitor_day';

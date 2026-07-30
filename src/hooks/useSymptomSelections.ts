@@ -106,13 +106,9 @@ export function useSymptomSelections() {
     [selections],
   );
 
-  /** @deprecated Prefer trackedSymptomIds — Quick Log shows all tracked. */
-  const watchSymptomIds = useMemo(() => trackedSymptomIds, [trackedSymptomIds]);
-
   return {
     selections,
     trackedSymptomIds,
-    watchSymptomIds,
     isLoading,
     error,
     fetchSelections,

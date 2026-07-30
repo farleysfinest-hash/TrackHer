@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolvePostCheckinNudge } from '../PostCheckinNudge';
+import { resolvePostCheckinNudge } from '../../../utils/postCheckinNudge';
 import { addDaysISO } from '../../../utils/localDate';
 import { EXPERIMENT_WINDOW_DAYS } from '../../../utils/medicationHelpers';
 

@@ -49,7 +49,7 @@ function monthLabelAt(dates: HeatmapCellView[], index: number): string | null {
 
 function SymptomHeatmapComponent({ rows }: SymptomHeatmapProps) {
   const isEmpty = rows.length === 0;
-  const dates = rows[0]?.cells ?? [];
+  const dates = useMemo(() => rows[0]?.cells ?? [], [rows]);
   const hasAnyFilled = dates.some((d) => !d.placeholder);
 
   const description = useMemo(() => {

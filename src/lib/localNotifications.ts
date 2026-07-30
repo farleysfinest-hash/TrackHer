@@ -148,52 +148,6 @@ export function buildCheckinNotification(opts: {
   };
 }
 
-export function buildDailyMedicationNotification(opts: {
-  id: number;
-  medicationName: string;
-  hour: number;
-  minute?: number;
-}): LocalNotificationSchema {
-  return {
-    id: opts.id,
-    title: 'Dose reminder',
-    body: `Time for ${opts.medicationName}.`,
-    schedule: {
-      on: {
-        hour: opts.hour,
-        minute: opts.minute ?? 0,
-      },
-      repeats: true,
-      allowWhileIdle: true,
-    },
-    extra: { path: '/checkin' },
-  };
-}
-
-export function buildWeeklyMedicationNotification(opts: {
-  id: number;
-  medicationName: string;
-  weekday: Weekday;
-  hour: number;
-  minute?: number;
-}): LocalNotificationSchema {
-  return {
-    id: opts.id,
-    title: 'Dose reminder',
-    body: `Time for ${opts.medicationName}.`,
-    schedule: {
-      on: {
-        weekday: opts.weekday,
-        hour: opts.hour,
-        minute: opts.minute ?? 0,
-      },
-      repeats: true,
-      allowWhileIdle: true,
-    },
-    extra: { path: '/checkin' },
-  };
-}
-
 /**
  * Next one-shot fire time for a medication dose slot — mirrors weekly MRS logic.
  * - Not done + before reminder time → today

@@ -51,7 +51,6 @@ interface OnboardingState {
   updateStaging: (data: Partial<StagingAnswers>) => void;
   updateFormData: (data: Partial<OnboardingFormData>) => void;
   toggleSymptom: (symptomId: string) => void;
-  toggleWatchSymptom: (symptomId: string) => void;
   initWatchSymptomsFromSelection: () => void;
   initSymptomsForStage: (stage: StrawStageCode) => void;
   submitStaging: () => Promise<{ success: boolean; error?: string }>;
@@ -192,27 +191,6 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
           ...state.formData,
           selectedSymptoms: selected,
           watchSymptoms,
-        },
-      };
-    });
-  },
-
-  toggleWatchSymptom: (symptomId) => {
-    set((state) => {
-      if (!state.formData.selectedSymptoms.includes(symptomId)) return state;
-      const isWatch = state.formData.watchSymptoms.includes(symptomId);
-      if (isWatch) {
-        return {
-          formData: {
-            ...state.formData,
-            watchSymptoms: state.formData.watchSymptoms.filter((id) => id !== symptomId),
-          },
-        };
-      }
-      return {
-        formData: {
-          ...state.formData,
-          watchSymptoms: [...state.formData.watchSymptoms, symptomId],
         },
       };
     });

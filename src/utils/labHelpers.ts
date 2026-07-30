@@ -179,3 +179,17 @@ export function getNextLabsMessage(drawDate: string | null): string {
   const remaining = 12 - weeks;
   return `Next labs recommended in ~${remaining} week${remaining !== 1 ? 's' : ''}`;
 }
+
+export function getDefaultBiomarkerKey(labResults: LabResult[]): string {
+  const keys = new Set<string>();
+  for (const lab of labResults) {
+    for (const b of LAB_BIOMARKERS) {
+      if (getBiomarkerValue(lab, b.key) !== null) {
+        keys.add(b.key);
+      }
+    }
+  }
+  const available = [...keys];
+  if (available.includes('estradiol')) return 'estradiol';
+  return available[0] ?? 'estradiol';
+}

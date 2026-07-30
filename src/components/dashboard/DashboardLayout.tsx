@@ -13,7 +13,7 @@ import { StoryColumn } from './StoryColumn';
 import { SubscaleChart } from './SubscaleChart';
 import { SymptomHeatmap } from './SymptomHeatmap';
 import { LabTrendChart } from './LabTrendChart';
-import { getDefaultBiomarkerKey } from './LabTrendSelector';
+import { getDefaultBiomarkerKey } from '../../utils/labHelpers';
 import { DrillDownControls } from './DrillDownControls';
 import { ActiveMedicationsSummary } from './ActiveMedicationsSummary';
 import { LabSummaryWidget } from './LabSummaryWidget';

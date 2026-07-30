@@ -2,9 +2,7 @@
 export const CHECKIN_DUE_NAV =
   'checkin-due-nav rounded-full bg-sage-500 font-semibold text-on-accent shadow-sm';
 
-export function checkinDueWord(): string {
-  return 'Check-In Due';
-}
+export const CHECKIN_DUE_WORD = 'Check-In Due';
 
 export function CheckinDueDot() {
   return (

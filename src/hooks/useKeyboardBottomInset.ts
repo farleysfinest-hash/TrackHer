@@ -2,12 +2,6 @@ import { useEffect, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { Keyboard } from '@capacitor/keyboard';
 
-const KEYBOARD_INSET_VAR = '--keyboard-inset';
-
-function setCssInset(px: number) {
-  document.documentElement.style.setProperty(KEYBOARD_INSET_VAR, `${Math.max(0, px)}px`);
-}
-
 export interface VisualViewportBounds {
   /** Soft-keyboard coverage at the bottom of the layout viewport (px). */
   inset: number;
@@ -53,9 +47,7 @@ export function useVisualViewportBounds(): VisualViewportBounds {
 
   useEffect(() => {
     const apply = (fallbackHeight?: number) => {
-      const next = readBounds(fallbackHeight);
-      setBounds(next);
-      setCssInset(next.inset);
+      setBounds(readBounds(fallbackHeight));
     };
 
     const onVv = () => apply();
@@ -82,16 +74,10 @@ export function useVisualViewportBounds(): VisualViewportBounds {
       vv?.removeEventListener('resize', onVv);
       vv?.removeEventListener('scroll', onVv);
       for (const h of handles) void h.then((l) => l.remove());
-      setCssInset(0);
     };
   }, []);
 
   return bounds;
-}
-
-/** Bottom inset only — thin wrapper for call sites that only need padding. */
-export function useKeyboardBottomInset(): number {
-  return useVisualViewportBounds().inset;
 }
 
 /**
@@ -108,11 +94,8 @@ export function useKeyboardAvoidance(): void {
       const tag = el.tagName;
       if (tag !== 'INPUT' && tag !== 'TEXTAREA' && !el.isContentEditable) return;
 
-      // Prefer snapping the sheet/dialog that owns the field into the visual frame.
       const frame = el.closest<HTMLElement>('[data-vv-frame]');
       if (frame) {
-        // Frame is already positioned to the visual viewport; just bring the
-        // composer into the frame's scrollport if needed.
         el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         return;
       }

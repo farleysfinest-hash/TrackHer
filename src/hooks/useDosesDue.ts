@@ -10,7 +10,8 @@ import {
 } from '../utils/doseSchedule';
 
 /**
- * Whether any scheduled dose is still owed today — mirrors useCheckinStatus for Meds nav chrome.
+ * Whether any scheduled dose is still owed today — drives Check-In Due chrome
+ * (Check-In owns daily dose taps).
  */
 export function useDosesDue() {
   const { medications, fetchActiveMedications, isLoading: medsLoading } = useMedications();

@@ -19,13 +19,11 @@ import {
 } from '../../utils/aiVisitPrep';
 import {
   writeVisitDebriefToStorage,
+  readVisitDebriefFromStorage,
   type VisitDebriefPack,
 } from '../../utils/aiVisitDebrief';
 import { useAuthStore } from '../../stores/authStore';
-import {
-  loadPersistedVisitDebrief,
-  VisitDebriefCard,
-} from './VisitDebriefCard';
+import { VisitDebriefCard } from './VisitDebriefCard';
 
 interface VisitPrepCardProps {
   context: AiFactsPacketInput;
@@ -48,7 +46,7 @@ export function VisitPrepCard({ context }: VisitPrepCardProps) {
   const [debriefLoading, setDebriefLoading] = useState(false);
   const [debriefError, setDebriefError] = useState<string | null>(null);
   const [debriefPack, setDebriefPack] = useState<VisitDebriefPack | null>(() =>
-    typeof window !== 'undefined' ? loadPersistedVisitDebrief() : null,
+    typeof window !== 'undefined' ? readVisitDebriefFromStorage() : null,
   );
 
   const facts = useMemo(() => buildAiFactsPacket(context), [context]);

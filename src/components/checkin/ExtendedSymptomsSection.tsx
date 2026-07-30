@@ -79,7 +79,7 @@ export function ExtendedSymptomsSection({ onNext, onBack, onSkip }: ExtendedSymp
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-sage-400">Loading your watch symptoms...</p>
+        <p className="text-sm text-sage-400">Loading your tracked symptoms...</p>
       ) : (
         <>
           {gridSymptomIds.length > 0 ? (

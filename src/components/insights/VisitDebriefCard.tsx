@@ -5,7 +5,6 @@ import { Button } from '../ui/Button';
 import {
   clearVisitDebriefStorage,
   clampVisitDebriefPack,
-  readVisitDebriefFromStorage,
   writeVisitDebriefToStorage,
   type VisitDebriefPack,
 } from '../../utils/aiVisitDebrief';
@@ -96,8 +95,4 @@ export function VisitDebriefCard({ pack: initial, onCleared }: VisitDebriefCardP
       </div>
     </Card>
   );
-}
-
-export function loadPersistedVisitDebrief(): VisitDebriefPack | null {
-  return readVisitDebriefFromStorage();
 }

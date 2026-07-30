@@ -16,7 +16,7 @@ import { useDosesDue } from '../../hooks/useDosesDue';
 import {
   CHECKIN_DUE_NAV,
   CheckinDueDot,
-  checkinDueWord,
+  CHECKIN_DUE_WORD,
 } from './navDueStyles';
 
 const navItems: Array<{
@@ -56,7 +56,7 @@ export function Sidebar() {
           const Icon = resolveIcon ? resolveIcon(needsCheckin) : icon;
           const isCheckin = path === '/checkin';
           const showDue = isCheckin && needsCheckin;
-          const dueWord = checkinDueWord();
+          const dueWord = CHECKIN_DUE_WORD;
 
           return (
             <NavLink

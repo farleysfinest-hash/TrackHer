@@ -8,7 +8,7 @@ import { getLocalDateISO, getResolvedTimezone } from '../../utils/checkinHelpers
 import { resolveEventLocalDate } from '../../utils/localDate';
 
 export function FlareTapRow() {
-  const { watchSymptomIds, isLoading: selectionsLoading } = useSymptomSelections();
+  const { trackedSymptomIds, isLoading: selectionsLoading } = useSymptomSelections();
   const { events, isLoading: eventsLoading } = useQuickLog();
   const flareSelected = useCheckinStore((s) => s.flareSelected);
   const targetDate = useCheckinStore((s) => s.targetDate);
@@ -20,13 +20,13 @@ export function FlareTapRow() {
 
   useEffect(() => {
     if (initialized.current) return;
-    if (selectionsLoading || eventsLoading || watchSymptomIds.length === 0) return;
+    if (selectionsLoading || eventsLoading || trackedSymptomIds.length === 0) return;
 
     const loggedToday = events
       .filter(
         (e) =>
           resolveEventLocalDate(e.logged_at, e.local_date, e.event_timezone, timezone) === targetDate &&
-          watchSymptomIds.includes(e.symptom_id),
+          trackedSymptomIds.includes(e.symptom_id),
       )
       .map((e) => e.symptom_id);
 
@@ -36,7 +36,7 @@ export function FlareTapRow() {
   }, [
     events,
     eventsLoading,
-    watchSymptomIds,
+    trackedSymptomIds,
     selectionsLoading,
     today,
     targetDate,
@@ -44,7 +44,7 @@ export function FlareTapRow() {
     initFlareFromPreLogged,
   ]);
 
-  if (selectionsLoading || watchSymptomIds.length === 0) return null;
+  if (selectionsLoading || trackedSymptomIds.length === 0) return null;
 
   const isBackdated = targetDate !== today;
 
@@ -54,7 +54,7 @@ export function FlareTapRow() {
         {isBackdated ? 'Anything flaring that day?' : 'Anything flaring today?'}
       </h3>
       <div className="flex flex-wrap gap-2">
-        {watchSymptomIds.map((id) => {
+        {trackedSymptomIds.map((id) => {
           const def = getSymptomByKey(id);
           if (!def) return null;
           const isSelected = flareSelected.includes(id);

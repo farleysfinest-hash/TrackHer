@@ -20,8 +20,6 @@ import { DashboardCardHeader } from '../dashboard/DashboardCardHeader';
 interface DoseTapWidgetProps {
   /** Overrides the default card title, so the check-in surface can ask its own question. */
   title?: string;
-  /** Hides the card entirely when nothing is expected today. Used on the check-in surface. */
-  hideWhenNothingDue?: boolean;
 }
 
 function formatLogTime(iso: string, timezone: string): string {
@@ -61,7 +59,7 @@ function summaryCopy(outstanding: number, total: number): string {
   return `${outstanding} medications still to log today.`;
 }
 
-export function DoseTapWidget({ title, hideWhenNothingDue = false }: DoseTapWidgetProps) {
+export function DoseTapWidget({ title }: DoseTapWidgetProps) {
   const toast = useToast();
   const { medications, fetchActiveMedications, isLoading: medsLoading } = useMedications();
   const {
@@ -145,7 +143,6 @@ export function DoseTapWidget({ title, hideWhenNothingDue = false }: DoseTapWidg
 
   if (medsLoading || adminsLoading) return null;
   if (doseStatuses.length === 0) return null;
-  if (hideWhenNothingDue && outstanding === 0) return null;
 
   return (
     <Card variant="elevated">

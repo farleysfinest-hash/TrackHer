@@ -81,7 +81,7 @@ export function QuickLogSheet() {
   const closeSheet = useQuickLogStore((s) => s.closeSheet);
   const selectSymptom = useQuickLogStore((s) => s.selectSymptom);
   const { createEvent, events } = useQuickLog();
-  const { watchSymptomIds, trackedSymptomIds } = useSymptomSelections();
+  const { trackedSymptomIds } = useSymptomSelections();
   const toast = useToast();
   const timezone = getResolvedTimezone(useAuthStore((state) => state.profile?.timezone));
   const timeOptions = buildQuickLogTimeOptions(timezone);
@@ -306,7 +306,7 @@ export function QuickLogSheet() {
         aria-modal="true"
         aria-labelledby="quick-log-title"
         tabIndex={-1}
-        data-keyboard-scroll
+
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -358,13 +358,13 @@ export function QuickLogSheet() {
           className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4"
           style={{ overflowY: offsetY > 0 ? 'hidden' : undefined }}
         >
-          {watchSymptomIds.length > 0 && (
+          {trackedSymptomIds.length > 0 && (
             <div className="mb-4">
               <p className="mb-2 text-xs font-medium uppercase tracking-wide text-sage-400">
                 Quick Log shortcuts
               </p>
               <div className="flex flex-wrap gap-2">
-                {watchSymptomIds.map((id) => {
+                {trackedSymptomIds.map((id) => {
                   const def = getSymptomByKey(id);
                   if (!def) return null;
                   const isSelected = selectedSymptomId === id;

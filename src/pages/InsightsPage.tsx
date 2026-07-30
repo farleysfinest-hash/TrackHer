@@ -9,10 +9,8 @@ import { AskDataSheet, type AskDataSeed } from '../components/insights/AskDataSh
 import { AiNoticedList } from '../components/insights/AiNoticedList';
 import { CompanionMonitorCard } from '../components/insights/CompanionMonitorCard';
 import { VisitPrepCard } from '../components/insights/VisitPrepCard';
-import {
-  GapCoachCard,
-  buildGapCoachMessage,
-} from '../components/insights/GapCoachCard';
+import { GapCoachCard } from '../components/insights/GapCoachCard';
+import { buildGapCoachMessage } from '../utils/gapCoach';
 import { PaywallModal } from '../components/subscription/PaywallModal';
 import { useProGate } from '../hooks/useProGate';
 import { useAuthStore } from '../stores/authStore';

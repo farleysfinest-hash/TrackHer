@@ -13,6 +13,7 @@ interface SafeguardingCardProps {
 export function SafeguardingCard({ insight, onDismiss }: SafeguardingCardProps) {
   useEffect(() => {
     markInsightAsViewed(insight);
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- identity fields, not object ref
   }, [insight.id, insight.title, insight.body]);
 
   return (

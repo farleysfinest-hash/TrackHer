@@ -56,9 +56,3 @@ export function LabTrendSelector({ labResults, selectedKey, onChange }: LabTrend
     </>
   );
 }
-
-export function getDefaultBiomarkerKey(labResults: LabResult[]): string {
-  const available = getAvailableBiomarkers(labResults);
-  if (available.includes('estradiol')) return 'estradiol';
-  return available[0] ?? 'estradiol';
-}

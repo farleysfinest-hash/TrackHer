@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { buildAiFactsPacket } from '../aiFactsPacket';
 import { hashAiFactsPacket } from '../aiInsightsCache';
 import { isAiForbiddenCategory } from '../aiForbiddenCategories';
-import { buildGapCoachMessage } from '../../components/insights/GapCoachCard';
+import { buildGapCoachMessage } from '../gapCoach';
 import type { Insight } from '../../engine/types';
 import type { Profile } from '../../types/database';
 

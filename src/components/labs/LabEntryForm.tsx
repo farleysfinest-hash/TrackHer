@@ -36,7 +36,7 @@ export function LabEntryForm({ onClose, onSuccess }: LabEntryFormProps) {
     reset,
   } = useLabEntryStore();
 
-  const { labResults, createLabResult, updateLabResult, getPreviousValue } = useLabResults();
+  const { createLabResult, updateLabResult, getPreviousValue } = useLabResults();
   const toast = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const [validationError, setValidationError] = useState('');
@@ -51,7 +51,7 @@ export function LabEntryForm({ onClose, onSuccess }: LabEntryFormProps) {
       }
     }
     return map;
-  }, [drawDate, isEditing, getPreviousValue, labResults]);
+  }, [drawDate, isEditing, getPreviousValue]);
 
   const handleSave = async () => {
     setValidationError('');
