@@ -7,7 +7,6 @@ import { useInsights } from '../../hooks/useInsights';
 import { useStageProfile } from '../../hooks/useStageProfile';
 import { getStageTrackingPhrase } from '../../engine/stageProfile';
 import { refreshCheckinStatusForCurrentUser } from '../../stores/checkinStatusStore';
-import { useTabActive } from '../layout/TabActiveContext';
 import { ScoreSummaryCards } from './ScoreSummaryCards';
 import { WelcomeMessage } from './WelcomeMessage';
 import { StoryColumn } from './StoryColumn';
@@ -20,26 +19,25 @@ import { ActiveMedicationsSummary } from './ActiveMedicationsSummary';
 import { LabSummaryWidget } from './LabSummaryWidget';
 import { AppointmentCountdownCard } from './AppointmentCountdownCard';
 import { ProviderReportButton } from './ProviderReportButton';
-import { DailyCompanionLine } from './DailyCompanionLine';
 import { SafeguardingCard } from '../insights/SafeguardingCard';
-import { QuickLogWidget } from './QuickLogWidget';
 import { PersonalSymptomTrends } from './PersonalSymptomTrends';
 import { StrawStageCard } from './StrawStageCard';
 import { UnlockProgress } from './UnlockProgress';
 import { GhostChartFrame } from './GhostChartFrame';
 import { PullToRefresh } from '../ui/PullToRefresh';
-import { useQuickLogStore } from '../../stores/quickLogStore';
 import { storyChartWindow } from '../../utils/earlyStoryChartWindow';
 import { hasMRSData } from '../../utils/checkinHelpers';
+import { LunaDashboardCard } from './LunaDashboardCard';
+import { QuickLogWidget } from './QuickLogWidget';
+import { useQuickLogStore } from '../../stores/quickLogStore';
 
 export function DashboardLayout() {
   const { pathname } = useLocation();
-  const tabActive = useTabActive();
-  const quickLogOpen = useQuickLogStore((s) => s.isSheetOpen);
   const dateRange = useDashboardStore((s) => s.dateRange);
   const refreshDateRange = useDashboardStore((s) => s.refreshDateRange);
+  const quickLogOpen = useQuickLogStore((s) => s.isSheetOpen);
   const checkinStatus = useCheckinStatus();
-  const { insights, safeguardingInsights, dismissInsight, extendedSymptoms, aiContext } = useInsights();
+  const { insights, safeguardingInsights, dismissInsight, extendedSymptoms } = useInsights();
   const {
     getSymptomTrendData,
     getMedicationChangeMarkers,
@@ -146,13 +144,14 @@ export function DashboardLayout() {
           <div>
             <h1 className="font-display text-3xl text-sage-800">Dashboard</h1>
             <p className="mt-1 text-sage-500">{subtitle}</p>
-            {tabActive ? <DailyCompanionLine context={aiContext} /> : null}
           </div>
         </div>
 
         {!ready ? null : (
           <>
             {safeguardingCards}
+
+            <LunaDashboardCard />
 
             <QuickLogWidget />
 

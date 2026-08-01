@@ -7,7 +7,7 @@ import { formatDateLong } from '../../utils/formatters';
 import { getCategoryLabel, getPriorityLabel, getPriorityBadgeVariant } from '../../utils/insightHelpers';
 import { formatConfidenceLine } from '../../engine/confidence';
 import { isAiForbiddenCategory } from '../../utils/aiForbiddenCategories';
-import { MessageCircle } from 'lucide-react';
+import { Moon } from 'lucide-react';
 
 interface InsightDetailModalProps {
   insight: Insight;
@@ -153,8 +153,8 @@ export function InsightDetailModal({
               onClose();
             }}
           >
-            <MessageCircle className="mr-1.5 h-4 w-4" />
-            Talk about this
+            <Moon className="mr-1.5 h-4 w-4" />
+            Ask Luna about this
           </Button>
         )}
 

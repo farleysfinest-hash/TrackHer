@@ -58,23 +58,15 @@ function clipRangeToDomain(
 }
 
 export function getConventionalBandLabel(biomarker: LabBiomarker): string {
-  if (!biomarker.conventionalRange) return '';
-  return `Typical range ${formatRange(biomarker.conventionalRange)} ${biomarker.unit}`;
-}
-
-export function getOptimalBandLabel(biomarker: LabBiomarker): string {
-  if (!biomarker.optimalRange) return '';
-  return `Optimal range ${formatRange(biomarker.optimalRange)} ${biomarker.unit}`;
+  if (!biomarker.conventionalRange || !biomarker.referenceSource) return '';
+  return `General reference context ${formatRange(biomarker.conventionalRange)} ${biomarker.unit}`;
 }
 
 /** Compact one-line legend for chart chrome (avoids overlapping in-plot ReferenceArea labels). */
 export function getReferenceLegendLine(biomarker: LabBiomarker): string | null {
   const parts: string[] = [];
-  if (biomarker.conventionalRange) {
-    parts.push(`Typical ${formatRange(biomarker.conventionalRange)}`);
-  }
-  if (biomarker.optimalRange) {
-    parts.push(`Optimal ${formatRange(biomarker.optimalRange)}`);
+  if (biomarker.conventionalRange && biomarker.referenceSource) {
+    parts.push(`General reference context ${formatRange(biomarker.conventionalRange)}`);
   }
   if (parts.length === 0) return null;
   return `${parts.join(' · ')} ${biomarker.unit}`;
@@ -97,16 +89,10 @@ export function resolveReferenceBands(
     fillOpacity: number;
   }> = [
     {
-      range: biomarker.conventionalRange,
+      range: biomarker.referenceSource ? biomarker.conventionalRange : null,
       label: getConventionalBandLabel(biomarker),
       fill: colors.conventional,
       fillOpacity: 0.14,
-    },
-    {
-      range: biomarker.optimalRange,
-      label: getOptimalBandLabel(biomarker),
-      fill: colors.optimal,
-      fillOpacity: 0.18,
     },
   ];
 

@@ -1,6 +1,10 @@
 /** Visit debrief — client clamp matching Edge visit_debrief. */
 
-export type VisitDebriefRiskTier = 'mental_decline' | 'crisis' | 'crisis_imminent';
+export type VisitDebriefRiskTier =
+  | 'mental_decline'
+  | 'crisis'
+  | 'crisis_imminent'
+  | 'loved_one';
 
 export interface VisitDebriefFollowUp {
   label: string;
@@ -67,7 +71,10 @@ export function clampVisitDebriefPack(raw: unknown): VisitDebriefPack | null {
   if (!raw || typeof raw !== 'object') return null;
   const o = raw as Record<string, unknown>;
   const risk =
-    o.risk === 'mental_decline' || o.risk === 'crisis' || o.risk === 'crisis_imminent'
+    o.risk === 'mental_decline' ||
+    o.risk === 'crisis' ||
+    o.risk === 'crisis_imminent' ||
+    o.risk === 'loved_one'
       ? o.risk
       : null;
   const riskReply =

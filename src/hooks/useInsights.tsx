@@ -22,6 +22,7 @@ import type {
   LabResult,
   Medication,
   MedicationChange,
+  MedicationAdministration,
   Profile,
   SymptomCheckin,
 } from '../types/database';
@@ -49,6 +50,7 @@ export interface InsightsValue {
     checkins: SymptomCheckin[];
     medications: Medication[];
     medicationChanges: MedicationChange[];
+    administrations: MedicationAdministration[];
     labResults: LabResult[];
     profile: Profile | null;
     timezone: string;
@@ -276,6 +278,7 @@ function useInsightsState(): InsightsValue {
       checkins: engineCheckins,
       medications,
       medicationChanges,
+      administrations,
       labResults,
       profile,
       timezone,
@@ -285,6 +288,7 @@ function useInsightsState(): InsightsValue {
       engineCheckins,
       medications,
       medicationChanges,
+      administrations,
       labResults,
       profile,
       timezone,

@@ -213,6 +213,9 @@ function makeLab(overrides: Partial<LabResult> = {}): LabResult {
     hdl: null,
     triglycerides: null,
     notes: null,
+    reported_values: {},
+    source_type: 'manual',
+    import_reviewed_at: null,
     created_at: '2026-06-15T12:00:00Z',
     ...overrides,
   };
@@ -335,64 +338,77 @@ describe('engine guard fixtures', () => {
   });
 });
 
-describe('lab discordance conventional range boundaries', () => {
+describe('lab discordance uses the laboratory report as its range source', () => {
   const lowPatternCheckin = makeCheckin({
     hot_flashes: 3,
     vaginal_dryness: 3,
     sleep_problems: 3,
   });
 
-  it.each([
-    { value: -1, expectedCount: 0, label: 'below the minimum' },
-    { value: 0, expectedCount: 1, label: 'at the minimum' },
-    { value: 15, expectedCount: 1, label: 'inside the range' },
-    { value: 30, expectedCount: 1, label: 'at the maximum' },
-    { value: 31, expectedCount: 0, label: 'above the maximum' },
-  ])(
-    'handles an expected-low lab value $label',
-    ({ value, expectedCount }) => {
-      const insights = analyzeLabDiscordance({
-        checkins: [lowPatternCheckin],
-        labResults: [makeLab({ estradiol: value })],
-      });
-      expect(insights).toHaveLength(expectedCount);
-    },
-  );
+  it('uses a laboratory-reported normal flag even when an unsourced built-in range differs', () => {
+    const insights = analyzeLabDiscordance({
+      checkins: [lowPatternCheckin],
+      labResults: [makeLab({
+        estradiol: 200,
+        reported_values: {
+          estradiol: {
+            reportedLabel: 'Oestradiol',
+            biomarkerKey: 'estradiol',
+            reportedValue: '734',
+            normalizedValue: 200,
+            comparator: null,
+            reportedUnit: 'pmol/L',
+            referenceLow: 0,
+            referenceHigh: 800,
+            referenceText: '0–800',
+            reportedFlag: 'normal',
+            sourcePage: 1,
+            confidence: 1,
+          },
+        },
+      })],
+    });
 
-  const highPatternCheckin = makeCheckin({
-    anxiety: 3,
-    sleep_problems: 3,
-    exhaustion: 3,
+    expect(insights).toHaveLength(1);
+    expect(insights[0].body).toMatch(/comparison guide, not a personal treatment target/i);
   });
 
-  it.each([
-    { value: 5, expectedCount: 0, label: 'below the minimum' },
-    { value: 6, expectedCount: 1, label: 'at the minimum' },
-    { value: 14, expectedCount: 1, label: 'inside the range' },
-    { value: 23, expectedCount: 1, label: 'at the maximum' },
-    { value: 24, expectedCount: 0, label: 'above the maximum' },
-  ])(
-    'handles an expected-high lab value $label',
-    ({ value, expectedCount }) => {
-      const insights = analyzeLabDiscordance({
-        checkins: [highPatternCheckin],
-        labResults: [makeLab({ estradiol: null, cortisol_am: value })],
-      });
-      expect(insights).toHaveLength(expectedCount);
-    },
-  );
+  it('does not interpret an unsourced built-in interval when the report supplied no range or flag', () => {
+    expect(analyzeLabDiscordance({
+      checkins: [lowPatternCheckin],
+      labResults: [makeLab({ estradiol: 15 })],
+    })).toEqual([]);
+  });
 });
 
 describe('lab range flags for out-of-range values', () => {
-  it('flags estradiol above the conventional maximum', () => {
-    const insights = analyzeLabRangeFlags([makeLab({ estradiol: 350 })]);
+  it('flags estradiol only when the laboratory reports a high flag', () => {
+    const insights = analyzeLabRangeFlags([makeLab({
+      estradiol: 350,
+      reported_values: {
+        estradiol: {
+          reportedLabel: 'Estradiol',
+          biomarkerKey: 'estradiol',
+          reportedValue: '350',
+          normalizedValue: 350,
+          comparator: null,
+          reportedUnit: 'pg/mL',
+          referenceLow: 0,
+          referenceHigh: 30,
+          referenceText: '0–30',
+          reportedFlag: 'high',
+          sourcePage: 1,
+          confidence: 1,
+        },
+      },
+    })]);
     expect(insights.some((i) => i.id === 'lab-range-estradiol')).toBe(true);
     expect(insights.find((i) => i.id === 'lab-range-estradiol')?.category).toBe(
       'lab_discordance',
     );
   });
 
-  it('does not flag estradiol inside the optimal HRT band', () => {
+  it('does not interpret an unsourced range when the report supplied no flag', () => {
     const insights = analyzeLabRangeFlags([makeLab({ estradiol: 80 })]);
     expect(insights.some((i) => i.id === 'lab-range-estradiol')).toBe(false);
   });

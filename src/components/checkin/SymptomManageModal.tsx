@@ -173,7 +173,7 @@ export function SymptomManageModal({
                 : 'No symptoms yet. Choose “Add from library” to pick the concerns you want to follow.'}
             </p>
             {searching && aiSuggestLoading && (
-              <p className="mt-2 text-xs text-sage-400">Asking your companion…</p>
+              <p className="mt-2 text-xs text-sage-400">Asking Luna…</p>
             )}
             {searching && aiSuggestions.length > 0 && (
               <ul className="mt-3 space-y-1 text-left">

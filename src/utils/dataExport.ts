@@ -27,6 +27,11 @@ export interface ExportBundle {
   checkin_drafts: Record<string, unknown>[];
   reminder_schedule: Record<string, unknown>[];
   ai_insights: Record<string, unknown>[];
+  luna_threads: Record<string, unknown>[];
+  luna_messages: Record<string, unknown>[];
+  luna_memories: Record<string, unknown>[];
+  luna_feedback: Record<string, unknown>[];
+  luna_crisis_state: Record<string, unknown>[];
 }
 
 async function checkedQuery(
@@ -71,6 +76,11 @@ export async function exportUserData(): Promise<ExportBundle> {
     drafts,
     reminders,
     aiInsights,
+    lunaThreads,
+    lunaMessages,
+    lunaMemories,
+    lunaFeedback,
+    lunaCrisisState,
   ] = await Promise.all([
     checkedQuery(userId, 'symptom_checkins', 'checkin_date'),
     checkedQuery(userId, 'extended_symptom_logs', 'created_at'),
@@ -86,6 +96,11 @@ export async function exportUserData(): Promise<ExportBundle> {
     checkedQuery(userId, 'checkin_drafts'),
     checkedQuery(userId, 'reminder_schedule'),
     checkedQuery(userId, 'ai_insights', 'generated_at'),
+    checkedQuery(userId, 'luna_threads', 'created_at'),
+    checkedQuery(userId, 'luna_messages', 'created_at'),
+    checkedQuery(userId, 'luna_memories', 'created_at'),
+    checkedQuery(userId, 'luna_feedback', 'created_at'),
+    checkedQuery(userId, 'luna_crisis_state', 'last_activity_at'),
   ]);
 
   const profile = (profileRes.data as Record<string, unknown> | null) ?? null;
@@ -109,6 +124,11 @@ export async function exportUserData(): Promise<ExportBundle> {
     checkin_drafts: drafts,
     reminder_schedule: reminders,
     ai_insights: aiInsights,
+    luna_threads: lunaThreads,
+    luna_messages: lunaMessages,
+    luna_memories: lunaMemories,
+    luna_feedback: lunaFeedback,
+    luna_crisis_state: lunaCrisisState,
   };
 }
 

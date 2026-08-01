@@ -88,9 +88,32 @@ export type InsightType =
   | 'gap_coach'
   | 'visit_prep'
   | 'dose_watch'
-  | 'daily_line'
   | 'stage_explain'
-  | 'partner_letter';
+  | 'partner_letter'
+  | 'luna_synthesis';
+
+export type LunaThreadKind =
+  | 'dashboard'
+  | 'medication'
+  | 'checkin'
+  | 'mrs'
+  | 'lab'
+  | 'insight'
+  | 'general';
+
+export type LunaCrisisTier =
+  | 'mental_decline'
+  | 'crisis'
+  | 'crisis_imminent'
+  | 'loved_one';
+
+export type LunaFeedbackRating =
+  | 'helpful'
+  | 'not_helpful'
+  | 'incorrect'
+  | 'too_obvious'
+  | 'missing_context'
+  | 'new_understanding';
 
 export type ReminderType = 'checkin' | 'medication' | 'lab_due';
 
@@ -374,6 +397,9 @@ export interface LabResult {
   hdl: number | null;
   triglycerides: number | null;
   notes: string | null;
+  reported_values?: import('./labs').LabReportedValues;
+  source_type?: import('./labs').LabSourceType;
+  import_reviewed_at?: string | null;
   created_at: string;
 }
 
@@ -406,6 +432,61 @@ export interface AiInsight {
   insight_content: Record<string, unknown>;
   generated_at: string;
   expires_at: string | null;
+}
+
+export interface LunaThread {
+  id: string;
+  user_id: string;
+  kind: LunaThreadKind;
+  title: string;
+  context_data: Record<string, unknown>;
+  summary: string | null;
+  summary_message_count: number;
+  is_dashboard_primary: boolean;
+  last_message_preview: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LunaMessage {
+  id: string;
+  thread_id: string;
+  user_id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  metadata: Record<string, unknown>;
+  crisis_tier: LunaCrisisTier | null;
+  created_at: string;
+}
+
+export interface LunaMemory {
+  id: string;
+  user_id: string;
+  content: string;
+  source_thread_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LunaCrisisState {
+  user_id: string;
+  tier: LunaCrisisTier;
+  response_count: number;
+  presented_actions: string[];
+  asked_questions: string[];
+  escalated: boolean;
+  last_activity_at: string;
+  expires_at: string;
+}
+
+export interface LunaFeedback {
+  id: string;
+  user_id: string;
+  thread_id: string | null;
+  message_id: string | null;
+  insight_key: string | null;
+  rating: LunaFeedbackRating;
+  created_at: string;
 }
 
 export interface ReminderSchedule {
@@ -516,6 +597,50 @@ export type Database = {
         Row: AiInsight;
         Insert: Omit<AiInsight, 'id' | 'generated_at'>;
         Update: Partial<Omit<AiInsight, 'id' | 'generated_at'>>;
+        Relationships: [];
+      };
+      luna_threads: {
+        Row: LunaThread;
+        Insert: Omit<LunaThread, 'id' | 'created_at' | 'updated_at'> & {
+          id?: string;
+          summary?: string | null;
+          summary_message_count?: number;
+          is_dashboard_primary?: boolean;
+          last_message_preview?: string | null;
+          context_data?: Record<string, unknown>;
+        };
+        Update: Partial<Omit<LunaThread, 'id' | 'user_id' | 'created_at'>>;
+        Relationships: [];
+      };
+      luna_messages: {
+        Row: LunaMessage;
+        Insert: Omit<LunaMessage, 'id' | 'created_at'> & {
+          id?: string;
+          metadata?: Record<string, unknown>;
+          crisis_tier?: LunaCrisisTier | null;
+        };
+        Update: Partial<Omit<LunaMessage, 'id' | 'thread_id' | 'user_id' | 'created_at'>>;
+        Relationships: [];
+      };
+      luna_memories: {
+        Row: LunaMemory;
+        Insert: Omit<LunaMemory, 'id' | 'created_at' | 'updated_at'> & {
+          id?: string;
+          source_thread_id?: string | null;
+        };
+        Update: Partial<Omit<LunaMemory, 'id' | 'user_id' | 'created_at'>>;
+        Relationships: [];
+      };
+      luna_crisis_state: {
+        Row: LunaCrisisState;
+        Insert: LunaCrisisState;
+        Update: Partial<Omit<LunaCrisisState, 'user_id'>>;
+        Relationships: [];
+      };
+      luna_feedback: {
+        Row: LunaFeedback;
+        Insert: Omit<LunaFeedback, 'id' | 'created_at'> & { id?: string };
+        Update: Partial<Omit<LunaFeedback, 'id' | 'user_id' | 'created_at'>>;
         Relationships: [];
       };
       reminder_schedule: {

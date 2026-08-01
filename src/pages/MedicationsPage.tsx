@@ -14,8 +14,12 @@ import { DoseWatchCard } from '../components/medications/DoseWatchCard';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Button } from '../components/ui/Button';
 import type { Medication } from '../types/database';
+import { LunaContextCard } from '../components/luna/LunaContextCard';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 export function MedicationsPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const { medications, isLoading, fetchMedications } = useMedications();
   const { changes, fetchChanges } = useMedicationChanges();
   const { insights } = useInsights();
@@ -29,6 +33,13 @@ export function MedicationsPage() {
     void fetchMedications();
     void fetchChanges();
   }, [fetchMedications, fetchChanges]);
+
+  useEffect(() => {
+    const action = new URLSearchParams(location.search).get('action');
+    if (action !== 'add') return;
+    setShowWizard(true);
+    navigate('/medications', { replace: true });
+  }, [location.search, navigate]);
 
   const activeCount = medications.filter((m) => m.is_active).length;
 
@@ -55,6 +66,20 @@ export function MedicationsPage() {
           <p className="mt-1 text-sage-500">Track your HRT/BHRT regimen and dose changes over time.</p>
         </div>
       </div>
+
+      <LunaContextCard
+        title="Luna on medications"
+        description="Ask about a recorded change, compare how symptoms moved, or prepare a neutral summary for your provider."
+        actionLabel="Ask Luna about your medications"
+        request={{
+          kind: 'medication',
+          title: 'Medication questions',
+          context: {
+            sourceType: 'medications',
+            label: 'Your medication history',
+          },
+        }}
+      />
 
       <ExperimentWindowCard
         insights={insights}

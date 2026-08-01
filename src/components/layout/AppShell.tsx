@@ -13,6 +13,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { refreshCheckinStatusForCurrentUser } from '../../stores/checkinStatusStore';
 import { prefetchCoreData } from '../../lib/prefetchCoreData';
 import { resyncRemindersForCurrentUser } from '../../hooks/useReminderSync';
+import { LunaProvider } from '../luna/LunaProvider';
 
 function useCoreDataPrefetch() {
   const userId = useAuthStore((s) => s.user?.id);
@@ -90,9 +91,11 @@ export function AppShell() {
 
   return (
     <InsightsProvider>
-      <NavDueProvider>
-        <AppShellChrome />
-      </NavDueProvider>
+      <LunaProvider>
+        <NavDueProvider>
+          <AppShellChrome />
+        </NavDueProvider>
+      </LunaProvider>
     </InsightsProvider>
   );
 }

@@ -63,4 +63,25 @@ describe('clampJournalExtract', () => {
     expect(result.risk).toBe('crisis');
     expect(result.riskReply).toMatch(/988/);
   });
+
+  it('keeps at most two bounded follow-up questions', () => {
+    const result = clampJournalExtract(
+      {
+        symptoms: [],
+        events: [],
+        followUpQuestions: [
+          'Was the sleep problem last night or earlier in the week?',
+          'Was the missed dose Estradiol or Progesterone?',
+          'This third question should be removed.',
+        ],
+      },
+      catalog,
+      meds,
+    );
+
+    expect(result.followUpQuestions).toEqual([
+      'Was the sleep problem last night or earlier in the week?',
+      'Was the missed dose Estradiol or Progesterone?',
+    ]);
+  });
 });

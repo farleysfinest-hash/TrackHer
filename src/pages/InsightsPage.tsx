@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useInsights } from '../hooks/useInsights';
 import { useStageProfile } from '../hooks/useStageProfile';
 import { useAiInsightLayer } from '../hooks/useAiInsightLayer';
@@ -6,15 +6,12 @@ import { useTabActive } from '../components/layout/TabActiveContext';
 import { MedicalDisclaimer } from '../components/ui/MedicalDisclaimer';
 import { InsightCategoryFilter } from '../components/insights/InsightCategoryFilter';
 import { InsightsList } from '../components/insights/InsightsList';
-import { AskDataSheet, type AskDataSeed } from '../components/insights/AskDataSheet';
-import { AiNoticedList } from '../components/insights/AiNoticedList';
-import { CompanionMonitorCard } from '../components/insights/CompanionMonitorCard';
+import { LunaSynthesisList } from '../components/insights/LunaSynthesisList';
 import { VisitPrepCard } from '../components/insights/VisitPrepCard';
 import { GapCoachCard } from '../components/insights/GapCoachCard';
 import { buildGapCoachMessage } from '../utils/gapCoach';
 import { PaywallModal } from '../components/subscription/PaywallModal';
 import { useProGate } from '../hooks/useProGate';
-import { useAuthStore } from '../stores/authStore';
 import { hasMRSData } from '../utils/checkinHelpers';
 import {
   filterInsightsByGroup,
@@ -22,7 +19,8 @@ import {
   type InsightFilterGroup,
   INSIGHT_FILTER_OPTIONS,
 } from '../utils/insightHelpers';
-import { supabase } from '../lib/supabase';
+import { LunaContextCard } from '../components/luna/LunaContextCard';
+import { useLuna } from '../components/luna/LunaProvider';
 
 const PRO_FILTERS = new Set<InsightFilterGroup>(['correlations']);
 
@@ -32,44 +30,20 @@ export function InsightsPage() {
   const stageProfile = useStageProfile();
   const [activeFilter, setActiveFilter] = useState<InsightFilterGroup>('all');
   const { requirePro, paywallOpen, paywallReason, closePaywall, isPro } = useProGate();
-  const userId = useAuthStore((s) => s.user?.id);
-  const [askSeed, setAskSeed] = useState<AskDataSeed | null>(null);
-  const [monitorNote, setMonitorNote] = useState<{
-    note: string;
-    gapHint: string | null;
-  } | null>(null);
+  const { openLuna } = useLuna();
 
-  const { polishedInsights, candidates, dismissCandidate } = useAiInsightLayer(
+  const {
+    polishedInsights,
+    candidates,
+    insufficient,
+    monitorNote,
+    isSynthesizing,
+    dismissCandidate,
+  } = useAiInsightLayer(
     aiContext,
     insights,
-    tabActive && !isLoading,
+    tabActive && !isLoading && isPro,
   );
-
-  useEffect(() => {
-    if (!tabActive || !userId) {
-      if (!userId) setMonitorNote(null);
-      return;
-    }
-    let cancelled = false;
-    void (async () => {
-      const { data } = await supabase
-        .from('ai_insights')
-        .select('insight_content')
-        .eq('user_id', userId)
-        .eq('insight_type', 'monitor_note')
-        .order('generated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (cancelled || !data?.insight_content) return;
-      const content = data.insight_content as { note?: string; gapHint?: string | null };
-      if (typeof content.note === 'string' && content.note.trim()) {
-        setMonitorNote({ note: content.note, gapHint: content.gapHint ?? null });
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [tabActive, userId, insights.length]);
 
   const visibleInsights = useMemo(() => {
     if (isPro) return polishedInsights;
@@ -129,17 +103,64 @@ export function InsightsPage() {
 
       <MedicalDisclaimer />
 
-      <AskDataSheet
-        context={aiContext}
-        seed={askSeed}
-        onSeedConsumed={() => setAskSeed(null)}
+      <LunaContextCard
+        title="Ask Luna"
+        description="Start a focused conversation about your patterns, scores, medications, labs, or anything in your TrackHer history."
+        actionLabel="Ask Luna about your insights"
+        request={{
+          kind: 'insight',
+          title: 'Insights questions',
+          context: {
+            sourceType: 'insights',
+            label: 'Your Insights page',
+          },
+        }}
       />
 
-      <VisitPrepCard context={aiContext} />
-
-      {monitorNote && (
-        <CompanionMonitorCard note={monitorNote.note} gapHint={monitorNote.gapHint} />
+      {isPro && (
+        <LunaSynthesisList
+          candidates={candidates}
+          insufficient={insufficient}
+          monitorNote={monitorNote}
+          isLoading={isSynthesizing}
+          onDismiss={dismissCandidate}
+          onAskInsufficient={() =>
+            void openLuna({
+              kind: 'insight',
+              title: 'What Luna needs to compare',
+              context: {
+                sourceType: 'insights_data_gap',
+                label: 'What information would make Insights more useful',
+                insufficiency: insufficient,
+              },
+              seedMessage: 'What information is missing, and what is the smallest useful thing I could track next?',
+            })
+          }
+          onAsk={(candidate) =>
+            void openLuna({
+              kind: 'insight',
+              title: candidate.title,
+              context: {
+                sourceType: 'luna_synthesis',
+                sourceId: candidate.id,
+                label: candidate.title,
+                synthesis: {
+                  title: candidate.title,
+                  body: candidate.body,
+                  whyItMatters: candidate.whyItMatters,
+                  limitations: candidate.limitations,
+                  strength: candidate.strength,
+                  evidence: candidate.citedFacts,
+                  toolEvidence: candidate.toolEvidence ?? null,
+                },
+              },
+              seedMessage: `Could you talk me through “${candidate.title}” and the evidence behind it?`,
+            })
+          }
+        />
       )}
+
+      <VisitPrepCard context={aiContext} />
 
       {gapMessage && !monitorNote?.gapHint && <GapCoachCard message={gapMessage} />}
 
@@ -157,24 +178,27 @@ export function InsightsPage() {
         emptyTitle={filteredEmptyCopy?.title}
         emptyDescription={filteredEmptyCopy?.description}
         onTalkAbout={(insight) =>
-          setAskSeed({
-            insight: {
-              id: insight.id,
-              title: insight.title,
-              body: insight.body,
+          void openLuna({
+            kind: 'insight',
+            title: insight.title,
+            context: {
+              sourceType: 'insight',
+              sourceId: insight.id,
+              label: insight.title,
               category: insight.category,
+              insight: {
+                id: insight.id,
+                title: insight.title,
+                body: insight.body,
+                category: insight.category,
+                confidence: insight.confidence,
+                supportingData: insight.supportingData,
+              },
             },
+            seedMessage: `Could you talk me through “${insight.title}”?`,
           })
         }
       />
-
-      {activeFilter === 'all' && (
-        <AiNoticedList
-          candidates={candidates}
-          onDismiss={dismissCandidate}
-          onTalkAbout={(c) => setAskSeed({ noticed: { title: c.title, body: c.body } })}
-        />
-      )}
 
       <PaywallModal isOpen={paywallOpen} onClose={closePaywall} reason={paywallReason} />
     </div>

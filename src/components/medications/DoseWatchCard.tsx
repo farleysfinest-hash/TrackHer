@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Eye, X } from 'lucide-react';
+import { Moon, X } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { useMedicationChanges } from '../../hooks/useMedicationChanges';
 import { useAuthStore } from '../../stores/authStore';
@@ -13,6 +13,7 @@ import {
   type DoseWatchPack,
 } from '../../utils/aiDoseWatch';
 import { hasUiFlag, setUiFlag } from '../../lib/uiState';
+import { AskLunaButton } from '../luna/AskLunaButton';
 
 function dismissKey(changeId: string): string {
   return `dose_watch_dismiss_${changeId}`;
@@ -85,12 +86,12 @@ export function DoseWatchCard() {
     <Card variant="outlined" padding="md" className="border-sage-200">
       <div className="flex items-start gap-3">
         <div className="mt-0.5 rounded-lg bg-sand-100 p-2 text-sage-600">
-          <Eye className="h-5 w-5" />
+          <Moon className="h-5 w-5" aria-hidden />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <p className="text-xs font-medium uppercase tracking-wide text-sage-500">
-              After your dose change
+              Luna after your dose change
             </p>
             <button
               type="button"
@@ -109,6 +110,25 @@ export function DoseWatchCard() {
               ))}
             </ul>
           )}
+          <AskLunaButton
+            label="Ask Luna about this change"
+            className="mt-3 px-0"
+            request={{
+              kind: 'medication',
+              title: `Change to ${activeChange.medication.medication_name}`,
+              context: {
+                sourceType: 'medication_change',
+                sourceId: activeChange.id,
+                label: `${activeChange.medication.medication_name} change on ${activeChange.change_date}`,
+                medicationName: activeChange.medication.medication_name,
+                changeDate: activeChange.change_date,
+                changeType: activeChange.change_type,
+                previousDose: activeChange.previous_dose,
+                newDose: activeChange.new_dose,
+              },
+              seedMessage: `What has changed in my symptoms around the ${activeChange.medication.medication_name} change on ${activeChange.change_date}?`,
+            }}
+          />
         </div>
       </div>
     </Card>

@@ -93,6 +93,18 @@ export function PrivacyPolicyPage() {
               <span className="font-medium text-sage-700">Notes:</span> Free-text notes you attach
               to check-ins, medications, or lab results.
             </li>
+            <li>
+              <span className="font-medium text-sage-700">Luna conversations and memory:</span>{' '}
+              Messages you send to Luna, Luna&apos;s replies (including messages exchanged during
+              difficult moments), conversation summaries, and personal context you explicitly ask
+              or confirm that Luna should remember.
+            </li>
+            <li>
+              <span className="font-medium text-sage-700">Lab report images you choose to import:</span>{' '}
+              A photo is processed to prepare an editable extraction draft. The image itself is not
+              added to your TrackHer health record; only laboratory values you review and confirm
+              are saved.
+            </li>
           </ul>
           <p className="mt-3">
             All health and wellness data is entered voluntarily by you. We do not collect data from
@@ -126,7 +138,18 @@ export function PrivacyPolicyPage() {
             <li>To store and display the health data you enter so you can track patterns over time.</li>
             <li>To calculate symptom scores, generate trend charts, and surface clinical-pattern cards between your medications, symptoms, and lab results. That pattern analysis runs inside the App (and our own servers) — it is not performed by a third-party AI model.</li>
             <li>
-              To power optional companion features (for example Ask about your data, insight polish, visit prep/debrief, and related drafts). When you use those features, we send a limited summary of your recent logs — such as recent check-in scores, medication names and doses, recent lab values, and non-emergency insight text — through our Supabase Edge Function to OpenAI so a language model can generate a reply. We do not send Tier‑2 safeguarding cards or equivalent emergency insight bodies to that model. OpenAI processes that summary as our processor to return the companion text; it is not used to train a public model under our API use, subject to OpenAI&apos;s then-current API terms.
+              To power Luna, TrackHer&apos;s optional AI companion, including conversations,
+              evidence-backed explanations, visit prep/debrief, and related drafts. When you use
+              Luna, we send the message you chose to submit and limited relevant TrackHer data —
+              such as recent check-in scores, medication records, lab values, confirmed Luna
+              memory, and non-emergency insight text — through our Supabase Edge Function to
+              OpenAI so a language model can generate a reply. Deterministic TrackHer code
+              calculates numerical relationships and controls safety requirements. We do not send
+              Tier‑2 safeguarding cards or equivalent emergency insight bodies to the model.
+              If you deliberately import a lab report photo, that image is also sent through the
+              Edge Function so Luna can prepare the extraction draft you review.
+              OpenAI processes this information as our processor; it is not used to train a public
+              model under our API use, subject to OpenAI&apos;s then-current API terms.
             </li>
             <li>To generate provider-ready PDF reports from your own data, which you control and share at your discretion.</li>
             <li>Optional check-in and medication reminders, when you enable them, are scheduled locally on your device and are not sent through an external notification marketing service.</li>
@@ -165,11 +188,12 @@ export function PrivacyPolicyPage() {
               which is stored directly in Supabase.
             </li>
             <li>
-              <span className="font-medium text-sage-700">OpenAI</span> (optional companion features):
-              When you use companion features in the App, a limited health-data summary is sent via
-              our Supabase Edge Function to OpenAI&apos;s API so a language model can generate the
-              companion reply. OpenAI acts as a processor for that request. See &quot;How We Use Your
-              Information&quot; above for what is included and what is excluded.
+              <span className="font-medium text-sage-700">OpenAI</span> (optional Luna features):
+              When you use Luna, your submitted conversation content and limited relevant
+              TrackHer data are sent via our Supabase Edge Function to OpenAI&apos;s API so a
+              language model can generate Luna&apos;s reply. OpenAI acts as a processor for that
+              request. See &quot;How We Use Your Information&quot; above for what is included and
+              what is excluded.
             </li>
             <li>
               <span className="font-medium text-sage-700">Apple</span> (iOS distribution): When the iOS App is available: The iOS App
@@ -229,10 +253,16 @@ export function PrivacyPolicyPage() {
             is central to TrackHer's purpose.
           </p>
           <p className="mt-3">
+            Luna conversations remain saved until you intentionally delete a conversation or your
+            account. Confirmed Luna memories are stored separately and remain until you edit or
+            delete them, clear all Luna memories, reset your app data, or delete your account.
+          </p>
+          <p className="mt-3">
             You may delete your account at any time through the App's Settings page — no email,
             phone call, or support request required. When you delete your account, all associated
             data — including your profile, symptom check-ins, medication records, lab results,
-            assessment scores, and any other data you have entered — is permanently deleted from
+            assessment scores, Luna conversations, confirmed Luna memories, and any other data you
+            have entered — is permanently deleted from
             our database, along with your login credentials. This deletion is cascading and irreversible.
           </p>
           <p className="mt-3">

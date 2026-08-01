@@ -1,12 +1,21 @@
 import { useCallback, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import type { AiFactsPacket } from '../utils/aiFactsPacket';
+import type { LunaCrisisState, LunaCrisisTier } from '../types/database';
 import { clampVisitPrepPack, type VisitPrepPack } from '../utils/aiVisitPrep';
 import type { JournalExtractResult } from '../utils/aiJournalExtract';
 import { clampDoseWatchPack, type DoseWatchPack } from '../utils/aiDoseWatch';
 import { clampVisitDebriefPack, type VisitDebriefPack } from '../utils/aiVisitDebrief';
+import {
+  clampLabReportExtraction,
+  type LabReportExtractionDraft,
+} from '../utils/labReportExtraction';
 
-export type AiChatTurn = { role: 'user' | 'assistant'; content: string };
+export type AiChatTurn = {
+  role: 'user' | 'assistant';
+  content: string;
+  crisisTier?: string | null;
+};
 
 export type AiAction =
   | 'chat'
@@ -19,13 +28,59 @@ export type AiAction =
   | 'journal_extract'
   | 'dose_watch'
   | 'visit_debrief'
-  | 'daily_line'
+  | 'summarize_thread'
   | 'stage_explain'
-  | 'partner_letter';
+  | 'partner_letter'
+  | 'lab_report_extract';
 
-interface ChatResult {
+export interface ChatResult {
   reply: string;
   model?: string;
+  shape?: string;
+  crisis?: {
+    tier: string;
+    responseCount: number;
+    showSafetyPanel: boolean;
+    expiresAt: string;
+  };
+  memoryProposal?: string | null;
+  toolEvidence?: Array<Record<string, unknown>>;
+}
+
+function isLunaCrisisTier(value: string): value is Exclude<LunaCrisisTier, null> {
+  return (
+    value === 'mental_decline' ||
+    value === 'crisis' ||
+    value === 'crisis_imminent' ||
+    value === 'loved_one'
+  );
+}
+
+/** Immediate client state from the trusted Edge response; DB persistence is continuity only. */
+export function localCrisisStateFromChatResult(
+  userId: string,
+  crisis: ChatResult['crisis'],
+  now = new Date(),
+): LunaCrisisState | null {
+  if (!crisis || !isLunaCrisisTier(crisis.tier)) return null;
+  return {
+    user_id: userId,
+    tier: crisis.tier,
+    response_count: Math.max(1, Math.round(crisis.responseCount)),
+    presented_actions: crisis.showSafetyPanel ? ['support_panel'] : [],
+    asked_questions: [],
+    escalated: false,
+    last_activity_at: now.toISOString(),
+    expires_at: crisis.expiresAt,
+  };
+}
+
+export interface LunaChatOptions {
+  threadId?: string;
+  threadSummary?: string | null;
+  memories?: string[];
+  pageContext?: Record<string, unknown>;
+  factsHash?: string;
 }
 
 export interface PolishedInsight {
@@ -35,14 +90,22 @@ export interface PolishedInsight {
 }
 
 export interface AiCandidate {
+  candidateKey: string;
+  evidenceClass: 'early_signal' | 'repeated_finding';
   title: string;
   body: string;
   citedFacts: string[];
+  whyItMatters: string;
+  limitations: string;
+    strength: string;
+  toolEvidence?: Record<string, unknown>;
 }
 
 export interface ImproveInsightsResult {
   polished: PolishedInsight[];
   candidates: AiCandidate[];
+  insufficient?: { title: string; body: string } | null;
+  monitorNote?: { note?: string; gapHint?: string | null } | null;
   model?: string;
 }
 
@@ -94,15 +157,23 @@ async function invokeAiAssistant<T>(
 /** Non-hook invokers for stores / report generation / background jobs. */
 export async function invokeImproveInsights(
   facts: AiFactsPacket,
+  factsHash?: string,
 ): Promise<ImproveInsightsResult | null> {
   const { data, error } = await invokeAiAssistant<ImproveInsightsResult>({
     action: 'improve_insights',
     facts,
+    factsHash,
   });
   if (error || !data) return null;
   return {
     polished: Array.isArray(data.polished) ? data.polished : [],
     candidates: Array.isArray(data.candidates) ? data.candidates : [],
+    insufficient:
+      data.insufficient && typeof data.insufficient === 'object'
+        ? data.insufficient
+        : null,
+    monitorNote:
+      data.monitorNote && typeof data.monitorNote === 'object' ? data.monitorNote : null,
     model: data.model,
   };
 }
@@ -214,17 +285,6 @@ export async function invokeVisitDebrief(
   return clampVisitDebriefPack(data);
 }
 
-export async function invokeDailyLine(facts: AiFactsPacket): Promise<string | null> {
-  const { data, error } = await invokeAiAssistant<{ line?: string; reply?: string }>({
-    action: 'daily_line',
-    facts,
-  });
-  if (error || !data) return null;
-  if (typeof data.line === 'string') return data.line;
-  if (typeof data.reply === 'string') return data.reply;
-  return null;
-}
-
 export async function invokeStageExplain(facts: AiFactsPacket): Promise<string | null> {
   const { data, error } = await invokeAiAssistant<{ text?: string; reply?: string }>({
     action: 'stage_explain',
@@ -251,15 +311,50 @@ export async function invokePartnerLetter(
   return null;
 }
 
+export async function invokeLabReportExtraction(input: {
+  fileName: string;
+  mimeType: string;
+  dataUrl: string;
+  knownMedications: string[];
+}): Promise<LabReportExtractionDraft | null> {
+  const { data, error } = await invokeAiAssistant<unknown>({
+    action: 'lab_report_extract',
+    report: {
+      fileName: input.fileName.slice(0, 180),
+      mimeType: input.mimeType,
+      dataUrl: input.dataUrl,
+    },
+    medications: input.knownMedications.slice(0, 100),
+  });
+  if (error || !data) return null;
+  return clampLabReportExtraction(data);
+}
+
+export async function invokeThreadSummary(
+  existingSummary: string | null,
+  messages: AiChatTurn[],
+): Promise<string | null> {
+  const { data, error } = await invokeAiAssistant<{ summary?: string }>({
+    action: 'summarize_thread',
+    existingSummary,
+    messages,
+  });
+  if (error || !data || typeof data.summary !== 'string') return null;
+  const summary = data.summary.trim();
+  return summary ? summary.slice(0, 5000) : null;
+}
+
 export function useAiAssistant() {
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const clearError = useCallback(() => setError(null), []);
 
   const ask = useCallback(
     async (
       message: string,
       facts: AiFactsPacket,
       history: AiChatTurn[],
+      options?: LunaChatOptions,
     ): Promise<ChatResult | null> => {
       setIsSending(true);
       setError(null);
@@ -268,6 +363,11 @@ export function useAiAssistant() {
         message,
         facts,
         history,
+        threadId: options?.threadId,
+        threadSummary: options?.threadSummary,
+        memories: options?.memories,
+        pageContext: options?.pageContext,
+        factsHash: options?.factsHash,
       });
       setIsSending(false);
       if (err) {
@@ -278,7 +378,7 @@ export function useAiAssistant() {
         setError('Empty reply from assistant');
         return null;
       }
-      return { reply: data.reply, model: data.model };
+      return data;
     },
     [],
   );
@@ -306,6 +406,6 @@ export function useAiAssistant() {
     explain,
     isSending,
     error,
-    clearError: () => setError(null),
+    clearError,
   };
 }

@@ -18,22 +18,15 @@ export function LabRangeTooltip({ biomarker, isOpen, onClose }: LabRangeTooltipP
       <p className="font-medium text-sage-800">
         {biomarker.label} ({biomarker.unit})
       </p>
-      <p className="mt-2 text-sage-600">{biomarker.context}</p>
       <p className="mt-2 text-xs text-sage-500">{formatRangeLine(biomarker)}</p>
-      {biomarker.warningLow && (
-        <p className="mt-2 text-xs text-sage-600">
-          <span className="font-medium">Low: </span>
-          {biomarker.warningLow}
-        </p>
-      )}
-      {biomarker.warningHigh && (
-        <p className="mt-1 text-xs text-sage-600">
-          <span className="font-medium">High: </span>
-          {biomarker.warningHigh}
-        </p>
-      )}
-      <p className="mt-3 text-xs italic text-sage-400">
-        Always discuss your results with your healthcare provider.
+      <p className="mt-2 text-xs leading-relaxed text-sage-600">
+        Laboratory intervals vary with methods, units, timing, and reference populations. TrackHer
+        will use the interval from your report when you import and confirm it. An interval is not a
+        personal treatment target.
+      </p>
+      <p className="mt-3 text-xs leading-relaxed text-sage-500">
+        Being inside a range does not by itself show whether your symptoms are controlled or whether
+        treatment is right for you. Discuss the result and how you feel with your doctor.
       </p>
       <button
         type="button"

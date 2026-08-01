@@ -25,6 +25,7 @@ import type { SymptomCheckin, CheckinDraft } from '../types/database';
 import { clearCheckinDraft, loadCheckinDraft } from '../lib/checkinDraft';
 import { useSymptomSelections } from '../hooks/useSymptomSelections';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { LunaContextCard } from '../components/luna/LunaContextCard';
 
 export function CheckinPage() {
   const location = useLocation();
@@ -207,11 +208,23 @@ export function CheckinPage() {
     <div className="min-w-0 space-y-10 overflow-x-hidden">
       <div className="min-w-0">
         <h1 className="font-display text-3xl text-sage-800">Check In</h1>
-        <p className="mt-1 text-sage-500">
-          Daily pulse keeps the day alive. Weekly check-in is the clinical symptom scale — once a
-          week is the minimum; more is better.
-        </p>
       </div>
+
+      <LunaContextCard
+        title="Check in with Luna"
+        description="Talk or type naturally. Luna can help identify what may be worth adding, and nothing saves until you confirm it."
+        actionLabel="Tell Luna how today feels"
+        request={{
+          kind: 'checkin',
+          title: "Today's check-in",
+          context: {
+            sourceType: 'checkin',
+            label: "Today's check-in",
+            date: todayStr,
+          },
+          seedMessage: '',
+        }}
+      />
 
       {/* 1) Dose log always first. 2) Weekly above pulse on her day / when overdue. */}
       <DoseTapWidget title="Did you take today's doses?" />

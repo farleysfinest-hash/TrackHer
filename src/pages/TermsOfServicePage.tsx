@@ -64,9 +64,10 @@ export function TermsOfServicePage() {
           </p>
           <p className="mt-3">
             All content in the App — including symptom scores, trend analyses, pattern observations,
-            AI-generated summaries, and any other output — is provided for educational and personal
-            record-keeping purposes only. This content is not a substitute for professional medical
-            advice, diagnosis, or treatment.
+            Luna conversations and AI-generated summaries, and any other output — is provided for
+            educational and personal record-keeping purposes only. Luna is an AI companion, not a
+            clinician, and does not provide diagnosis or treatment instructions. This content is
+            not a substitute for professional medical advice, diagnosis, or treatment.
           </p>
           <p className="mt-3">
             You should always consult your physician or other qualified healthcare provider before

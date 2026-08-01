@@ -10,6 +10,7 @@ import { formatDateLong } from '../../utils/formatters';
 import { CATEGORY_LABELS, SEVERITY_LABELS, hasMRSData, hasPartialMRSData } from '../../utils/checkinHelpers';
 import { DailyChannelsDisplay } from '../ui/DailyChannelsDisplay';
 import type { MRSSymptomKey } from '../../utils/checkinHelpers';
+import { AskLunaButton } from '../luna/AskLunaButton';
 
 interface CheckinDetailModalProps {
   checkin: SymptomCheckin | null;
@@ -158,6 +159,35 @@ export function CheckinDetailModal({
           )}
 
           <div className="flex flex-wrap gap-3 border-t border-sand-200 pt-4">
+            <AskLunaButton
+              label={
+                hasMRSData(checkin)
+                  ? 'Ask Luna about this score'
+                  : 'Ask Luna about this check-in'
+              }
+              onBeforeOpen={onClose}
+              request={{
+                kind: hasMRSData(checkin) ? 'mrs' : 'checkin',
+                title: hasMRSData(checkin)
+                  ? `MRS score from ${formatDateLong(checkin.checkin_date)}`
+                  : `Check-in from ${formatDateLong(checkin.checkin_date)}`,
+                context: {
+                  sourceType: hasMRSData(checkin) ? 'mrs' : 'checkin',
+                  sourceId: checkin.id,
+                  label: hasMRSData(checkin)
+                    ? `MRS score from ${formatDateLong(checkin.checkin_date)}`
+                    : `Check-in from ${formatDateLong(checkin.checkin_date)}`,
+                  checkin,
+                  extendedSymptoms: extended.map((item) => ({
+                    symptomKey: item.symptom_key,
+                    severity: item.severity_score,
+                  })),
+                },
+                seedMessage: hasMRSData(checkin)
+                  ? 'Help me understand what contributed to this MRS score.'
+                  : 'Help me understand this check-in.',
+              }}
+            />
             <Button variant="secondary" onClick={() => onEdit(checkin)}>
               Edit this check-in
             </Button>

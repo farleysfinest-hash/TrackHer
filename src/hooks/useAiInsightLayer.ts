@@ -5,7 +5,6 @@ import {
   buildAiFactsPacket,
   type AiFactsPacketInput,
 } from '../utils/aiFactsPacket';
-import { isAiForbiddenCategory } from '../utils/aiForbiddenCategories';
 import {
   hashAiFactsPacket,
   readAiInsightCache,
@@ -14,25 +13,33 @@ import {
 import {
   invokeImproveInsights,
   type AiCandidate,
-  type PolishedInsight,
 } from './useAiAssistant';
 import { logAiCandidateEvent } from '../utils/aiCandidateEventLog';
+import {
+  hashLunaMemories,
+  listLunaMemories,
+  onLunaMemoryChanged,
+} from '../lib/lunaConversations';
 
-export interface AiNoticedCandidate extends AiCandidate {
+export interface LunaSynthesisCandidate extends AiCandidate {
   id: string;
 }
 
+/** @deprecated Use LunaSynthesisCandidate. */
+export type AiNoticedCandidate = LunaSynthesisCandidate;
+
 interface ImproveCachePayload {
-  polished: PolishedInsight[];
   candidates: AiCandidate[];
+  insufficient?: { title: string; body: string } | null;
+  monitorNote?: { note?: string; gapHint?: string | null } | null;
 }
 
-const POLISH_SESSION_KEY = 'trackher_ai_polish_hash';
+const SYNTHESIS_SESSION_PREFIX = 'trackher_luna_synthesis_hash:';
 const SHOWN_SESSION_PREFIX = 'trackher_ai_candidate_shown:';
 
 /**
- * Background companion layer: polish engine copy + soft "AI noticed" candidates.
- * Engine insights remain authoritative; polish is UI-only by id.
+ * Cached Luna synthesis over deterministic server-side analysis tools.
+ * Engine copy remains untouched and authoritative.
  *
  * Debounced and keyed only on dataHash so Insights data settling / HMR does not
  * fire a storm of OpenAI calls that can crash the browser tab.
@@ -43,19 +50,62 @@ export function useAiInsightLayer(
   enabled: boolean,
 ) {
   const userId = useAuthStore((s) => s.user?.id);
-  const [polishMap, setPolishMap] = useState<Record<string, PolishedInsight>>({});
-  const [candidates, setCandidates] = useState<AiNoticedCandidate[]>([]);
-  const [isPolishing, setIsPolishing] = useState(false);
+  const [candidates, setCandidates] = useState<LunaSynthesisCandidate[]>([]);
+  const [insufficient, setInsufficient] = useState<{
+    title: string;
+    body: string;
+  } | null>(null);
+  const [monitorNote, setMonitorNote] = useState<{
+    note?: string;
+    gapHint?: string | null;
+  } | null>(null);
+  const [isSynthesizing, setIsSynthesizing] = useState(false);
+  const [memoryHash, setMemoryHash] = useState<string | null>(null);
+  const [stateOwnerUserId, setStateOwnerUserId] = useState<string | null>(null);
   const lastHashRef = useRef<string | null>(null);
-  const insightsRef = useRef(insights);
-  insightsRef.current = insights;
 
   const facts = useMemo(() => buildAiFactsPacket(aiContext), [aiContext]);
   const dataHash = useMemo(() => hashAiFactsPacket(facts), [facts]);
+  const synthesisHash = memoryHash === null
+    ? null
+    : `c3-evidence-v1-${dataHash}-${memoryHash}`;
 
   useEffect(() => {
-    if (!enabled || !userId || insightsRef.current.length === 0) return;
-    if (lastHashRef.current === dataHash) return;
+    lastHashRef.current = null;
+    setCandidates([]);
+    setInsufficient(null);
+    setMonitorNote(null);
+    setIsSynthesizing(false);
+    setStateOwnerUserId(null);
+    if (!userId) {
+      setMemoryHash(null);
+      return;
+    }
+    let cancelled = false;
+    const refreshMemoryHash = () => {
+      void listLunaMemories(userId).then((rows) => {
+        if (!cancelled) setMemoryHash(hashLunaMemories(rows));
+      }).catch(() => {
+        if (!cancelled) setMemoryHash('unavailable');
+      });
+    };
+    refreshMemoryHash();
+    const unsubscribe = onLunaMemoryChanged(refreshMemoryHash);
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [userId]);
+
+  useEffect(() => {
+    if (!enabled || !userId || synthesisHash === null) {
+      setIsSynthesizing(false);
+      return;
+    }
+    const scopedHash = `${userId}:${synthesisHash}`;
+    const synthesisSessionKey = `${SYNTHESIS_SESSION_PREFIX}${userId}`;
+    if (facts.mrs.length === 0 && facts.pulseRecent.daysSampled === 0) return;
+    if (lastHashRef.current === scopedHash) return;
     // Don't hammer OpenAI / the tab while it's in the background or mid-reload.
     if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
 
@@ -63,90 +113,76 @@ export function useAiInsightLayer(
     const timer = window.setTimeout(() => {
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       void (async () => {
-        setIsPolishing(true);
+        setIsSynthesizing(true);
 
         const cached = await readAiInsightCache<ImproveCachePayload>(
           userId,
-          'insight_polish',
-          dataHash,
+          'luna_synthesis',
+          synthesisHash,
         );
 
         if (cancelled) return;
 
         if (cached) {
-          applyImprove(cached, dataHash, userId);
-          lastHashRef.current = dataHash;
-          setIsPolishing(false);
+          applyImprove(cached, userId);
+          lastHashRef.current = scopedHash;
+          setIsSynthesizing(false);
           return;
         }
 
-        // Skip network polish if this exact hash already ran this browser session
+        // Skip network synthesis if this exact hash already ran this browser session
         // (avoids re-hitting OpenAI on every Vite full reload).
         try {
-          if (sessionStorage.getItem(POLISH_SESSION_KEY) === dataHash) {
-            lastHashRef.current = dataHash;
-            setIsPolishing(false);
+          if (sessionStorage.getItem(synthesisSessionKey) === synthesisHash) {
+            lastHashRef.current = scopedHash;
+            setIsSynthesizing(false);
             return;
           }
         } catch {
           // ignore
         }
 
-        const result = await invokeImproveInsights(facts);
+        const result = await invokeImproveInsights(facts, synthesisHash);
         if (cancelled) return;
 
         if (result) {
           const payload: ImproveCachePayload = {
-            polished: result.polished,
             candidates: result.candidates,
+            insufficient: result.insufficient ?? null,
+            monitorNote: result.monitorNote ?? null,
           };
-          applyImprove(payload, dataHash, userId);
-          lastHashRef.current = dataHash;
+          applyImprove(payload, userId);
+          lastHashRef.current = scopedHash;
           try {
-            sessionStorage.setItem(POLISH_SESSION_KEY, dataHash);
+            sessionStorage.setItem(synthesisSessionKey, synthesisHash);
           } catch {
             // ignore
           }
-          void writeAiInsightCache(userId, 'insight_polish', dataHash, payload, 7);
-          void writeAiInsightCache(
-            userId,
-            'ai_candidate',
-            dataHash,
-            { candidates: result.candidates },
-            3,
-          );
+          void writeAiInsightCache(userId, 'luna_synthesis', synthesisHash, payload, 7);
         } else {
-          lastHashRef.current = dataHash;
+          lastHashRef.current = scopedHash;
         }
-        setIsPolishing(false);
+        setIsSynthesizing(false);
       })();
     }, 1500);
 
-    function applyImprove(payload: ImproveCachePayload, hash: string, uid: string) {
-      const current = insightsRef.current;
-      const allowedIds = new Set(
-        current.filter((i) => !isAiForbiddenCategory(i.category)).map((i) => i.id),
-      );
-      const map: Record<string, PolishedInsight> = {};
-      for (const p of payload.polished ?? []) {
-        if (allowedIds.has(p.id) && p.title?.trim() && p.body?.trim()) {
-          map[p.id] = p;
-        }
-      }
-      setPolishMap(map);
+    function applyImprove(payload: ImproveCachePayload, uid: string) {
       const next = (payload.candidates ?? [])
-        .filter((c) => c.title?.trim() && c.body?.trim())
+        .filter((c) => c.candidateKey?.trim() && c.title?.trim() && c.body?.trim())
         .slice(0, 3)
-        .map((c, i) => ({
+        .map((c) => ({
           ...c,
-          id: `ai-noticed-${hash.slice(0, 8)}-${i}`,
+          id: c.candidateKey,
         }));
       setCandidates(next);
+      setInsufficient(payload.insufficient ?? null);
+      setMonitorNote(payload.monitorNote ?? null);
+      setStateOwnerUserId(uid);
 
       // Log "shown" once per title per browser session.
       for (const c of next) {
         try {
-          const key = `${SHOWN_SESSION_PREFIX}${c.title.trim().toLowerCase()}`;
+          const key = `${SHOWN_SESSION_PREFIX}${uid}:${c.id}`;
           if (sessionStorage.getItem(key) === '1') continue;
           sessionStorage.setItem(key, '1');
           logAiCandidateEvent(uid, c.title, 'shown');
@@ -160,16 +196,9 @@ export function useAiInsightLayer(
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [enabled, userId, dataHash, facts]);
+  }, [enabled, userId, synthesisHash, facts]);
 
-  const polishedInsights = useMemo(() => {
-    return insights.map((insight) => {
-      if (isAiForbiddenCategory(insight.category)) return insight;
-      const polish = polishMap[insight.id];
-      if (!polish) return insight;
-      return { ...insight, title: polish.title, body: polish.body };
-    });
-  }, [insights, polishMap]);
+  const polishedInsights = insights;
 
   const dismissCandidate = (id: string) => {
     setCandidates((prev) => {
@@ -181,8 +210,11 @@ export function useAiInsightLayer(
 
   return {
     polishedInsights,
-    candidates,
-    isPolishing,
+    candidates: enabled && stateOwnerUserId === userId ? candidates : [],
+    insufficient: enabled && stateOwnerUserId === userId ? insufficient : null,
+    monitorNote: enabled && stateOwnerUserId === userId ? monitorNote : null,
+    isPolishing: isSynthesizing,
+    isSynthesizing,
     facts,
     dataHash,
     dismissCandidate,

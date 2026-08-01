@@ -16,7 +16,6 @@ import {
   CHECKIN_DUE_NAV,
   CheckinDueDot,
 } from './navDueStyles';
-import { useTabNavigate } from './useTabNavigate';
 
 const navItems: Array<{
   path: string;
@@ -49,7 +48,6 @@ function prefersReducedMotion(): boolean {
 export function MobileNav() {
   const { hasCheckedInToday, isDue, isLoading } = useCheckinStatus();
   const { needsDoses } = useNavDosesDue();
-  const goTab = useTabNavigate();
   const needsCheckin =
     !isLoading && (!hasCheckedInToday || isDue || needsDoses);
 
@@ -119,10 +117,6 @@ export function MobileNav() {
               key={path}
               to={path}
               ref={isCheckin ? checkinRef : undefined}
-              onClick={(e) => {
-                e.preventDefault();
-                goTab(path);
-              }}
               aria-label={
                 showDue
                   ? isDue

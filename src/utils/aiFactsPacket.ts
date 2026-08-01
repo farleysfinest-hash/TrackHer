@@ -2,6 +2,7 @@ import type {
   LabResult,
   Medication,
   MedicationChange,
+  MedicationAdministration,
   Profile,
   SymptomCheckin,
 } from '../types/database';
@@ -45,6 +46,10 @@ export interface AiFactsPacket {
     changeType: string;
     notes: string | null;
   }>;
+  recentAdministrations: Array<{
+    date: string;
+    medicationName: string | null;
+  }>;
   labs: Array<{
     drawDate: string;
     estradiol: number | null;
@@ -68,6 +73,7 @@ export interface AiFactsPacketInput {
   checkins: SymptomCheckin[];
   medications: Medication[];
   medicationChanges: MedicationChange[];
+  administrations?: MedicationAdministration[];
   labResults: LabResult[];
   insights: Insight[];
 }
@@ -135,6 +141,13 @@ export function buildAiFactsPacket(input: AiFactsPacketInput): AiFactsPacket {
       changeType: ch.change_type,
       notes: ch.notes,
     }));
+  const recentAdministrations = [...(input.administrations ?? [])]
+    .sort((a, b) => a.taken_at.localeCompare(b.taken_at))
+    .slice(-30)
+    .map((administration) => ({
+      date: administration.local_date ?? administration.taken_at.slice(0, 10),
+      medicationName: medById.get(administration.medication_id)?.medication_name ?? null,
+    }));
 
   const labs = [...input.labResults]
     .sort((a, b) => a.draw_date.localeCompare(b.draw_date))
@@ -185,6 +198,7 @@ export function buildAiFactsPacket(input: AiFactsPacketInput): AiFactsPacket {
         endDate: m.end_date,
       })),
     recentDoseChanges,
+    recentAdministrations,
     labs,
     engineInsights,
   };

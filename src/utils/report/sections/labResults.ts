@@ -38,20 +38,23 @@ export function renderLabResultsPage(
     const biomarker = getBiomarkerByKey(key);
     if (!biomarker) continue;
     const value = getBiomarkerValue(latestLab, key)!;
+    const reported = (latestLab.reported_values ?? {})[key] ?? null;
     const status = getValueStatus(value, biomarker);
     const priorVal = priorLab ? getBiomarkerValue(priorLab, key) : null;
     let trend = '—';
     if (priorVal !== null) {
       trend = value > priorVal ? '↑' : value < priorVal ? '↓' : '→';
     }
-    const range = biomarker.optimalRange
-      ? `${biomarker.optimalRange.min}–${biomarker.optimalRange.max}`
-      : biomarker.conventionalRange
-        ? `${biomarker.conventionalRange.min}–${biomarker.conventionalRange.max}`
+    const range = reported?.referenceText
+      ? `${reported.referenceText}${reported.reportedUnit ? ` ${reported.reportedUnit}` : ''} (laboratory)`
+      : biomarker.conventionalRange && biomarker.referenceSource
+        ? `${biomarker.conventionalRange.min}–${biomarker.conventionalRange.max} ${biomarker.unit} (${biomarker.referenceSource.label})`
         : '—';
     labRows.push([
       biomarker.label,
-      `${value} ${biomarker.unit}`,
+      reported
+        ? `${reported.comparator ?? ''}${reported.reportedValue}${reported.reportedUnit ? ` ${reported.reportedUnit}` : ''}`
+        : `${value} ${biomarker.unit}`,
       range,
       formatChartDateLong(latestLab.draw_date),
       status.replace(/_/g, ' '),
@@ -61,7 +64,7 @@ export function renderLabResultsPage(
 
   autoTable(doc, {
     startY: y,
-    head: [['Test', 'Value', 'Reference range', 'Date', 'Status', 'Trend']],
+    head: [['Test', 'Value', 'Reference context', 'Date', 'Status', 'Trend']],
     body: labRows,
     theme: 'grid',
     headStyles: { fillColor: PDF_COLORS.tableHead, textColor: [255, 255, 255], fontSize: 8 },

@@ -59,25 +59,30 @@ export function analyzeLabDiscordance(input: LabDiscordanceInput): Insight[] {
 
       const biomarker = LAB_BIOMARKERS.find((b) => b.key === labRef.biomarkerKey);
       if (!biomarker) continue;
+      const reported = (recentLab.reported_values ?? {})[labRef.biomarkerKey] ?? null;
 
       let isLabContradicting = false;
       let contradiction = '';
 
-      const conventionalRange = biomarker.conventionalRange;
-      if (
-        !conventionalRange ||
-        labValue < conventionalRange.min ||
-        labValue > conventionalRange.max
-      ) {
+      const generalRange = biomarker.referenceSource ? biomarker.conventionalRange : null;
+      const isReportedInRange = reported?.reportedFlag === 'normal';
+      const isInGeneralRange = Boolean(
+        generalRange && labValue >= generalRange.min && labValue <= generalRange.max,
+      );
+      if (!isReportedInRange && !isInGeneralRange) {
         continue;
       }
 
+      const rangeDescription = reported?.referenceText
+        ? `the reference interval printed by your laboratory (${reported.referenceText}${reported.reportedUnit ? ` ${reported.reportedUnit}` : ''})`
+        : `TrackHer’s general reference context (${generalRange?.min}-${generalRange?.max} ${biomarker.unit})`;
+
       if (labRef.expectedDirection === 'low') {
         isLabContradicting = true;
-        contradiction = `Your ${biomarker.label} is ${labValue} ${biomarker.unit}, which falls within the conventional reference range (${conventionalRange.min}-${conventionalRange.max}). Your logged symptoms remain elevated alongside this lab value.`;
+        contradiction = `Your recorded ${biomarker.label} falls within ${rangeDescription}, while your logged symptoms remain elevated.`;
       } else if (labRef.expectedDirection === 'high') {
         isLabContradicting = true;
-        contradiction = `Your ${biomarker.label} is ${labValue} ${biomarker.unit}, within conventional range, while your logged symptom pattern remains consistent with excess for you. Individual sensitivity varies.`;
+        contradiction = `Your recorded ${biomarker.label} falls within ${rangeDescription}, while your logged symptoms remain elevated.`;
       }
 
       if (isLabContradicting) {
@@ -86,9 +91,9 @@ export function analyzeLabDiscordance(input: LabDiscordanceInput): Insight[] {
           id: `lab-discord-${pattern.key}-${labRef.biomarkerKey}`,
           category: 'lab_discordance',
           priority: 'medium',
-          title: `${biomarker.label} is within the conventional range while your symptoms remain elevated`,
+          title: `${biomarker.label} is within its reference context while your symptoms remain elevated`,
           body: finalizeInsightBody(
-            `${contradiction} This is worth discussing with your provider — "normal" on paper does not always match how you feel.`,
+            `${contradiction} A reference interval is a comparison guide, not a personal treatment target, so it does not by itself show whether treatment is working for you. Discuss both the result and your symptoms with your doctor.`,
             labSample,
             true,
           ),
@@ -110,13 +115,13 @@ export function analyzeLabDiscordance(input: LabDiscordanceInput): Insight[] {
             labValue: {
               biomarker: biomarker.label,
               value: labValue,
-              range: biomarker.conventionalRange
-                ? `${biomarker.conventionalRange.min}-${biomarker.conventionalRange.max} ${biomarker.unit}`
-                : 'N/A',
+              range: reported?.referenceText ?? (generalRange
+                ? `${generalRange.min}-${generalRange.max} ${biomarker.unit} (general context)`
+                : 'N/A'),
             },
             matchedPattern: pattern.key,
           },
-          actionSuggestion: `Ask your provider: "My ${biomarker.label} is within range, but I'm still experiencing ${pattern.label.toLowerCase()} symptoms. Could my personal optimal level be different from the standard range?"`,
+          actionSuggestion: `Ask your provider: "My ${biomarker.label} is within the laboratory reference interval, but I'm still experiencing ${pattern.label.toLowerCase()} symptoms. How should we interpret the result alongside my symptoms, timing, and treatment?"`,
           disclaimer: INSIGHT_DISCLAIMER,
           generatedAt: new Date().toISOString(),
         });
@@ -143,23 +148,32 @@ export function analyzeLabRangeFlags(labResults: LabResult[]): Insight[] {
     if (labValue === null) continue;
 
     const biomarker = LAB_BIOMARKERS.find((b) => b.key === key);
-    if (!biomarker?.conventionalRange) continue;
-
-    const status = getValueStatus(labValue, biomarker);
+    if (!biomarker) continue;
+    const reported = (recentLab.reported_values ?? {})[key] ?? null;
+    const status = reported?.reportedFlag === 'low' || reported?.reportedFlag === 'high' || reported?.reportedFlag === 'abnormal'
+      ? 'out_of_range'
+      : reported?.reportedFlag === 'normal'
+        ? 'conventional'
+        : getValueStatus(labValue, biomarker);
     if (status !== 'out_of_range') continue;
 
-    const { min, max } = biomarker.conventionalRange;
-    const isHigh = labValue > max;
-    const direction = isHigh ? 'above' : 'below';
+    const generalRange = biomarker.referenceSource ? biomarker.conventionalRange : null;
+    const isHigh = reported?.reportedFlag === 'high' || Boolean(generalRange && labValue > generalRange.max);
+    const direction = reported?.reportedFlag === 'abnormal' ? 'flagged by the laboratory' : isHigh ? 'above' : 'below';
+    const rangeDescription = reported?.referenceText
+      ? `${reported.referenceText}${reported.reportedUnit ? ` ${reported.reportedUnit}` : ''} (laboratory)`
+      : generalRange
+        ? `${generalRange.min}-${generalRange.max} ${biomarker.unit} (general context)`
+        : 'not supplied';
     const sampleSize = { n: 1 };
 
     insights.push({
       id: `lab-range-${key}`,
       category: 'lab_discordance',
       priority: 'low',
-      title: `${biomarker.label} is ${direction} the conventional reference range`,
+      title: `${biomarker.label} is ${direction} its reference context`,
       body: finalizeInsightBody(
-        `Your most recent ${biomarker.label} was ${labValue} ${biomarker.unit}. The conventional reference range — based on people not using hormone therapy — is ${min}–${max} ${biomarker.unit}. On HRT, values outside this range can be intentional and expected. Only your provider can say what's right for you.`,
+        `Your most recent ${biomarker.label} was ${reported ? `${reported.comparator ?? ''}${reported.reportedValue} ${reported.reportedUnit ?? ''}`.trim() : `${labValue} ${biomarker.unit}`}. The relevant reference context is ${rangeDescription}. A flag does not by itself determine a diagnosis or medication change, but it is worth discussing with your doctor alongside symptoms and collection timing.`,
         sampleSize,
         false,
       ),
@@ -177,7 +191,7 @@ export function analyzeLabRangeFlags(labResults: LabResult[]): Insight[] {
         labValue: {
           biomarker: biomarker.label,
           value: labValue,
-          range: `${min}-${max} ${biomarker.unit}`,
+          range: rangeDescription,
         },
       },
       actionSuggestion: `Ask your provider: "My ${biomarker.label} came back ${labValue} ${biomarker.unit}. How should we interpret that alongside my symptoms?"`,

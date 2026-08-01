@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { MessageCircle, Sparkles, X } from 'lucide-react';
+import { Moon, Sparkles, X } from 'lucide-react';
 import type { Insight } from '../../engine/types';
 import { formatConfidenceLine } from '../../engine/confidence';
 import type { StageProfile } from '../../engine/stageProfile';
@@ -116,8 +116,8 @@ export function InsightCard({
                   className="px-0 text-sage-600"
                   onClick={() => onTalkAbout(insight)}
                 >
-                  <MessageCircle className="mr-1.5 h-4 w-4" />
-                  Talk about this
+                  <Moon className="mr-1.5 h-4 w-4" />
+                  Ask Luna about this
                 </Button>
               )}
             </div>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ExternalLink } from 'lucide-react';
 import type { LabResult } from '../../types/database';
 import { useLabResults } from '../../hooks/useLabResults';
 import { useToast } from '../../stores/toastStore';
@@ -8,6 +9,7 @@ import { formatDateLong } from '../../utils/formatters';
 import { LabValueDisplay } from './LabValueDisplay';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
+import { AskLunaButton } from '../luna/AskLunaButton';
 
 interface LabDetailModalProps {
   lab: LabResult | null;
@@ -52,6 +54,12 @@ export function LabDetailModal({
   ]
     .filter(Boolean)
     .join(' · ');
+  const reportedValues = Object.values(lab.reported_values ?? {});
+  const unchartedValues = reportedValues.filter((item) => !item.biomarkerKey);
+  const hasHrtReportedValue = reportedValues.some((item) =>
+    ['estradiol', 'estrone', 'progesterone', 'fsh', 'lh', 'total_testosterone', 'free_testosterone']
+      .includes(item.biomarkerKey ?? ''),
+  );
 
   return (
     <>
@@ -78,6 +86,7 @@ export function LabDetailModal({
                         biomarkerKey={b.key}
                         value={value}
                         previousValue={prev}
+                        reportedValue={(lab.reported_values ?? {})[b.key] ?? null}
                       />
                     );
                   })}
@@ -85,6 +94,52 @@ export function LabDetailModal({
               </div>
             );
           })}
+
+          {unchartedValues.length > 0 && (
+            <div>
+              <h3 className="mb-3 font-medium text-sage-800">Other reported results</h3>
+              <div className="space-y-3">
+                {unchartedValues.map((item, index) => (
+                  <div key={`${item.reportedLabel}-${index}`} className="rounded-lg border border-sand-200 p-3">
+                    <p className="font-medium text-sage-800">{item.reportedLabel}</p>
+                    <p className="mt-1 select-text text-sm text-sage-700">
+                      {item.comparator ?? ''}{item.reportedValue}{item.reportedUnit ? ` ${item.reportedUnit}` : ''}
+                    </p>
+                    {item.referenceText && (
+                      <p className="mt-1 text-xs text-sage-500">
+                        This laboratory’s reference interval: {item.referenceText}
+                      </p>
+                    )}
+                    <p className="mt-1 text-xs text-sage-400">
+                      Preserved from the report; TrackHer does not currently chart this marker.
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {reportedValues.length > 0 && (
+            <div className="rounded-xl bg-sand-100/70 p-4">
+              <p className="text-sm font-medium text-sage-800">
+                Your laboratory’s interval is not a personal treatment target
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-sage-600">
+                Being inside it does not by itself show whether your symptoms are controlled or whether treatment is right for you. A flagged result also needs clinical context. Discuss both the result and how you feel with your doctor.
+              </p>
+              {hasHrtReportedValue && (
+                <a
+                  href="https://thebms.org.uk/2022/12/bms-statement-hrt-prescribing/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-sage-700 underline underline-offset-2"
+                >
+                  British Menopause Society guidance
+                  <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                </a>
+              )}
+            </div>
+          )}
 
           {lab.notes && (
             <div>
@@ -98,6 +153,21 @@ export function LabDetailModal({
           </p>
 
           <div className="flex flex-wrap gap-3 border-t border-sand-100 pt-4">
+            <AskLunaButton
+              label="Ask Luna about this result"
+              onBeforeOpen={onClose}
+              request={{
+                kind: 'lab',
+                title: `Lab result from ${formatDateLong(lab.draw_date)}`,
+                context: {
+                  sourceType: 'lab',
+                  sourceId: lab.id,
+                  label: `Lab result from ${formatDateLong(lab.draw_date)}`,
+                  labResult: lab,
+                },
+                seedMessage: 'Help me understand this lab result alongside how I have been feeling.',
+              }}
+            />
             <Button variant="secondary" onClick={() => onEdit(lab)}>
               Edit this lab result
             </Button>

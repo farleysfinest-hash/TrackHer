@@ -28,8 +28,7 @@ export type ScriptShape =
   | 'life_support'
   | 'loved_one_crisis';
 
-export type CrisisTier = 'mental_decline' | 'crisis' | 'crisis_imminent';
-
+export type CrisisTier = 'mental_decline' | 'crisis' | 'crisis_imminent' | 'loved_one';
 
 export type FactsLite = {
   profile?: {
@@ -79,6 +78,19 @@ function normalize(text: string): string {
     .trim();
 }
 
+const CLEARLY_NEGATED_CLINICIAN_RISK_RE =
+  /^(?:my )?(?:doctor|therapist|clinician|provider|nurse|counselor) asked (?:me )?(?:if|whether) i (?:want(?:ed)? to (?:kill|hurt) myself|was thinking about (?:suicide|self[- ]?harm)|felt suicidal)[,.!?;:\s]+(?:and )?i (?:said|answered) no[.!?]*$/;
+
+export function isClearlyNegatedClinicianRiskReport(text: string): boolean {
+  return CLEARLY_NEGATED_CLINICIAN_RISK_RE.test(normalize(text));
+}
+
+/** Remove only a complete, explicitly negated clinician screening report. */
+function normalizeForRiskClassification(text: string): string {
+  const normalized = normalize(text);
+  return isClearlyNegatedClinicianRiskReport(text) ? '' : normalized;
+}
+
 export function isDemandPush(message: string): boolean {
   const m = normalize(message);
   return (
@@ -112,7 +124,7 @@ export function priorCrisisReplyCount(
 }
 
 export function classifyCrisisTier(message: string): CrisisTier | null {
-  const m = normalize(message);
+  const m = normalizeForRiskClassification(message);
 
   // Imminent = timeframe, method, or “going to do it” — NOT bare “going to kill myself”
   // (that’s ideation; escalating with tonight/gun/plan bumps the tier).
@@ -177,10 +189,36 @@ export function classifyCrisisTier(message: string): CrisisTier | null {
 /** Loose risk-adjacent check for fail-open decisions when the tier classifier is down. */
 export function looksRiskAdjacent(message: string): boolean {
   if (classifyCrisisTier(message)) return true;
-  const m = normalize(message);
-  return /\b(suicid|kill(ing)? (my|myself)|end (my life|it all)|hurt myself|self[- ]?harm|unalive|want to die|hopeless|worthless|not wake up|overdose|hang myself|cut myself|gun|rifle|988)\b/.test(
-    m,
+  const m = normalizeForRiskClassification(message);
+  const benignAbsenceContext =
+    /\b(travel|travelling|traveling|appointment|flight|vacation|out of town|work trip|school trip)\b/.test(
+      m,
+    );
+  const passiveRisk =
+    /\b(no point in being alive|go to sleep and (?:not|never) (?:wake up|come back)|(?:don'?t|do not) plan on making it through (?:the )?night|(?:don'?t|do not) think i(?:'ll| will| am going to) be (?:alive|around|here) tomorrow)\b/.test(
+      m,
+    );
+  return (
+    /\b(suicid|kill(ing)? (my|myself)|end (my life|it all)|hurt myself|self[- ]?harm|unalive|want to die|hopeless|worthless|not wake up|overdose|hang myself|cut myself|gun|rifle|988)\b/.test(
+      m,
+    ) ||
+    (passiveRisk && !benignAbsenceContext)
   );
+}
+
+/**
+ * Deterministic predicate: is this text safe to store as Luna memory?
+ * Rejects content classified as active self-harm/suicide risk, imminent crisis,
+ * risk-adjacent self-harm wording, loved-one crisis, or method-seeking/overdose content.
+ * Crisis-related content must never enter ordinary Luna memory or proactive Insights.
+ */
+export function isMemorySafeContent(text: string): boolean {
+  if (!text || !text.trim()) return false;
+  if (isClearlyNegatedClinicianRiskReport(text)) return false;
+  if (classifyCrisisTier(text)) return false;
+  if (classifyCompanionShape(text) === 'loved_one_crisis') return false;
+  if (looksRiskAdjacent(text)) return false;
+  return true;
 }
 
 /** @deprecated use classifyCompanionShape */
@@ -563,6 +601,21 @@ export function buildTierScriptReply(
   if (tier === 'mental_decline') {
     return { shape: 'mental_decline', reply: buildMentalDeclineReply(message, facts) };
   }
+  if (tier === 'loved_one') {
+    // Use the same loved-one script that buildCompanionScriptReply produces.
+    const lovedOneReply = buildCompanionScriptReply(message, facts, { history });
+    if (lovedOneReply?.shape === 'loved_one_crisis') return lovedOneReply;
+    // Fallback if the regex didn't match the loved-one pattern (classifier-only path).
+    return {
+      shape: 'loved_one_crisis',
+      reply: join(
+        `That's a frightening thing to hear from someone you love — and you did the right thing by taking it seriously.`,
+        `Ask them directly if they're thinking of acting on it, stay close, and if you safely can, remove anything they could use to hurt themselves.`,
+        `988 (call or text) supports worried family and friends too — they'll coach you through what to say. If they're in immediate danger, call your local emergency number.`,
+        `You don't have to handle this perfectly. Staying with them and getting trained help involved is the win.`,
+      ),
+    };
+  }
   return { shape: tier, reply: buildCrisisReply(tier, message, history) };
 }
 
@@ -574,9 +627,10 @@ export type RiskTierLabel = CrisisTier | 'none';
 
 export function parseRiskTierLabel(text: string | null | undefined): RiskTierLabel | null {
   const w = (text ?? '').trim().toLowerCase();
-  if (/^imminent\b/.test(w)) return 'crisis_imminent';
-  if (/^ideation\b/.test(w)) return 'crisis';
-  if (/^decline\b/.test(w)) return 'mental_decline';
+  if (/^(?:imminent|crisis[_ -]?imminent)\b/.test(w)) return 'crisis_imminent';
+  if (/^(?:ideation|crisis)\b/.test(w)) return 'crisis';
+  if (/^(?:decline|mental[_ -]?decline)\b/.test(w)) return 'mental_decline';
+  if (/^loved[_ -]?one(?:[_ -]?crisis)?\b/.test(w)) return 'loved_one';
   if (/^none\b/.test(w)) return 'none';
   return null;
 }

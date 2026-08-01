@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { TestTube2 } from 'lucide-react';
+import { Camera, TestTube2 } from 'lucide-react';
 import { useLabResults } from '../hooks/useLabResults';
 import { useLabEntryStore } from '../stores/labEntryStore';
 import { LabEntryForm } from '../components/labs/LabEntryForm';
@@ -9,17 +9,37 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import type { LabResult } from '../types/database';
+import { LunaContextCard } from '../components/luna/LunaContextCard';
+import { LabReportImportDialog } from '../components/labs/LabReportImportDialog';
+import { useMedications } from '../hooks/useMedications';
+import { useLuna } from '../components/luna/LunaProvider';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 export function LabsPage() {
   const { labResults, isLoading, fetchLabResults } = useLabResults();
-  const { reset, loadExistingLab } = useLabEntryStore();
+  const { reset, loadExistingLab, loadImportDraft } = useLabEntryStore();
+  const { medications, fetchMedications } = useMedications();
+  const { openLuna } = useLuna();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const [activeEntry, setActiveEntry] = useState(false);
   const [detailLab, setDetailLab] = useState<LabResult | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   useEffect(() => {
     void fetchLabResults();
-  }, [fetchLabResults]);
+    void fetchMedications();
+  }, [fetchLabResults, fetchMedications]);
+
+  useEffect(() => {
+    const action = new URLSearchParams(location.search).get('action');
+    if (action === 'import') setImportOpen(true);
+    if (action === 'add') startEntry();
+    if (action === 'import' || action === 'add') navigate('/labs', { replace: true });
+    // Deep links are consumed once; startEntry intentionally uses current store actions.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
 
   const startEntry = () => {
     reset();
@@ -33,9 +53,22 @@ export function LabsPage() {
     setActiveEntry(true);
   };
 
-  const handleSuccess = () => {
+  const handleSuccess = (confirmedMedicationMentions: string[] = []) => {
     setActiveEntry(false);
     void fetchLabResults();
+    if (confirmedMedicationMentions.length > 0) {
+      const names = confirmedMedicationMentions.join(', ');
+      void openLuna({
+        kind: 'medication',
+        title: 'Medication mentioned on a lab report',
+        context: {
+          sourceType: 'lab_import',
+          label: names,
+          medicationMentions: confirmedMedicationMentions,
+        },
+        seedMessage: `My lab report mentions ${names}, and I confirmed that I take ${confirmedMedicationMentions.length === 1 ? 'it' : 'them'}. Help me prepare ${confirmedMedicationMentions.length === 1 ? 'this medication' : 'these medications'} for review before anything is added.`,
+      });
+    }
   };
 
   if (activeEntry) {
@@ -53,8 +86,28 @@ export function LabsPage() {
             Track your blood work to see how your hormone levels relate to how you&apos;re feeling.
           </p>
         </div>
-        {hasLabs && <Button onClick={startEntry}>Add Lab Results</Button>}
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" onClick={() => setImportOpen(true)}>
+            <Camera className="h-4 w-4" aria-hidden />
+            Import report photo
+          </Button>
+          {hasLabs && <Button onClick={startEntry}>Add Lab Results</Button>}
+        </div>
       </div>
+
+      <LunaContextCard
+        title="Luna on lab results"
+        description="Ask about a result or how laboratory changes line up with symptoms and recorded treatment timing."
+        actionLabel="Ask Luna about your labs"
+        request={{
+          kind: 'lab',
+          title: 'Lab questions',
+          context: {
+            sourceType: 'labs',
+            label: 'Your lab history',
+          },
+        }}
+      />
 
       {!isLoading && !hasLabs ? (
         <EmptyState
@@ -81,6 +134,18 @@ export function LabsPage() {
         onClose={() => setDetailLab(null)}
         onEdit={handleEdit}
         onDeleted={() => void fetchLabResults()}
+      />
+
+      <LabReportImportDialog
+        isOpen={importOpen}
+        medicationNames={medications.map((medication) => medication.medication_name)}
+        onClose={() => setImportOpen(false)}
+        onImported={(draft, unknownMedicationMentions) => {
+          reset();
+          loadImportDraft(draft, unknownMedicationMentions);
+          setImportOpen(false);
+          setActiveEntry(true);
+        }}
       />
     </div>
   );

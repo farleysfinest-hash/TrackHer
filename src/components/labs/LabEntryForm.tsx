@@ -1,19 +1,20 @@
 import { useMemo, useRef, useState } from 'react';
-import { X } from 'lucide-react';
+import { ExternalLink, Moon, Trash2, X } from 'lucide-react';
 import { useLabEntryStore } from '../../stores/labEntryStore';
 import { useLabResults } from '../../hooks/useLabResults';
 import { useToast } from '../../stores/toastStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
-import { getBiomarkersByCategory } from '../../data/labRanges';
+import { getBiomarkerByKey, getBiomarkersByCategory, LAB_BIOMARKERS } from '../../data/labRanges';
 import { LAB_CATEGORIES } from '../../utils/labHelpers';
 import { LabPanelSection } from './LabPanelSection';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { todayISO } from '../../utils/localDate';
+import { reportedValuesRecord } from '../../utils/labReportExtraction';
 
 interface LabEntryFormProps {
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (confirmedMedicationMentions?: string[]) => void;
 }
 
 export function LabEntryForm({ onClose, onSuccess }: LabEntryFormProps) {
@@ -26,12 +27,21 @@ export function LabEntryForm({ onClose, onSuccess }: LabEntryFormProps) {
     labName,
     values,
     notes,
+    sourceType,
+    importedValues,
+    medicationMentions,
+    medicationAnswers,
+    importWarnings,
+    importPreviewDataUrl,
     setValue,
     setDrawDate,
     setFasting,
     setDrawTime,
     setLabName,
     setNotes,
+    setImportedValue,
+    removeImportedValue,
+    setMedicationAnswer,
     getFilledCount,
     reset,
   } = useLabEntryStore();
@@ -52,11 +62,24 @@ export function LabEntryForm({ onClose, onSuccess }: LabEntryFormProps) {
     }
     return map;
   }, [drawDate, isEditing, getPreviousValue]);
+  const hasHrtImport = importedValues.some((item) =>
+    item.biomarkerKey === 'estradiol' ||
+    item.biomarkerKey === 'estrone' ||
+    item.biomarkerKey === 'progesterone' ||
+    item.biomarkerKey === 'fsh' ||
+    item.biomarkerKey === 'lh' ||
+    item.biomarkerKey === 'total_testosterone' ||
+    item.biomarkerKey === 'free_testosterone',
+  );
 
   const handleSave = async () => {
     setValidationError('');
     if (getFilledCount() < 1) {
       setValidationError('Enter at least one biomarker value to save.');
+      return;
+    }
+    if (medicationMentions.some((name) => !medicationAnswers[name])) {
+      setValidationError('Please answer Luna’s medication question before saving. “I’m not sure” is okay.');
       return;
     }
 
@@ -68,6 +91,20 @@ export function LabEntryForm({ onClose, onSuccess }: LabEntryFormProps) {
       labName,
       values,
       notes,
+      ...(sourceType !== 'manual'
+        ? {
+            reportedValues: reportedValuesRecord(
+              importedValues.map((item) => ({
+                ...item,
+                normalizedValue: item.biomarkerKey
+                  ? values[item.biomarkerKey] ?? item.normalizedValue
+                  : null,
+              })),
+            ),
+            sourceType,
+            importReviewedAt: new Date().toISOString(),
+          }
+        : {}),
     };
 
     let ok = false;
@@ -82,7 +119,9 @@ export function LabEntryForm({ onClose, onSuccess }: LabEntryFormProps) {
     if (ok) {
       toast.success(isEditing ? 'Lab results updated' : 'Lab results saved');
       reset();
-      onSuccess();
+      onSuccess(
+        medicationMentions.filter((name) => medicationAnswers[name] === 'yes'),
+      );
     } else {
       toast.error('Failed to save lab results');
     }
@@ -121,6 +160,185 @@ export function LabEntryForm({ onClose, onSuccess }: LabEntryFormProps) {
 
       <div className="safe-area-bottom flex-1 overflow-y-auto px-6 py-8">
         <div className="mx-auto max-w-[640px] space-y-8">
+          {sourceType !== 'manual' && (
+            <section aria-labelledby="luna-import-review" className="space-y-4">
+              <div className="flex items-start gap-3 rounded-xl border border-sage-200 bg-sage-50/50 p-4">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sage-100 text-sage-600">
+                  <Moon className="h-4 w-4" aria-hidden />
+                </span>
+                <div>
+                  <h2 id="luna-import-review" className="font-display text-lg text-sage-800">
+                    Check what I read
+                  </h2>
+                  <p className="mt-1 text-sm leading-relaxed text-sage-600">
+                    I prepared a draft, but scans can misread digits and units. Compare every row with your report. Nothing is saved until you confirm below.
+                  </p>
+                </div>
+              </div>
+
+              {importPreviewDataUrl && (
+                <div className="overflow-hidden rounded-xl border border-sand-200 bg-sand-100">
+                  <img
+                    src={importPreviewDataUrl}
+                    alt="Laboratory report being reviewed"
+                    className="max-h-80 w-full object-contain"
+                  />
+                </div>
+              )}
+
+              {importWarnings.map((warning) => (
+                <p key={warning} className="rounded-lg bg-sand-100 px-3 py-2 text-sm text-sage-600">
+                  {warning}
+                </p>
+              ))}
+
+              <div className="space-y-3">
+                {importedValues.map((item, index) => {
+                  const biomarker = item.biomarkerKey
+                    ? getBiomarkerByKey(item.biomarkerKey)
+                    : undefined;
+                  return (
+                    <div
+                      key={`${item.reportedLabel}-${index}`}
+                      className={`rounded-xl border p-4 ${item.confidence < 0.8 ? 'border-sand-400 bg-sand-100/60' : 'border-sand-200 bg-sand-50'}`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="text-xs font-medium uppercase tracking-wide text-sage-500">
+                          {item.confidence < 0.8 ? 'Please check carefully' : 'Extracted result'}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => removeImportedValue(index)}
+                          className="rounded-lg p-1.5 text-sage-400 hover:bg-sage-50 hover:text-sage-600"
+                          aria-label={`Remove ${item.reportedLabel}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        <Input
+                          label="Report label"
+                          value={item.reportedLabel}
+                          onChange={(event) => setImportedValue(index, { reportedLabel: event.target.value })}
+                        />
+                        <label className="block text-sm font-medium text-sage-700">
+                          TrackHer match
+                          <select
+                            value={item.biomarkerKey ?? ''}
+                            onChange={(event) => setImportedValue(index, { biomarkerKey: event.target.value || null })}
+                            className="mt-1.5 w-full rounded-lg border border-sand-200 bg-sand-50 px-3 py-3 text-base text-sage-800"
+                          >
+                            <option value="">Keep as an uncharted result</option>
+                            {LAB_BIOMARKERS.map((option) => (
+                              <option key={option.key} value={option.key}>{option.label}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <Input
+                          label="Reported value"
+                          value={item.reportedValue}
+                          onChange={(event) => setImportedValue(index, { reportedValue: event.target.value })}
+                        />
+                        <Input
+                          label="Reported unit"
+                          value={item.reportedUnit ?? ''}
+                          onChange={(event) => setImportedValue(index, { reportedUnit: event.target.value || null })}
+                        />
+                        <Input
+                          label="Laboratory reference interval"
+                          value={item.referenceText ?? ''}
+                          onChange={(event) => setImportedValue(index, { referenceText: event.target.value || null })}
+                          helperText="Copy the interval printed by this laboratory. It is not a personal treatment target."
+                        />
+                        <label className="block text-sm font-medium text-sage-700">
+                          Flag printed by laboratory
+                          <select
+                            value={item.reportedFlag}
+                            onChange={(event) => setImportedValue(index, { reportedFlag: event.target.value as typeof item.reportedFlag })}
+                            className="mt-1.5 w-full rounded-lg border border-sand-200 bg-sand-50 px-3 py-3 text-base text-sage-800"
+                          >
+                            <option value="unknown">No flag shown</option>
+                            <option value="normal">Normal / in range</option>
+                            <option value="low">Low</option>
+                            <option value="high">High</option>
+                            <option value="abnormal">Abnormal</option>
+                          </select>
+                        </label>
+                      </div>
+
+                      {biomarker && item.normalizedValue !== null ? (
+                        <p className="mt-3 text-xs leading-relaxed text-sage-500">
+                          TrackHer chart value: {item.normalizedValue} {biomarker.unit}. The original reported value and unit are preserved.
+                        </p>
+                      ) : item.biomarkerKey ? (
+                        <p className="mt-3 text-xs leading-relaxed text-sage-600">
+                          I can preserve this result, but I can’t safely convert that unit for TrackHer’s chart. You can correct the mapped value in the fields below.
+                        </p>
+                      ) : (
+                        <p className="mt-3 text-xs leading-relaxed text-sage-600">
+                          I don’t recognize this as one of TrackHer’s charted markers, so I’ll preserve it exactly as an uncharted result.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="rounded-xl border border-sand-200 bg-sand-100/60 p-4">
+                <p className="text-sm font-medium text-sage-800">A reference interval is not your personal target</p>
+                <p className="mt-1 text-sm leading-relaxed text-sage-600">
+                  It shows how this laboratory compares results using its method and reference population. Being inside it does not by itself show whether your symptoms are controlled or whether treatment is right for you. A flagged result also needs clinical context. Talk with your doctor before drawing treatment conclusions.
+                </p>
+                {hasHrtImport && (
+                  <a
+                    href="https://thebms.org.uk/2025/07/new-bms-tool-for-clinicians-measurement-of-serum-estradiol-in-the-menopause-transition/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-sage-700 underline underline-offset-2"
+                  >
+                    British Menopause Society guide to understanding estradiol blood tests
+                    <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                  </a>
+                )}
+              </div>
+
+              {medicationMentions.map((name) => (
+                <div key={name} className="rounded-xl border border-sage-200 bg-sage-50/40 p-4">
+                  <div className="flex items-start gap-3">
+                    <Moon className="mt-0.5 h-4 w-4 shrink-0 text-sage-600" aria-hidden />
+                    <div>
+                      <p className="text-sm font-medium text-sage-800">
+                        I found “{name}” on this report, but it isn’t in your TrackHer medication list. Do you currently take it?
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {([
+                          ['yes', 'Yes, I take it'],
+                          ['no', 'No'],
+                          ['unsure', 'I’m not sure'],
+                        ] as const).map(([answer, label]) => (
+                          <button
+                            key={answer}
+                            type="button"
+                            onClick={() => setMedicationAnswer(name, answer)}
+                            className={`rounded-full border px-3 py-1.5 text-sm ${medicationAnswers[name] === answer ? 'border-sage-500 bg-sage-100 text-sage-800' : 'border-sand-300 bg-sand-50 text-sage-600'}`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                      {medicationAnswers[name] === 'yes' && (
+                        <p className="mt-2 text-xs text-sage-500">
+                          After this report is saved, Luna will help you prepare it for medication review. It will not be added silently.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </section>
+          )}
+
           <div className="rounded-xl border border-sand-200 bg-sand-50 p-6 space-y-4">
             <div>
               <label htmlFor="draw-date" className="mb-1 block text-sm font-medium text-sage-700">

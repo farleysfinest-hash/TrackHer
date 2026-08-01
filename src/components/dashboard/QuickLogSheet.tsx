@@ -416,7 +416,7 @@ export function QuickLogSheet() {
                       <div className="px-3 py-3">
                         <p className="text-sm text-sage-400">No exact catalog match.</p>
                         {aiSuggestLoading && (
-                          <p className="mt-2 text-xs text-sage-400">Asking your companion…</p>
+                          <p className="mt-2 text-xs text-sage-400">Asking Luna…</p>
                         )}
                         {aiSuggestions.length > 0 && (
                           <ul className="mt-2 space-y-1">

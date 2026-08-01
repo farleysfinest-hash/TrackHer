@@ -23,11 +23,8 @@ export const PRIORITY_BIOMARKER_KEYS = [
 export const BIOMARKER_KEYS = LAB_BIOMARKERS.map((b) => b.key);
 
 export function getValueStatus(value: number, biomarker: LabBiomarker): LabValueStatus {
-  const { conventionalRange, optimalRange } = biomarker;
-
-  if (optimalRange && value >= optimalRange.min && value <= optimalRange.max) {
-    return 'optimal';
-  }
+  const { conventionalRange } = biomarker;
+  if (!biomarker.referenceSource) return 'unknown';
 
   if (conventionalRange) {
     if (value >= conventionalRange.min && value <= conventionalRange.max) {
@@ -78,13 +75,9 @@ export function formatRange(range: { min: number; max: number } | null): string 
 }
 
 export function formatRangeLine(biomarker: LabBiomarker): string {
-  const conv = biomarker.conventionalRange
-    ? `Conventional: ${formatRange(biomarker.conventionalRange)}`
-    : 'Conventional: —';
-  const opt = biomarker.optimalRange
-    ? `Optimal: ${formatRange(biomarker.optimalRange)}`
-    : 'Optimal: —';
-  return `${conv} · ${opt}`;
+  return biomarker.conventionalRange && biomarker.referenceSource
+    ? `Sourced general reference context: ${formatRange(biomarker.conventionalRange)} ${biomarker.unit}`
+    : 'Use the reference interval printed on your laboratory report';
 }
 
 export function getBiomarkerValue(lab: LabResult, key: string): number | null {
@@ -144,9 +137,9 @@ export function getRangeBarPosition(
   value: number,
   biomarker: LabBiomarker,
 ): number {
-  const { conventionalRange, optimalRange } = biomarker;
-  const min = conventionalRange?.min ?? optimalRange?.min ?? 0;
-  const max = conventionalRange?.max ?? optimalRange?.max ?? (value * 2 || 100);
+  const { conventionalRange } = biomarker;
+  const min = conventionalRange?.min ?? 0;
+  const max = conventionalRange?.max ?? (value * 2 || 100);
   const span = max - min || 1;
   const clamped = Math.max(min, Math.min(max, value));
   return ((clamped - min) / span) * 100;

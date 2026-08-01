@@ -16,6 +16,7 @@ import {
 } from '../../utils/medicationHelpers';
 import { DELIVERY_METHOD_LABELS } from '../../lib/medicationConstants';
 import { formatDateLong } from '../../utils/formatters';
+import { AskLunaButton } from '../luna/AskLunaButton';
 
 interface MedicationDetailModalProps {
   medication: Medication | null;
@@ -218,6 +219,37 @@ export function MedicationDetailModal({
                     Cancel
                   </Button>
                 </>
+              )}
+              {!isEditing && !showDoseChange && (
+                <AskLunaButton
+                  label="Ask Luna about this medication"
+                  onBeforeOpen={onClose}
+                  request={{
+                    kind: 'medication',
+                    title: medication.medication_name,
+                    context: {
+                      sourceType: 'medication',
+                      sourceId: medication.id,
+                      label: medication.medication_name,
+                      medication: {
+                        name: medication.medication_name,
+                        category: medication.hormone_category,
+                        doseAmount: medication.dose_amount,
+                        doseUnit: medication.dose_unit,
+                        frequency: medication.frequency,
+                        deliveryMethod: medication.delivery_method,
+                        startDate: medication.start_date,
+                      },
+                      changes: medChanges.map((change) => ({
+                        date: change.change_date,
+                        type: change.change_type,
+                        previousDose: change.previous_dose,
+                        newDose: change.new_dose,
+                      })),
+                    },
+                    seedMessage: `I want to understand my ${medication.medication_name} history.`,
+                  }}
+                />
               )}
             </div>
           </>

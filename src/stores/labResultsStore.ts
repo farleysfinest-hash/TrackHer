@@ -5,6 +5,7 @@ import type { LabResult } from '../types/database';
 import { BIOMARKER_KEYS, getBiomarkerValue } from '../utils/labHelpers';
 import { fetchAllPages } from '../utils/pagedQuery';
 import type { FetchOptions } from './medicationsStore';
+import type { LabReportedValues, LabSourceType } from '../types/labs';
 
 export interface LabResultInput {
   drawDate: string;
@@ -13,6 +14,9 @@ export interface LabResultInput {
   labName: string;
   values: Record<string, number | null>;
   notes: string;
+  reportedValues?: LabReportedValues;
+  sourceType?: LabSourceType;
+  importReviewedAt?: string | null;
 }
 
 function buildLabPayload(data: LabResultInput, userId: string) {
@@ -27,6 +31,11 @@ function buildLabPayload(data: LabResultInput, userId: string) {
 
   for (const key of BIOMARKER_KEYS) {
     payload[key] = data.values[key] ?? null;
+  }
+  if (data.reportedValues) payload.reported_values = data.reportedValues;
+  if (data.sourceType) payload.source_type = data.sourceType;
+  if (data.importReviewedAt !== undefined) {
+    payload.import_reviewed_at = data.importReviewedAt;
   }
 
   return payload;

@@ -58,8 +58,8 @@ function TabFallback() {
 
 /**
  * Keeps main shell tabs mounted after first visit.
- * Inactive tabs stay in an absolute layer (no display:none) so Recharts keeps
- * width and returning to Dashboard does not remount ~12 chart trees.
+ * Inactive tabs use true display:none (not transparent absolute layers). One
+ * requestAnimationFrame resize after scroll restore lets Recharts recalculate.
  */
 export function PersistentTabs() {
   const { pathname } = useLocation();
@@ -99,6 +99,8 @@ export function PersistentTabs() {
   }, [pathname]);
 
   // Preserve scroll per tab instead of snapping to top on every switch.
+  // After restoring scroll onto a main tab, fire one resize so charts that
+  // lived under display:none can remeasure.
   useEffect(() => {
     const leaving = prevPath.current;
     if (isMainTabPath(leaving)) {
@@ -108,10 +110,14 @@ export function PersistentTabs() {
     if (isMainTabPath(pathname)) {
       const y = scrollByPath.current.get(pathname) ?? 0;
       window.scrollTo(0, y);
-    } else {
-      window.scrollTo(0, 0);
+      const raf = window.requestAnimationFrame(() => {
+        window.dispatchEvent(new Event('resize'));
+      });
+      prevPath.current = pathname;
+      return () => window.cancelAnimationFrame(raf);
     }
 
+    window.scrollTo(0, 0);
     prevPath.current = pathname;
   }, [pathname]);
 
@@ -128,14 +134,11 @@ export function PersistentTabs() {
         return (
           <div
             key={path}
+            hidden={!active}
             aria-hidden={!active}
             inert={!active}
-            className={
-              active
-                ? 'relative min-w-0'
-                : // Keep width + chart trees warm — no display:none (Recharts RO collapses).
-                  'pointer-events-none absolute inset-x-0 top-0 -z-10 min-w-0 opacity-0'
-            }
+            className={active ? 'min-w-0' : 'hidden'}
+            style={active ? undefined : { contentVisibility: 'hidden' }}
           >
             <TabActiveProvider active={active}>
               <RouteErrorBoundary>

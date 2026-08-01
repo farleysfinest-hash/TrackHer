@@ -8,7 +8,6 @@ import {
   getTrendDirection,
   formatRangeLine,
   getRangeBarPosition,
-  getOptimalSegment,
 } from '../../utils/labHelpers';
 import { LabRangeTooltip } from './LabRangeTooltip';
 import { TrendArrow } from '../ui/TrendArrow';
@@ -37,7 +36,6 @@ function LabValueInputComponent({
   const status = value !== null ? getValueStatus(value, biomarker) : null;
   const trend = value !== null ? getTrendDirection(value, previousValue) : null;
   const barPos = value !== null ? getRangeBarPosition(value, biomarker) : 0;
-  const optimalSeg = getOptimalSegment(biomarker);
 
   const handleBlur = () => {
     const trimmed = localText.trim();
@@ -114,14 +112,8 @@ function LabValueInputComponent({
         )}
       </div>
 
-      {value !== null && (
+      {value !== null && biomarker.referenceSource && (
         <div className="relative mt-3 h-2 w-full overflow-hidden rounded-full bg-sand-100">
-          {optimalSeg && (
-            <div
-              className="absolute top-0 h-full bg-success/30"
-              style={{ left: `${optimalSeg.left}%`, width: `${optimalSeg.width}%` }}
-            />
-          )}
           <div
             className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-on-accent bg-sage-600 shadow"
             style={{ left: `${barPos}%` }}

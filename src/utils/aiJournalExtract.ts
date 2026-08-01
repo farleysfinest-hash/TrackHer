@@ -1,6 +1,10 @@
 /** Journal extract — client clamp matching Edge journal_extract validation. */
 
-export type JournalRiskTier = 'mental_decline' | 'crisis' | 'crisis_imminent';
+export type JournalRiskTier =
+  | 'mental_decline'
+  | 'crisis'
+  | 'crisis_imminent'
+  | 'loved_one';
 
 export interface JournalSymptomSuggestion {
   key: string;
@@ -17,12 +21,16 @@ export interface JournalEventSuggestion {
 export interface JournalExtractResult {
   symptoms: JournalSymptomSuggestion[];
   events: JournalEventSuggestion[];
+  followUpQuestions: string[];
   risk?: JournalRiskTier | null;
   riskReply?: string | null;
 }
 
 function parseRisk(raw: unknown): JournalRiskTier | null {
-  return raw === 'mental_decline' || raw === 'crisis' || raw === 'crisis_imminent'
+  return raw === 'mental_decline' ||
+    raw === 'crisis' ||
+    raw === 'crisis_imminent' ||
+    raw === 'loved_one'
     ? raw
     : null;
 }
@@ -40,7 +48,7 @@ export function clampJournalExtract(
     allowedKeys instanceof Map ? allowedKeys.has(key) : allowedKeys.has(key);
 
   if (!raw || typeof raw !== 'object') {
-    return { symptoms: [], events: [], risk: null, riskReply: null };
+    return { symptoms: [], events: [], followUpQuestions: [], risk: null, riskReply: null };
   }
   const o = raw as Record<string, unknown>;
   const risk = parseRisk(o.risk);
@@ -50,7 +58,7 @@ export function clampJournalExtract(
       : null;
 
   if (risk && riskReply) {
-    return { symptoms: [], events: [], risk, riskReply };
+    return { symptoms: [], events: [], followUpQuestions: [], risk, riskReply };
   }
 
   const symptoms = Array.isArray(o.symptoms)
@@ -98,5 +106,13 @@ export function clampJournalExtract(
         .slice(0, 3)
     : [];
 
-  return { symptoms, events, risk: null, riskReply: null };
+  const followUpQuestions = Array.isArray(o.followUpQuestions)
+    ? o.followUpQuestions
+        .filter((question): question is string => typeof question === 'string')
+        .map((question) => question.trim().slice(0, 180))
+        .filter(Boolean)
+        .slice(0, 2)
+    : [];
+
+  return { symptoms, events, followUpQuestions, risk: null, riskReply: null };
 }
