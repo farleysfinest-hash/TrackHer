@@ -100,6 +100,7 @@ vi.mock('../../../lib/lunaConversations', () => {
     markLunaMessageCrisis: vi.fn(async () => undefined),
     updateLunaThreadSummary: vi.fn(async () => undefined),
     createFocusedLunaThread: vi.fn(),
+    getOrCreateFocusedLunaThread: vi.fn(),
     deleteLunaThread: vi.fn(),
     addLunaMemory: vi.fn(),
     clearLunaMemories: vi.fn(),
@@ -143,5 +144,63 @@ describe('LunaProvider crisis persistence fallback', () => {
     expect(safetyPanelHeading.parentElement).toHaveClass('sticky', 'top-0', 'z-10');
     expect(screen.getByRole('link', { name: '988' })).toHaveAttribute('href', 'tel:988');
     await waitFor(() => expect(screen.getByText('Storage unavailable')).toBeVisible());
+  });
+
+  it('shows the safety panel and crisis-tags the turn when the risk classifier is down', async () => {
+    mocks.loadLunaCrisisState.mockResolvedValue(null);
+    mocks.ask.mockResolvedValueOnce({
+      reply: "I'm having a brief glitch checking how you're doing. Call or text 988 if you're in a hard place.",
+      model: 'trackher-companion-script',
+      shape: 'risk_classifier_unavailable',
+      crisis: {
+        tier: 'crisis',
+        responseCount: 1,
+        showSafetyPanel: true,
+        expiresAt: '2026-08-04T00:00:00.000Z',
+      },
+    });
+    const { markLunaMessageCrisis } = await import('../../../lib/lunaConversations');
+    const user = userEvent.setup();
+    render(
+      <LunaProvider>
+        <OpenLunaButton />
+      </LunaProvider>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Open Luna' }));
+    const input = await screen.findByPlaceholderText('Tell Luna what’s going on…');
+    await user.type(input, 'I have been feeling worthless lately');
+    await user.click(screen.getByRole('button', { name: 'Send to Luna' }));
+
+    expect(await screen.findByText('Immediate support stays within reach')).toBeVisible();
+    await waitFor(() =>
+      expect(vi.mocked(markLunaMessageCrisis)).toHaveBeenCalledWith(
+        'user-1',
+        expect.any(String),
+        'crisis',
+      ),
+    );
+  });
+
+  it('keeps the support panel visible for an active mental-decline tier', async () => {
+    mocks.loadLunaCrisisState.mockResolvedValue({
+      user_id: 'user-1',
+      tier: 'mental_decline',
+      response_count: 1,
+      presented_actions: [],
+      asked_questions: [],
+      escalated: false,
+      last_activity_at: '2026-08-01T00:00:00.000Z',
+      expires_at: '2026-08-04T00:00:00.000Z',
+    });
+    const user = userEvent.setup();
+    render(
+      <LunaProvider>
+        <OpenLunaButton />
+      </LunaProvider>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Open Luna' }));
+    expect(await screen.findByText('Immediate support stays within reach')).toBeVisible();
   });
 });

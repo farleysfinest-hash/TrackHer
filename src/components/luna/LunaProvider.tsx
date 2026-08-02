@@ -14,9 +14,6 @@ import {
   Brain,
   Clock3,
   Moon,
-  Plus,
-  Send,
-  Trash2,
   X,
 } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
@@ -31,6 +28,7 @@ import { buildAiFactsPacket } from '../../utils/aiFactsPacket';
 import { hashAiFactsPacket } from '../../utils/aiInsightsCache';
 import { hasUiFlag, setUiFlag } from '../../lib/uiState';
 import { useVisualViewportBounds } from '../../hooks/useKeyboardBottomInset';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import type {
   LunaCrisisState,
   LunaFeedbackRating,
@@ -42,11 +40,9 @@ import type {
 import {
   addLunaMemory,
   addLunaMessage,
-  clearLunaMemories,
-  createFocusedLunaThread,
-  deleteLunaMemory,
   deleteLunaThread,
   getOrCreateDashboardLunaThread,
+  getOrCreateFocusedLunaThread,
   listLunaMemories,
   listLunaThreads,
   loadLunaCrisisState,
@@ -55,12 +51,13 @@ import {
   markLunaMessageCrisis,
   MemorySafetyError,
   saveLunaFeedback,
-  updateLunaMemory,
   updateLunaThreadSummary,
   type LunaThreadContext,
 } from '../../lib/lunaConversations';
-import { Button } from '../ui/Button';
-import { LunaCaptureReview } from './LunaCaptureReview';
+import { LunaComposer } from './LunaComposer';
+import { LunaHistoryView } from './LunaHistoryView';
+import { LunaMemoryView } from './LunaMemoryView';
+import { LunaTranscript } from './LunaTranscript';
 
 const RECENT_TURNS = 8;
 const SUMMARY_ROLL_SIZE = 4;
@@ -85,43 +82,6 @@ function sortThreads(rows: LunaThread[]): LunaThread[] {
   return [...rows].sort((a, b) => b.updated_at.localeCompare(a.updated_at));
 }
 
-function feedbackLabel(value: LunaFeedbackRating): string {
-  switch (value) {
-    case 'helpful':
-      return 'Helpful';
-    case 'not_helpful':
-      return 'Not helpful';
-    case 'incorrect':
-      return 'Incorrect';
-    case 'too_obvious':
-      return 'Too obvious';
-    case 'missing_context':
-      return 'Missing context';
-    case 'new_understanding':
-      return 'Made me understand something new';
-  }
-}
-
-const FEEDBACK_OPTIONS: LunaFeedbackRating[] = [
-  'helpful',
-  'new_understanding',
-  'not_helpful',
-  'incorrect',
-  'too_obvious',
-  'missing_context',
-];
-
-function messageDateLabel(value: string): string {
-  const date = new Date(value);
-  const today = new Date();
-  if (date.toDateString() === today.toDateString()) return 'Today';
-  return new Intl.DateTimeFormat(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: date.getFullYear() === today.getFullYear() ? undefined : 'numeric',
-  }).format(date);
-}
-
 function isCrisisShape(shape: string | undefined): LunaMessage['crisis_tier'] {
   if (
     shape === 'mental_decline' ||
@@ -133,6 +93,9 @@ function isCrisisShape(shape: string | undefined): LunaMessage['crisis_tier'] {
   }
   if (shape === 'loved_one_crisis') return 'loved_one';
   if (shape === 'crisis_followup_resolved') return 'crisis';
+  // Classifier outage on a risk-signal message: tag conservatively so the turn
+  // is redacted from summaries and the safety panel state holds.
+  if (shape === 'risk_classifier_unavailable') return 'crisis';
   return null;
 }
 
@@ -147,30 +110,6 @@ function mergeMessages(current: LunaMessage[], additions: LunaMessage[]): LunaMe
   const byId = new Map(current.map((message) => [message.id, message]));
   for (const message of additions) byId.set(message.id, message);
   return [...byId.values()].sort((a, b) => a.created_at.localeCompare(b.created_at));
-}
-
-function LunaSafetyPanel() {
-  return (
-    <div className="sticky top-0 z-10 rounded-xl border border-sage-300 bg-sand-50 p-4 shadow-sm">
-      <p className="text-sm font-medium text-sage-800">Immediate support stays within reach</p>
-      <p className="mt-1 text-sm leading-relaxed text-sage-600">
-        If you may act now, contact local emergency services. In the US, call or text{' '}
-        <a href="tel:988" className="font-medium text-sage-700 underline underline-offset-2">
-          988
-        </a>
-        . Outside the US,{' '}
-        <a
-          href="https://findahelpline.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-medium text-sage-700 underline underline-offset-2"
-        >
-          findahelpline.com
-        </a>{' '}
-        lists local support.
-      </p>
-    </div>
-  );
 }
 
 function LunaSessionProvider({
@@ -197,11 +136,10 @@ function LunaSessionProvider({
   const [storageError, setStorageError] = useState<string | null>(null);
   const [assistantErrorThreadId, setAssistantErrorThreadId] = useState<string | null>(null);
   const [memoryProposal, setMemoryProposal] = useState<string | null>(null);
-  const [editingMemoryId, setEditingMemoryId] = useState<string | null>(null);
-  const [editingMemoryText, setEditingMemoryText] = useState('');
   const [ratedMessages, setRatedMessages] = useState<Record<string, LunaFeedbackRating>>({});
   const messageEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const sessionActiveRef = useRef(true);
   const selectedThreadIdRef = useRef<string | null>(null);
   const openRequestRef = useRef(0);
@@ -272,6 +210,29 @@ function LunaSessionProvider({
     messageEndRef.current?.scrollIntoView({ block: 'end' });
   }, [open, view, messages.length, memoryProposal]);
 
+  useEffect(() => {
+    if (view !== 'chat') return;
+    const textarea = inputRef.current;
+    if (!textarea) return;
+    textarea.style.height = '0px';
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 128)}px`;
+  }, [input, view]);
+
+  const beginOpen = useCallback((requestId: number) => {
+    selectedThreadIdRef.current = null;
+    setOpen(true);
+    setLoadingThread(true);
+    setView('chat');
+    setStorageError(null);
+    setAssistantErrorThreadId(null);
+    clearError();
+    setMemoryProposal(null);
+    setThread(null);
+    setMessages([]);
+    setRatedMessages({});
+    return requestId;
+  }, [clearError]);
+
   const loadSelectedThread = useCallback(
     async (target: LunaThread, seedMessage: string, requestId: number) => {
       if (
@@ -339,11 +300,7 @@ function LunaSessionProvider({
   const openDashboardLuna = useCallback(
     async (startFresh = false) => {
       if (!userId) return;
-      const requestId = ++openRequestRef.current;
-      setOpen(true);
-      setLoadingThread(true);
-      setView('chat');
-      setStorageError(null);
+      const requestId = beginOpen(++openRequestRef.current);
       try {
         const target = await getOrCreateDashboardLunaThread(userId, startFresh);
         if (!sessionActiveRef.current || requestId !== openRequestRef.current) return;
@@ -356,19 +313,15 @@ function LunaSessionProvider({
         setLoadingThread(false);
       }
     },
-    [loadSelectedThread, refreshIndex, userId],
+    [beginOpen, loadSelectedThread, refreshIndex, userId],
   );
 
   const openLuna = useCallback(
     async (request: OpenLunaRequest) => {
       if (!userId) return;
-      const requestId = ++openRequestRef.current;
-      setOpen(true);
-      setLoadingThread(true);
-      setView('chat');
-      setStorageError(null);
+      const requestId = beginOpen(++openRequestRef.current);
       try {
-        const target = await createFocusedLunaThread(
+        const target = await getOrCreateFocusedLunaThread(
           userId,
           request.kind,
           request.title,
@@ -384,7 +337,7 @@ function LunaSessionProvider({
         setLoadingThread(false);
       }
     },
-    [loadSelectedThread, refreshIndex, userId],
+    [beginOpen, loadSelectedThread, refreshIndex, userId],
   );
 
   const maybeRefreshSummary = useCallback(
@@ -636,6 +589,8 @@ function LunaSessionProvider({
     clearError();
   };
 
+  useFocusTrap(open, panelRef, close);
+
   const openManualAction = (path: string) => {
     close();
     window.history.pushState({}, '', path);
@@ -670,7 +625,14 @@ function LunaSessionProvider({
             aria-label="Close Luna"
             onClick={close}
           />
-          <div className="relative z-10 flex h-full w-full flex-col overflow-hidden bg-sand-50 outline-none sm:h-[min(760px,92vh)] sm:max-w-2xl sm:rounded-2xl sm:border sm:border-sand-200 sm:shadow-2xl">
+          <div
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="luna-panel-title"
+            tabIndex={-1}
+            className="relative z-10 flex h-full w-full flex-col overflow-hidden bg-sand-50 outline-none sm:h-[min(760px,92vh)] sm:max-w-2xl sm:rounded-2xl sm:border sm:border-sand-200 sm:shadow-2xl"
+          >
             <header className="safe-area-modal-header flex shrink-0 items-center gap-3 border-b border-sand-200">
               {view !== 'chat' ? (
                 <button
@@ -687,7 +649,7 @@ function LunaSessionProvider({
                 </span>
               )}
               <div className="min-w-0 flex-1">
-                <h2 className="truncate font-display text-xl text-sage-800">
+                <h2 id="luna-panel-title" className="truncate font-display text-xl text-sage-800">
                   {view === 'history'
                     ? 'Recent conversations'
                     : view === 'memory'
@@ -729,393 +691,62 @@ function LunaSessionProvider({
             </header>
 
             {view === 'history' ? (
-              <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
-                <p className="mb-4 text-sm text-sage-500">
-                  Conversations stay separate. Reopening one restores only that conversation.
-                </p>
-                <div className="space-y-3">
-                  {threads.length === 0 && (
-                    <p className="rounded-xl border border-sand-200 p-4 text-sm text-sage-500">
-                      No saved conversations yet.
-                    </p>
-                  )}
-                  {threads.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center gap-3 rounded-xl border border-sand-200 bg-sand-50 p-3"
-                    >
-                      <button
-                        type="button"
-                        className="min-w-0 flex-1 text-left"
-                        onClick={() => void openExistingThread(item)}
-                      >
-                        <p className="truncate text-sm font-medium text-sage-800">{item.title}</p>
-                        <p className="mt-1 line-clamp-2 text-xs text-sage-500">
-                          {item.last_message_preview || 'No messages yet'}
-                        </p>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void handleDeleteThread(item)}
-                        className="rounded-lg p-2 text-sage-400 hover:bg-sage-50 hover:text-sage-600"
-                        aria-label={`Delete ${item.title}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <LunaHistoryView
+                threads={threads}
+                storageError={storageError}
+                onOpen={(item) => void openExistingThread(item)}
+                onDelete={(item) => void handleDeleteThread(item)}
+              />
             ) : view === 'memory' ? (
-              <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
-                <p className="text-sm leading-relaxed text-sage-600">
-                  I use only memories you explicitly saved or confirmed. You can change or remove
-                  any of them.
-                </p>
-                <div className="mt-4 space-y-3">
-                  {memories.length === 0 && (
-                    <p className="rounded-xl border border-sand-200 p-4 text-sm text-sage-500">
-                      I am not remembering any personal context yet.
-                    </p>
-                  )}
-                  {memories.map((memory) => (
-                    <div key={memory.id} className="rounded-xl border border-sand-200 p-3">
-                      {editingMemoryId === memory.id ? (
-                        <div className="space-y-2">
-                          <textarea
-                            value={editingMemoryText}
-                            onChange={(event) => setEditingMemoryText(event.target.value)}
-                            className="w-full rounded-lg border border-sand-200 bg-sand-50 p-3 text-base text-sage-800"
-                            rows={3}
-                          />
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              onClick={() => {
-                                if (!userId || !editingMemoryText.trim()) return;
-                                void updateLunaMemory(
-                                  userId,
-                                  memory.id,
-                                  editingMemoryText,
-                                ).then(() => {
-                                  setMemories((current) =>
-                                    current.map((item) =>
-                                      item.id === memory.id
-                                        ? { ...item, content: editingMemoryText.trim() }
-                                        : item,
-                                    ),
-                                  );
-                                  setEditingMemoryId(null);
-                                }).catch((editError: unknown) => {
-                                  if (editError instanceof MemorySafetyError) {
-                                    setStorageError(editError.message);
-                                  } else {
-                                    setStorageError(lunaPersistenceError(editError));
-                                  }
-                                  setEditingMemoryId(null);
-                                });
-                              }}
-                            >
-                              Save
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setEditingMemoryId(null)}
-                            >
-                              Cancel
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex items-start gap-3">
-                          <p className="min-w-0 flex-1 text-sm leading-relaxed text-sage-700">
-                            {memory.content}
-                          </p>
-                          <button
-                            type="button"
-                            className="text-xs text-sage-500 underline"
-                            onClick={() => {
-                              setEditingMemoryId(memory.id);
-                              setEditingMemoryText(memory.content);
-                            }}
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            className="rounded p-1 text-sage-400 hover:text-sage-600"
-                            aria-label="Delete memory"
-                            onClick={() => {
-                              if (!userId) return;
-                              void deleteLunaMemory(userId, memory.id).then(() =>
-                                setMemories((current) =>
-                                  current.filter((item) => item.id !== memory.id),
-                                ),
-                              );
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                {memories.length > 0 && (
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    className="mt-5"
-                    onClick={() => {
-                      if (!userId) return;
-                      void clearLunaMemories(userId).then(() => setMemories([]));
-                    }}
-                  >
-                    Clear all memories
-                  </Button>
-                )}
-              </div>
+              <LunaMemoryView
+                userId={userId}
+                memories={memories}
+                storageError={storageError}
+                setMemories={setMemories}
+                onError={setStorageError}
+              />
             ) : (
               <>
-                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6">
-                  {loadingThread && <p className="text-sm text-sage-500">Opening Luna…</p>}
-
-                  {showIntro && (
-                    <div className="rounded-xl border border-sage-200 bg-sage-50/50 p-4">
-                      <div className="flex items-center gap-2">
-                        <Moon className="h-5 w-5 text-sage-600" />
-                        <h3 className="font-display text-lg text-sage-800">Meet Luna</h3>
-                      </div>
-                      <p className="mt-3 text-sm leading-relaxed text-sage-700">
-                        I&apos;m TrackHer&apos;s AI companion. Talk about how you feel, or ask about
-                        your data. I can help organize and explain what you&apos;ve tracked, but I
-                        can&apos;t diagnose you or tell you how to change treatment.
-                      </p>
-                      <p className="mt-2 text-sm leading-relaxed text-sage-600">
-                        You don&apos;t need to phrase things perfectly. Nothing is added to your
-                        tracker until you review and confirm it.
-                      </p>
-                      <Button
-                        size="sm"
-                        className="mt-4"
-                        onClick={() => setUiFlag('luna_intro_seen')}
-                      >
-                        Got it
-                      </Button>
-                    </div>
-                  )}
-
-                  {Boolean(thread?.context_data?.label) && thread?.kind !== 'dashboard' && (
-                    <div className="mb-4 rounded-lg bg-sand-100 px-3 py-2 text-xs text-sage-600">
-                      Discussing: {String(thread?.context_data.label)}
-                    </div>
-                  )}
-
-                  {crisisState && crisisState.tier !== 'mental_decline' && <LunaSafetyPanel />}
-
-                  <div className="mt-4 space-y-3">
-                    {messages.map((item, index) => {
-                      const prior = messages[index - 1];
-                      const showDate =
-                        !prior ||
-                        messageDateLabel(prior.created_at) !== messageDateLabel(item.created_at);
-                      return (
-                        <div key={item.id}>
-                          {showDate && (
-                            <p className="my-4 text-center text-xs text-sage-400">
-                              {messageDateLabel(item.created_at)}
-                            </p>
-                          )}
-                          <div
-                            className={[
-                              'flex items-start gap-2',
-                              item.role === 'user' ? 'justify-end' : 'justify-start',
-                            ].join(' ')}
-                          >
-                            {item.role === 'assistant' && (
-                              <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sage-100 text-sage-600">
-                                <Moon className="h-4 w-4" aria-hidden />
-                              </span>
-                            )}
-                            <div className="max-w-[85%]">
-                              <div
-                                className={[
-                                  'whitespace-pre-line rounded-xl px-3 py-2 text-sm leading-relaxed',
-                                  item.role === 'user'
-                                    ? 'bg-sage-500 text-on-accent'
-                                    : 'bg-sand-100 text-sage-800',
-                                ].join(' ')}
-                              >
-                                {item.content}
-                              </div>
-                              {item.role === 'user' &&
-                                !item.crisis_tier &&
-                                !crisisState &&
-                                !(isSending && index === messages.length - 1) && (
-                                <>
-                                  <button
-                                    type="button"
-                                    className="mt-1 text-xs text-sage-400 underline-offset-2 hover:underline"
-                                    onClick={() => void remember(item.content)}
-                                  >
-                                    Remember this
-                                  </button>
-                                  {thread?.kind === 'checkin' && !crisisState && (
-                                    <LunaCaptureReview text={item.content} />
-                                  )}
-                                </>
-                              )}
-                              {item.role === 'assistant' && !item.crisis_tier && (
-                                <select
-                                  aria-label="Rate Luna's reply"
-                                  value={ratedMessages[item.id] ?? ''}
-                                  className="mt-1 bg-transparent text-xs text-sage-400"
-                                  onChange={(event) => {
-                                    const rating = event.target.value as LunaFeedbackRating;
-                                    if (!rating || !userId || !thread) return;
-                                    setRatedMessages((current) => ({
-                                      ...current,
-                                      [item.id]: rating,
-                                    }));
-                                    void saveLunaFeedback({
-                                      userId,
-                                      threadId: thread.id,
-                                      messageId: item.id,
-                                      rating,
-                                    });
-                                  }}
-                                >
-                                  <option value="">Rate this reply</option>
-                                  {FEEDBACK_OPTIONS.map((option) => (
-                                    <option key={option} value={option}>
-                                      {feedbackLabel(option)}
-                                    </option>
-                                  ))}
-                                </select>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                    {isSending && (
-                      <div className="flex items-center gap-2 text-sm text-sage-500">
-                        <Moon className="h-4 w-4" />
-                        Luna is thinking…
-                      </div>
-                    )}
-                    {memoryProposal && (
-                      <div className="rounded-xl border border-sage-200 bg-sage-50/40 p-3">
-                        <p className="text-sm text-sage-700">
-                          This seems useful for future conversations. Would you like me to remember
-                          it?
-                        </p>
-                        <p className="mt-2 text-sm font-medium text-sage-800">{memoryProposal}</p>
-                        <div className="mt-3 flex gap-2">
-                          <Button size="sm" onClick={() => void remember(memoryProposal)}>
-                            Remember it
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setMemoryProposal(null)}
-                          >
-                            Not now
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                    {!crisisState && thread && (
-                      <div className="flex flex-wrap gap-2 pt-2" aria-label="TrackHer actions">
-                        {(thread.kind === 'lab' || thread.kind === 'insight') && (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => openManualAction('/labs?action=import')}
-                              className="rounded-full border border-sage-200 bg-sage-50 px-3 py-1.5 text-xs font-medium text-sage-700 hover:bg-sage-100"
-                            >
-                              Import a lab report
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => openManualAction('/labs?action=add')}
-                              className="rounded-full border border-sage-200 bg-sage-50 px-3 py-1.5 text-xs font-medium text-sage-700 hover:bg-sage-100"
-                            >
-                              Add a lab result manually
-                            </button>
-                          </>
-                        )}
-                        {(thread.kind === 'medication' || thread.kind === 'insight') && (
-                          <button
-                            type="button"
-                            onClick={() => openManualAction('/medications?action=add')}
-                            className="rounded-full border border-sage-200 bg-sage-50 px-3 py-1.5 text-xs font-medium text-sage-700 hover:bg-sage-100"
-                          >
-                            Review a medication to add
-                          </button>
-                        )}
-                        {(thread.kind === 'checkin' || thread.kind === 'dashboard' || thread.kind === 'insight') && (
-                          <button
-                            type="button"
-                            onClick={() => openManualAction('/checkin?mode=quick')}
-                            className="rounded-full border border-sage-200 bg-sage-50 px-3 py-1.5 text-xs font-medium text-sage-700 hover:bg-sage-100"
-                          >
-                            Open Check In
-                          </button>
-                        )}
-                      </div>
-                    )}
-                    <div ref={messageEndRef} />
-                  </div>
-                </div>
-
-                <div className="shrink-0 border-t border-sand-200 bg-sand-50 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6">
-                  {(storageError || visibleAssistantError) && (
-                    <p className="mb-2 text-sm text-sage-600">
-                      {storageError ??
-                        (visibleAssistantError?.includes('OPENAI')
-                          ? 'Luna is not configured yet.'
-                          : visibleAssistantError)}
-                    </p>
-                  )}
-                  {thread?.kind === 'dashboard' && messages.length > 0 && (
-                    <button
-                      type="button"
-                      className="mb-2 inline-flex items-center gap-1 text-xs text-sage-500 underline-offset-2 hover:underline"
-                      onClick={() => void openDashboardLuna(true)}
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      Start fresh
-                    </button>
-                  )}
-                  <div className="flex items-end gap-2">
-                    <textarea
-                      ref={inputRef}
-                      rows={1}
-                      value={input}
-                      onChange={(event) => setInput(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter' && !event.shiftKey) {
-                          event.preventDefault();
-                          void send();
-                        }
-                      }}
-                      placeholder="Tell Luna what’s going on…"
-                      className="max-h-32 min-h-11 min-w-0 flex-1 resize-none rounded-xl border border-sand-200 bg-sand-50 px-3 py-2.5 text-base text-sage-800 placeholder:text-sage-400 focus:border-sage-400 focus:outline-none focus:ring-1 focus:ring-sage-400"
-                      disabled={!thread || loadingThread || isSending}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => void send()}
-                      disabled={!input.trim() || !thread || loadingThread || isSending}
-                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sage-500 text-on-accent disabled:cursor-not-allowed disabled:opacity-50"
-                      aria-label="Send to Luna"
-                    >
-                      <Send className="h-5 w-5" />
-                    </button>
-                  </div>
-                </div>
+                <LunaTranscript
+                  loading={loadingThread}
+                  showIntro={showIntro}
+                  thread={thread}
+                  messages={messages}
+                  crisisState={crisisState}
+                  sending={isSending}
+                  memoryProposal={memoryProposal}
+                  ratedMessages={ratedMessages}
+                  messageEndRef={messageEndRef}
+                  onIntroSeen={() => setUiFlag('luna_intro_seen')}
+                  onRemember={(content) => void remember(content)}
+                  onDismissMemory={() => setMemoryProposal(null)}
+                  onRate={(messageId, rating) => {
+                    if (!rating || !userId || !thread) return;
+                    setRatedMessages((current) => ({ ...current, [messageId]: rating }));
+                    void saveLunaFeedback({
+                      userId,
+                      threadId: thread.id,
+                      messageId,
+                      rating,
+                    }).catch((feedbackError: unknown) => {
+                      setStorageError(lunaPersistenceError(feedbackError));
+                    });
+                  }}
+                  onManualAction={openManualAction}
+                />
+                <LunaComposer
+                  inputRef={inputRef}
+                  input={input}
+                  setInput={setInput}
+                  thread={thread}
+                  messageCount={messages.length}
+                  loading={loadingThread}
+                  sending={isSending}
+                  storageError={storageError}
+                  assistantError={visibleAssistantError}
+                  onSend={() => void send()}
+                  onStartFresh={() => void openDashboardLuna(true)}
+                />
               </>
             )}
           </div>

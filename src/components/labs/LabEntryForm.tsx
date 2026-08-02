@@ -4,6 +4,7 @@ import { useLabEntryStore } from '../../stores/labEntryStore';
 import { useLabResults } from '../../hooks/useLabResults';
 import { useToast } from '../../stores/toastStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useTabActive } from '../layout/TabActiveContext';
 import { getBiomarkerByKey, getBiomarkersByCategory, LAB_BIOMARKERS } from '../../data/labRanges';
 import { LAB_CATEGORIES } from '../../utils/labHelpers';
 import { LabPanelSection } from './LabPanelSection';
@@ -33,6 +34,7 @@ export function LabEntryForm({ onClose, onSuccess }: LabEntryFormProps) {
     medicationAnswers,
     importWarnings,
     importPreviewDataUrl,
+    importReviewedAt,
     setValue,
     setDrawDate,
     setFasting,
@@ -102,7 +104,7 @@ export function LabEntryForm({ onClose, onSuccess }: LabEntryFormProps) {
               })),
             ),
             sourceType,
-            importReviewedAt: new Date().toISOString(),
+            importReviewedAt: importReviewedAt ?? new Date().toISOString(),
           }
         : {}),
     };
@@ -133,7 +135,8 @@ export function LabEntryForm({ onClose, onSuccess }: LabEntryFormProps) {
   };
 
   const dialogRef = useRef<HTMLDivElement>(null);
-  useFocusTrap(true, dialogRef, handleClose);
+  const tabActive = useTabActive();
+  useFocusTrap(tabActive, dialogRef, handleClose);
 
   return (
     <div

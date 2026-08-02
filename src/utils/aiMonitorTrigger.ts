@@ -46,7 +46,7 @@ export function triggerAiMonitorAfterMrsCheckin(input: AiFactsPacketInput): void
         // ignore
       }
     } catch (e) {
-      console.warn('AI monitor failed:', e);
+      if (import.meta.env.DEV) console.warn('AI monitor failed:', e);
     }
   })();
 }

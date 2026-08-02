@@ -25,9 +25,6 @@ export interface LunaSynthesisCandidate extends AiCandidate {
   id: string;
 }
 
-/** @deprecated Use LunaSynthesisCandidate. */
-export type AiNoticedCandidate = LunaSynthesisCandidate;
-
 interface ImproveCachePayload {
   candidates: AiCandidate[];
   insufficient?: { title: string; body: string } | null;
@@ -60,6 +57,8 @@ export function useAiInsightLayer(
     gapHint?: string | null;
   } | null>(null);
   const [isSynthesizing, setIsSynthesizing] = useState(false);
+  const [synthesisError, setSynthesisError] = useState<string | null>(null);
+  const [retryToken, setRetryToken] = useState(0);
   const [memoryHash, setMemoryHash] = useState<string | null>(null);
   const [stateOwnerUserId, setStateOwnerUserId] = useState<string | null>(null);
   const lastHashRef = useRef<string | null>(null);
@@ -76,6 +75,7 @@ export function useAiInsightLayer(
     setInsufficient(null);
     setMonitorNote(null);
     setIsSynthesizing(false);
+    setSynthesisError(null);
     setStateOwnerUserId(null);
     if (!userId) {
       setMemoryHash(null);
@@ -114,55 +114,61 @@ export function useAiInsightLayer(
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       void (async () => {
         setIsSynthesizing(true);
+        setSynthesisError(null);
 
-        const cached = await readAiInsightCache<ImproveCachePayload>(
-          userId,
-          'luna_synthesis',
-          synthesisHash,
-        );
-
-        if (cancelled) return;
-
-        if (cached) {
-          applyImprove(cached, userId);
-          lastHashRef.current = scopedHash;
-          setIsSynthesizing(false);
-          return;
-        }
-
-        // Skip network synthesis if this exact hash already ran this browser session
-        // (avoids re-hitting OpenAI on every Vite full reload).
         try {
-          if (sessionStorage.getItem(synthesisSessionKey) === synthesisHash) {
+          const cached = await readAiInsightCache<ImproveCachePayload>(
+            userId,
+            'luna_synthesis',
+            synthesisHash,
+          );
+
+          if (cancelled) return;
+
+          if (cached) {
+            applyImprove(cached, userId);
             lastHashRef.current = scopedHash;
-            setIsSynthesizing(false);
             return;
           }
-        } catch {
-          // ignore
-        }
 
-        const result = await invokeImproveInsights(facts, synthesisHash);
-        if (cancelled) return;
-
-        if (result) {
-          const payload: ImproveCachePayload = {
-            candidates: result.candidates,
-            insufficient: result.insufficient ?? null,
-            monitorNote: result.monitorNote ?? null,
-          };
-          applyImprove(payload, userId);
-          lastHashRef.current = scopedHash;
+          // Skip network synthesis if this exact hash already ran this browser session
+          // (avoids re-hitting OpenAI on every Vite full reload).
           try {
-            sessionStorage.setItem(synthesisSessionKey, synthesisHash);
+            if (sessionStorage.getItem(synthesisSessionKey) === synthesisHash) {
+              lastHashRef.current = scopedHash;
+              return;
+            }
           } catch {
             // ignore
           }
-          void writeAiInsightCache(userId, 'luna_synthesis', synthesisHash, payload, 7);
-        } else {
-          lastHashRef.current = scopedHash;
+
+          const result = await invokeImproveInsights(facts, synthesisHash);
+          if (cancelled) return;
+
+          if (result) {
+            const payload: ImproveCachePayload = {
+              candidates: result.candidates,
+              insufficient: result.insufficient ?? null,
+              monitorNote: result.monitorNote ?? null,
+            };
+            applyImprove(payload, userId);
+            lastHashRef.current = scopedHash;
+            try {
+              sessionStorage.setItem(synthesisSessionKey, synthesisHash);
+            } catch {
+              // ignore
+            }
+            void writeAiInsightCache(userId, 'luna_synthesis', synthesisHash, payload, 7);
+          } else {
+            setStateOwnerUserId(userId);
+            setSynthesisError(
+              'Luna could not finish connecting the dots just now. You can try again in a moment.',
+            );
+          }
+        } finally {
+          // Loading must never stick, even if a callee ever starts throwing.
+          if (!cancelled) setIsSynthesizing(false);
         }
-        setIsSynthesizing(false);
       })();
     }, 1500);
 
@@ -177,6 +183,7 @@ export function useAiInsightLayer(
       setCandidates(next);
       setInsufficient(payload.insufficient ?? null);
       setMonitorNote(payload.monitorNote ?? null);
+      setSynthesisError(null);
       setStateOwnerUserId(uid);
 
       // Log "shown" once per title per browser session.
@@ -196,7 +203,7 @@ export function useAiInsightLayer(
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [enabled, userId, synthesisHash, facts]);
+  }, [enabled, userId, synthesisHash, facts, retryToken]);
 
   const polishedInsights = insights;
 
@@ -208,11 +215,26 @@ export function useAiInsightLayer(
     });
   };
 
+  const retrySynthesis = () => {
+    lastHashRef.current = null;
+    setSynthesisError(null);
+    if (userId) {
+      try {
+        sessionStorage.removeItem(`${SYNTHESIS_SESSION_PREFIX}${userId}`);
+      } catch {
+        // ignore
+      }
+    }
+    setRetryToken((current) => current + 1);
+  };
+
   return {
     polishedInsights,
     candidates: enabled && stateOwnerUserId === userId ? candidates : [],
     insufficient: enabled && stateOwnerUserId === userId ? insufficient : null,
     monitorNote: enabled && stateOwnerUserId === userId ? monitorNote : null,
+    synthesisError: enabled && stateOwnerUserId === userId ? synthesisError : null,
+    retrySynthesis,
     isPolishing: isSynthesizing,
     isSynthesizing,
     facts,

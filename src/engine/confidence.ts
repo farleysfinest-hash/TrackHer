@@ -117,11 +117,6 @@ export function provisionalInsightConfidence(): InsightConfidence {
   };
 }
 
-/** @deprecated Use computeComparativeConfidence */
-export function computeInsightConfidence(inputs: ComparativeConfidenceInputs): InsightConfidence {
-  return computeComparativeConfidence(inputs);
-}
-
 export function formatConfidenceLine(confidence: InsightConfidence): string {
   if (confidence.level === 'provisional') {
     return 'Early days — based on your first few check-ins.';

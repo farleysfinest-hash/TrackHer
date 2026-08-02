@@ -41,8 +41,3 @@ export function storyChartWindow(
 
   return { start, end };
 }
-
-/** @deprecated Use storyChartWindow — same progressive domain. */
-export const earlyStoryChartWindow = storyChartWindow;
-export const EARLY_STORY_SPAN_DAYS = STORY_CHART_MIN_SPAN_DAYS;
-export const EARLY_STORY_PAD_BEFORE = STORY_CHART_PAD_BEFORE;

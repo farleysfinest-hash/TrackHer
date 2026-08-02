@@ -37,6 +37,8 @@ export function InsightsPage() {
     candidates,
     insufficient,
     monitorNote,
+    synthesisError,
+    retrySynthesis,
     isSynthesizing,
     dismissCandidate,
   } = useAiInsightLayer(
@@ -123,6 +125,8 @@ export function InsightsPage() {
           insufficient={insufficient}
           monitorNote={monitorNote}
           isLoading={isSynthesizing}
+          synthesisError={synthesisError}
+          onRetry={retrySynthesis}
           onDismiss={dismissCandidate}
           onAskInsufficient={() =>
             void openLuna({

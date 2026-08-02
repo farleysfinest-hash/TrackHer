@@ -197,6 +197,7 @@ export type CrisisTurnDecision =
   | { action: 'crisis'; tier: StoredCrisisTier }
   | { action: 'resolve' }
   | { action: 'classifier_unavailable' }
+  | { action: 'risk_watch' }
   | { action: 'normal' };
 
 /**
@@ -237,6 +238,17 @@ export function decideCrisisTurn(input: {
 
   if (currentMessageHasCrisisSignal(input.message)) {
     return { action: 'classifier_unavailable' };
+  }
+
+  // Middle tier: risk-adjacent trip words fired but the classifier confidently
+  // judged the message non-crisis. Proceed with ordinary chat, carrying the
+  // signal forward so the reply can acknowledge it instead of discarding it.
+  if (
+    input.classification?.status === 'ok' &&
+    input.classification.tier === null &&
+    looksRiskAdjacent(input.message)
+  ) {
+    return { action: 'risk_watch' };
   }
 
   return { action: 'normal' };

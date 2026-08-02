@@ -146,9 +146,11 @@ export function LabReportImportDialog({
           ref={inputRef}
           type="file"
           accept="image/jpeg,image/png,image/webp"
-          capture="environment"
           className="sr-only"
-          onChange={(event) => chooseFile(event.target.files?.[0])}
+          onChange={(event) => {
+            chooseFile(event.target.files?.[0]);
+            event.target.value = '';
+          }}
         />
 
         {previewUrl ? (

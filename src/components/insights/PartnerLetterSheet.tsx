@@ -19,6 +19,7 @@ import {
 import { useAuthStore } from '../../stores/authStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useVisualViewportBounds } from '../../hooks/useKeyboardBottomInset';
+import { CompanionRiskNotice } from './CompanionRiskNotice';
 
 interface PartnerLetterSheetProps {
   context: AiFactsPacketInput;
@@ -30,6 +31,7 @@ export function PartnerLetterSheet({ context, open, onClose }: PartnerLetterShee
   const userId = useAuthStore((s) => s.user?.id);
   const [freeText, setFreeText] = useState('');
   const [letter, setLetter] = useState<string | null>(null);
+  const [riskReply, setRiskReply] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -43,6 +45,7 @@ export function PartnerLetterSheet({ context, open, onClose }: PartnerLetterShee
   useEffect(() => {
     if (!open) {
       setLetter(null);
+      setRiskReply(null);
       setError(null);
       setFreeText('');
       setCopied(false);
@@ -55,6 +58,7 @@ export function PartnerLetterSheet({ context, open, onClose }: PartnerLetterShee
     if (!userId) return;
     setLoading(true);
     setError(null);
+    setRiskReply(null);
     const cacheHash = partnerLetterCacheKey(factsHash, freeText);
     try {
       const cached = await readAiInsightCache<{ letter?: string }>(
@@ -69,7 +73,15 @@ export function PartnerLetterSheet({ context, open, onClose }: PartnerLetterShee
         return;
       }
       const result = await invokePartnerLetter(facts, freeText.trim() || undefined);
-      const clamped = clampPartnerLetter(result);
+      if (result?.riskReply) {
+        // Safety screening fired on her notes: show the scripted support reply
+        // instead of a letter, and never cache it.
+        setLetter(null);
+        setRiskReply(result.riskReply);
+        setLoading(false);
+        return;
+      }
+      const clamped = clampPartnerLetter(result?.letter ?? null);
       if (!clamped) {
         setError('Could not draft a letter right now.');
         setLoading(false);
@@ -169,6 +181,7 @@ export function PartnerLetterSheet({ context, open, onClose }: PartnerLetterShee
             Draft letter
           </Button>
           {error && <p className="text-sm text-sage-600">{error}</p>}
+          {riskReply && <CompanionRiskNotice reply={riskReply} />}
           {letter && (
             <div className="space-y-3">
               <div className="max-h-64 overflow-y-auto rounded-lg border border-sand-200 bg-white p-4 text-sm leading-relaxed text-sage-800 whitespace-pre-wrap">

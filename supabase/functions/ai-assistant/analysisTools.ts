@@ -241,6 +241,17 @@ function correlationIsStable(pairs: Array<[number, number]>, result: number | nu
   });
 }
 
+const MRS_SCORE_METRICS = new Set<AnalysisMetric>([
+  'total_score',
+  'somatic_score',
+  'psychological_score',
+  'urogenital_score',
+]);
+
+function isCompletedMrsRow(row: AnalysisCheckin): boolean {
+  return row.mrs_complete === true;
+}
+
 function metricValues(
   rows: AnalysisCheckin[],
   metric: AnalysisMetric,
@@ -251,7 +262,8 @@ function metricValues(
     .filter(
       (row) =>
         (!startDate || row.checkin_date >= startDate) &&
-        (!endDate || row.checkin_date <= endDate),
+        (!endDate || row.checkin_date <= endDate) &&
+        (!MRS_SCORE_METRICS.has(metric) || isCompletedMrsRow(row)),
     )
     .map((row) => ({ date: row.checkin_date, value: numeric(row, metric) }))
     .filter((row): row is { date: string; value: number } => row.value !== null)
@@ -353,6 +365,7 @@ export function compareMrsDomains(input: {
         (row.checkin_date >= input.firstStart && row.checkin_date <= input.firstEnd) ||
         (row.checkin_date >= input.secondStart && row.checkin_date <= input.secondEnd);
       return inWindow &&
+        isCompletedMrsRow(row) &&
         numeric(row, 'total_score') !== null &&
         numeric(row, 'somatic_score') !== null &&
         numeric(row, 'psychological_score') !== null &&
@@ -365,9 +378,14 @@ export function compareMrsDomains(input: {
   const second = complete.filter(
     (row) => row.checkin_date >= input.secondStart && row.checkin_date <= input.secondEnd,
   );
+  const valuesFor = (rows: AnalysisCheckin[], metric: AnalysisMetric) =>
+    rows
+      .map((row) => numeric(row, metric))
+      .filter((value): value is number => value !== null)
+      .map((value) => ({ value }));
   const deltaFor = (metric: AnalysisMetric): number | null => {
-    const firstAverage = rawMean(first.map((row) => numeric(row, metric)).filter((value): value is number => value !== null));
-    const secondAverage = rawMean(second.map((row) => numeric(row, metric)).filter((value): value is number => value !== null));
+    const firstAverage = rawMean(valuesFor(first, metric).map((row) => row.value));
+    const secondAverage = rawMean(valuesFor(second, metric).map((row) => row.value));
     return firstAverage === null || secondAverage === null
       ? null
       : Math.round((secondAverage - firstAverage) * 100) / 100;
@@ -387,6 +405,24 @@ export function compareMrsDomains(input: {
     totalDelta !== null && Math.abs(totalDelta) < 2 && improving.length > 0 && worsening.length > 0;
   const hasMinimum = first.length >= 2 && second.length >= 2;
   const repeated = first.length >= 4 && second.length >= 4;
+  const metricForDomain = (name: string): AnalysisMetric =>
+    name === 'somatic'
+      ? 'somatic_score'
+      : name === 'psychological'
+        ? 'psychological_score'
+        : 'urogenital_score';
+  const stableWithoutOutlier = hiddenOpposition
+    ? [...improving, ...worsening].every(([name, delta]) => {
+        if (delta === null) return false;
+        const metric = metricForDomain(name);
+        return periodDifferenceIsStable(
+          valuesFor(first, metric),
+          valuesFor(second, metric),
+          delta,
+          1,
+        );
+      })
+    : null;
   const evidenceClass: AnalysisEvidenceClass =
     first.length === 0 || second.length === 0
       ? 'suppressed'
@@ -394,9 +430,11 @@ export function compareMrsDomains(input: {
         ? 'worth_watching'
         : !hiddenOpposition
           ? 'suppressed'
-          : repeated
+          : repeated && stableWithoutOutlier
             ? 'repeated_finding'
-            : 'early_signal';
+            : hiddenOpposition
+              ? 'early_signal'
+              : 'suppressed';
   const summary = hiddenOpposition
     ? `The total MRS changed ${totalDelta}, while ${improving.map(([name]) => name).join(' and ')} improved and ${worsening.map(([name]) => name).join(' and ')} worsened.`
     : 'The completed MRS records do not show a stable total concealing opposing domain changes.';
@@ -409,7 +447,7 @@ export function compareMrsDomains(input: {
       ? Math.max(...domainDeltas.map(([, delta]) => Math.abs(delta ?? 0)))
       : null,
     minimumRequired: 4,
-    stableWithoutOutlier: repeated ? true : null,
+    stableWithoutOutlier,
     repeatCount: Math.min(first.length, second.length),
     identity: identity(
       {
@@ -1010,7 +1048,7 @@ export function identifyContradictoryEvidence(input: {
 }): AnalysisToolResult {
   const comparable = input.results.filter(
     (result) =>
-      result.sufficient &&
+      isMeaningfulAnalysisResult(result) &&
       (typeof result.values.delta === 'number' ||
         typeof result.values.correlation === 'number'),
   );

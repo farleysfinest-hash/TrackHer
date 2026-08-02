@@ -58,6 +58,25 @@ import {
   type StoredCrisisState,
   type StoredCrisisTier,
 } from './crisisController.ts';
+import { BoundedTtlCache } from './boundedTtlCache.ts';
+import {
+  corsHeadersForOrigin,
+  isAllowedRequestOrigin,
+  withCors,
+} from './httpSecurity.ts';
+import {
+  crisisContinuityUnavailablePayload,
+  crisisReadFailureDisposition,
+  showSafetyPanelForActiveTier,
+} from './crisisContinuityPolicy.ts';
+import {
+  AI_RATE_LIMIT_CAPACITY,
+  AI_RATE_LIMIT_HIGH_CEILING_CAPACITY,
+  AI_RATE_LIMIT_WINDOW_MS,
+  aiActionCost,
+  parseSharedRateLimitDecision,
+  type SharedRateLimitDecision,
+} from './rateLimitPolicy.ts';
 
 const MODEL = 'gpt-5.6-luna';
 const MAX_OUTPUT_TOKENS = 800;
@@ -71,13 +90,16 @@ const AI_FORBIDDEN_CATEGORIES = new Set([
 ]);
 
 /** Soft reply when the risk-tier backstop cannot run (API error / unusable label). */
+// Hard input bounds enforced server-side regardless of client behavior.
+const CHAT_MESSAGE_MAX_CHARS = 4000;
+const HISTORY_TURN_MAX_CHARS = 2000;
+
 const RISK_CLASSIFIER_UNAVAILABLE_REPLY =
   "I'm having a brief glitch checking how you're doing, so I won't keep chatting on autopilot right now. If you're in a hard place, please reach out — call or text 988 in the US, or findahelpline.com for a local line. Try me again in a moment when you're ready.";
 
-/** Per-isolate sliding window — enough headroom for polish + chat + cards, blocks abuse. */
-const AI_RATE_LIMIT_MAX = 45;
-const AI_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
-const aiRateBuckets = new Map<string, number[]>();
+/** Defense-in-depth burst backstop in addition to the durable database bucket. */
+const AI_RATE_BUCKET_MAX_USERS = 1_000;
+const aiRateBuckets = new Map<string, Array<{ at: number; cost: number }>>();
 
 const COMPANION_BASE = `You are Luna, TrackHer's AI companion for a woman tracking menopause / HRT symptoms. Sound like a warm, medically knowledgeable woman in her family: attentive, practical, unflustered, and willing to sit with the details. Soft, feminine, clear, and never fluffy. Never dodge a direct question with a wall of generic empathy.
 
@@ -152,10 +174,19 @@ type RequestBody = {
 };
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get('Origin');
+  const configuredOrigins = Deno.env.get('TRACKHER_ALLOWED_ORIGINS');
+  if (!isAllowedRequestOrigin(origin, configuredOrigins)) {
+    return json({ error: 'Origin not allowed' }, 403);
+  }
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders() });
+    return new Response(null, { headers: corsHeadersForOrigin(origin) });
   }
 
+  return withCors(await handleRequest(req), origin);
+});
+
+async function handleRequest(req: Request): Promise<Response> {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -184,32 +215,90 @@ Deno.serve(async (req) => {
       return json({ error: 'Unauthorized' }, 401);
     }
 
-    if (!allowAiRequest(user.id)) {
+    const body = (await req.json()) as RequestBody;
+    const rawAction = typeof body.action === 'string' ? body.action : 'chat';
+    const actionCost = aiActionCost(rawAction);
+    if (actionCost === null) {
+      return json({ error: 'Unsupported action' }, 400);
+    }
+    const action = rawAction as AiAction;
+
+    const crisisRead = await readActiveCrisisState(userClient, user.id);
+    if (!crisisRead.ok) {
+      console.error('Could not verify Luna crisis continuity:', crisisRead.errorMessage);
+      const disposition = crisisReadFailureDisposition(
+        action,
+        Boolean(body.message?.trim()),
+        Boolean(body.message && currentMessageHasCrisisSignal(body.message)),
+      );
+      if (disposition === 'proceed_crisis') {
+        // Continuity is unverified, but the current message itself signals danger.
+        // Classify and respond without relying on the failed DB read.
+        return await handleChat(openaiKey, user.id, body, userClient, null);
+      }
+      if (disposition === 'safe_chat_fallback') {
+        return crisisContinuityUnavailable();
+      }
       return json(
-        { error: 'Too many AI requests. Please wait a few minutes and try again.' },
-        429,
+        {
+          error:
+            'Luna cannot safely verify crisis continuity right now, so analysis and capture are paused. Try again shortly.',
+        },
+        503,
+      );
+    }
+    const activeCrisis = crisisRead.state;
+
+    if (action !== 'chat' && action !== 'summarize_thread' && activeCrisis) {
+      return json(
+        {
+          error:
+            'Luna is staying with the active safety conversation, so other AI analysis and capture are paused.',
+        },
+        409,
       );
     }
 
-    const body = (await req.json()) as RequestBody;
-    const action: AiAction = body.action ?? 'chat';
+    const hasCrisisSignal = Boolean(
+      body.message && currentMessageHasCrisisSignal(body.message),
+    );
+    // Required safety responses must never 429. Active crisis continuity and
+    // current-message crisis signals bypass rate limiting entirely.
+    const safetyExemptChat =
+      action === 'chat' && Boolean(activeCrisis || hasCrisisSignal);
+    const riskAdjacentOnly =
+      action === 'chat' &&
+      !safetyExemptChat &&
+      Boolean(body.message && looksRiskAdjacent(body.message));
 
-    if (action !== 'chat' && action !== 'summarize_thread') {
-      const activeCrisis = await readActiveCrisisState(userClient, user.id);
-      if (activeCrisis) {
+    if (!safetyExemptChat) {
+      const rateLimit = await checkAiRateLimit(userClient, user.id, action, {
+        highCeiling: riskAdjacentOnly,
+      });
+      if (!rateLimit.ok) {
+        console.error('Could not verify Luna AI rate limit:', rateLimit.errorMessage);
         return json(
           {
             error:
-              'Luna is staying with the active safety conversation, so other AI analysis and capture are paused.',
+              'Luna cannot safely verify request capacity right now. Please try again shortly.',
           },
-          409,
+          503,
+        );
+      }
+      if (!rateLimit.decision.allowed) {
+        return json(
+          {
+            error: 'Too many AI requests. Please wait a few minutes and try again.',
+            retryAfterSeconds: rateLimit.decision.retryAfterSeconds,
+          },
+          429,
         );
       }
     }
 
     switch (action) {
       case 'chat':
-        return await handleChat(openaiKey, user.id, body, userClient);
+        return await handleChat(openaiKey, user.id, body, userClient, activeCrisis);
       case 'explain_insight':
         return await handleExplain(openaiKey, user.id, body);
       case 'improve_insights':
@@ -243,21 +332,22 @@ Deno.serve(async (req) => {
     console.error(e);
     return json({ error: 'Unexpected server error' }, 500);
   }
-});
+}
 
 async function handleChat(
   openaiKey: string,
   userId: string,
   body: RequestBody,
   userClient: UserClient,
+  activeCrisis: StoredCrisisState | null,
 ) {
-  const message = body.message?.trim();
+  // Bound spend: the UI caps input, but the Edge must not trust the client.
+  const message = body.message?.trim().slice(0, CHAT_MESSAGE_MAX_CHARS);
   if (!message) return json({ error: 'message is required' }, 400);
 
   const history = sanitizeHistory(body.history);
   const facts =
     body.facts && typeof body.facts === 'object' ? (body.facts as FactsLite) : {};
-  const activeCrisis = await readActiveCrisisState(userClient, userId);
   const directTier = deterministicCurrentCrisisTier(message);
   const resolutionCandidate = hasExplicitCrisisResolution(message);
 
@@ -338,16 +428,23 @@ she remains in danger.`,
       reply: reply.text,
       model: MODEL,
       shape: 'crisis_followup_resolved',
-      userId,
     });
   }
 
   if (crisisDecision.action === 'classifier_unavailable') {
+    // The classifier is down while the message carries a risk signal. Fail closed:
+    // mount the safety panel and tag the turn client-side (which also keeps it out
+    // of thread summaries) without claiming durable crisis state we never verified.
     return json({
       reply: RISK_CLASSIFIER_UNAVAILABLE_REPLY,
       model: 'trackher-companion-script',
       shape: 'risk_classifier_unavailable',
-      userId,
+      crisis: {
+        tier: 'crisis',
+        responseCount: 1,
+        showSafetyPanel: showSafetyPanelForActiveTier(),
+        expiresAt: new Date(Date.now() + CRISIS_WINDOW_MS).toISOString(),
+      },
     });
   }
 
@@ -356,12 +453,15 @@ she remains in danger.`,
       reply: finalScript.reply,
       model: 'trackher-companion-script',
       shape: finalScript.shape,
-      userId,
     });
   }
 
   const factsJson = requireFacts(body.facts);
   if (typeof factsJson !== 'string') return factsJson;
+
+  // Risk-adjacent trip words fired but the classifier judged the message
+  // non-crisis: keep the signal in play so the model weighs it in context.
+  const riskWatch = crisisDecision.action === 'risk_watch';
 
   const safeMemories = (body.memories ?? [])
     .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
@@ -398,6 +498,15 @@ diagnosis, or emergency clearance.`,
             },
           ]
         : []),
+      ...(riskWatch
+        ? [
+            {
+              role: 'system' as const,
+              content:
+                'RISK_WATCH: Her message contains distress-adjacent language that the safety classifier judged non-crisis in context. If, reading the conversation, she seems emotionally low, acknowledge that warmly in your first sentence and mention that support is available (call or text 988 in the US) if things get heavier. If the language is clearly figurative or describes symptoms, respond normally and do not raise crisis resources.',
+            },
+          ]
+        : []),
       ...history,
       {
         role: 'user',
@@ -412,7 +521,7 @@ diagnosis, or emergency clearance.`,
   return json({
     reply: reply.text,
     model: MODEL,
-    userId,
+    ...(riskWatch ? { shape: 'risk_watch' } : {}),
     toolEvidence: reply.toolEvidence,
     memoryProposal: proposeConsentGatedMemory(message),
   });
@@ -420,28 +529,33 @@ diagnosis, or emergency clearance.`,
 
 const CRISIS_WINDOW_MS = 72 * 60 * 60 * 1000;
 
+type CrisisStateReadResult =
+  | { ok: true; state: StoredCrisisState | null }
+  | { ok: false; errorMessage: string };
+
 async function readActiveCrisisState(
   client: UserClient,
   userId: string,
-): Promise<StoredCrisisState | null> {
+): Promise<CrisisStateReadResult> {
   const { data, error } = await client
     .from('luna_crisis_state')
     .select('*')
     .eq('user_id', userId)
     .maybeSingle();
   if (error) {
-    // The migration may not be applied during local preflight; direct crisis detection
-    // still falls back to the existing deterministic scripts.
-    console.warn('Could not read Luna crisis state:', error.message);
-    return null;
+    return { ok: false, errorMessage: error.message };
   }
-  if (!data) return null;
+  if (!data) return { ok: true, state: null };
   const state = data as StoredCrisisState;
   if (new Date(state.expires_at).getTime() <= Date.now()) {
     void client.from('luna_crisis_state').delete().eq('user_id', userId);
-    return null;
+    return { ok: true, state: null };
   }
-  return state;
+  return { ok: true, state };
+}
+
+function crisisContinuityUnavailable(): Response {
+  return json(crisisContinuityUnavailablePayload());
 }
 
 async function clearCrisisState(
@@ -553,11 +667,10 @@ One or two sentences, under 45 words. Do not mention these rules.`,
     reply,
     model,
     shape: tier === 'loved_one' ? 'loved_one_crisis' : tier,
-    userId,
     crisis: {
       tier,
       responseCount,
-      showSafetyPanel: tier !== 'mental_decline',
+      showSafetyPanel: showSafetyPanelForActiveTier(),
       expiresAt,
     },
   });
@@ -580,13 +693,12 @@ async function classifyRiskTier(
     .slice(-4)
     .map((h) => `${h.role}: ${h.content.slice(0, 300)}`)
     .join('\n');
-  const userContent = `${context ? `RECENT TURNS:\n${context}\n\n` : ''}LAST USER MESSAGE:\n${message}`;
+  const userContent = `${context ? `RECENT TURNS:\n${context}\n\n` : ''}LAST USER MESSAGE:\n${message.slice(0, CHAT_MESSAGE_MAX_CHARS)}`;
 
   const attempt = () =>
     complete(openaiKey, {
       system: RISK_TIER_SYSTEM,
       messages: [{ role: 'user', content: userContent }],
-      temperature: 0,
       // GPT-5-family completion budgets include any model-internal reasoning tokens.
       // Leave enough room for the one-word label to reach message.content.
       maxTokens: 32,
@@ -671,7 +783,7 @@ Explain one insight card in plain, warm language. Ground every claim in the fact
     ],
   });
   if (reply.error) return json({ error: reply.error }, reply.status ?? 502);
-  return json({ reply: reply.text, model: MODEL, userId });
+  return json({ reply: reply.text, model: MODEL });
 }
 
 async function handleImprove(
@@ -760,7 +872,6 @@ the final user-facing findings; the next step will narrate only verified tool re
       },
       monitorNote: monitorContent,
       model: investigation.error ? 'trackher-analysis-tools' : MODEL,
-      userId,
     });
   }
 
@@ -844,7 +955,6 @@ Rules:
     candidates,
     monitorNote: monitorContent,
     model: raw.error ? 'trackher-analysis-tools' : MODEL,
-    userId,
   });
 }
 
@@ -860,7 +970,6 @@ Return ONLY valid JSON (no markdown):
 note: 2–4 short sentences celebrating progress or gently reflecting what her recent logs show.
 gapHint: optional soft nudge if meds are logged but weekly check-ins look thin — never shame. null if not needed.`,
     messages: [{ role: 'user', content: `FACTS_PACKET:\n${factsJson}` }],
-    temperature: 0.4,
     maxTokens: 400,
   });
   if (raw.error) return json({ error: raw.error }, raw.status ?? 502);
@@ -875,7 +984,7 @@ gapHint: optional soft nudge if meds are logged but weekly check-ins look thin �
       ? parsed.gapHint.trim().slice(0, 400)
       : null;
 
-  return json({ note, gapHint, model: MODEL, userId });
+  return json({ note, gapHint, model: MODEL });
 }
 
 async function handleNarrative(openaiKey: string, userId: string, body: RequestBody) {
@@ -895,11 +1004,10 @@ Write a 2–4 paragraph plain-language story of her recent tracking for a clinic
         content: `FACTS_PACKET:\n${factsJson}\n\nDraft the companion narrative for the provider report.`,
       },
     ],
-    temperature: 0.35,
     maxTokens: 700,
   });
   if (reply.error) return json({ error: reply.error }, reply.status ?? 502);
-  return json({ narrative: reply.text, model: MODEL, userId });
+  return json({ narrative: reply.text, model: MODEL });
 }
 
 async function handleVisitPrep(openaiKey: string, userId: string, body: RequestBody) {
@@ -929,7 +1037,6 @@ Never diagnose. Never prescribe.`,
         content: `FACTS_PACKET:\n${factsJson}${historyBlock}\n\nDraft the visit prep pack.`,
       },
     ],
-    temperature: 0.35,
     maxTokens: 700,
   });
   if (raw.error) return json({ error: raw.error }, raw.status ?? 502);
@@ -959,7 +1066,7 @@ Never diagnose. Never prescribe.`,
       ? parsed.watchSince.trim().slice(0, 240)
       : null;
 
-  return json({ summary, symptomsToRaise, questions, watchSince, model: MODEL, userId });
+  return json({ summary, symptomsToRaise, questions, watchSince, model: MODEL });
 }
 
 async function handleTranslate(openaiKey: string, userId: string, body: RequestBody) {
@@ -967,6 +1074,16 @@ async function handleTranslate(openaiKey: string, userId: string, body: RequestB
   if (!freeText) return json({ error: 'freeText is required' }, 400);
   const catalog = Array.isArray(body.catalog) ? body.catalog.slice(0, 80) : [];
   if (catalog.length === 0) return json({ error: 'catalog is required' }, 400);
+
+  const risk = await screenFreeTextRisk(openaiKey, freeText);
+  if (risk) {
+    return json({
+      suggestions: [],
+      risk: risk.tier,
+      riskReply: risk.reply,
+      model: risk.model,
+    });
+  }
 
   const catalogJson = JSON.stringify(
     catalog.map((c) => ({
@@ -991,7 +1108,6 @@ Map her everyday phrase to 1–5 catalog entries. key MUST be copied exactly fro
         content: `PHRASE:\n${freeText}\n\nCATALOG:\n${catalogJson}`,
       },
     ],
-    temperature: 0.2,
     maxTokens: 400,
   });
   if (raw.error) return json({ error: raw.error }, raw.status ?? 502);
@@ -1013,7 +1129,7 @@ Map her everyday phrase to 1–5 catalog entries. key MUST be copied exactly fro
         }))
     : [];
 
-  return json({ suggestions, model: MODEL, userId });
+  return json({ suggestions, model: MODEL });
 }
 
 const LAB_REPORT_BIOMARKER_KEYS = [
@@ -1087,7 +1203,7 @@ Rules:
   if (!parsed || !Array.isArray(parsed.values) || parsed.values.length === 0) {
     return json({ error: 'No laboratory values could be read from that image.' }, 422);
   }
-  return json({ ...parsed, sourceType: 'photo', userId, model: MODEL });
+  return json({ ...parsed, sourceType: 'photo', model: MODEL });
 }
 
 async function handleJournalExtract(openaiKey: string, userId: string, body: RequestBody) {
@@ -1103,7 +1219,6 @@ async function handleJournalExtract(openaiKey: string, userId: string, body: Req
       risk: risk.tier,
       riskReply: risk.reply,
       model: risk.model,
-      userId,
     });
   }
 
@@ -1142,7 +1257,6 @@ Extract what she might want to log from free text.
         content: `JOURNAL:\n${freeText.slice(0, 4000)}\n\nCATALOG:\n${catalogJson}\n\nMEDICATIONS:\n${JSON.stringify(medications)}`,
       },
     ],
-    temperature: 0.2,
     maxTokens: 500,
   });
   if (raw.error) return json({ error: raw.error }, raw.status ?? 502);
@@ -1205,7 +1319,6 @@ Extract what she might want to log from free text.
     risk: null,
     riskReply: null,
     model: MODEL,
-    userId,
   });
 }
 
@@ -1236,7 +1349,6 @@ Look at the dose change identified in FOCUS_CHANGE when present; otherwise recen
 - watchFor: up to 4 plain observations to log. NEVER thresholds, dose advice, or diagnoses.
 If there is no recent dose change, return {"note":"","watchFor":[]}.`,
     messages: [{ role: 'user', content: `FACTS_PACKET:\n${factsJson}${pinBlock}` }],
-    temperature: 0.35,
     maxTokens: 400,
   });
   if (raw.error) return json({ error: raw.error }, raw.status ?? 502);
@@ -1247,7 +1359,7 @@ If there is no recent dose change, return {"note":"","watchFor":[]}.`,
       ? parsed.note.trim().slice(0, 500)
       : '';
   if (!note) {
-    return json({ note: '', watchFor: [], model: MODEL, userId });
+    return json({ note: '', watchFor: [], model: MODEL });
   }
   const watchFor = Array.isArray(parsed?.watchFor)
     ? parsed.watchFor
@@ -1256,7 +1368,7 @@ If there is no recent dose change, return {"note":"","watchFor":[]}.`,
         .slice(0, 4)
     : [];
 
-  return json({ note, watchFor, model: MODEL, userId });
+  return json({ note, watchFor, model: MODEL });
 }
 
 async function handleVisitDebrief(openaiKey: string, userId: string, body: RequestBody) {
@@ -1271,7 +1383,6 @@ async function handleVisitDebrief(openaiKey: string, userId: string, body: Reque
       risk: risk.tier,
       riskReply: risk.reply,
       model: risk.model,
-      userId,
     });
   }
 
@@ -1295,7 +1406,6 @@ Never invent follow-ups she did not mention. Never dose advice.`,
         content: `WHAT_SHE_PASTED:\n${freeText.slice(0, 4000)}\n\nFACTS_PACKET:\n${factsJson}`,
       },
     ],
-    temperature: 0.3,
     maxTokens: 600,
   });
   if (raw.error) return json({ error: raw.error }, raw.status ?? 502);
@@ -1333,7 +1443,6 @@ Never invent follow-ups she did not mention. Never dose advice.`,
     risk: null,
     riskReply: null,
     model: MODEL,
-    userId,
   });
 }
 
@@ -1348,7 +1457,7 @@ async function handleThreadSummary(openaiKey: string, userId: string, body: Requ
         : { role: message.role, content: message.content.slice(0, 2000) },
     )
     .slice(-24);
-  if (messages.length === 0) return json({ summary: body.existingSummary ?? '', userId });
+  if (messages.length === 0) return json({ summary: body.existingSummary ?? '' });
 
   const reply = await complete(openaiKey, {
     system: `Summarize an older Luna conversation for continuity.
@@ -1371,7 +1480,7 @@ that a supportive safety conversation occurred. Return plain text under 700 word
     maxTokens: 900,
   });
   if (reply.error) return json({ error: reply.error }, reply.status ?? 502);
-  return json({ summary: reply.text.trim().slice(0, 5000), model: MODEL, userId });
+  return json({ summary: reply.text.trim().slice(0, 5000), model: MODEL });
 }
 
 async function handleStageExplain(openaiKey: string, userId: string, body: RequestBody) {
@@ -1389,18 +1498,29 @@ Never re-stage her. Never contradict the profile stage. No diagnoses or dose adv
         content: `FACTS_PACKET:\n${factsJson}\n\nExplain her stage warmly.`,
       },
     ],
-    temperature: 0.4,
     maxTokens: 400,
   });
   if (reply.error) return json({ error: reply.error }, reply.status ?? 502);
   const text = reply.text.trim().slice(0, 1200);
-  return json({ text, model: MODEL, userId });
+  return json({ text, model: MODEL });
 }
 
 async function handlePartnerLetter(openaiKey: string, userId: string, body: RequestBody) {
   const factsJson = requireFacts(body.facts);
   if (typeof factsJson !== 'string') return factsJson;
   const freeText = typeof body.freeText === 'string' ? body.freeText.trim().slice(0, 2000) : '';
+
+  if (freeText) {
+    const risk = await screenFreeTextRisk(openaiKey, freeText);
+    if (risk) {
+      return json({
+        letter: '',
+        risk: risk.tier,
+        riskReply: risk.reply,
+        model: risk.model,
+      });
+    }
+  }
 
   const reply = await complete(openaiKey, {
     system: `${COMPANION_BASE}
@@ -1419,12 +1539,11 @@ Return plain text only.`,
         }\n\nDraft the partner letter.`,
       },
     ],
-    temperature: 0.4,
     maxTokens: 900,
   });
   if (reply.error) return json({ error: reply.error }, reply.status ?? 502);
   const letter = reply.text.trim().slice(0, 6000);
-  return json({ letter, model: MODEL, userId });
+  return json({ letter, model: MODEL });
 }
 
 function stripForbiddenEngineInsights(facts: Record<string, unknown>): Record<string, unknown> {
@@ -1499,25 +1618,82 @@ function requireFacts(facts: unknown): string | Response {
   return factsJson;
 }
 
-/** In-memory per-user sliding window (resets on cold start; still stops burst abuse). */
-function allowAiRequest(userId: string): boolean {
+/** Weighted per-isolate burst protection. */
+function allowBurstAiRequest(
+  userId: string,
+  action: AiAction,
+  options: { highCeiling?: boolean } = {},
+): boolean {
   const now = Date.now();
   const prior = (aiRateBuckets.get(userId) ?? []).filter(
-    (t) => now - t < AI_RATE_LIMIT_WINDOW_MS,
+    (entry) => now - entry.at < AI_RATE_LIMIT_WINDOW_MS,
   );
-  if (prior.length >= AI_RATE_LIMIT_MAX) {
+  const cost = aiActionCost(action);
+  if (cost === null) return false;
+  const capacity = options.highCeiling
+    ? AI_RATE_LIMIT_HIGH_CEILING_CAPACITY
+    : AI_RATE_LIMIT_CAPACITY;
+  const used = prior.reduce((total, entry) => total + entry.cost, 0);
+  if (used + cost > capacity) {
     aiRateBuckets.set(userId, prior);
     return false;
   }
-  prior.push(now);
+  prior.push({ at: now, cost });
+  aiRateBuckets.delete(userId);
   aiRateBuckets.set(userId, prior);
+  while (aiRateBuckets.size > AI_RATE_BUCKET_MAX_USERS) {
+    const oldestUser = aiRateBuckets.keys().next().value;
+    if (typeof oldestUser !== 'string') break;
+    aiRateBuckets.delete(oldestUser);
+  }
   return true;
+}
+
+type AiRateLimitResult =
+  | { ok: true; decision: SharedRateLimitDecision }
+  | { ok: false; errorMessage: string };
+
+async function checkAiRateLimit(
+  client: UserClient,
+  userId: string,
+  action: AiAction,
+  options: { highCeiling?: boolean } = {},
+): Promise<AiRateLimitResult> {
+  if (!allowBurstAiRequest(userId, action, options)) {
+    return {
+      ok: true,
+      decision: {
+        allowed: false,
+        retryAfterSeconds: Math.ceil(AI_RATE_LIMIT_WINDOW_MS / 1000),
+        remainingUnits: 0,
+      },
+    };
+  }
+
+  const cost = aiActionCost(action);
+  if (cost === null) {
+    return { ok: false, errorMessage: 'Unsupported action' };
+  }
+
+  const { data, error } = await client.rpc('consume_luna_ai_rate_limit', {
+    p_cost: cost,
+    p_high_ceiling: Boolean(options.highCeiling),
+  });
+  if (error) return { ok: false, errorMessage: error.message };
+  const decision = parseSharedRateLimitDecision(data);
+  if (!decision) return { ok: false, errorMessage: 'Malformed rate-limit response' };
+  return { ok: true, decision };
 }
 
 function sanitizeHistory(history: ChatMessage[] | undefined, limit = 8): ChatMessage[] {
   return (history ?? [])
     .filter((m) => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string')
-    .slice(-limit);
+    .slice(-limit)
+    .map((m) =>
+      m.content.length > HISTORY_TURN_MAX_CHARS
+        ? { ...m, content: m.content.slice(0, HISTORY_TURN_MAX_CHARS) }
+        : m,
+    );
 }
 
 function parseJsonObject(text: string): Record<string, unknown> | null {
@@ -1570,10 +1746,7 @@ function humanizeToolName(tool: string): string {
   return labels[tool] ?? 'A verified pattern in your tracking';
 }
 
-const analysisToolCache = new Map<
-  string,
-  { expiresAt: number; result: AnalysisToolResult }
->();
+const analysisToolCache = new BoundedTtlCache<AnalysisToolResult>(250);
 
 const ANALYSIS_TOOL_DEFINITIONS = [
   {
@@ -1800,7 +1973,7 @@ async function executeAnalysisTool(
     args,
   )}:${priorSignature}`;
   const cached = analysisToolCache.get(cacheKey);
-  if (cached && cached.expiresAt > Date.now()) return cached.result;
+  if (cached) return cached;
 
   const run = async (): Promise<AnalysisToolResult> => {
     if (name === 'contradictory_evidence') {
@@ -2021,7 +2194,7 @@ async function executeAnalysisTool(
       setTimeout(() => reject(new Error(`${name} timed out`)), 5000),
     ),
   ]);
-  analysisToolCache.set(cacheKey, { result, expiresAt: Date.now() + 5 * 60 * 1000 });
+  analysisToolCache.set(cacheKey, result, 5 * 60 * 1000);
   return result;
 }
 
@@ -2135,8 +2308,6 @@ async function complete(
   opts: {
     system: string;
     messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>;
-    /** Kept for call-site clarity; GPT-5.6 Luna ignores custom temperature. */
-    temperature?: number;
     maxTokens?: number;
   },
 ): Promise<{ text: string; error?: string; status?: number }> {
@@ -2168,16 +2339,9 @@ async function complete(
   return { text };
 }
 
-function corsHeaders(): HeadersInit {
-  return {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  };
-}
-
 function json(payload: unknown, status = 200): Response {
   return new Response(JSON.stringify(payload), {
     status,
-    headers: { ...corsHeaders(), 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json' },
   });
 }

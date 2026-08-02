@@ -296,19 +296,35 @@ export async function invokeStageExplain(facts: AiFactsPacket): Promise<string |
   return null;
 }
 
+export interface PartnerLetterResult {
+  letter: string | null;
+  riskReply: string | null;
+}
+
 export async function invokePartnerLetter(
   facts: AiFactsPacket,
   freeText?: string,
-): Promise<string | null> {
-  const { data, error } = await invokeAiAssistant<{ letter?: string; reply?: string }>({
+): Promise<PartnerLetterResult | null> {
+  const { data, error } = await invokeAiAssistant<{
+    letter?: string;
+    reply?: string;
+    riskReply?: string;
+  }>({
     action: 'partner_letter',
     facts,
     freeText,
   });
   if (error || !data) return null;
-  if (typeof data.letter === 'string') return data.letter;
-  if (typeof data.reply === 'string') return data.reply;
-  return null;
+  if (typeof data.riskReply === 'string' && data.riskReply.trim()) {
+    return { letter: null, riskReply: data.riskReply.trim().slice(0, 2000) };
+  }
+  const letter =
+    typeof data.letter === 'string' && data.letter
+      ? data.letter
+      : typeof data.reply === 'string'
+        ? data.reply
+        : null;
+  return letter === null ? null : { letter, riskReply: null };
 }
 
 export async function invokeLabReportExtraction(input: {
@@ -317,6 +333,8 @@ export async function invokeLabReportExtraction(input: {
   dataUrl: string;
   knownMedications: string[];
 }): Promise<LabReportExtractionDraft | null> {
+  // Mirror of the Edge-side cap; keeps oversized payloads off the wire entirely.
+  if (input.dataUrl.length > 12_000_000) return null;
   const { data, error } = await invokeAiAssistant<unknown>({
     action: 'lab_report_extract',
     report: {

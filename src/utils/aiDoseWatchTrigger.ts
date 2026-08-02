@@ -28,7 +28,7 @@ export function triggerAiDoseWatch(
       const hash = doseWatchCacheKey(changeDate, medicationName);
       await writeAiInsightCache(userId, 'dose_watch', hash, clamped, 14);
     } catch (e) {
-      console.warn('AI dose watch failed:', e);
+      if (import.meta.env.DEV) console.warn('AI dose watch failed:', e);
     }
   })();
 }

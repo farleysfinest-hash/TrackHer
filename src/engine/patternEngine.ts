@@ -181,8 +181,3 @@ export function runPatternEngine(input: EngineInput): PatternEngineResult {
   }
   return withNotices;
 }
-
-/** @deprecated Use runPatternEngine — returns all insights flat for legacy callers. */
-export function runPatternEngineFlat(input: EngineInput): Insight[] {
-  return runPatternEngine(input).all;
-}

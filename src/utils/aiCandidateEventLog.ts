@@ -22,6 +22,8 @@ export function logAiCandidateEvent(
       action,
     })
     .then(({ error }) => {
-      if (error) console.warn('ai_candidate_events insert failed:', error.message);
+      if (error && import.meta.env.DEV) {
+        console.warn('ai_candidate_events insert failed:', error.message);
+      }
     });
 }

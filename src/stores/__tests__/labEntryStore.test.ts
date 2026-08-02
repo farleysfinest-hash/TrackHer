@@ -45,4 +45,31 @@ describe('labEntryStore imported review', () => {
     expect(useLabEntryStore.getState().values.estradiol).toBeNull();
     expect(useLabEntryStore.getState().importedValues).toEqual([]);
   });
+
+  it('counts only chartable biomarker values toward save readiness', () => {
+    useLabEntryStore.getState().loadImportDraft(
+      {
+        ...importDraft,
+        values: [
+          {
+            reportedLabel: 'Mystery analyte',
+            biomarkerKey: null,
+            reportedValue: '12',
+            normalizedValue: null,
+            comparator: null,
+            reportedUnit: 'ng/mL',
+            referenceLow: null,
+            referenceHigh: null,
+            referenceText: null,
+            reportedFlag: 'normal',
+            sourcePage: null,
+            confidence: 0.4,
+          },
+        ],
+      },
+      [],
+    );
+
+    expect(useLabEntryStore.getState().getFilledCount()).toBe(0);
+  });
 });

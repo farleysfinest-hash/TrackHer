@@ -7,6 +7,7 @@ import { getLocalDateISO, getResolvedTimezone } from '../../utils/checkinHelpers
 import { formatLoggingDate } from '../../utils/formatters';
 import { clearCheckinDraft, saveCheckinDraft } from '../../lib/checkinDraft';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useTabActive } from '../layout/TabActiveContext';
 import { StepIndicator } from '../ui/StepIndicator';
 import { DailyChannels } from './DailyChannels';
 import { MRSSection } from './MRSSection';
@@ -125,7 +126,8 @@ export function CheckinFlow({ onClose, onComplete }: CheckinFlowProps) {
   };
 
   const dialogRef = useRef<HTMLDivElement>(null);
-  useFocusTrap(true, dialogRef, handleClose);
+  const tabActive = useTabActive();
+  useFocusTrap(tabActive, dialogRef, handleClose);
 
   const handleDiscard = () => {
     const s = useCheckinStore.getState();

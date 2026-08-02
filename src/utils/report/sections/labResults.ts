@@ -39,7 +39,17 @@ export function renderLabResultsPage(
     if (!biomarker) continue;
     const value = getBiomarkerValue(latestLab, key)!;
     const reported = (latestLab.reported_values ?? {})[key] ?? null;
-    const status = getValueStatus(value, biomarker);
+    const statusFromFlag =
+      reported?.reportedFlag === 'low'
+        ? 'low'
+        : reported?.reportedFlag === 'high'
+          ? 'high'
+          : reported?.reportedFlag === 'abnormal'
+            ? 'abnormal'
+            : reported?.reportedFlag === 'normal'
+              ? 'normal'
+              : null;
+    const status = statusFromFlag ?? getValueStatus(value, biomarker);
     const priorVal = priorLab ? getBiomarkerValue(priorLab, key) : null;
     let trend = '—';
     if (priorVal !== null) {
@@ -74,7 +84,12 @@ export function renderLabResultsPage(
     didParseCell: (hookData) => {
       if (hookData.section === 'body' && hookData.column.index === 4) {
         const status = hookData.cell.raw as string;
-        if (status.includes('out of range') || status.includes('high') || status.includes('low')) {
+        if (
+          status.includes('out of range') ||
+          status.includes('high') ||
+          status.includes('low') ||
+          status.includes('abnormal')
+        ) {
           hookData.cell.styles.textColor = PDF_COLORS.alert;
           hookData.cell.styles.fontStyle = 'bold';
         }

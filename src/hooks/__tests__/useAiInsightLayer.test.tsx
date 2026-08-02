@@ -164,4 +164,31 @@ describe('useAiInsightLayer account scoping', () => {
     expect(mocks.invokeImproveInsights).not.toHaveBeenCalled();
     expect(view.result.current.candidates).toEqual([]);
   });
+
+  it('clears the session marker so Try again can re-invoke synthesis', async () => {
+    sessionStorage.setItem(
+      'trackher_luna_synthesis_hash:user-a',
+      'c3-evidence-v1-same-data-same-memory',
+    );
+    mocks.invokeImproveInsights.mockResolvedValue(null);
+    const view = renderHook(() => useAiInsightLayer(context, [], true));
+
+    await act(async () => Promise.resolve());
+    await act(async () => vi.advanceTimersByTimeAsync(1600));
+    expect(mocks.invokeImproveInsights).not.toHaveBeenCalled();
+
+    await act(async () => {
+      view.result.current.retrySynthesis();
+    });
+    expect(sessionStorage.getItem('trackher_luna_synthesis_hash:user-a')).toBeNull();
+
+    mocks.invokeImproveInsights.mockResolvedValue(synthesisResult('Retry finding'));
+    await act(async () => Promise.resolve());
+    await act(async () => vi.advanceTimersByTimeAsync(1600));
+
+    expect(mocks.invokeImproveInsights).toHaveBeenCalledTimes(1);
+    expect(view.result.current.candidates.map((candidate) => candidate.title)).toEqual([
+      'Retry finding',
+    ]);
+  });
 });

@@ -119,6 +119,54 @@ export async function createFocusedLunaThread(
   return data as LunaThread;
 }
 
+/** Reuse the newest truly empty same-kind focused thread; otherwise create one.
+ *  Preview-null alone is insufficient: a user message can save before an
+ *  assistant reply, leaving preview null while the thread already has content.
+ */
+export async function getOrCreateFocusedLunaThread(
+  userId: string,
+  kind: Exclude<LunaThreadKind, 'dashboard'>,
+  title: string,
+  context: LunaThreadContext,
+): Promise<LunaThread> {
+  const { data: existingRows, error: existingError } = await supabase
+    .from('luna_threads')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('kind', kind)
+    .eq('is_dashboard_primary', false)
+    .is('last_message_preview', null)
+    .order('updated_at', { ascending: false })
+    .limit(5);
+  if (existingError) throw existingError;
+
+  for (const candidate of (existingRows as LunaThread[] | null) ?? []) {
+    const { count, error: countError } = await supabase
+      .from('luna_messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('thread_id', candidate.id);
+    if (countError) throw countError;
+    if ((count ?? 0) > 0) continue;
+
+    const { data, error } = await supabase
+      .from('luna_threads')
+      .update({
+        title,
+        context_data: context,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', candidate.id)
+      .eq('user_id', userId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as LunaThread;
+  }
+
+  return createFocusedLunaThread(userId, kind, title, context);
+}
+
 export async function getOrCreateDashboardLunaThread(
   userId: string,
   startFresh = false,
@@ -203,13 +251,20 @@ export async function addLunaMessage(input: {
     .single();
   if (error) throw error;
 
-  if (input.role === 'assistant' && !input.crisisTier) {
+  if (input.role === 'assistant') {
     const { error: threadError } = await supabase
       .from('luna_threads')
-      .update({ last_message_preview: trimPreview(input.content) })
+      .update({
+        last_message_preview: input.crisisTier
+          ? 'Supportive safety conversation'
+          : trimPreview(input.content),
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', input.threadId)
       .eq('user_id', input.userId);
-    if (threadError) console.warn('Could not update Luna thread preview:', threadError.message);
+    if (threadError && import.meta.env.DEV) {
+      console.warn('Could not update Luna thread preview:', threadError.message);
+    }
   }
 
   return data as LunaMessage;
@@ -292,7 +347,7 @@ export async function updateLunaMemory(
   if (!isMemorySafeContent(content)) throw new MemorySafetyError();
   const { error } = await supabase
     .from('luna_memories')
-    .update({ content: content.trim() })
+    .update({ content: content.trim().slice(0, 1000) })
     .eq('id', memoryId)
     .eq('user_id', userId);
   if (error) throw error;

@@ -32,6 +32,7 @@ interface LabEntryState {
   medicationAnswers: Record<string, 'yes' | 'no' | 'unsure'>;
   importWarnings: string[];
   importPreviewDataUrl: string | null;
+  importReviewedAt: string | null;
 
   setValue: (biomarkerKey: string, value: number | null) => void;
   setDrawDate: (date: string) => void;
@@ -63,6 +64,7 @@ export const useLabEntryStore = create<LabEntryState>((set, get) => ({
   medicationAnswers: {},
   importWarnings: [],
   importPreviewDataUrl: null,
+  importReviewedAt: null,
 
   setValue: (biomarkerKey, value) =>
     set((s) => ({ values: { ...s.values, [biomarkerKey]: value } })),
@@ -144,6 +146,7 @@ export const useLabEntryStore = create<LabEntryState>((set, get) => ({
       medicationAnswers: {},
       importWarnings: draft.warnings,
       importPreviewDataUrl: draft.previewDataUrl ?? null,
+      importReviewedAt: null,
     });
   },
 
@@ -163,6 +166,7 @@ export const useLabEntryStore = create<LabEntryState>((set, get) => ({
       medicationAnswers: {},
       importWarnings: [],
       importPreviewDataUrl: null,
+      importReviewedAt: lab.import_reviewed_at ?? null,
     });
   },
 
@@ -182,13 +186,13 @@ export const useLabEntryStore = create<LabEntryState>((set, get) => ({
       medicationAnswers: {},
       importWarnings: [],
       importPreviewDataUrl: null,
+      importReviewedAt: null,
     }),
 
   getFilledCount: () => {
-    const { values, importedValues } = get();
-    const normalizedCount = LAB_BIOMARKERS.filter(
+    const { values } = get();
+    return LAB_BIOMARKERS.filter(
       (b) => values[b.key] !== null && values[b.key] !== undefined,
     ).length;
-    return Math.max(normalizedCount, importedValues.length);
   },
 }));

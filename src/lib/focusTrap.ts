@@ -1,7 +1,7 @@
 /** Shared focus-trap helpers for Modal and custom fullscreen dialogs. */
 
 export const FOCUSABLE_SELECTOR =
-  'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /** Trap Tab / Shift+Tab inside `container`. No-op for other keys. */
 export function trapTabKey(e: KeyboardEvent, container: HTMLElement | null): void {

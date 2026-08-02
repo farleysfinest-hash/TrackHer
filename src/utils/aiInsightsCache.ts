@@ -54,7 +54,7 @@ export async function writeAiInsightCache(
     { onConflict: 'user_id,insight_type,data_hash' },
   );
 
-  if (error) {
+  if (error && import.meta.env.DEV) {
     // Unique index may not exist until migration 030 is applied — fall back to insert.
     console.warn('ai_insights cache write failed:', error.message);
   }

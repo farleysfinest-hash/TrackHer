@@ -226,6 +226,63 @@ describe('Batch A crisis-routing invariants', () => {
   });
 });
 
+describe('Batch A risk-watch middle tier', () => {
+  const softRiskMessage = "I've been feeling worthless lately.";
+
+  it('keeps risk-adjacent trip words in play when the classifier says none', () => {
+    expect(deterministicCurrentCrisisTier(softRiskMessage)).toBeNull();
+    expect(currentMessageHasCrisisSignal(softRiskMessage)).toBe(false);
+    expect(looksRiskAdjacent(softRiskMessage)).toBe(true);
+    expect(
+      decideCrisisTurn({
+        message: softRiskMessage,
+        priorTier: null,
+        classification: { status: 'ok', tier: null },
+      }),
+    ).toEqual({ action: 'risk_watch' });
+  });
+
+  it('still enters crisis when the classifier finds a tier', () => {
+    expect(
+      decideCrisisTurn({
+        message: softRiskMessage,
+        priorTier: null,
+        classification: { status: 'ok', tier: 'mental_decline' },
+      }),
+    ).toEqual({ action: 'crisis', tier: 'mental_decline' });
+  });
+
+  it('fails closed when the classifier is down for risk-adjacent wording', () => {
+    expect(
+      decideCrisisTurn({
+        message: softRiskMessage,
+        priorTier: null,
+        classification: { status: 'unavailable' },
+      }),
+    ).toEqual({ action: 'classifier_unavailable' });
+  });
+
+  it('keeps a prior crisis tier ahead of risk-watch', () => {
+    expect(
+      decideCrisisTurn({
+        message: softRiskMessage,
+        priorTier: 'crisis',
+        classification: { status: 'ok', tier: null },
+      }),
+    ).toEqual({ action: 'crisis', tier: 'crisis' });
+  });
+
+  it('does not risk-watch ordinary messages', () => {
+    expect(
+      decideCrisisTurn({
+        message: 'How is my estradiol trending?',
+        priorTier: null,
+        classification: { status: 'ok', tier: null },
+      }),
+    ).toEqual({ action: 'normal' });
+  });
+});
+
 describe('Batch A persistence invariants', () => {
   it('reports a failed crisis-state clear instead of claiming success', async () => {
     const result = await attemptCrisisStateClear(async () => ({

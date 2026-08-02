@@ -17,12 +17,12 @@ import {
 } from '../../../supabase/functions/ai-assistant/analysisTools';
 
 const patternedCheckins: AnalysisCheckin[] = [
-  { checkin_date: '2026-01-01', total_score: 20, sleep_problems: 4, brain_fog: 4 },
-  { checkin_date: '2026-01-08', total_score: 18, sleep_problems: 3, brain_fog: 3 },
-  { checkin_date: '2026-01-15', total_score: 12, sleep_problems: 2, brain_fog: 2 },
-  { checkin_date: '2026-01-22', total_score: 10, sleep_problems: 1, brain_fog: 1 },
-  { checkin_date: '2026-01-29', total_score: 9, sleep_problems: 0, brain_fog: 0 },
-  { checkin_date: '2026-02-05', total_score: 10, sleep_problems: 1, brain_fog: 1 },
+  { checkin_date: '2026-01-01', mrs_complete: true, total_score: 20, sleep_problems: 4, brain_fog: 4 },
+  { checkin_date: '2026-01-08', mrs_complete: true, total_score: 18, sleep_problems: 3, brain_fog: 3 },
+  { checkin_date: '2026-01-15', mrs_complete: true, total_score: 12, sleep_problems: 2, brain_fog: 2 },
+  { checkin_date: '2026-01-22', mrs_complete: true, total_score: 10, sleep_problems: 1, brain_fog: 1 },
+  { checkin_date: '2026-01-29', mrs_complete: true, total_score: 9, sleep_problems: 0, brain_fog: 0 },
+  { checkin_date: '2026-02-05', mrs_complete: true, total_score: 10, sleep_problems: 1, brain_fog: 1 },
 ];
 
 describe('Luna deterministic analysis tools', () => {
@@ -96,10 +96,10 @@ describe('Luna deterministic analysis tools', () => {
   it('keeps the recorded change date out of the before window', () => {
     const result = analyzeMedicationWindow({
       checkins: [
-        { checkin_date: '2026-01-01', total_score: 20 },
-        { checkin_date: '2026-01-08', total_score: 18 },
-        { checkin_date: '2026-01-15', total_score: 12 },
-        { checkin_date: '2026-01-22', total_score: 10 },
+        { checkin_date: '2026-01-01', mrs_complete: true, total_score: 20 },
+        { checkin_date: '2026-01-08', mrs_complete: true, total_score: 18 },
+        { checkin_date: '2026-01-15', mrs_complete: true, total_score: 12 },
+        { checkin_date: '2026-01-22', mrs_complete: true, total_score: 10 },
       ],
       metric: 'total_score',
       changeDate: '2026-01-15',
@@ -211,8 +211,8 @@ describe('Luna deterministic analysis tools', () => {
   it('reports sparse data as insufficient rather than a finding', () => {
     const result = comparePeriods({
       checkins: [
-        { checkin_date: '2026-03-01', total_score: 18 },
-        { checkin_date: '2026-03-15', total_score: 12 },
+        { checkin_date: '2026-03-01', mrs_complete: true, total_score: 18 },
+        { checkin_date: '2026-03-15', mrs_complete: true, total_score: 12 },
       ],
       metric: 'total_score',
       firstStart: '2026-03-01',
@@ -234,16 +234,21 @@ describe('Luna deterministic analysis tools', () => {
         { draw_date: '2026-02-01', estradiol: 30 },
       ],
       checkins: [
-        { checkin_date: '2026-01-02', total_score: 20 },
-        { checkin_date: '2026-02-02', total_score: 18 },
+        { checkin_date: '2026-01-02', mrs_complete: true, total_score: 20 },
+        { checkin_date: '2026-02-02', mrs_complete: true, total_score: 18 },
       ],
       biomarker: 'estradiol',
       metric: 'total_score',
     });
+    const meaningfulBase = {
+      ...checkSufficiency({ observationCount: 5, requiredCount: 4, label: 'A' }),
+      evidenceClass: 'early_signal' as const,
+      sufficient: true,
+    };
     const contradiction = identifyContradictoryEvidence({
       results: [
-        { ...checkSufficiency({ observationCount: 5, requiredCount: 4, label: 'A' }), values: { delta: 2 } },
-        { ...checkSufficiency({ observationCount: 5, requiredCount: 4, label: 'B' }), values: { delta: -3 } },
+        { ...meaningfulBase, values: { delta: 2 } },
+        { ...meaningfulBase, tool: 'compare_periods_b', values: { delta: -3 } },
       ],
     });
 
@@ -253,12 +258,65 @@ describe('Luna deterministic analysis tools', () => {
     expect(contradiction.evidenceClass).toBe('repeated_finding');
   });
 
+  it('ignores incomplete MRS score rows and suppressed contradictions', () => {
+    const mixed = comparePeriods({
+      checkins: [
+        { checkin_date: '2026-04-01', mrs_complete: true, total_score: 20 },
+        { checkin_date: '2026-04-02', mrs_complete: true, total_score: 20 },
+        { checkin_date: '2026-04-03', mrs_complete: false, total_score: 0 },
+        { checkin_date: '2026-04-04', mrs_complete: false, total_score: 0 },
+        { checkin_date: '2026-04-15', mrs_complete: true, total_score: 10 },
+        { checkin_date: '2026-04-16', mrs_complete: true, total_score: 10 },
+        { checkin_date: '2026-04-17', mrs_complete: false, total_score: 0 },
+      ],
+      metric: 'total_score',
+      firstStart: '2026-04-01',
+      firstEnd: '2026-04-07',
+      secondStart: '2026-04-15',
+      secondEnd: '2026-04-21',
+    });
+    expect(mixed.values).toMatchObject({
+      firstAverage: 20,
+      secondAverage: 10,
+      firstCount: 2,
+      secondCount: 2,
+    });
+
+    const suppressed = comparePeriods({
+      checkins: [
+        { checkin_date: '2026-04-01', mrs_complete: true, total_score: 20, sleep_problems: 2 },
+        { checkin_date: '2026-04-02', mrs_complete: true, total_score: 20, sleep_problems: 2 },
+        { checkin_date: '2026-04-15', mrs_complete: true, total_score: 21, sleep_problems: 3 },
+        { checkin_date: '2026-04-16', mrs_complete: true, total_score: 21, sleep_problems: 3 },
+      ],
+      metric: 'total_score',
+      firstStart: '2026-04-01',
+      firstEnd: '2026-04-02',
+      secondStart: '2026-04-15',
+      secondEnd: '2026-04-16',
+    });
+    expect(suppressed.evidenceClass).toBe('suppressed');
+    expect(suppressed.sufficient).toBe(true);
+    const contradiction = identifyContradictoryEvidence({
+      results: [
+        { ...suppressed, values: { ...suppressed.values, delta: 0.2 } },
+        {
+          ...suppressed,
+          tool: 'compare_periods_b',
+          values: { ...suppressed.values, delta: -0.2 },
+        },
+      ],
+    });
+    expect(contradiction.values.contradictory).toBe(false);
+    expect(isMeaningfulAnalysisResult(contradiction)).toBe(false);
+  });
+
   it('uses metric-specific effect thresholds instead of one delta for every scale', () => {
     const rows: AnalysisCheckin[] = [
-      { checkin_date: '2026-04-01', total_score: 20, sleep_problems: 2 },
-      { checkin_date: '2026-04-02', total_score: 20, sleep_problems: 2 },
-      { checkin_date: '2026-04-15', total_score: 21, sleep_problems: 3 },
-      { checkin_date: '2026-04-16', total_score: 21, sleep_problems: 3 },
+      { checkin_date: '2026-04-01', mrs_complete: true, total_score: 20, sleep_problems: 2 },
+      { checkin_date: '2026-04-02', mrs_complete: true, total_score: 20, sleep_problems: 2 },
+      { checkin_date: '2026-04-15', mrs_complete: true, total_score: 21, sleep_problems: 3 },
+      { checkin_date: '2026-04-16', mrs_complete: true, total_score: 21, sleep_problems: 3 },
     ];
     const total = comparePeriods({
       checkins: rows,
@@ -284,10 +342,10 @@ describe('Luna deterministic analysis tools', () => {
   it('detects a stable MRS total that conceals opposing domains', () => {
     const result = compareMrsDomains({
       checkins: [
-        { checkin_date: '2026-05-01', total_score: 12, somatic_score: 5, psychological_score: 4, urogenital_score: 3 },
-        { checkin_date: '2026-05-02', total_score: 12, somatic_score: 5, psychological_score: 4, urogenital_score: 3 },
-        { checkin_date: '2026-05-15', total_score: 12, somatic_score: 3, psychological_score: 4, urogenital_score: 5 },
-        { checkin_date: '2026-05-16', total_score: 12, somatic_score: 3, psychological_score: 4, urogenital_score: 5 },
+        { checkin_date: '2026-05-01', mrs_complete: true, total_score: 12, somatic_score: 5, psychological_score: 4, urogenital_score: 3 },
+        { checkin_date: '2026-05-02', mrs_complete: true, total_score: 12, somatic_score: 5, psychological_score: 4, urogenital_score: 3 },
+        { checkin_date: '2026-05-15', mrs_complete: true, total_score: 12, somatic_score: 3, psychological_score: 4, urogenital_score: 5 },
+        { checkin_date: '2026-05-16', mrs_complete: true, total_score: 12, somatic_score: 3, psychological_score: 4, urogenital_score: 5 },
       ],
       firstStart: '2026-05-01',
       firstEnd: '2026-05-02',
@@ -296,6 +354,7 @@ describe('Luna deterministic analysis tools', () => {
     });
 
     expect(result.evidenceClass).toBe('early_signal');
+    expect(result.stableWithoutOutlier).toBe(false);
     expect(result.values).toMatchObject({
       totalDelta: 0,
       somaticDelta: -2,
@@ -303,6 +362,28 @@ describe('Luna deterministic analysis tools', () => {
       urogenitalDelta: 2,
     });
     expect(isMeaningfulAnalysisResult(result)).toBe(true);
+  });
+
+  it('requires leave-one-out stability before promoting domain divergence to repeated', () => {
+    const result = compareMrsDomains({
+      checkins: [
+        { checkin_date: '2026-06-01', mrs_complete: true, total_score: 12, somatic_score: 5, psychological_score: 4, urogenital_score: 3 },
+        { checkin_date: '2026-06-02', mrs_complete: true, total_score: 12, somatic_score: 5, psychological_score: 4, urogenital_score: 3 },
+        { checkin_date: '2026-06-03', mrs_complete: true, total_score: 12, somatic_score: 5, psychological_score: 4, urogenital_score: 3 },
+        { checkin_date: '2026-06-04', mrs_complete: true, total_score: 12, somatic_score: 5, psychological_score: 4, urogenital_score: 3 },
+        { checkin_date: '2026-06-15', mrs_complete: true, total_score: 12, somatic_score: 3, psychological_score: 4, urogenital_score: 5 },
+        { checkin_date: '2026-06-16', mrs_complete: true, total_score: 12, somatic_score: 3, psychological_score: 4, urogenital_score: 5 },
+        { checkin_date: '2026-06-17', mrs_complete: true, total_score: 12, somatic_score: 3, psychological_score: 4, urogenital_score: 5 },
+        { checkin_date: '2026-06-18', mrs_complete: true, total_score: 12, somatic_score: 3, psychological_score: 4, urogenital_score: 5 },
+      ],
+      firstStart: '2026-06-01',
+      firstEnd: '2026-06-04',
+      secondStart: '2026-06-15',
+      secondEnd: '2026-06-18',
+    });
+
+    expect(result.evidenceClass).toBe('repeated_finding');
+    expect(result.stableWithoutOutlier).toBe(true);
   });
 
   it('derives candidate identity from evidence and parameters, not result order or wording', () => {

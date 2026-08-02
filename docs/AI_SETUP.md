@@ -1,121 +1,127 @@
-# TrackHer AI companion
+# TrackHer Luna AI setup
 
-Personal journey companion (GPT-5.6 Luna) via Supabase Edge Function `ai-assistant`.
-The OpenAI key stays on the server — never in Vite `.env` or the iOS app.
+Luna uses the Supabase Edge Function `ai-assistant`. The OpenAI key stays on the server and must never be added to Vite environment variables or the iOS bundle.
 
-## Product stance
+## Product architecture
 
-| Brain | Role |
-|-------|------|
-| **Pattern engine** (`runPatternEngine`) | Clinical / evidence authority — dose correlations, trends, safeguarding |
-| **AI companion** | Warm friend for the journey — polishes copy, soft “AI noticed” observations, chat, monitor notes, report narrative, symptom phrase mapping |
+| Layer | Responsibility |
+|---|---|
+| Deterministic TrackHer engine | Safeguarding decisions, thresholds, arithmetic, and verified analysis-tool results |
+| Luna | Shared conversation UI, consent-gated memory, explanations, and narration of verified results |
+| Supabase | User-scoped threads, messages, memories, feedback, crisis continuity, and cached insights under RLS |
 
-The companion **never** rewrites or proposes cards about: `safeguarding`, `psych_trajectory`, `cardiac_persistence`, `bleeding_red_flag`.
+Luna never receives or explains the forbidden categories `safeguarding`, `psych_trajectory`, `cardiac_persistence`, or `bleeding_red_flag`.
 
-“AI noticed” candidates are clearly labeled observations grounded in her facts packet — not peer clinical insights.
+## 1. Configure the OpenAI key
 
-## 1. Add your OpenAI API key (Supabase Dashboard)
+1. Create a key at [platform.openai.com/api-keys](https://platform.openai.com/api-keys).
+2. Open the TrackHer project in the [Supabase Dashboard](https://supabase.com/dashboard).
+3. Go to **Edge Functions → Secrets**.
+4. Add `OPENAI_API_KEY` and paste the key once.
 
-1. Open [platform.openai.com/api-keys](https://platform.openai.com/api-keys) → **Create new secret key** → copy it.
-2. Open [Supabase Dashboard](https://supabase.com/dashboard) → your TrackHer project.
-3. **Edge Functions** → **Secrets**.
-4. Add secret:
-   - Name: `OPENAI_API_KEY`
-   - Value: `sk-...` (paste once; don’t commit it)
+Optional: add `TRACKHER_ALLOWED_ORIGINS` as a comma-separated list when a web preview uses an origin outside TrackHer's built-in production, Capacitor, and local-development allowlist.
 
-## 2. Deploy the function
+## 2. Apply local migrations and deploy
+
+Luna persistence requires:
+
+- `034_luna_conversations.sql`
+- `035_luna_lab_report_import.sql`
+- `036_luna_ai_rate_limit.sql`
+- `037_luna_ai_rate_limit_high_ceiling.sql`
+
+James applies migrations and deploys the Edge Function. Apply migrations `036` and `037` before deploying the Edge source: the deployed function calls the two-argument `consume_luna_ai_rate_limit(p_cost, p_high_ceiling)` introduced in `037`, and ordinary Luna actions fail closed (503) when the shared limiter cannot be reached. Repository agents must not apply or deploy either automatically.
 
 ```bash
 cd /Users/james/Desktop/TrackHer
 npx supabase login
 npx supabase link --project-ref bgvfghnfmgbdezwotsmn
+npx supabase db push --linked
 npx supabase functions deploy ai-assistant --project-ref bgvfghnfmgbdezwotsmn
 ```
 
-Apply migration `030_ai_companion_cache_and_herd_stub.sql` (widens `ai_insights` types + herd stubs).
-
-## 3. Try it in the app
+## 3. Run locally
 
 ```bash
 cd /Users/james/Desktop/TrackHer
 npm run dev
 ```
 
-Chrome → Vite URL → **Insights**:
-- **Ask about your data** (chat)
-- Polished engine cards + **AI noticed**
-- **Talk about this** on an insight
-- Monitor note after a full weekly check-in
-- Gap coach when meds exist but MRS history is thin
+Luna appears as:
 
-Also: Quick Log / personal symptom search for everyday phrases; provider PDF companion narrative above pattern blocks.
+- the continuing Dashboard conversation;
+- focused entry points on Medications, Check In, Lab Results, and Insights;
+- evidence-backed synthesis on Insights;
+- conversational Check In capture with confirmation before saving;
+- lab-report photo extraction into a review draft.
 
 ## Edge actions
 
 | Action | Purpose |
-|--------|---------|
-| `chat` | Ask about her data (dose/level asks use fixed helpful scripts) |
-| `explain_insight` | Talk through one card |
-| `improve_insights` | Polish titles/bodies + AI noticed candidates |
-| `monitor` | Post–weekly-check-in companion note |
-| `report_narrative` | Provider PDF story draft |
-| `symptom_translate` | Phrase → catalog keys only |
+|---|---|
+| `chat` | Shared Luna conversation with structured records, approved memory, and focused page context |
+| `improve_insights` | Investigate hypotheses with deterministic tools and narrate verified findings |
+| `explain_insight` | Explain one permitted insight |
+| `monitor` | Preserve post-check-in monitor capability for Insights |
+| `report_narrative` | Grounded provider-report narrative |
+| `symptom_translate` | Map ordinary language to existing symptom keys |
+| `visit_prep` | Structured appointment preparation |
+| `journal_extract` | Prepare conversational Check In items for confirmation |
+| `dose_watch` | Medication-change observation support |
+| `visit_debrief` | Structure a post-appointment plan |
+| `summarize_thread` | Incrementally summarize older thread turns; crisis details are omitted |
+| `stage_explain` | Explain the recorded stage without re-staging |
+| `partner_letter` | Grounded shareable explanation |
+| `lab_report_extract` | Transcribe a report image into an unsaved review draft |
 
-### Companion scripts (chat)
+## Safety and privacy
 
-High-risk / high-dodge asks use deterministic templates (not free-form GPT):
+- Deterministic detection and a model classifier backstop set the crisis tier.
+- Crisis state is user-level and survives thread changes for a 72-hour sliding window.
+- A crisis-state read failure pauses ordinary Luna work; it does not silently continue without prior-tier context. A message that itself carries a hard crisis signal still proceeds to crisis handling.
+- If the risk classifier is unavailable while a message carries a risk signal, Luna answers with a deterministic script, shows the support panel, and the turn is crisis-tagged client-side so it never enters thread summaries.
+- Risk-watch middle tier: when risk-adjacent trip words fire but the classifier judges the message non-crisis, chat proceeds with a system note so the reply can acknowledge emotional weight in context instead of discarding the signal. No panel, no crisis state.
+- Chat with an active crisis or a hard crisis signal bypasses the AI throttle entirely; risk-adjacent-only chat uses a raised 120-unit ceiling.
+- The persistent support panel remains visible for every active tier.
+- Free text sent to `journal_extract`, `visit_debrief`, `symptom_translate`, and `partner_letter` is risk-screened before any free-form model call.
+- Chat messages are capped at 4,000 characters and each history turn at 2,000 characters server-side.
+- Conversation memory is saved only after explicit user consent. Crisis content is never proposed as memory or used for synthesis.
+- Browser CORS uses an explicit origin allowlist. Auth and RLS remain the data-access boundary.
+- Lab images are restricted to JPEG, PNG, or WebP and capped at 8 MB client-side plus an Edge request-size cap.
 
-| Shape | Examples |
-|--------|----------|
-| `mental_decline` | depressed / can’t fix this / hopeless without SI — answer feeling + pulse/dose; soft 988 only |
-| `crisis` | SI / “kill myself” without plan/time — warm resources; **follow-ups must not paste the same blob** |
-| `crisis_imminent` | tonight / method (gun etc.) / “going to do it” — shorter urgent reply; escalate copy on repeat |
-| `med_effect` | why did progesterone lower energy / supposed to help — answer disappointment + dose-change facts |
-| Emergency | clot, chest pain, stroke signs, post-meno heavy bleed — seek urgent care |
-| DIY dose | double / skip / stop / switch product — refuse; clinician ask |
-| Dose amount / should I raise | refuse personal mg; cite logs; small-step education |
-| Lab target / interpret | her labs + educational ballpark; no diagnosis; units tip |
-| Staging | point at profile STRAW/stage; don’t re-stage in chat |
-| Comparison | no herd dosing; personal baseline |
-| Thin / broken | won’t invent patterns; logging tip |
-| Life support | partner disbelief / can’t afford — empathy + practical redirects |
+## Rate limiting
 
-Keep `src/utils/aiCompanionScripts.ts` and `supabase/functions/ai-assistant/companionScripts.ts` in sync; redeploy Edge after script changes.
+The Edge Function uses an atomic Supabase token bucket shared across cold starts and Edge isolates, plus a bounded in-isolate burst backstop. The ordinary bucket refills 45 weighted units over 10 minutes; risk-adjacent chat uses a raised 120-unit ceiling (`p_high_ceiling`, migration `037`); expensive synthesis and image extraction consume more capacity than ordinary chat. Authenticated identity comes from `auth.uid()`, and clients have no direct table access. Only chat during an active crisis or with a hard crisis signal in the current message bypasses the limiter entirely.
 
-Dose/lab demands (“just tell me”) after a script get a shorter, firmer version. Crisis demands do **not** replay the identical 988 paragraph — they escalate via `priorCrisisReplyCount`.
+## Caching
 
-### Safety hardening (Edge)
+- Insight caching uses the authenticated user plus facts hash.
+- Analysis-tool results use user, facts hash, tool, and parameters, with a five-minute TTL and a hard in-isolate entry limit.
+- Opening a tab or the Dashboard does not make a model request solely for decorative content.
 
-- **Risk classifier:** one retry on OpenAI blips; if still unavailable, soft 988/findahelpline reply only when the message looks risk-adjacent — hormone/vocab asks fail open to normal chat.
-- **Rate limit:** ~45 authenticated requests per user per 10 minutes (in-memory per isolate).
-- **Forbidden explain:** `explain_insight` returns 403 when `insight.category` is in the safeguarding family; facts packets also strip those categories before any model call.
-- **Journal / visit debrief:** `classifyCrisisTier` on free text returns a scripted `risk` + `riskReply` (no chip/plan generation) so SI disclosures are not treated as logging only.
-
-## Cache
-
-`ai_insights` keyed by `user_id` + `insight_type` + `data_hash` (facts packet hash).
-
-Types: `insight_polish`, `ai_candidate`, `monitor_note`, `gap_coach`, `report_narrative`, plus legacy types.
-
-## Herd patterns (later)
-
-Scaffold only in migration 030:
-- `ai_herd_consent` — per-user opt-in
-- `herd_aggregate_snapshots` — empty; no writers; no RLS for clients
-
-Next phase: nightly SQL aggregates → anonymized stats packet → optional “women in your stage often…” **only with consent**. No raw cross-user dumps to the model.
-
-## Repo map
+## Repository map
 
 | Path | Role |
-|------|------|
-| `supabase/functions/ai-assistant/index.ts` | Edge Function |
-| `src/utils/aiFactsPacket.ts` | Facts JSON |
+|---|---|
+| `supabase/functions/ai-assistant/index.ts` | Authenticated Edge request routing and model/tool orchestration |
+| `supabase/functions/ai-assistant/analysisTools.ts` | Deterministic user-scoped calculations |
+| `supabase/functions/ai-assistant/crisisController.ts` | Deterministic safety policy and validation |
+| `supabase/functions/ai-assistant/crisisContinuityPolicy.ts` | Fail-closed dispositions when crisis state cannot be read |
+| `supabase/functions/ai-assistant/rateLimitPolicy.ts` | Shared limiter capacities, action costs, and burst policy |
+| `supabase/functions/ai-assistant/httpSecurity.ts` | CORS origin allowlist and response headers |
+| `supabase/functions/ai-assistant/boundedTtlCache.ts` | Bounded in-isolate TTL cache for analysis-tool results |
+| `src/utils/aiFactsPacket.ts` | Bounded structured context packet |
 | `src/utils/aiForbiddenCategories.ts` | Never-touch categories |
-| `src/utils/aiInsightsCache.ts` | Cache read/write |
 | `src/hooks/useAiAssistant.ts` | Client invoke helpers |
-| `src/hooks/useAiInsightLayer.ts` | Polish + candidates |
-| `src/components/insights/AskDataSheet.tsx` | Chat UI |
-| `src/components/insights/AiNoticedList.tsx` | Candidate list |
-| `src/components/insights/CompanionMonitorCard.tsx` | Monitor note |
-| `src/components/insights/GapCoachCard.tsx` | Gap coach |
+| `src/lib/lunaConversations.ts` | Thread, message, memory, feedback, and crisis persistence |
+| `src/components/luna/LunaProvider.tsx` | Shared Luna session and conversation state |
+| `src/components/luna/LunaTranscript.tsx` | Message list, safety panel, and feedback surface |
+| `src/components/luna/LunaComposer.tsx` | Message input and send controls |
+| `src/components/luna/LunaHistoryView.tsx` | Past-conversation list with confirmed deletion |
+| `src/components/luna/LunaMemoryView.tsx` | Consent-gated memory review and editing |
+| `src/components/dashboard/LunaDashboardCard.tsx` | Dashboard relationship entry |
+| `src/components/luna/LunaContextCard.tsx` | Context-specific tab entry |
+| `src/components/insights/LunaSynthesisList.tsx` | Verified Insights synthesis |
+| `src/components/labs/LabReportImportDialog.tsx` | Report-photo review workflow |
+
+If `src/utils/aiCompanionScripts.ts` changes, copy it verbatim to `supabase/functions/ai-assistant/companionScripts.ts` and verify the diff is empty before deployment.

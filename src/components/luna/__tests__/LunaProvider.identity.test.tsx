@@ -42,6 +42,8 @@ const mocks = vi.hoisted(() => {
     addLunaMessage: vi.fn(),
     loadLunaMessages: vi.fn(),
     listLunaThreads: vi.fn(),
+    listLunaMemories: vi.fn(),
+    clearLunaMemories: vi.fn(),
     messageNumber: 0,
   };
 });
@@ -90,19 +92,20 @@ vi.mock('../../../lib/lunaConversations', () => {
   return {
     MemorySafetyError,
     listLunaThreads: mocks.listLunaThreads,
-    listLunaMemories: vi.fn(async () => []),
+    listLunaMemories: mocks.listLunaMemories,
     loadLunaCrisisState: vi.fn(async () => null),
     getOrCreateDashboardLunaThread: vi.fn(async (userId: string) =>
       userId === 'user-b' ? mocks.accountBThread : mocks.threadA,
     ),
     createFocusedLunaThread: vi.fn(async () => mocks.threadB),
+    getOrCreateFocusedLunaThread: vi.fn(async () => mocks.threadB),
     loadLunaMessages: mocks.loadLunaMessages,
     addLunaMessage: mocks.addLunaMessage,
     markLunaMessageCrisis: vi.fn(async () => undefined),
     updateLunaThreadSummary: vi.fn(async () => undefined),
     deleteLunaThread: vi.fn(async () => undefined),
     addLunaMemory: vi.fn(),
-    clearLunaMemories: vi.fn(),
+    clearLunaMemories: mocks.clearLunaMemories,
     deleteLunaMemory: vi.fn(),
     saveLunaFeedback: vi.fn(),
     updateLunaMemory: vi.fn(),
@@ -160,6 +163,10 @@ describe('LunaProvider async identity boundaries', () => {
     mocks.addLunaMessage.mockReset();
     mocks.loadLunaMessages.mockReset();
     mocks.listLunaThreads.mockReset();
+    mocks.listLunaMemories.mockReset();
+    mocks.listLunaMemories.mockResolvedValue([]);
+    mocks.clearLunaMemories.mockReset();
+    mocks.clearLunaMemories.mockResolvedValue(undefined);
     mocks.listLunaThreads.mockImplementation(async (userId: string) =>
       userId === 'user-b' ? [mocks.accountBThread] : [mocks.threadA, mocks.threadB],
     );
@@ -204,6 +211,54 @@ describe('LunaProvider async identity boundaries', () => {
     expect(assistantWrite.threadId).toBe('thread-a');
     expect(screen.queryByText('Late answer for A')).not.toBeInTheDocument();
     expect(screen.getByText('B existing')).toBeVisible();
+  });
+
+  it('exposes an accessible focus-trapped dialog and closes it with Escape', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: 'Open A' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Luna' });
+    expect(dialog).toHaveAttribute('aria-modal', 'true');
+
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Luna' })).not.toBeInTheDocument());
+  });
+
+  it('requires confirmation before clearing every Luna memory', async () => {
+    mocks.listLunaMemories.mockResolvedValue([
+      {
+        id: 'memory-1',
+        user_id: 'user-a',
+        content: 'I work rotating night shifts',
+        source_thread_id: 'thread-a',
+        created_at: '2026-08-01T00:00:00.000Z',
+        updated_at: '2026-08-01T00:00:00.000Z',
+      },
+    ]);
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByRole('button', { name: 'Open A' }));
+    await user.click(await screen.findByRole('button', { name: 'What Luna remembers' }));
+    await user.click(await screen.findByRole('button', { name: 'Clear all memories' }));
+
+    expect(mocks.clearLunaMemories).not.toHaveBeenCalled();
+    expect(screen.getByRole('alertdialog', { name: 'Clear all 1 memory?' })).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: 'Yes, clear all' }));
+    await waitFor(() => expect(mocks.clearLunaMemories).toHaveBeenCalledWith('user-a'));
+    expect(screen.queryByText('I work rotating night shifts')).not.toBeInTheDocument();
+  });
+
+  it('grows the composer with its content up to the configured cap', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: 'Open A' }));
+    const composer = await screen.findByPlaceholderText('Tell Luna what’s going on…');
+    Object.defineProperty(composer, 'scrollHeight', { configurable: true, value: 96 });
+    await user.type(composer, 'A longer message');
+    expect(composer).toHaveStyle({ height: '96px' });
   });
 
   it('ignores stale loads during rapid A to B to A navigation', async () => {

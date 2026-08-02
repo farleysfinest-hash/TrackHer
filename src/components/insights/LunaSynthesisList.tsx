@@ -12,6 +12,8 @@ interface LunaSynthesisListProps {
   insufficient?: { title: string; body: string } | null;
   monitorNote?: { note?: string; gapHint?: string | null } | null;
   isLoading?: boolean;
+  synthesisError?: string | null;
+  onRetry?: () => void;
   onAsk: (candidate: LunaSynthesisCandidate) => void;
   onAskInsufficient?: () => void;
   onDismiss?: (id: string) => void;
@@ -31,12 +33,15 @@ export function LunaSynthesisList({
   insufficient,
   monitorNote,
   isLoading = false,
+  synthesisError = null,
+  onRetry,
   onAsk,
   onAskInsufficient,
   onDismiss,
 }: LunaSynthesisListProps) {
   const userId = useAuthStore((state) => state.user?.id);
   const [ratings, setRatings] = useState<Record<string, LunaFeedbackRating>>({});
+  const [feedbackError, setFeedbackError] = useState<string | null>(null);
 
   return (
     <section aria-labelledby="luna-synthesis-heading" className="space-y-4">
@@ -71,6 +76,23 @@ export function LunaSynthesisList({
         <div className="rounded-xl border border-sand-200 px-4 py-5 text-sm text-sage-500">
           Luna is checking which possible connections have enough evidence…
         </div>
+      )}
+
+      {!isLoading && synthesisError && candidates.length === 0 && !insufficient && (
+        <div className="rounded-xl border border-sand-200 px-4 py-5">
+          <p className="text-sm leading-relaxed text-sage-600">{synthesisError}</p>
+          {onRetry && (
+            <Button variant="secondary" size="sm" className="mt-3" onClick={onRetry}>
+              Try again
+            </Button>
+          )}
+        </div>
+      )}
+
+      {feedbackError && (
+        <p className="text-sm text-sage-600" role="alert">
+          {feedbackError}
+        </p>
       )}
 
       {!isLoading && candidates.length === 0 && insufficient && (
@@ -161,11 +183,21 @@ export function LunaSynthesisList({
                 onChange={(event) => {
                   const rating = event.target.value as LunaFeedbackRating;
                   if (!rating || !userId) return;
+                  const previous = ratings[candidate.id];
                   setRatings((current) => ({ ...current, [candidate.id]: rating }));
+                  setFeedbackError(null);
                   void saveLunaFeedback({
                     userId,
                     insightKey: candidate.id,
                     rating,
+                  }).catch(() => {
+                    setRatings((current) => {
+                      const next = { ...current };
+                      if (previous) next[candidate.id] = previous;
+                      else delete next[candidate.id];
+                      return next;
+                    });
+                    setFeedbackError('Luna could not save that rating. Please try again.');
                   });
                 }}
               >

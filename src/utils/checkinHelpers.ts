@@ -42,9 +42,6 @@ export const ALL_CHECKIN_SYMPTOM_KEYS = [
   ...LEGACY_MRS_EXTRA_KEYS,
 ] as const;
 
-/** @deprecated Use MRS_CANONICAL_KEYS — kept for gradual migration of imports. */
-export const MRS_SYMPTOM_KEYS = ALL_CHECKIN_SYMPTOM_KEYS;
-
 export type MRSScoresMap = Record<MRSSymptomKey, MRSScore | null>;
 
 export const INITIAL_MRS_SCORES: MRSScoresMap = {
@@ -141,9 +138,6 @@ export function computePsychologicalScore(scores: MRSScoresMap): number | null {
 export function computeUrogenitalScore(scores: MRSScoresMap): number | null {
   return calculateMRS(scores).urogenital;
 }
-
-/** @deprecated Use MRSSeverityLevel — alias for chart compatibility */
-export type MRSSeverityTier = MRSSeverityLevel;
 
 export function getMRSSeverityTier(total: number): MRSSeverityLevel {
   return getMrsTotalSeverityLevel(total);
