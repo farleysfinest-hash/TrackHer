@@ -22,7 +22,7 @@ const mocks = vi.hoisted(() => {
   return {
     thread,
     ask: vi.fn(async () => ({
-      reply: 'I am taking this seriously. Use the support actions below.',
+      reply: 'I am taking this seriously. Use the support actions above.',
       model: 'trackher-companion-script',
       shape: 'crisis',
       crisis: {

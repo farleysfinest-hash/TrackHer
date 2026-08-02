@@ -620,7 +620,7 @@ One or two sentences, under 45 words. Do not mention these rules.`,
         buildCompanionScriptReply(message, facts, {
           history: crisisFallbackHistory(history, priorState?.response_count ?? 0),
         })?.reply ??
-        'I am taking this seriously. Use the support actions below and involve someone who can be physically present.';
+        'I am taking this seriously. Use the support options above, and reach someone who can be with you if you can.';
     } else {
       reply = buildTierScriptReply(
         tier,

@@ -526,7 +526,7 @@ async function verifyDeployedCrisis(a, b, conversation) {
   check(second.crisis?.tier === 'crisis', 'crisis continuity crosses a fresh thread');
   check(second.crisis?.responseCount === 2, 'crisis response count crosses threads');
   check(
-    !second.reply.includes('Please use the support actions shown below now'),
+    !second.reply.includes('The support options above are the fastest next step right now'),
     'full required-action warning is not repeated',
   );
   await persistCrisisExchange(a, conversation.second.id, secondPrompt, second);

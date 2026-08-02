@@ -20,7 +20,7 @@ vi.mock('../../../hooks/useJournalExtract', () => ({
       events: [{ type: 'note', medicationName: null, note: 'should stay hidden' }],
       followUpQuestions: [],
       risk: 'crisis',
-      riskReply: 'I am taking this seriously. Use the support actions below.',
+      riskReply: 'I am taking this seriously. Use the support actions above.',
     },
   }),
 }));
@@ -56,7 +56,7 @@ describe('LunaCaptureReview crisis rendering', () => {
     await user.click(screen.getByRole('button', { name: 'Review what Luna could add' }));
 
     expect(
-      screen.getByText('I am taking this seriously. Use the support actions below.'),
+      screen.getByText('I am taking this seriously. Use the support actions above.'),
     ).toBeVisible();
     expect(screen.getByRole('link', { name: '988' })).toHaveAttribute('href', 'tel:988');
     expect(screen.getByRole('link', { name: 'findahelpline.com' })).toHaveAttribute(

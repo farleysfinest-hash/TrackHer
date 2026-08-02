@@ -30,27 +30,27 @@ const APPROVED_CRISIS_QUESTIONS: Array<{
   {
     id: 'immediate_danger',
     tiers: ['crisis', 'crisis_imminent'],
-    text: 'Are you in immediate danger of acting on this right now?',
+    text: 'Are you in immediate danger right now?',
   },
   {
     id: 'alone_now',
     tiers: ['crisis', 'crisis_imminent'],
-    text: 'Are you alone right now?',
+    text: 'Are you by yourself right now?',
   },
   {
     id: 'create_distance',
     tiers: ['crisis_imminent'],
-    text: 'Can you move away from anything you could use to hurt yourself?',
+    text: 'Can you put some distance between yourself and anything you could use to hurt yourself?',
   },
   {
     id: 'trusted_person',
     tiers: ['mental_decline', 'crisis', 'crisis_imminent'],
-    text: 'Who is one person you can contact or sit with right now?',
+    text: 'Is there someone you can call or text right now if you need them?',
   },
   {
     id: 'connected',
     tiers: ['mental_decline', 'crisis', 'crisis_imminent'],
-    text: 'Have you been able to reach someone?',
+    text: 'Have you been able to reach anyone yet?',
   },
   {
     id: 'loved_one_nearby',
@@ -310,12 +310,12 @@ export function crisisRequiredAction(
   if (tier === 'loved_one') {
     return {
       id: 'support_panel',
-      text: 'Use the support actions shown below if they may be in immediate danger, and involve someone who can be physically present.',
+      text: 'The support options above are the fastest next step if they may be in immediate danger. Involve someone who can be physically present if you can.',
     };
   }
   return {
     id: 'support_panel',
-    text: 'Please use the support actions shown below now and get a trusted person physically near you if you can.',
+    text: 'The support options above are the fastest next step right now. If someone can be with you in person, reach out to them.',
   };
 }
 

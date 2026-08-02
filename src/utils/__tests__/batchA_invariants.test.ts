@@ -335,7 +335,7 @@ describe('Batch A non-chat risk payloads', () => {
         symptoms: [{ key: 'anxiety', reason: 'drop this' }],
         events: [{ type: 'note', medicationName: null, note: 'drop this' }],
         risk: 'loved_one',
-        riskReply: 'Use the support actions below. Call or text 988.',
+        riskReply: 'Use the support actions above. Call or text 988.',
       },
       new Set(['anxiety']),
       new Set(),
@@ -353,7 +353,7 @@ describe('Batch A non-chat risk payloads', () => {
       planSummary: '',
       followUps: [{ label: 'ordinary follow-up' }],
       risk: 'loved_one',
-      riskReply: 'Use the support actions below. Call or text 988.',
+      riskReply: 'Use the support actions above. Call or text 988.',
     });
     expect(result).toMatchObject({
       planSummary: '',
