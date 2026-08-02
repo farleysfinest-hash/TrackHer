@@ -10,6 +10,7 @@ import {
   decideCrisisTurn,
   deterministicCurrentCrisisTier,
   hasExplicitCrisisResolution,
+  hasSoftCrisisDismiss,
   indicatesCrisisResolution,
   tierForCurrentCrisisSubject,
 } from '../../../supabase/functions/ai-assistant/crisisController';
@@ -110,6 +111,7 @@ describe('Batch A crisis-routing invariants', () => {
     'My doctor asked if I wanted to kill myself and I said no.',
     'My therapist asked me whether I was thinking about suicide; I answered no.',
     'My clinician asked if I want to hurt myself and I said no.',
+    "My doctor asked if I wanted to kill myself and I said no, we're adjusting my dose",
   ];
 
   it.each(negatedClinicianReports)(
@@ -119,6 +121,7 @@ describe('Batch A crisis-routing invariants', () => {
     expect(deterministicCurrentCrisisTier(message)).toBeNull();
     expect(currentMessageHasCrisisSignal(message)).toBe(false);
     expect(looksRiskAdjacent(message)).toBe(false);
+    // Screening language (even negated / with trailing dose talk) stays out of memory.
     expect(isMemorySafeContent(message)).toBe(false);
     },
   );
@@ -223,6 +226,39 @@ describe('Batch A crisis-routing invariants', () => {
         classification: { status: 'ok', tier: null },
       }),
     ).toEqual({ action: 'resolve' });
+  });
+});
+
+describe('Batch A soft dismiss of safety follow-ups', () => {
+  it.each([
+    "I don't want this help",
+    'leave me alone',
+    'please stop asking',
+    'stop with the safety questions',
+    'enough with the 988',
+  ])('recognizes soft dismiss: %s', (message) => {
+    expect(hasSoftCrisisDismiss(message)).toBe(true);
+    expect(hasExplicitCrisisResolution(message)).toBe(true);
+  });
+
+  it('resolves an active crisis on soft dismiss even if the classifier mislabels', () => {
+    expect(
+      decideCrisisTurn({
+        message: 'leave me alone',
+        priorTier: 'crisis',
+        classification: { status: 'ok', tier: 'crisis' },
+      }),
+    ).toEqual({ action: 'resolve' });
+  });
+
+  it('does not soft-dismiss when the same message still contains danger', () => {
+    expect(
+      decideCrisisTurn({
+        message: "leave me alone, I'm going to kill myself",
+        priorTier: 'crisis',
+        classification: { status: 'ok', tier: null },
+      }),
+    ).toEqual({ action: 'crisis', tier: 'crisis' });
   });
 });
 

@@ -46,7 +46,7 @@ vi.mock('../supabase', () => ({
   },
 }));
 
-import { getOrCreateFocusedLunaThread, loadLunaMessages } from '../lunaConversations';
+import { getOrCreateFocusedLunaThread, loadLunaCrisisState, loadLunaMessages } from '../lunaConversations';
 
 describe('Luna conversation persistence queries', () => {
   beforeEach(() => {
@@ -175,5 +175,47 @@ describe('Luna conversation persistence queries', () => {
 
     expect(result.id).toBe('thread-empty');
     expect(result.title).toBe('Dose watch');
+  });
+});
+
+describe('loadLunaCrisisState mental_decline leftovers', () => {
+  beforeEach(() => {
+    mocks.from.mockReset();
+  });
+
+  it('clears and ignores leftover mental_decline rows so the panel never mounts', async () => {
+    const deleteEq = vi.fn(async () => ({ error: null }));
+    const deleteBuilder = {
+      delete: vi.fn(() => ({ eq: deleteEq })),
+    };
+    const selectBuilder = chain(async () => ({
+      data: {
+        user_id: 'user-1',
+        tier: 'mental_decline',
+        response_count: 1,
+        presented_actions: [],
+        asked_questions: [],
+        escalated: false,
+        last_activity_at: '2026-08-01T00:00:00.000Z',
+        expires_at: '2026-08-05T00:00:00.000Z',
+      },
+      error: null,
+    }));
+
+    mocks.from.mockImplementation((table: string) => {
+      if (table === 'luna_crisis_state') {
+        // First call is select/maybeSingle; subsequent is best-effort delete.
+        if (mocks.from.mock.calls.length <= 1) return selectBuilder;
+        return deleteBuilder;
+      }
+      throw new Error(`unexpected table ${table}`);
+    });
+
+    // maybeSingle is used by loadLunaCrisisState — add it to the chain helper usage
+    selectBuilder.maybeSingle = selectBuilder.single;
+
+    await expect(loadLunaCrisisState('user-1')).resolves.toBeNull();
+    expect(deleteBuilder.delete).toHaveBeenCalled();
+    expect(deleteEq).toHaveBeenCalledWith('user_id', 'user-1');
   });
 });

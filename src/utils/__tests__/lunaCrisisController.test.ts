@@ -5,6 +5,7 @@ import {
   currentMessageHasCrisisSignal,
   decideCrisisTurn,
   hasLovedOneCrisisResolution,
+  hasSoftCrisisDismiss,
   indicatesCrisisResolution,
   nextApprovedQuestion,
   shouldUseCrisisFallback,
@@ -46,6 +47,12 @@ describe('Luna crisis controller', () => {
     expect(indicatesCrisisResolution("I'm safe now")).toBe(true);
     expect(indicatesCrisisResolution("I'm not safe")).toBe(false);
     expect(indicatesCrisisResolution('I am still going to do it')).toBe(false);
+  });
+
+  it('recognizes soft dismiss without treating it as affirming safety', () => {
+    expect(hasSoftCrisisDismiss("I don't want this help")).toBe(true);
+    expect(indicatesCrisisResolution("I don't want this help")).toBe(true);
+    expect(indicatesCrisisResolution("I'm safe now")).toBe(true);
   });
 
   it('rejects injected non-compliant model text and activates fallback', () => {
@@ -262,5 +269,52 @@ describe('Fix 3: memory safety predicate', () => {
   it('empty and whitespace-only content is rejected', () => {
     expect(isMemorySafeContent('')).toBe(false);
     expect(isMemorySafeContent('   ')).toBe(false);
+  });
+});
+
+describe('mental_decline one-shot behavior', () => {
+  it('mental_decline does not persist across follow-ups', () => {
+    // First message triggers mental_decline
+    const first = decideCrisisTurn({
+      message: 'i feel hopeless',
+      priorTier: null,
+      classification: null,
+    });
+    expect(first).toEqual({ action: 'crisis', tier: 'mental_decline' });
+
+    // Follow-up with prior mental_decline returns normal, not crisis
+    const followUp = decideCrisisTurn({
+      message: 'what should i eat for dinner',
+      priorTier: 'mental_decline',
+      classification: { status: 'ok', tier: null },
+    });
+    expect(followUp).toEqual({ action: 'normal' });
+  });
+
+  it('crisis tier still persists across follow-ups', () => {
+    const followUp = decideCrisisTurn({
+      message: 'what should i eat for dinner',
+      priorTier: 'crisis',
+      classification: { status: 'ok', tier: null },
+    });
+    expect(followUp).toEqual({ action: 'crisis', tier: 'crisis' });
+  });
+
+  it('crisis_imminent still persists across follow-ups', () => {
+    const followUp = decideCrisisTurn({
+      message: 'never mind that, hows the weather',
+      priorTier: 'crisis_imminent',
+      classification: { status: 'ok', tier: null },
+    });
+    expect(followUp).toEqual({ action: 'crisis', tier: 'crisis_imminent' });
+  });
+
+  it('loved_one still persists across follow-ups', () => {
+    const followUp = decideCrisisTurn({
+      message: 'ok thanks',
+      priorTier: 'loved_one',
+      classification: { status: 'ok', tier: null },
+    });
+    expect(followUp).toEqual({ action: 'crisis', tier: 'loved_one' });
   });
 });

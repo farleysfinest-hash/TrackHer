@@ -381,7 +381,20 @@ export async function loadLunaCrisisState(
   if (error) throw error;
   if (!data) return null;
   const state = data as LunaCrisisState;
-  return new Date(state.expires_at).getTime() > Date.now() ? state : null;
+  if (new Date(state.expires_at).getTime() <= Date.now()) return null;
+  // mental_decline is one-shot and must never own the sticky panel / lock.
+  // Clear leftover pre-deploy rows the same way the Edge read path does.
+  if (state.tier === 'mental_decline') {
+    void supabase.from('luna_crisis_state').delete().eq('user_id', userId);
+    return null;
+  }
+  return state;
+}
+
+/** Clear sticky safety state when she asks to stop the follow-ups. */
+export async function clearLunaCrisisState(userId: string): Promise<void> {
+  const { error } = await supabase.from('luna_crisis_state').delete().eq('user_id', userId);
+  if (error) throw error;
 }
 
 export async function saveLunaFeedback(input: {

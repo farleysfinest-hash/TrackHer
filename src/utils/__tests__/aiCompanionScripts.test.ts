@@ -4,6 +4,7 @@ import {
   classifyCompanionShape,
   classifyCrisisTier,
   priorCrisisReplyCount,
+  routeMentalDeclineChat,
 } from '../aiCompanionScripts';
 
 const facts = {
@@ -46,7 +47,7 @@ describe('threat levels', () => {
     });
     expect(first?.reply).not.toEqual(second?.reply);
     expect(second?.shape).toBe('crisis_imminent');
-    expect(second?.reply).toMatch(/not going to paste the same|I’m still here|firearm|urgent/i);
+    expect(second?.reply).toMatch(/not going to paste the same|I'm still here|firearm|urgent/i);
     expect(priorCrisisReplyCount([{ role: 'assistant', content: first!.reply }])).toBe(1);
   });
 
@@ -55,7 +56,7 @@ describe('threat levels', () => {
     expect(out?.shape).toBe('mental_decline');
     expect(out?.reply).toMatch(/mood ~3\.8/);
     expect(out?.reply).toMatch(/progesterone|Prometrium/i);
-    expect(out?.reply).not.toMatch(/I can’t be your crisis counselor/);
+    expect(out?.reply).not.toMatch(/I can't be your crisis counselor/);
   });
 
   it('answers why progesterone hurt energy', () => {
@@ -68,6 +69,91 @@ describe('threat levels', () => {
     );
     expect(out?.reply).toMatch(/supposed to help|fair question/i);
     expect(out?.reply).toMatch(/dose_increased|June 10|2026-06-10|progesterone/i);
-    expect(out?.reply).toMatch(/won’t tell you to stop/i);
+    expect(out?.reply).toMatch(/won.t tell you to stop/i);
+  });
+});
+
+describe('treatment-context exception for mental_decline', () => {
+  it('HRT/menopause language suppresses mental_decline', () => {
+    // Each case uses a keyword that WOULD match mental_decline without the exception.
+    expect(classifyCrisisTier('HRT is making me feel hopeless')).toBeNull();
+    expect(classifyCrisisTier('i feel hopeless about menopause')).toBeNull();
+    expect(classifyCrisisTier('estradiol is making me numb and empty')).toBeNull();
+    expect(classifyCrisisTier('perimenopause has me overwhelmed')).toBeNull();
+    expect(classifyCrisisTier('progesterone makes me feel so low and awful')).toBeNull();
+    expect(classifyCrisisTier('these hormones are making everything worse mentally')).toBeNull();
+    expect(classifyCrisisTier('night sweats have me feeling hopeless')).toBeNull();
+    expect(classifyCrisisTier('hot flashes and i cant do this anymore')).toBeNull();
+    expect(classifyCrisisTier('this HRT is making me feel so depressed')).toBeNull();
+  });
+
+  it('matches depress stem forms (depressed / depressing)', () => {
+    expect(classifyCrisisTier('i feel so depressed')).toBe('mental_decline');
+    expect(classifyCrisisTier('i have been feeling depressed lately')).toBe('mental_decline');
+    expect(classifyCrisisTier('everything feels depressing')).toBe('mental_decline');
+  });
+
+  it('bare emotional language without treatment context still triggers', () => {
+    expect(classifyCrisisTier('i feel hopeless')).toBe('mental_decline');
+    expect(classifyCrisisTier('everything is empty and numb')).toBe('mental_decline');
+    expect(classifyCrisisTier('i cant do this anymore')).toBe('mental_decline');
+    expect(classifyCrisisTier('im overwhelm by everything')).toBe('mental_decline');
+    expect(classifyCrisisTier('broken inside and cant go on')).toBe('mental_decline');
+  });
+
+  it('generic medical words do NOT suppress mental_decline', () => {
+    expect(classifyCrisisTier('i feel hopeless my doctor doesnt care')).toBe('mental_decline');
+    expect(classifyCrisisTier('i feel empty after therapy')).toBe('mental_decline');
+    expect(classifyCrisisTier('feeling numb from all the pills')).toBe('mental_decline');
+    expect(classifyCrisisTier('this medication has me feeling hopeless')).toBe('mental_decline');
+    expect(classifyCrisisTier('cant do this treatment anymore')).toBe('mental_decline');
+  });
+
+  it('genuine SI is never suppressed by treatment context', () => {
+    expect(classifyCrisisTier('i want to kill myself because of this HRT')).toBe('crisis');
+    expect(classifyCrisisTier('menopause makes me want to die')).toBe('crisis');
+    expect(classifyCrisisTier('im going to end it, estradiol isnt helping')).toBe('crisis');
+  });
+
+  it('mental_decline reply does not preemptively mention 988 or suicide', () => {
+    const out = buildCompanionScriptReply('i feel hopeless and empty', facts);
+    expect(out?.shape).toBe('mental_decline');
+    expect(out?.reply).not.toMatch(/988/);
+    expect(out?.reply).not.toMatch(/wanting to die/);
+    expect(out?.reply).toMatch(/clinician/);
+  });
+});
+
+describe('clear SI euphemisms', () => {
+  it.each([
+    'i want to off myself',
+    'im going to off myself',
+    'thinking about offing myself',
+    'i might take myself out',
+    'i could do myself in',
+  ])('classifies clear euphemism as crisis: %s', (message) => {
+    expect(classifyCrisisTier(message)).toBe('crisis');
+  });
+});
+
+describe('routeMentalDeclineChat', () => {
+  it('sends treatment complaints to free-chat risk_watch', () => {
+    expect(routeMentalDeclineChat('HRT is making me feel hopeless')).toBe(
+      'free_chat_risk_watch',
+    );
+    expect(routeMentalDeclineChat('this HRT is making me feel so depressed')).toBe(
+      'free_chat_risk_watch',
+    );
+    expect(routeMentalDeclineChat('estradiol leaves me numb and empty')).toBe(
+      'free_chat_risk_watch',
+    );
+  });
+
+  it('keeps bare low mood on the one-shot script path', () => {
+    expect(routeMentalDeclineChat('i feel hopeless')).toBe('one_shot_script');
+    expect(routeMentalDeclineChat('i feel so depressed')).toBe('one_shot_script');
+    expect(routeMentalDeclineChat('i feel hopeless my doctor doesnt care')).toBe(
+      'one_shot_script',
+    );
   });
 });

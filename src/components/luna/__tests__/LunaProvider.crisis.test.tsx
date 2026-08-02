@@ -103,6 +103,7 @@ vi.mock('../../../lib/lunaConversations', () => {
     getOrCreateFocusedLunaThread: vi.fn(),
     deleteLunaThread: vi.fn(),
     addLunaMemory: vi.fn(),
+    clearLunaCrisisState: vi.fn(async () => undefined),
     clearLunaMemories: vi.fn(),
     deleteLunaMemory: vi.fn(),
     saveLunaFeedback: vi.fn(),
@@ -182,10 +183,10 @@ describe('LunaProvider crisis persistence fallback', () => {
     );
   });
 
-  it('keeps the support panel visible for an active mental-decline tier', async () => {
+  it('keeps the support panel visible for an active crisis tier', async () => {
     mocks.loadLunaCrisisState.mockResolvedValue({
       user_id: 'user-1',
-      tier: 'mental_decline',
+      tier: 'crisis',
       response_count: 1,
       presented_actions: [],
       asked_questions: [],
@@ -202,5 +203,8 @@ describe('LunaProvider crisis persistence fallback', () => {
 
     await user.click(screen.getByRole('button', { name: 'Open Luna' }));
     expect(await screen.findByText('Immediate support stays within reach')).toBeVisible();
+    expect(
+      screen.getByRole('button', { name: "I don't want these prompts right now" }),
+    ).toBeVisible();
   });
 });

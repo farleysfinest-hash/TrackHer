@@ -3,6 +3,7 @@ import {
   classifyCompanionShape,
   isClearlyNegatedClinicianRiskReport,
   looksRiskAdjacent,
+  stripNegatedClinicianRiskReport,
 } from './companionScripts.ts';
 
 export type StoredCrisisTier =
@@ -44,12 +45,12 @@ const APPROVED_CRISIS_QUESTIONS: Array<{
   },
   {
     id: 'trusted_person',
-    tiers: ['mental_decline', 'crisis', 'crisis_imminent'],
+    tiers: ['crisis', 'crisis_imminent'],
     text: 'Is there someone you can call or text right now if you need them?',
   },
   {
     id: 'connected',
-    tiers: ['mental_decline', 'crisis', 'crisis_imminent'],
+    tiers: ['crisis', 'crisis_imminent'],
     text: 'Have you been able to reach anyone yet?',
   },
   {
@@ -81,6 +82,16 @@ const RESOLUTION_PATTERNS = [
   /\ba crisis counselor is with me\b/i,
 ];
 
+/** She wants the safety follow-ups to stop — not the same as affirming safety. */
+const SOFT_DISMISS_PATTERNS = [
+  /\b(?:i )?(?:don'?t|do not) want (?:your |this |the )?(?:help|support|resources)\b/i,
+  /\b(?:i )?(?:don'?t|do not) want (?:the )?(?:crisis|safety|988|hotline) (?:help|support|stuff|resources|questions?|panel|lecture)?\b/i,
+  /\b(?:please )?stop (?:asking|bugging|nagging)(?: me)?\b/i,
+  /\b(?:please )?stop with the (?:safety|crisis|support|988|questions?)\b/i,
+  /\bleave me alone\b/i,
+  /\benough (?:with )?(?:the )?(?:safety|crisis|988|hotline|support prompts?)\b/i,
+];
+
 const LOVED_ONE_RESOLUTION_PATTERNS = [
   /\b(?:they|he|she) (?:are|is|'re|'s) safe now\b/i,
   /\b(?:they|he|she) (?:got|received) emergency help\b/i,
@@ -89,7 +100,7 @@ const LOVED_ONE_RESOLUTION_PATTERNS = [
 ];
 
 function withoutResolutionLanguage(message: string): string {
-  return RESOLUTION_PATTERNS.reduce(
+  return [...RESOLUTION_PATTERNS, ...SOFT_DISMISS_PATTERNS].reduce(
     (current, pattern) => current.replace(new RegExp(pattern.source, 'gi'), ' '),
     message,
   );
@@ -97,7 +108,15 @@ function withoutResolutionLanguage(message: string): string {
 
 /** Explicit first-person evidence that an active crisis may be ready to resolve. */
 export function hasExplicitCrisisResolution(message: string): boolean {
-  return RESOLUTION_PATTERNS.some((pattern) => pattern.test(message));
+  return (
+    RESOLUTION_PATTERNS.some((pattern) => pattern.test(message)) ||
+    SOFT_DISMISS_PATTERNS.some((pattern) => pattern.test(message))
+  );
+}
+
+/** She asked to stop the safety follow-ups without affirming she is safe. */
+export function hasSoftCrisisDismiss(message: string): boolean {
+  return SOFT_DISMISS_PATTERNS.some((pattern) => pattern.test(message));
 }
 
 /** Explicit evidence that the other person in a loved-one crisis is now safe or supported. */
@@ -133,8 +152,11 @@ export function deterministicCurrentCrisisTier(
  * because this function catches the imminent danger first.
  */
 export function currentMessageHasCrisisSignal(message: string): boolean {
-  if (isClearlyNegatedClinicianRiskReport(message)) return false;
-  const currentDanger = withoutResolutionLanguage(message);
+  // Strip negated clinician SI screens first so "doctor asked… I said no, adjusting dose"
+  // does not trip on the screening words, while "…said no, but I want to die" still does.
+  const afterNegatedScreen = stripNegatedClinicianRiskReport(message);
+  if (!afterNegatedScreen || isClearlyNegatedClinicianRiskReport(message)) return false;
+  const currentDanger = withoutResolutionLanguage(afterNegatedScreen);
 
   // The authoritative regex classifiers detect self-harm tiers.
   if (classifyCrisisTier(currentDanger)) return true;
@@ -213,6 +235,17 @@ export function decideCrisisTurn(input: {
   const deterministicTier = deterministicCurrentCrisisTier(input.message);
   if (deterministicTier) return { action: 'crisis', tier: deterministicTier };
 
+  // Soft dismiss of an active crisis: she asked to stop the safety follow-ups.
+  // Honor that even if the classifier misreads "stop asking" / "leave me alone"
+  // as continued ideation — unless the same message still contains current danger.
+  if (
+    input.priorTier &&
+    hasSoftCrisisDismiss(input.message) &&
+    !currentMessageHasCrisisSignal(input.message)
+  ) {
+    return { action: 'resolve' };
+  }
+
   if (input.classification?.status === 'ok' && input.classification.tier) {
     return { action: 'crisis', tier: input.classification.tier };
   }
@@ -225,6 +258,13 @@ export function decideCrisisTurn(input: {
       input.classification.tier === null
     ) {
       return { action: 'resolve' };
+    }
+    // mental_decline is the lightest tier — don't persist it across follow-ups.
+    // It fires once, delivers its script, then conversation returns to normal.
+    // If she says something crisis-worthy again, the classifier catches it fresh.
+    // crisis / crisis_imminent / loved_one still persist for safety.
+    if (input.priorTier === 'mental_decline') {
+      return { action: 'normal' };
     }
     return { action: 'crisis', tier: input.priorTier };
   }

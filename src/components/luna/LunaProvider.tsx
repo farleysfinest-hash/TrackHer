@@ -40,6 +40,7 @@ import type {
 import {
   addLunaMemory,
   addLunaMessage,
+  clearLunaCrisisState,
   deleteLunaThread,
   getOrCreateDashboardLunaThread,
   getOrCreateFocusedLunaThread,
@@ -720,6 +721,13 @@ function LunaSessionProvider({
                   onIntroSeen={() => setUiFlag('luna_intro_seen')}
                   onRemember={(content) => void remember(content)}
                   onDismissMemory={() => setMemoryProposal(null)}
+                  onDismissCrisis={() => {
+                    if (!userId) return;
+                    setCrisisState(null);
+                    void clearLunaCrisisState(userId).catch((clearError: unknown) => {
+                      setStorageError(lunaPersistenceError(clearError));
+                    });
+                  }}
                   onRate={(messageId, rating) => {
                     if (!rating || !userId || !thread) return;
                     setRatedMessages((current) => ({ ...current, [messageId]: rating }));

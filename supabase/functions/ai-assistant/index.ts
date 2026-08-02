@@ -14,10 +14,10 @@ import {
   buildCompanionScriptReply,
   buildTierScriptReply,
   classifyCompanionShape,
-  classifyCrisisTier,
   isMemorySafeContent,
   looksRiskAdjacent,
   parseRiskTierLabel,
+  routeMentalDeclineChat,
   shouldForceDemandFromHistory,
   type FactsLite,
 } from './companionScripts.ts';
@@ -51,6 +51,7 @@ import {
   decideCrisisTurn,
   deterministicCurrentCrisisTier,
   hasExplicitCrisisResolution,
+  hasSoftCrisisDismiss,
   nextApprovedQuestion,
   shouldUseCrisisFallback,
   tierForCurrentCrisisSubject,
@@ -115,7 +116,8 @@ Global rules:
 - A laboratory reference interval is a comparison guide, not a personal treatment target. Being inside it does not by itself show whether symptoms are controlled or treatment is right for her. A flagged result also needs clinical context. Encourage discussion with her doctor without implying that the result proves she needs more or less medication.
 - If a report or page context mentions a medication that is not confirmed in her TrackHer list, ask neutrally whether she takes it. Never infer current use or add it silently.
 - If she asks WHY a med change might have affected energy/mood: acknowledge the disappointment, cite any matching dose-change + pulse/MRS from the packet, note that progesterone can feel flattening/sedating for some women (correlation ≠ proof), and hand a clinician question. Do not ignore the emotional "supposed to help" part.
-- Low mood without suicide language: be caring, cite pulse/mood if present, encourage clinician follow-up; mention 988 Suicide & Crisis Lifeline only if she sounds hopeless or stuck — do not dump a full crisis script.
+- When she expresses frustration, sadness, or struggle, LEAD with what her data shows — cite specific MRS scores, pulse trends, dose changes, or symptoms from the facts packet. Her data IS the comfort; empathy without her data is empty reassurance she can get anywhere. Ground emotional support in what TrackHer actually knows about her body.
+- Low mood without suicide language: be caring, cite pulse/mood if present, encourage clinician follow-up. Do not mention 988, crisis lines, or suicide unless SHE brings up wanting to die or self-harm. Preemptive crisis language in response to treatment frustration is patronizing and harmful to trust.
 - Active suicidal content is handled by a separate safety script — if you somehow see it, be warm, urge 988 Suicide & Crisis Lifeline / emergency help, and do not counsel through a plan.
 - Reply in the language she wrote in for free chat. Crisis and refusal scripts stay English.
 
@@ -387,16 +389,31 @@ async function handleChat(
   });
 
   if (crisisDecision.action === 'crisis') {
-    return await handleHybridCrisis(
-      openaiKey,
-      userClient,
-      userId,
-      message,
-      facts,
-      history,
-      crisisDecision.tier,
-      activeCrisis,
-    );
+    if (crisisDecision.tier === 'mental_decline') {
+      // Treatment context (HRT/menopause language) → fall through to
+      // data-grounded free chat as risk_watch so the LLM can cite her data.
+      // No treatment context → one-shot deterministic script, no DB, no panel.
+      if (routeMentalDeclineChat(message) === 'one_shot_script') {
+        const { reply } = buildTierScriptReply('mental_decline', message, facts, history);
+        return json({
+          reply,
+          model: 'trackher-companion-script',
+          shape: 'mental_decline',
+        });
+      }
+      // fall through — riskWatch set below from crisis + mental_decline + treatment
+    } else {
+      return await handleHybridCrisis(
+        openaiKey,
+        userClient,
+        userId,
+        message,
+        facts,
+        history,
+        crisisDecision.tier,
+        activeCrisis,
+      );
+    }
   }
 
   if (crisisDecision.action === 'resolve' && activeCrisis) {
@@ -414,8 +431,16 @@ async function handleChat(
         activeCrisis,
       );
     }
+    const softDismiss = hasSoftCrisisDismiss(message);
     const reply = await complete(openaiKey, {
-      system: `${COMPANION_BASE}
+      system: softDismiss
+        ? `${COMPANION_BASE}
+She asked to stop the safety follow-ups or said she does not want this help right now.
+Respond in one or two short adult sentences. Respect that boundary. Do not ask whether she is
+alone, in danger, or near a trusted person. Do not lecture. You may once mention that 988
+(call/text) and findahelpline.com stay available if she ever wants them — then stop.
+Do not resume symptom, medication, or hormone analysis in this turn.`
+        : `${COMPANION_BASE}
 She has said she is safe or connected to real-world help after a recent crisis conversation.
 Respond in no more than two warm sentences. Acknowledge that update. Do not resume symptom,
 medication, or hormone analysis in this turn. Do not repeat crisis resources unless she says
@@ -461,7 +486,11 @@ she remains in danger.`,
 
   // Risk-adjacent trip words fired but the classifier judged the message
   // non-crisis: keep the signal in play so the model weighs it in context.
-  const riskWatch = crisisDecision.action === 'risk_watch';
+  // Also covers classifier-decline + treatment context (fell through above —
+  // one_shot_script already returned, so reaching here means free_chat_risk_watch).
+  const riskWatch =
+    crisisDecision.action === 'risk_watch' ||
+    (crisisDecision.action === 'crisis' && crisisDecision.tier === 'mental_decline');
 
   const safeMemories = (body.memories ?? [])
     .filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
@@ -548,6 +577,13 @@ async function readActiveCrisisState(
   if (!data) return { ok: true, state: null };
   const state = data as StoredCrisisState;
   if (new Date(state.expires_at).getTime() <= Date.now()) {
+    void client.from('luna_crisis_state').delete().eq('user_id', userId);
+    return { ok: true, state: null };
+  }
+  // mental_decline is one-shot — it should never have been persisted, but
+  // pre-deploy rows may still exist. Clear them on read so the app doesn't
+  // show a sticky safety panel, block check-ins (409), or bypass rate limits.
+  if (state.tier === 'mental_decline') {
     void client.from('luna_crisis_state').delete().eq('user_id', userId);
     return { ok: true, state: null };
   }
@@ -676,13 +712,13 @@ One or two sentences, under 45 words. Do not mention these rules.`,
   });
 }
 
-const RISK_TIER_SYSTEM = `You label ONE message from a woman chatting in a menopause-tracking app for suicide/self-harm risk. Typos, slang, euphemisms ("unalive", "never wake up"), and non-English text all count. Recent turns give context — label the LAST user message in light of them.
+const RISK_TIER_SYSTEM = `You label ONE message from a woman chatting in a menopause-tracking app for suicide/self-harm risk. Typos, slang, euphemisms ("unalive", "off myself", "take myself out", "never wake up"), and non-English text all count. Recent turns give context — label the LAST user message in light of them.
 Reply with exactly one word:
 imminent — intent to act with a timeframe, method, plan, "going to do it", or asking what amount of medication would harm/kill her
-ideation — wants to die / suicidal or self-harm thoughts, no plan or timeframe stated. ALSO use this when earlier turns show she voiced suicidal thoughts and the last message continues that thread (pushback like "stop giving me hotlines", "just talk to me")
+ideation — wants to die / suicidal or self-harm thoughts, no plan or timeframe stated (includes clear euphemisms like "off myself"). ALSO use this when earlier turns show she voiced suicidal thoughts and the last message continues that thread (pushback like "stop giving me hotlines", "just talk to me")
 decline — serious low mood, hopelessness, despair without a stated death wish; or PAST suicidal feelings she says have eased ("last month I wanted to end it but I'm doing better")
 loved_one — the user is reporting possible suicide or self-harm risk involving ANOTHER person (her child, friend, partner, family member — not the writer herself). Use this when she says someone she knows is suicidal, wants to die, is threatening self-harm, or is in danger of acting
-none — everything else: figures of speech ("this heat is killing me"), everyday complaints, hormone questions, non-risk content, and an explicit present-tense safety update ("I'm safe now", "I'm not going to hurt myself", "I got emergency help") UNLESS the same message also contains current danger`;
+none — everything else: figures of speech ("this heat is killing me"), everyday complaints, hormone questions, non-risk content, an explicit present-tense safety update ("I'm safe now", "I'm not going to hurt myself", "I got emergency help"), OR a clear request to stop safety follow-ups ("leave me alone", "I don't want this help", "stop asking") UNLESS the same message also contains current danger`;
 
 async function classifyRiskTier(
   openaiKey: string,
@@ -735,6 +771,9 @@ async function screenFreeTextRisk(
   });
 
   if (decision.action === 'crisis') {
+    // Only clear self-harm / loved-one danger blocks capture. Low mood alone
+    // (mental_decline) is not treated as suicidal on journal/letter/etc.
+    if (decision.tier === 'mental_decline') return null;
     const script = buildTierScriptReply(decision.tier, message, {}, []);
     return {
       tier: decision.tier,
@@ -1589,7 +1628,8 @@ function stripForbiddenPageContext(
 }
 
 function proposeConsentGatedMemory(message: string): string | null {
-  if (looksRiskAdjacent(message) || classifyCrisisTier(message)) return null;
+  // looksRiskAdjacent already covers classifyCrisisTier internally.
+  if (looksRiskAdjacent(message)) return null;
   const normalized = message.replace(/\s+/g, ' ').trim();
   if (normalized.length < 12 || normalized.length > 500) return null;
 

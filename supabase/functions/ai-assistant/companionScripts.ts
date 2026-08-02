@@ -78,17 +78,29 @@ function normalize(text: string): string {
     .trim();
 }
 
+/** Negated clinician SI screen — match from start; trailing content is stripped, not required to be absent. */
 const CLEARLY_NEGATED_CLINICIAN_RISK_RE =
-  /^(?:my )?(?:doctor|therapist|clinician|provider|nurse|counselor) asked (?:me )?(?:if|whether) i (?:want(?:ed)? to (?:kill|hurt) myself|was thinking about (?:suicide|self[- ]?harm)|felt suicidal)[,.!?;:\s]+(?:and )?i (?:said|answered) no[.!?]*$/;
+  /^(?:my )?(?:doctor|therapist|clinician|provider|nurse|counselor) asked (?:me )?(?:if|whether) i (?:want(?:ed)? to (?:kill|hurt) myself|was thinking about (?:suicide|self[- ]?harm)|felt suicidal)[,.!?;:\s]+(?:and )?i (?:said|answered) no[.!?]*/;
 
-export function isClearlyNegatedClinicianRiskReport(text: string): boolean {
-  return CLEARLY_NEGATED_CLINICIAN_RISK_RE.test(normalize(text));
+/** Strip a clearly negated clinician screening report; leave any remaining clauses for classification. */
+export function stripNegatedClinicianRiskReport(text: string): string {
+  return normalize(text)
+    .replace(CLEARLY_NEGATED_CLINICIAN_RISK_RE, '')
+    .replace(/^[,.!?;:\s]+/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
-/** Remove only a complete, explicitly negated clinician screening report. */
-function normalizeForRiskClassification(text: string): string {
+/** True when the message is only a negated clinician screen (nothing left after strip). */
+export function isClearlyNegatedClinicianRiskReport(text: string): boolean {
   const normalized = normalize(text);
-  return isClearlyNegatedClinicianRiskReport(text) ? '' : normalized;
+  if (!CLEARLY_NEGATED_CLINICIAN_RISK_RE.test(normalized)) return false;
+  return stripNegatedClinicianRiskReport(text).length === 0;
+}
+
+/** Remove negated clinician screening text before risk classification. */
+function normalizeForRiskClassification(text: string): string {
+  return stripNegatedClinicianRiskReport(text);
 }
 
 export function isDemandPush(message: string): boolean {
@@ -150,10 +162,15 @@ export function classifyCrisisTier(message: string): CrisisTier | null {
     /\b(kil+ my ?self|end my life|want to die|suicid|hurt myself|self[- ]?harm|unalive)\b/.test(
       m,
     ) ||
-    /\b(don'?t|dont) want to (be )?(alive|wake up)\b/.test(m) ||
+    /\boff(?:ed|ing)?\s+(?:my\s*)?self\b/.test(m) ||
+    /\b(?:take|taking)\s+myself\s+out\b/.test(m) ||
+    /\bdo(?:ing)?\s+myself\s+in\b/.test(m) ||
+    /\b(?:don'?t|dont) want to (be )?(alive|wake up)\b/.test(m) ||
     /\b(better off|be better) without me\b/.test(m) ||
     /\bno reason to (live|keep going)\b/.test(m) ||
-    /\bthink(ing)? about (ending it( all)?|kil+ing my ?self|suicide|not being here)\b/.test(m) ||
+    /\bthink(ing)? about (ending it( all)?|kil+ing my ?self|suicide|not being here|offing (?:my\s*)?self)\b/.test(
+      m,
+    ) ||
     /\b(want(ed)? to|gonna|going to) end it( all)?\b/.test(m) ||
     /\bi('m| am) going to (kill|end)\b/.test(m);
 
@@ -171,19 +188,48 @@ export function classifyCrisisTier(message: string): CrisisTier | null {
 
   if (ideation) return 'crisis';
 
-  // Mental decline without active SI — still serious, different script
-  if (
-    /\b(depress|hopeless|can'?t (fix|go on|do this)|overwhelm|broken inside|numb|empty)\b/.test(
+  // Mental decline without active SI — still serious, different script.
+  // BUT: perimenopause/HRT language alongside these emotional words is a
+  // treatment complaint, not a mental-health crisis. Let the LLM handle
+  // those with data-grounded empathy instead of a deterministic crisis script.
+  // Match depress / depressed / depressing — stem, not only the bare root.
+  const mentalDeclineMatch =
+    /\b(depress(?:ed|ing|ion)?|hopeless|can'?t (fix|go on|do this)|overwhelm|broken inside|numb|empty)\b/.test(
       m,
     ) ||
     (/\b(making me feel|feel(ing)?|got)\b/.test(m) &&
-      /\b(depress|so low|awful|miserable|worse mentally)\b/.test(m)) ||
-    /\bmental (decline|health).{0,20}(worse|bad|crash)\b/.test(m)
-  ) {
+      /\b(depress(?:ed|ing|ion)?|so low|awful|miserable|worse mentally)\b/.test(m)) ||
+    /\bmental (decline|health).{0,20}(worse|bad|crash)\b/.test(m);
+
+  if (mentalDeclineMatch) {
+    if (MENOPAUSE_TREATMENT_RE.test(m)) return null;
     return 'mental_decline';
   }
 
   return null;
+}
+
+const MENOPAUSE_TREATMENT_RE =
+  /\b(hrt|hormone|estrogen|oestrogen|estradiol|progesterone|testosterone|perimenopause|menopause|hot\s?flash(es)?|night\s?sweats?)\b/;
+
+/**
+ * Does the message contain unambiguous HRT/menopause language?
+ * Used by the chat handler to route classifier-`decline` + treatment context
+ * to risk_watch instead of the deterministic mental_decline script.
+ */
+export function hasMenopauseTreatmentContext(message: string): boolean {
+  return MENOPAUSE_TREATMENT_RE.test(normalize(message));
+}
+
+/**
+ * How chat should handle a mental_decline decision.
+ * Treatment complaints get data-grounded free chat; bare low mood gets a
+ * one-shot script with no DB lock and no safety panel.
+ */
+export type MentalDeclineChatRoute = 'one_shot_script' | 'free_chat_risk_watch';
+
+export function routeMentalDeclineChat(message: string): MentalDeclineChatRoute {
+  return hasMenopauseTreatmentContext(message) ? 'free_chat_risk_watch' : 'one_shot_script';
 }
 
 /** Loose risk-adjacent check for fail-open decisions when the tier classifier is down. */
@@ -199,7 +245,7 @@ export function looksRiskAdjacent(message: string): boolean {
       m,
     );
   return (
-    /\b(suicid|kill(ing)? (my|myself)|end (my life|it all)|hurt myself|self[- ]?harm|unalive|want to die|hopeless|worthless|not wake up|overdose|hang myself|cut myself|gun|rifle|988)\b/.test(
+    /\b(suicid|kill(ing)? (my|myself)|end (my life|it all)|hurt myself|self[- ]?harm|unalive|off(?:ed|ing)?\s+(?:my\s*)?self|take myself out|do myself in|want to die|hopeless|worthless|not wake up|overdose|hang myself|cut myself|gun|rifle|988)\b/.test(
       m,
     ) ||
     (passiveRisk && !benignAbsenceContext)
@@ -214,7 +260,8 @@ export function looksRiskAdjacent(message: string): boolean {
  */
 export function isMemorySafeContent(text: string): boolean {
   if (!text || !text.trim()) return false;
-  if (isClearlyNegatedClinicianRiskReport(text)) return false;
+  // Any clinician SI screening clause (negated or with trailing chat) stays out of memory.
+  if (CLEARLY_NEGATED_CLINICIAN_RISK_RE.test(normalize(text))) return false;
   if (classifyCrisisTier(text)) return false;
   if (classifyCompanionShape(text) === 'loved_one_crisis') return false;
   if (looksRiskAdjacent(text)) return false;
@@ -582,8 +629,8 @@ function buildMentalDeclineReply(message: string, facts: FactsLite): string {
         ? `I see progesterone on your list (${progMeds.join('; ')}). Some women feel flatter, sleepier, or lower mood when progesterone goes up — that doesn’t prove it’s the only cause, but it’s a real pattern to take to your clinician.`
         : null),
     `This isn’t the same as me diagnosing depression — it’s me taking your words and your logs seriously.`,
-    `If thoughts of wanting to die show up, call or text 988 (or findahelpline.com). For the low mood itself: please tell your clinician soon — bring your pulse/mood trend and any dose-change dates.`,
-    `You don’t have to solve it alone tonight.`,
+    `Please tell your clinician how you’re feeling — bring your pulse/mood trend and any dose-change dates so they can see the full picture.`,
+    `You don’t have to figure it all out tonight.`,
   );
 }
 
@@ -915,18 +962,11 @@ export function shouldForceDemandFromHistory(
   message: string,
   history: Array<{ role: string; content: string }>,
 ): boolean {
+  // Crisis-tier messages are never dose/lab demand pushes.
   if (classifyCrisisTier(message)) return false;
-  if (isDemandPush(message) && !PRIOR_CRISIS_RE.test(message)) {
-    const lastAssistant = [...history].reverse().find((m) => m.role === 'assistant');
-    if (lastAssistant && PRIOR_CRISIS_RE.test(lastAssistant.content)) {
-      // "you said the same thing" after crisis is still crisis follow-up, not dose demand
-      if (classifyCrisisTier(message) || /\b(kill|suicide|gun|die|tonight)\b/.test(normalize(message))) {
-        return false;
-      }
-    }
-  }
   if (isDemandPush(message)) {
     const lastAssistant = [...history].reverse().find((m) => m.role === 'assistant');
+    // After a crisis reply, "you said the same thing" is continuity — not dose demand.
     if (lastAssistant && PRIOR_CRISIS_RE.test(lastAssistant.content)) return false;
     return true;
   }

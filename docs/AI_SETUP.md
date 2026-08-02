@@ -77,13 +77,16 @@ Luna appears as:
 ## Safety and privacy
 
 - Deterministic detection and a model classifier backstop set the crisis tier.
-- Crisis state is user-level and survives thread changes for a 72-hour sliding window.
+- `mental_decline` is one-shot: no DB persistence, no safety panel, no 72-hour lock. Two paths depending on context: if HRT/menopause language appears alongside the emotional words (e.g. "this estradiol is making me feel hopeless"), the message routes to data-grounded free chat as `risk_watch` — the LLM gets her facts packet and can cite her data. If no treatment context, a deterministic script fires once. Pre-deploy `mental_decline` rows in `luna_crisis_state` are cleared on read.
+- `crisis`, `crisis_imminent`, and `loved_one` tiers persist to `luna_crisis_state` with a 72-hour sliding window and a visible safety panel. Crisis state is user-level and survives thread changes.
+- Clear euphemisms for self-harm (e.g. "off myself", "take myself out", "do myself in") are treated as real danger, same as "kill myself".
+- Crisis state clears when she affirms safety ("I'm safe now") or asks to stop the follow-ups ("I don't want this help", "leave me alone", or the panel button). Soft dismiss respects the boundary without requiring her to say she is safe; clear danger in the same message still wins.
 - A crisis-state read failure pauses ordinary Luna work; it does not silently continue without prior-tier context. A message that itself carries a hard crisis signal still proceeds to crisis handling.
 - If the risk classifier is unavailable while a message carries a risk signal, Luna answers with a deterministic script, shows the support panel, and the turn is crisis-tagged client-side so it never enters thread summaries.
 - Risk-watch middle tier: when risk-adjacent trip words fire but the classifier judges the message non-crisis, chat proceeds with a system note so the reply can acknowledge emotional weight in context instead of discarding the signal. No panel, no crisis state.
 - Chat with an active crisis or a hard crisis signal bypasses the AI throttle entirely; risk-adjacent-only chat uses a raised 120-unit ceiling.
-- The persistent support panel remains visible for every active tier.
-- Free text sent to `journal_extract`, `visit_debrief`, `symptom_translate`, and `partner_letter` is risk-screened before any free-form model call.
+- The persistent support panel remains visible for every active persisted tier (crisis, crisis_imminent, loved_one).
+- Free text sent to `journal_extract`, `visit_debrief`, `symptom_translate`, and `partner_letter` is risk-screened before any free-form model call. Only clear self-harm / loved-one danger blocks those flows; bare low mood (`mental_decline`) does not.
 - Chat messages are capped at 4,000 characters and each history turn at 2,000 characters server-side.
 - Conversation memory is saved only after explicit user consent. Crisis content is never proposed as memory or used for synthesis.
 - Browser CORS uses an explicit origin allowlist. Auth and RLS remain the data-access boundary.

@@ -40,7 +40,7 @@ function messageDateLabel(value: string): string {
   }).format(date);
 }
 
-function LunaSafetyPanel() {
+function LunaSafetyPanel({ onDismiss }: { onDismiss: () => void }) {
   return (
     <div className="sticky top-0 z-10 rounded-xl border border-sage-300 bg-sand-50 p-4 shadow-sm">
       <p className="text-sm font-medium text-sage-800">Immediate support stays within reach</p>
@@ -60,6 +60,13 @@ function LunaSafetyPanel() {
         </a>{' '}
         lists local support.
       </p>
+      <button
+        type="button"
+        onClick={onDismiss}
+        className="mt-3 text-xs font-medium text-sage-600 underline underline-offset-2 hover:text-sage-800"
+      >
+        I don&apos;t want these prompts right now
+      </button>
     </div>
   );
 }
@@ -77,6 +84,7 @@ interface LunaTranscriptProps {
   onIntroSeen: () => void;
   onRemember: (content: string) => void;
   onDismissMemory: () => void;
+  onDismissCrisis: () => void;
   onRate: (messageId: string, rating: LunaFeedbackRating) => void;
   onManualAction: (path: string) => void;
 }
@@ -94,6 +102,7 @@ export function LunaTranscript({
   onIntroSeen,
   onRemember,
   onDismissMemory,
+  onDismissCrisis,
   onRate,
   onManualAction,
 }: LunaTranscriptProps) {
@@ -123,7 +132,7 @@ export function LunaTranscript({
           Discussing: {String(thread?.context_data.label)}
         </div>
       )}
-      {crisisState && <LunaSafetyPanel />}
+      {crisisState && <LunaSafetyPanel onDismiss={onDismissCrisis} />}
       <div className="mt-4 space-y-3">
         {messages.map((message, index) => {
           const prior = messages[index - 1];
