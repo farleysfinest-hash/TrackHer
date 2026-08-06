@@ -114,7 +114,7 @@ function LunaSessionProvider({
 }) {
   const profile = useAuthStore((s) => s.profile);
   const { aiContext } = useInsights();
-  const { ask, isSending, error: assistantError, clearError } = useAiAssistant();
+  const { ask, error: assistantError, clearError } = useAiAssistant();
   const { offsetTop, height: viewportHeight } = useVisualViewportBounds();
 
   const [open, setOpen] = useState(false);

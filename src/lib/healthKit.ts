@@ -7,7 +7,7 @@
 
 import { Capacitor } from '@capacitor/core';
 import { Health } from '@capgo/capacitor-health';
-import type { HealthDataType, HealthSample } from '@capgo/capacitor-health';
+import type { HealthDataType } from '@capgo/capacitor-health';
 
 // ---------------------------------------------------------------------------
 // Availability

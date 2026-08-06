@@ -403,16 +403,6 @@ function estrogenMeds(facts: FactsLite): string[] {
   });
 }
 
-function progesteroneMeds(facts: FactsLite): string[] {
-  return (facts.medications ?? [])
-    .filter((m) => /progesterone|prometrium|progest/i.test(`${m.name} ${m.category ?? ''}`))
-    .slice(0, 2)
-    .map((m) => {
-      const dose = m.dose?.trim();
-      return dose ? `${m.name} (${dose})` : m.name;
-    });
-}
-
 function latestLab(
   facts: FactsLite,
   key: 'estradiol' | 'progesterone' | 'testosterone' | 'fsh',

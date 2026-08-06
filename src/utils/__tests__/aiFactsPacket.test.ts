@@ -93,7 +93,7 @@ describe('buildAiFactsPacket', () => {
         change_type: 'increase',
         notes: null,
       },
-    ] as MedicationChange[];
+    ] as unknown as MedicationChange[];
 
     const packet = buildAiFactsPacket({
       timezone: 'America/Los_Angeles',

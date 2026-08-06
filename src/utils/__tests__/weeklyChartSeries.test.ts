@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { buildDailyIndexedWeeklyChart } from '../weeklyChartSeries';
-import { addDaysISO } from '../localDate';
 
 describe('buildDailyIndexedWeeklyChart axis downsampling', () => {
   function makeRow(date: string, value: number) {
