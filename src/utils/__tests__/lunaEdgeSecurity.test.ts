@@ -5,11 +5,6 @@ import {
   isAllowedRequestOrigin,
 } from '../../../supabase/functions/ai-assistant/httpSecurity';
 import {
-  crisisContinuityUnavailablePayload,
-  crisisReadFailureDisposition,
-  showSafetyPanelForActiveTier,
-} from '../../../supabase/functions/ai-assistant/crisisContinuityPolicy';
-import {
   AI_RATE_LIMIT_HIGH_CEILING_CAPACITY,
   aiActionCost,
   parseSharedRateLimitDecision,
@@ -44,29 +39,6 @@ describe('Luna shared rate-limit policy', () => {
         { allowed: false, retry_after_seconds: 14, remaining_units: 0 },
       ]),
     ).toEqual({ allowed: false, retryAfterSeconds: 14, remainingUnits: 0 });
-  });
-});
-
-describe('Luna crisis continuity failure policy', () => {
-  it('pauses ordinary chat with a deterministic safety response', () => {
-    expect(crisisReadFailureDisposition('chat', true, false)).toBe('safe_chat_fallback');
-    const payload = crisisContinuityUnavailablePayload(0);
-    expect(payload.shape).toBe('crisis_continuity_unavailable');
-    expect(payload.crisis.showSafetyPanel).toBe(true);
-    expect(payload.crisis.expiresAt).toBe('1970-01-04T00:00:00.000Z');
-  });
-
-  it('still classifies an active disclosure when continuity cannot be read', () => {
-    expect(crisisReadFailureDisposition('chat', true, true)).toBe('proceed_crisis');
-  });
-
-  it('blocks analysis and invalid chat requests when continuity cannot be read', () => {
-    expect(crisisReadFailureDisposition('improve_insights', false)).toBe('block_action');
-    expect(crisisReadFailureDisposition('chat', false)).toBe('block_action');
-  });
-
-  it('keeps the persistent support panel on for every active tier', () => {
-    expect(showSafetyPanelForActiveTier()).toBe(true);
   });
 });
 

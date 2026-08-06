@@ -93,7 +93,6 @@ vi.mock('../../../lib/lunaConversations', () => {
     MemorySafetyError,
     listLunaThreads: mocks.listLunaThreads,
     listLunaMemories: mocks.listLunaMemories,
-    loadLunaCrisisState: vi.fn(async () => null),
     getOrCreateDashboardLunaThread: vi.fn(async (userId: string) =>
       userId === 'user-b' ? mocks.accountBThread : mocks.threadA,
     ),

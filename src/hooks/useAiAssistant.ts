@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import type { AiFactsPacket } from '../utils/aiFactsPacket';
-import type { LunaCrisisState, LunaCrisisTier } from '../types/database';
+
 import { clampVisitPrepPack, type VisitPrepPack } from '../utils/aiVisitPrep';
 import type { JournalExtractResult } from '../utils/aiJournalExtract';
 import { clampDoseWatchPack, type DoseWatchPack } from '../utils/aiDoseWatch';
@@ -41,38 +41,9 @@ export interface ChatResult {
     tier: string;
     responseCount: number;
     showSafetyPanel: boolean;
-    expiresAt: string;
   };
   memoryProposal?: string | null;
   toolEvidence?: Array<Record<string, unknown>>;
-}
-
-function isLunaCrisisTier(value: string): value is Exclude<LunaCrisisTier, null> {
-  return (
-    value === 'mental_decline' ||
-    value === 'crisis' ||
-    value === 'crisis_imminent' ||
-    value === 'loved_one'
-  );
-}
-
-/** Immediate client state from the trusted Edge response; DB persistence is continuity only. */
-export function localCrisisStateFromChatResult(
-  userId: string,
-  crisis: ChatResult['crisis'],
-  now = new Date(),
-): LunaCrisisState | null {
-  if (!crisis || !isLunaCrisisTier(crisis.tier)) return null;
-  return {
-    user_id: userId,
-    tier: crisis.tier,
-    response_count: Math.max(1, Math.round(crisis.responseCount)),
-    presented_actions: crisis.showSafetyPanel ? ['support_panel'] : [],
-    asked_questions: [],
-    escalated: false,
-    last_activity_at: now.toISOString(),
-    expires_at: crisis.expiresAt,
-  };
 }
 
 export interface LunaChatOptions {
@@ -131,18 +102,41 @@ export interface TranslateResult {
   model?: string;
 }
 
+/** Prefer the Edge Function JSON `error` over supabase-js's generic non-2xx string. */
+async function edgeFunctionErrorMessage(fnError: unknown, fallback: string): Promise<string> {
+  const context =
+    fnError && typeof fnError === 'object' && 'context' in fnError
+      ? (fnError as { context?: Response }).context
+      : undefined;
+  if (context && typeof context.json === 'function') {
+    try {
+      const payload = await context.json();
+      if (payload && typeof payload === 'object' && typeof (payload as { error?: unknown }).error === 'string') {
+        return (payload as { error: string }).error;
+      }
+    } catch {
+      // Fall through to the generic supabase-js message.
+    }
+  }
+  return fnError instanceof Error && fnError.message ? fnError.message : fallback;
+}
+
 async function invokeAiAssistant<T>(
   body: Record<string, unknown>,
 ): Promise<{ data: T | null; error: string | null }> {
   try {
     const { data, error: fnError } = await supabase.functions.invoke('ai-assistant', { body });
     if (fnError) {
-      return { data: null, error: fnError.message || 'Could not reach the assistant' };
-    }
-    if (data?.error) {
       return {
         data: null,
-        error: typeof data.error === 'string' ? data.error : 'Assistant error',
+        error: await edgeFunctionErrorMessage(fnError, 'Could not reach the assistant'),
+      };
+    }
+    if (data && typeof data === 'object' && 'error' in data && (data as { error?: unknown }).error) {
+      const err = (data as { error: unknown }).error;
+      return {
+        data: null,
+        error: typeof err === 'string' ? err : 'Assistant error',
       };
     }
     return { data: data as T, error: null };

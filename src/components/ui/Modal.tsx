@@ -87,8 +87,9 @@ export function Modal({
       }
     >
       <div
-        className="absolute inset-0 bg-black/40"
+        className="absolute inset-0 bg-black/40 overscroll-contain"
         onClick={closeOnBackdrop ? onClose : undefined}
+        style={{ touchAction: 'none' }}
         aria-hidden
       />
       <div
@@ -99,7 +100,7 @@ export function Modal({
         tabIndex={-1}
 
         className={[
-          'relative z-10 flex w-full flex-col overflow-hidden bg-sand-50 outline-none',
+          'relative z-10 flex w-full flex-col overflow-hidden overscroll-contain bg-sand-50 outline-none',
           isFullScreen ? '' : 'max-h-full rounded-t-xl border border-sand-200 shadow-xl sm:rounded-xl',
           sizeClasses[size],
         ].join(' ')}
@@ -108,7 +109,8 @@ export function Modal({
           <div
             className={[
               'flex shrink-0 items-center justify-between border-b border-sand-200 pb-3',
-              isFullScreen ? 'safe-area-modal-header' : 'px-4 pt-4 sm:px-6',
+              'safe-area-modal-header',
+              isFullScreen ? '' : 'sm:px-6',
             ].join(' ')}
           >
             {title && (
@@ -131,7 +133,7 @@ export function Modal({
         <div
           className={[
             'min-h-0 flex-1 overflow-y-auto',
-            isFullScreen ? 'safe-area-modal-body pt-4' : 'p-6',
+            isFullScreen ? 'safe-area-modal-body pt-4' : 'safe-area-modal-body p-6',
           ].join(' ')}
         >
           {children}

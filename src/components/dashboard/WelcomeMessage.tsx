@@ -3,7 +3,12 @@ import { Card } from '../ui/Card';
 import { useAuthStore } from '../../stores/authStore';
 import { hasUiFlag, setUiFlag } from '../../lib/uiState';
 
-export function WelcomeMessage() {
+interface WelcomeMessageProps {
+  /** When the user already has check-in data, skip the welcome card entirely. */
+  checkinCount?: number;
+}
+
+export function WelcomeMessage({ checkinCount = 0 }: WelcomeMessageProps) {
   const profile = useAuthStore((s) => s.profile);
 
   // Wait for the profile before deciding — prevents a flash of the
@@ -13,6 +18,8 @@ export function WelcomeMessage() {
   // selects). Treat that as "not ready" rather than "not dismissed".
   if (profile.ui_state == null) return null;
   if (hasUiFlag(profile, 'welcome_dismissed')) return null;
+  // Users with existing data don't need the welcome blurb.
+  if (checkinCount > 0) return null;
 
   const handleDismiss = () => {
     setUiFlag('welcome_dismissed');
@@ -23,7 +30,7 @@ export function WelcomeMessage() {
       <button
         type="button"
         onClick={handleDismiss}
-        className="absolute right-4 top-4 rounded-full p-1 text-sage-400 hover:bg-sage-100 hover:text-sage-600 transition-colors"
+        className="absolute right-2 top-2 flex h-11 w-11 items-center justify-center rounded-full text-sage-400 hover:bg-sage-100 hover:text-sage-600 transition-colors"
         aria-label="Dismiss welcome message"
       >
         <X className="h-4 w-4" />

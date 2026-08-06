@@ -25,7 +25,7 @@ export function ToastContainer() {
   if (toasts.length === 0) return null;
 
   return (
-    <div className="fixed right-4 top-4 z-[100] flex flex-col gap-2">
+    <div className="fixed right-4 z-[100] flex flex-col gap-2" style={{ top: 'max(1rem, env(safe-area-inset-top, 1rem))' }}>
       {toasts.map((toast) => {
         const style = variantStyles[toast.variant];
         const Icon = style.icon;
@@ -57,7 +57,7 @@ export function ToastContainer() {
             <button
               type="button"
               onClick={() => dismiss(toast.id)}
-              className="shrink-0 text-sage-400 hover:text-sage-600"
+              className="flex h-11 w-11 shrink-0 items-center justify-center text-sage-400 hover:text-sage-600"
               aria-label="Dismiss"
             >
               <X className="h-4 w-4" />

@@ -18,16 +18,27 @@ export function segmentDataKey(baseKey: string, segmentIndex: number): string {
   return `${baseKey}__wseg${segmentIndex}`;
 }
 
-function enumerateDays(start: string, end: string): string[] {
+function enumerateAxisDates(start: string, end: string, step = 1): string[] {
   if (start > end) return [];
-  const days: string[] = [];
+  const dates: string[] = [];
   let cur = start;
   while (cur <= end) {
-    days.push(cur);
-    cur = addDaysISO(cur, 1);
+    dates.push(cur);
+    cur = addDaysISO(cur, step);
   }
-  return days;
+  // Always include the end date so the axis spans the full window.
+  if (step > 1 && dates.length > 0 && dates[dates.length - 1] !== end) {
+    dates.push(end);
+  }
+  return dates;
 }
+
+/**
+ * For ranges > 90 days the daily-indexed axis creates far more DOM nodes than
+ * data points (365 nodes for ~52 weekly check-ins at 1yr). Step the grid by 7
+ * for long ranges and merge in the actual measurement dates so no data is lost.
+ */
+const DOWNSAMPLE_THRESHOLD_DAYS = 90;
 
 export function weeklyMeasurementDates(
   rows: Array<{ date: string; [key: string]: unknown }>,
@@ -84,7 +95,24 @@ export function buildDailyIndexedWeeklyChart<T extends { date: string }>(
   weeklyValueKeys: string[],
 ): DailyIndexedWeeklyChart<T> {
   const sparseByDate = new Map(sparseRows.map((row) => [row.date, row]));
-  const days = enumerateDays(windowStart, windowEnd);
+  const rangeDays = daysBetweenISO(windowStart, windowEnd);
+  const step = rangeDays > DOWNSAMPLE_THRESHOLD_DAYS ? 7 : 1;
+  const gridDates = enumerateAxisDates(windowStart, windowEnd, step);
+
+  // When stepping > 1, merge in sparse data dates so measurements that fall
+  // between grid ticks are not silently dropped.
+  let days: string[];
+  if (step > 1) {
+    const dateSet = new Set(gridDates);
+    for (const row of sparseRows) {
+      if (row.date >= windowStart && row.date <= windowEnd) {
+        dateSet.add(row.date);
+      }
+    }
+    days = [...dateSet].sort();
+  } else {
+    days = gridDates;
+  }
 
   const weeklySegmentKeys: Record<string, string[]> = {};
   const allGaps: WeeklyGapNotice[] = [];

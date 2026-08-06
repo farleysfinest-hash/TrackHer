@@ -15,6 +15,7 @@ import { buildDailyIndexedWeeklyChart } from '../../utils/weeklyChartSeries';
 import type { SymptomTrendPoint } from '../../hooks/useChartData';
 import type { Medication, MedicationChange } from '../../types/database';
 import type { Insight } from '../../engine/types';
+import { daysBetweenISO } from '../../utils/localDate';
 import {
   PANEL_MRS_HEIGHT,
   PANEL_MRS_HEIGHT_EXPANDED,
@@ -23,6 +24,25 @@ import {
   StoryChartsBody,
   type StoryChartRow,
 } from './StoryChartsBody';
+
+/** Smooth pulse data with a centred rolling average when range > threshold. */
+const ROLLING_WINDOW_THRESHOLD_DAYS = 90;
+
+function smoothPulseData(rows: StoryChartRow[], windowDays: number): StoryChartRow[] {
+  if (windowDays <= ROLLING_WINDOW_THRESHOLD_DAYS) return rows;
+  // Wider window for longer ranges: 7 days up to 1yr, 14 for 2yr+
+  const halfWin = windowDays > 730 ? 7 : 3;
+  return rows.map((row, i) => {
+    if (row.pulseRaw == null) return row;
+    let sum = 0;
+    let count = 0;
+    for (let j = Math.max(0, i - halfWin); j <= Math.min(rows.length - 1, i + halfWin); j++) {
+      const v = rows[j].pulseRaw;
+      if (v != null) { sum += v; count++; }
+    }
+    return count > 0 ? { ...row, pulseRaw: Math.round((sum / count) * 100) / 100 } : row;
+  });
+}
 
 interface StoryColumnProps {
   data: SymptomTrendPoint[];
@@ -53,10 +73,12 @@ function StoryColumnComponent({
 
   const [pulseChannel, setPulseChannel] = useState<PulseChannel | null>(null);
   const activeChannel = pulseChannel ?? pulseDefaults.channel;
+  const windowDays = daysBetweenISO(windowStart, windowEnd);
+  const isSmoothed = windowDays > ROLLING_WINDOW_THRESHOLD_DAYS;
   const pulseHeader =
     pulseChannel === null
-      ? pulseDefaults.header
-      : `${PULSE_CHANNELS.find((c) => c.id === activeChannel)?.label} · daily pulse`;
+      ? pulseDefaults.header + (isSmoothed ? ' (smoothed)' : '')
+      : `${PULSE_CHANNELS.find((c) => c.id === activeChannel)?.label} · daily pulse${isSmoothed ? ' (smoothed)' : ''}`;
 
   const { chartData, mrsSegmentKeys } = useMemo(() => {
     const rawValues = data.map((d) => getPulseChannelValue(d.checkin, activeChannel));
@@ -65,11 +87,12 @@ function StoryColumnComponent({
       pulseRaw: rawValues[i],
     }));
     const indexed = buildDailyIndexedWeeklyChart(sparse, windowStart, windowEnd, ['mrsTotal']);
+    const smoothedRows = smoothPulseData(indexed.dailyRows as StoryChartRow[], windowDays);
     return {
-      chartData: indexed.dailyRows as StoryChartRow[],
+      chartData: smoothedRows,
       mrsSegmentKeys: indexed.weeklySegmentKeys.mrsTotal ?? [],
     };
-  }, [data, activeChannel, windowStart, windowEnd]);
+  }, [data, activeChannel, windowStart, windowEnd, windowDays]);
 
   const domainDates = useMemo(() => chartData.map((d) => d.date), [chartData]);
 

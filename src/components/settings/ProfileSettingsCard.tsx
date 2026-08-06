@@ -113,9 +113,8 @@ export function ProfileSettingsCard() {
       const stamp = await uploadProfileAvatar(user.id, file);
       setUiValue(AVATAR_STAMP_KEY, stamp);
     } catch (error) {
-      setAvatarError(
-        error instanceof Error ? error.message : 'Could not save your profile picture.',
-      );
+      console.warn('Avatar upload failed:', error instanceof Error ? error.message : error);
+      setAvatarError('Could not save your profile picture. Please try again.');
     } finally {
       setIsAvatarSaving(false);
       if (avatarInputRef.current) avatarInputRef.current.value = '';

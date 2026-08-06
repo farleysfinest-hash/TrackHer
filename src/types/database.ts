@@ -101,6 +101,7 @@ export type LunaThreadKind =
   | 'insight'
   | 'general';
 
+/** 'mental_decline' is legacy (DB CHECK constraint, migration 034); app no longer writes it. */
 export type LunaCrisisTier =
   | 'mental_decline'
   | 'crisis'
@@ -113,7 +114,8 @@ export type LunaFeedbackRating =
   | 'incorrect'
   | 'too_obvious'
   | 'missing_context'
-  | 'new_understanding';
+  | 'new_understanding'
+  | 'false_crisis_perception';
 
 export type ReminderType = 'checkin' | 'medication' | 'lab_due';
 

@@ -29,11 +29,9 @@ const mocks = vi.hoisted(() => {
         tier: 'crisis',
         responseCount: 1,
         showSafetyPanel: true,
-        expiresAt: '2026-08-04T00:00:00.000Z',
       },
     })),
     clearError: vi.fn(),
-    loadLunaCrisisState: vi.fn(),
   };
 });
 
@@ -84,7 +82,6 @@ vi.mock('../../../lib/lunaConversations', () => {
     MemorySafetyError,
     listLunaThreads: vi.fn(async () => [mocks.thread]),
     listLunaMemories: vi.fn(async () => []),
-    loadLunaCrisisState: mocks.loadLunaCrisisState,
     getOrCreateDashboardLunaThread: vi.fn(async () => mocks.thread),
     loadLunaMessages: vi.fn(async () => []),
     addLunaMessage: vi.fn(async (input: { role: 'user' | 'assistant'; content: string }) => ({
@@ -103,7 +100,6 @@ vi.mock('../../../lib/lunaConversations', () => {
     getOrCreateFocusedLunaThread: vi.fn(),
     deleteLunaThread: vi.fn(),
     addLunaMemory: vi.fn(),
-    clearLunaCrisisState: vi.fn(async () => undefined),
     clearLunaMemories: vi.fn(),
     deleteLunaMemory: vi.fn(),
     saveLunaFeedback: vi.fn(),
@@ -122,12 +118,7 @@ function OpenLunaButton() {
 }
 
 describe('LunaProvider crisis persistence fallback', () => {
-  it('keeps immediate safety actions visible when the DB reread fails', async () => {
-    mocks.loadLunaCrisisState
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(null)
-      .mockRejectedValueOnce(new Error('database unavailable'));
+  it('shows safety panel from the Edge crisis response', async () => {
     const user = userEvent.setup();
     render(
       <LunaProvider>
@@ -144,20 +135,17 @@ describe('LunaProvider crisis persistence fallback', () => {
     expect(safetyPanelHeading).toBeVisible();
     expect(safetyPanelHeading.parentElement).toHaveClass('sticky', 'top-0', 'z-10');
     expect(screen.getByRole('link', { name: '988' })).toHaveAttribute('href', 'tel:988');
-    await waitFor(() => expect(screen.getByText('Storage unavailable')).toBeVisible());
   });
 
-  it('shows the safety panel and crisis-tags the turn when the risk classifier is down', async () => {
-    mocks.loadLunaCrisisState.mockResolvedValue(null);
+  it('shows the safety panel and crisis-tags the turn for ambiguous risk signals', async () => {
     mocks.ask.mockResolvedValueOnce({
-      reply: "I'm having a brief glitch checking how you're doing. Call or text 988 if you're in a hard place.",
+      reply: "I'm hearing something that concerns me. Use the support actions above.",
       model: 'trackher-companion-script',
-      shape: 'risk_classifier_unavailable',
+      shape: 'crisis',
       crisis: {
         tier: 'crisis',
         responseCount: 1,
         showSafetyPanel: true,
-        expiresAt: '2026-08-04T00:00:00.000Z',
       },
     });
     const { markLunaMessageCrisis } = await import('../../../lib/lunaConversations');
@@ -183,17 +171,7 @@ describe('LunaProvider crisis persistence fallback', () => {
     );
   });
 
-  it('keeps the support panel visible for an active crisis tier', async () => {
-    mocks.loadLunaCrisisState.mockResolvedValue({
-      user_id: 'user-1',
-      tier: 'crisis',
-      response_count: 1,
-      presented_actions: [],
-      asked_questions: [],
-      escalated: false,
-      last_activity_at: '2026-08-01T00:00:00.000Z',
-      expires_at: '2026-08-04T00:00:00.000Z',
-    });
+  it('dismisses safety panel when user clicks dismiss button', async () => {
     const user = userEvent.setup();
     render(
       <LunaProvider>
@@ -202,9 +180,16 @@ describe('LunaProvider crisis persistence fallback', () => {
     );
 
     await user.click(screen.getByRole('button', { name: 'Open Luna' }));
+    const input = await screen.findByPlaceholderText('Tell Luna what’s going on…');
+    await user.type(input, 'I need immediate help');
+    await user.click(screen.getByRole('button', { name: 'Send to Luna' }));
+
     expect(await screen.findByText('Immediate support stays within reach')).toBeVisible();
-    expect(
-      screen.getByRole('button', { name: "I don't want these prompts right now" }),
-    ).toBeVisible();
+    const dismissButton = screen.getByRole('button', {
+      name: "I don't want these prompts right now",
+    });
+    expect(dismissButton).toBeVisible();
+    await user.click(dismissButton);
+    expect(screen.queryByText('Immediate support stays within reach')).toBeNull();
   });
 });

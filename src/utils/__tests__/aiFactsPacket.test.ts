@@ -4,7 +4,12 @@ import { hashAiFactsPacket } from '../aiInsightsCache';
 import { isAiForbiddenCategory } from '../aiForbiddenCategories';
 import { buildGapCoachMessage } from '../gapCoach';
 import type { Insight } from '../../engine/types';
-import type { Profile } from '../../types/database';
+import type {
+  Medication,
+  MedicationChange,
+  Profile,
+  SymptomCheckin,
+} from '../../types/database';
 
 describe('buildAiFactsPacket', () => {
   it('maps engine insights and omits forbidden categories', () => {
@@ -57,6 +62,61 @@ describe('buildAiFactsPacket', () => {
     expect(packet.engineInsights[0].id).toBe('a');
     expect(packet.medications).toEqual([]);
     expect(packet.mrs).toEqual([]);
+    expect(packet.pulseSeries).toEqual([]);
+    expect(packet.doseChangeWindows).toEqual([]);
+  });
+
+  it('includes pulse series and dose-change before/after windows', () => {
+    const med = {
+      id: 'med-1',
+      medication_name: 'Estradiol',
+      is_active: true,
+      end_date: null,
+      hormone_category: 'estrogen',
+      dose_amount: 1,
+      dose_unit: 'mg',
+      start_date: '2026-01-01',
+    } as Medication;
+
+    const checkins = [
+      { checkin_date: '2026-02-01', energy_level: 4, mood_level: 3, sleep_quality: 5 },
+      { checkin_date: '2026-02-10', energy_level: 5, mood_level: 4, sleep_quality: 5 },
+      { checkin_date: '2026-02-20', energy_level: 6, mood_level: 5, sleep_quality: 6 },
+      { checkin_date: '2026-03-05', energy_level: 7, mood_level: 6, sleep_quality: 7 },
+      { checkin_date: '2026-03-15', energy_level: 7, mood_level: 7, sleep_quality: 7 },
+    ] as SymptomCheckin[];
+
+    const changes = [
+      {
+        medication_id: 'med-1',
+        change_date: '2026-02-15',
+        change_type: 'increase',
+        notes: null,
+      },
+    ] as MedicationChange[];
+
+    const packet = buildAiFactsPacket({
+      timezone: 'America/Los_Angeles',
+      profile: { display_name: 'T', straw_stage: null, menopause_stage: null } as Profile,
+      checkins,
+      medications: [med],
+      medicationChanges: changes,
+      labResults: [],
+      insights: [],
+    });
+
+    expect(packet.pulseSeries.length).toBe(5);
+    expect(packet.doseChangeWindows).toHaveLength(1);
+    const window = packet.doseChangeWindows[0];
+    expect(window.medicationName).toBe('Estradiol');
+    expect(window.beforeDays).toBe(28);
+    expect(window.afterDays).toBe(42);
+    expect(window.energy.beforeCount).toBe(2);
+    expect(window.energy.afterCount).toBe(3);
+    expect(window.energy.before).toBe(4.5);
+    expect(window.energy.after).toBe(6.7);
+    expect(window.energy.delta).toBe(2.2);
+    expect(JSON.stringify(packet).length).toBeLessThan(24_000);
   });
 
   it('hashes stably when only generatedAt changes', () => {

@@ -21,7 +21,7 @@ export function DataSettingsCard({ onRequestReset, onRequestDelete }: DataSettin
       const dateStr = new Date().toISOString().slice(0, 10);
       await downloadJson(data, `trackher-export-${dateStr}.json`);
     } catch (err) {
-      setExportError(err instanceof Error ? err.message : 'Export failed. Please try again.');
+      setExportError('Export failed. Please try again.');
     } finally {
       setIsExporting(false);
     }
@@ -35,7 +35,7 @@ export function DataSettingsCard({ onRequestReset, onRequestDelete }: DataSettin
       const dateStr = new Date().toISOString().slice(0, 10);
       await downloadCsv(data, `trackher-export-${dateStr}.csv`);
     } catch (err) {
-      setExportError(err instanceof Error ? err.message : 'Export failed. Please try again.');
+      setExportError('Export failed. Please try again.');
     } finally {
       setIsExportingCsv(false);
     }

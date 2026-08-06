@@ -1,41 +1,18 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   classifyCompanionShape,
   isMemorySafeContent,
   looksRiskAdjacent,
 } from '../aiCompanionScripts';
 import {
-  attemptCrisisStateClear,
   currentMessageHasCrisisSignal,
-  decideCrisisTurn,
   deterministicCurrentCrisisTier,
-  hasExplicitCrisisResolution,
-  hasSoftCrisisDismiss,
-  indicatesCrisisResolution,
-  tierForCurrentCrisisSubject,
 } from '../../../supabase/functions/ai-assistant/crisisController';
-import { localCrisisStateFromChatResult } from '../../hooks/useAiAssistant';
+
 import { clampJournalExtract } from '../aiJournalExtract';
 import { clampVisitDebriefPack } from '../aiVisitDebrief';
 
 describe('Batch A crisis-routing invariants', () => {
-  const explicitResolutions = [
-    "I'm safe now.",
-    'I am safe now.',
-    'I got emergency help.',
-    "I'm at the hospital.",
-    'A crisis counselor is with me.',
-  ];
-
-  it.each(explicitResolutions)('recognizes standalone resolution: %s', (message) => {
-    expect(hasExplicitCrisisResolution(message)).toBe(true);
-    expect(indicatesCrisisResolution(message)).toBe(true);
-  });
-
-  it('does not treat another person getting help as the user resolving', () => {
-    expect(hasExplicitCrisisResolution('My friend got emergency help.')).toBe(false);
-  });
-
   const negatedDanger = [
     "I'm not going to hurt myself.",
     'I am not going to kill myself.',
@@ -47,7 +24,6 @@ describe('Batch A crisis-routing invariants', () => {
   it.each(negatedDanger)('does not reinterpret negated danger: %s', (message) => {
     expect(deterministicCurrentCrisisTier(message)).toBeNull();
     expect(currentMessageHasCrisisSignal(message)).toBe(false);
-    expect(indicatesCrisisResolution(message)).toBe(true);
   });
 
   const directCompoundDanger: Array<[string, 'crisis' | 'crisis_imminent']> = [
@@ -60,7 +36,6 @@ describe('Batch A crisis-routing invariants', () => {
     (message, tier) => {
       expect(deterministicCurrentCrisisTier(message)).toBe(tier);
       expect(currentMessageHasCrisisSignal(message)).toBe(true);
-      expect(indicatesCrisisResolution(message)).toBe(false);
     },
   );
 
@@ -74,15 +49,9 @@ describe('Batch A crisis-routing invariants', () => {
   ];
 
   it.each(modelBackstopCompound)(
-    'lets a positive model classification override resolution: %s',
+    'detects danger signal in compound resolution + danger: %s',
     (message) => {
-      expect(
-        decideCrisisTurn({
-          message,
-          priorTier: 'crisis',
-          classification: { status: 'ok', tier: 'crisis' },
-        }),
-      ).toEqual({ action: 'crisis', tier: 'crisis' });
+      expect(currentMessageHasCrisisSignal(message)).toBe(true);
     },
   );
 
@@ -97,14 +66,6 @@ describe('Batch A crisis-routing invariants', () => {
     expect(looksRiskAdjacent(message)).toBe(true);
     expect(currentMessageHasCrisisSignal(message)).toBe(true);
     expect(isMemorySafeContent(message)).toBe(false);
-    expect(indicatesCrisisResolution(message)).toBe(false);
-    expect(
-      decideCrisisTurn({
-        message,
-        priorTier: null,
-        classification: { status: 'unavailable' },
-      }),
-    ).toEqual({ action: 'classifier_unavailable' });
   });
 
   const negatedClinicianReports = [
@@ -144,223 +105,26 @@ describe('Batch A crisis-routing invariants', () => {
     expect(looksRiskAdjacent(message)).toBe(false);
     expect(currentMessageHasCrisisSignal(message)).toBe(false);
     expect(isMemorySafeContent(message)).toBe(true);
-    expect(
-      decideCrisisTurn({
-        message,
-        priorTier: null,
-        classification: { status: 'ok', tier: null },
-      }),
-    ).toEqual({ action: 'normal' });
-  });
-
-  const novelSelfRisk = [
-    'I want to go to sleep and not come back',
-    "I don't think I'll be here tomorrow",
-    "There's no point in being alive",
-    "I don't plan on making it through the night",
-  ];
-
-  it.each(novelSelfRisk)('routes model-classified novel self-risk: %s', (message) => {
-    expect(
-      decideCrisisTurn({
-        message,
-        priorTier: null,
-        classification: { status: 'ok', tier: 'crisis' },
-      }),
-    ).toEqual({ action: 'crisis', tier: 'crisis' });
-    expect(isMemorySafeContent(message)).toBe(false);
-  });
-
-  it('routes novel loved-one risk to the loved-one subject', () => {
-    const message = 'someone I love told me there is no point in being alive';
-    expect(classifyCompanionShape(message)).toBeNull();
-    expect(
-      decideCrisisTurn({
-        message,
-        priorTier: 'crisis',
-        classification: { status: 'ok', tier: 'loved_one' },
-      }),
-    ).toEqual({ action: 'crisis', tier: 'loved_one' });
-    expect(isMemorySafeContent(message)).toBe(false);
-  });
-
-  it('uses the current loved-one subject instead of a prior self-crisis rank', () => {
-    expect(tierForCurrentCrisisSubject('loved_one', 'crisis_imminent')).toBe('loved_one');
-  });
-
-  it('uses current self-danger instead of a prior loved-one subject', () => {
-    expect(tierForCurrentCrisisSubject('crisis', 'loved_one')).toBe('crisis');
-  });
-
-  it('retains higher prior severity only within the same subject', () => {
-    expect(tierForCurrentCrisisSubject('crisis', 'crisis_imminent')).toBe(
-      'crisis_imminent',
-    );
-  });
-
-  it('does not resolve when the model classifier is unavailable', () => {
-    expect(
-      decideCrisisTurn({
-        message: "I'm safe now.",
-        priorTier: 'crisis',
-        classification: { status: 'unavailable' },
-      }),
-    ).toEqual({ action: 'crisis', tier: 'crisis' });
-  });
-
-  it('does not resolve when the model finds current danger', () => {
-    expect(
-      decideCrisisTurn({
-        message: "I'm safe now, but I don't plan on making it through the night.",
-        priorTier: 'crisis',
-        classification: { status: 'ok', tier: 'crisis' },
-      }),
-    ).toEqual({ action: 'crisis', tier: 'crisis' });
-  });
-
-  it('resolves only after explicit safety and a model none result', () => {
-    expect(
-      decideCrisisTurn({
-        message: "I'm safe now.",
-        priorTier: 'crisis',
-        classification: { status: 'ok', tier: null },
-      }),
-    ).toEqual({ action: 'resolve' });
-  });
-});
-
-describe('Batch A soft dismiss of safety follow-ups', () => {
-  it.each([
-    "I don't want this help",
-    'leave me alone',
-    'please stop asking',
-    'stop with the safety questions',
-    'enough with the 988',
-  ])('recognizes soft dismiss: %s', (message) => {
-    expect(hasSoftCrisisDismiss(message)).toBe(true);
-    expect(hasExplicitCrisisResolution(message)).toBe(true);
-  });
-
-  it('resolves an active crisis on soft dismiss even if the classifier mislabels', () => {
-    expect(
-      decideCrisisTurn({
-        message: 'leave me alone',
-        priorTier: 'crisis',
-        classification: { status: 'ok', tier: 'crisis' },
-      }),
-    ).toEqual({ action: 'resolve' });
-  });
-
-  it('does not soft-dismiss when the same message still contains danger', () => {
-    expect(
-      decideCrisisTurn({
-        message: "leave me alone, I'm going to kill myself",
-        priorTier: 'crisis',
-        classification: { status: 'ok', tier: null },
-      }),
-    ).toEqual({ action: 'crisis', tier: 'crisis' });
   });
 });
 
 describe('Batch A risk-watch middle tier', () => {
-  const softRiskMessage = "I've been feeling worthless lately.";
+  const softMoodMessage = 'I feel so exhausted and low lately.';
 
-  it('keeps risk-adjacent trip words in play when the classifier says none', () => {
-    expect(deterministicCurrentCrisisTier(softRiskMessage)).toBeNull();
-    expect(currentMessageHasCrisisSignal(softRiskMessage)).toBe(false);
-    expect(looksRiskAdjacent(softRiskMessage)).toBe(true);
-    expect(
-      decideCrisisTurn({
-        message: softRiskMessage,
-        priorTier: null,
-        classification: { status: 'ok', tier: null },
-      }),
-    ).toEqual({ action: 'risk_watch' });
+  it('soft mood without SI is not a crisis signal', () => {
+    expect(deterministicCurrentCrisisTier(softMoodMessage)).toBeNull();
+    expect(currentMessageHasCrisisSignal(softMoodMessage)).toBe(false);
+    expect(looksRiskAdjacent(softMoodMessage)).toBe(false);
   });
 
-  it('still enters crisis when the classifier finds a tier', () => {
-    expect(
-      decideCrisisTurn({
-        message: softRiskMessage,
-        priorTier: null,
-        classification: { status: 'ok', tier: 'mental_decline' },
-      }),
-    ).toEqual({ action: 'crisis', tier: 'mental_decline' });
+  it('trusts classifier none for HRT/casual method-word false positives', () => {
+    expect(currentMessageHasCrisisSignal("I'm hanging in there")).toBe(false);
+    expect(currentMessageHasCrisisSignal('can I overdose on my patches?')).toBe(false);
   });
 
-  it('fails closed when the classifier is down for risk-adjacent wording', () => {
-    expect(
-      decideCrisisTurn({
-        message: softRiskMessage,
-        priorTier: null,
-        classification: { status: 'unavailable' },
-      }),
-    ).toEqual({ action: 'classifier_unavailable' });
-  });
-
-  it('keeps a prior crisis tier ahead of risk-watch', () => {
-    expect(
-      decideCrisisTurn({
-        message: softRiskMessage,
-        priorTier: 'crisis',
-        classification: { status: 'ok', tier: null },
-      }),
-    ).toEqual({ action: 'crisis', tier: 'crisis' });
-  });
-
-  it('does not risk-watch ordinary messages', () => {
-    expect(
-      decideCrisisTurn({
-        message: 'How is my estradiol trending?',
-        priorTier: null,
-        classification: { status: 'ok', tier: null },
-      }),
-    ).toEqual({ action: 'normal' });
-  });
-});
-
-describe('Batch A persistence invariants', () => {
-  it('reports a failed crisis-state clear instead of claiming success', async () => {
-    const result = await attemptCrisisStateClear(async () => ({
-      error: { message: 'database unavailable' },
-    }));
-    expect(result).toEqual({ cleared: false, errorMessage: 'database unavailable' });
-  });
-
-  it('reports a thrown crisis-state clear instead of claiming success', async () => {
-    const result = await attemptCrisisStateClear(async () => {
-      throw new Error('network unavailable');
-    });
-    expect(result).toEqual({ cleared: false, errorMessage: 'network unavailable' });
-  });
-
-  it('reports a successful crisis-state clear', async () => {
-    const clear = vi.fn(async () => ({ error: null }));
-    await expect(attemptCrisisStateClear(clear)).resolves.toEqual({
-      cleared: true,
-      errorMessage: null,
-    });
-    expect(clear).toHaveBeenCalledOnce();
-  });
-
-  it('creates immediate local safety state from the Edge response', () => {
-    const state = localCrisisStateFromChatResult(
-      'user-1',
-      {
-        tier: 'crisis',
-        responseCount: 2,
-        showSafetyPanel: true,
-        expiresAt: '2026-08-03T00:00:00.000Z',
-      },
-      new Date('2026-08-01T00:00:00.000Z'),
-    );
-    expect(state).toMatchObject({
-      user_id: 'user-1',
-      tier: 'crisis',
-      response_count: 2,
-      presented_actions: ['support_panel'],
-      expires_at: '2026-08-03T00:00:00.000Z',
-    });
+  it('detects standalone method signal', () => {
+    expect(deterministicCurrentCrisisTier('I have a knife')).toBeNull();
+    expect(currentMessageHasCrisisSignal('I have a knife')).toBe(true);
   });
 });
 

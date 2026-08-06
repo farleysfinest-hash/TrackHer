@@ -96,7 +96,7 @@ export function DoseWatchCard() {
             <button
               type="button"
               onClick={onDismiss}
-              className="rounded p-1 text-sage-400 hover:bg-sage-50 hover:text-sage-600"
+              className="flex h-11 w-11 items-center justify-center rounded text-sage-400 hover:bg-sage-50 hover:text-sage-600"
               aria-label="Dismiss"
             >
               <X className="h-4 w-4" />

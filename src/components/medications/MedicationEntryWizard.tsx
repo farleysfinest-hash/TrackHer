@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { X } from 'lucide-react';
 import { useMedicationEntryStore } from '../../stores/medicationEntryStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useVisualViewportBounds } from '../../hooks/useKeyboardBottomInset';
 import { StepIndicator } from '../ui/StepIndicator';
 import { StepHormoneCategory } from './StepHormoneCategory';
 import { StepDeliveryMethod } from './StepDeliveryMethod';
@@ -27,6 +28,7 @@ export function MedicationEntryWizard({ isOpen, onClose, onComplete }: Medicatio
   } = useMedicationEntryStore();
 
   const dialogRef = useRef<HTMLDivElement>(null);
+  const { inset: keyboardInset } = useVisualViewportBounds();
 
   const handleClose = () => {
     reset();
@@ -58,7 +60,7 @@ export function MedicationEntryWizard({ isOpen, onClose, onComplete }: Medicatio
     <div
       ref={dialogRef}
       tabIndex={-1}
-      className="fixed inset-0 z-50 flex flex-col bg-sand-50 outline-none"
+      className="fixed inset-0 z-50 flex flex-col overscroll-contain bg-sand-50 outline-none"
       role="dialog"
       aria-modal="true"
       aria-label="Add medication"
@@ -68,14 +70,17 @@ export function MedicationEntryWizard({ isOpen, onClose, onComplete }: Medicatio
         <button
           type="button"
           onClick={handleClose}
-          className="rounded-lg p-2 text-sage-400 hover:bg-sage-50 hover:text-sage-600"
+          className="flex h-11 w-11 items-center justify-center rounded-lg text-sage-400 hover:bg-sage-50 hover:text-sage-600"
           aria-label="Close"
         >
           <X className="h-5 w-5" />
         </button>
       </header>
 
-      <div className="safe-area-bottom flex-1 overflow-y-auto px-6 py-8">
+      <div
+        className="safe-area-bottom flex-1 overflow-y-auto px-6 py-8"
+        style={keyboardInset > 0 ? { paddingBottom: keyboardInset + 16 } : undefined}
+      >
         <div className="mx-auto max-w-[640px]">
           {currentStep < 5 && (
             <StepIndicator currentStep={displayStep} totalSteps={totalSteps} />

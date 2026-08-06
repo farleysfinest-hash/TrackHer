@@ -10,8 +10,27 @@ import type { Insight } from '../engine/types';
 import { getDailySignal, getTrustedMrsTotal, hasMRSData } from './checkinHelpers';
 import { getBiomarkerValue } from './labHelpers';
 import { isAiForbiddenCategory } from './aiForbiddenCategories';
+import { daysBetweenISO } from './localDate';
 
-/** Compact packet sent to the AI assistant — keep under ~3k tokens when possible. */
+/** Edge `requireFacts` rejects packets over 24k JSON chars. */
+const FACTS_PACKET_MAX_CHARS = 24_000;
+
+/** Match analysis-tool defaults for medication_change_window. */
+const DOSE_BEFORE_DAYS = 28;
+const DOSE_AFTER_DAYS = 42;
+const DOSE_CHANGE_WINDOW_LIMIT = 4;
+const PULSE_SERIES_DAYS = 60;
+
+const LAB_PACKET_KEYS = [
+  'estradiol',
+  'progesterone',
+  'total_testosterone',
+  'fsh',
+  'tsh',
+  'shbg',
+] as const;
+
+/** Compact packet sent to the AI assistant — keep under Edge 24k JSON limit. */
 export interface AiFactsPacket {
   generatedAt: string;
   timezone: string;
@@ -33,6 +52,13 @@ export interface AiFactsPacket {
     avgMood: number | null;
     avgSleep: number | null;
   };
+  /** Daily pulse points (honest nulls for missing days in range are omitted — only logged days). */
+  pulseSeries: Array<{
+    date: string;
+    energy: number | null;
+    mood: number | null;
+    sleep: number | null;
+  }>;
   medications: Array<{
     name: string;
     category: string | null;
@@ -46,6 +72,18 @@ export interface AiFactsPacket {
     changeType: string;
     notes: string | null;
   }>;
+  /** Deterministic before/after means around recent dose changes (engine math, Luna narrates). */
+  doseChangeWindows: Array<{
+    date: string;
+    medicationName: string | null;
+    changeType: string;
+    beforeDays: number;
+    afterDays: number;
+    energy: { before: number | null; after: number | null; delta: number | null; beforeCount: number; afterCount: number };
+    mood: { before: number | null; after: number | null; delta: number | null; beforeCount: number; afterCount: number };
+    sleep: { before: number | null; after: number | null; delta: number | null; beforeCount: number; afterCount: number };
+    mrsTotal: { before: number | null; after: number | null; delta: number | null; beforeCount: number; afterCount: number };
+  }>;
   recentAdministrations: Array<{
     date: string;
     medicationName: string | null;
@@ -56,6 +94,8 @@ export interface AiFactsPacket {
     progesterone: number | null;
     testosterone: number | null;
     fsh: number | null;
+    tsh: number | null;
+    shbg: number | null;
   }>;
   engineInsights: Array<{
     id: string;
@@ -83,10 +123,72 @@ function mean(nums: number[]): number | null {
   return Math.round((nums.reduce((a, b) => a + b, 0) / nums.length) * 10) / 10;
 }
 
+function delta(before: number | null, after: number | null): number | null {
+  if (before === null || after === null) return null;
+  return Math.round((after - before) * 10) / 10;
+}
+
 function doseLabel(med: Medication): string | null {
   if (med.dose_amount == null) return null;
   const unit = med.dose_unit ?? '';
   return `${med.dose_amount}${unit ? ` ${unit}` : ''}`.trim();
+}
+
+function pulseLevels(c: SymptomCheckin): {
+  energy: number | null;
+  mood: number | null;
+  sleep: number | null;
+} {
+  let energy = c.energy_level ?? null;
+  const mood = c.mood_level ?? null;
+  const sleep = c.sleep_quality ?? null;
+  if (energy == null) {
+    const legacy = getDailySignal(c);
+    if (legacy != null) energy = legacy;
+  }
+  return { energy, mood, sleep };
+}
+
+type WindowMetric = {
+  before: number | null;
+  after: number | null;
+  delta: number | null;
+  beforeCount: number;
+  afterCount: number;
+};
+
+function windowMeans(
+  points: Array<{ date: string; value: number }>,
+  changeDate: string,
+  beforeDays: number,
+  afterDays: number,
+): WindowMetric {
+  const beforeVals: number[] = [];
+  const afterVals: number[] = [];
+  for (const row of points) {
+    const beforeOffset = daysBetweenISO(row.date, changeDate);
+    if (beforeOffset > 0 && beforeOffset <= beforeDays) beforeVals.push(row.value);
+    const afterOffset = daysBetweenISO(changeDate, row.date);
+    if (afterOffset >= 0 && afterOffset <= afterDays) afterVals.push(row.value);
+  }
+  const before = mean(beforeVals);
+  const after = mean(afterVals);
+  return {
+    before,
+    after,
+    delta: delta(before, after),
+    beforeCount: beforeVals.length,
+    afterCount: afterVals.length,
+  };
+}
+
+function trimPulseSeriesToFit(packet: AiFactsPacket): AiFactsPacket {
+  let next = packet;
+  while (JSON.stringify(next).length > FACTS_PACKET_MAX_CHARS && next.pulseSeries.length > 0) {
+    const drop = Math.max(1, Math.ceil(next.pulseSeries.length * 0.1));
+    next = { ...next, pulseSeries: next.pulseSeries.slice(drop) };
+  }
+  return next;
 }
 
 /**
@@ -95,7 +197,11 @@ function doseLabel(med: Medication): string | null {
  * (engine keeps those — companion must never rewrite them).
  */
 export function buildAiFactsPacket(input: AiFactsPacketInput): AiFactsPacket {
-  const mrsRows = input.checkins
+  const sortedCheckins = input.checkins
+    .slice()
+    .sort((a, b) => a.checkin_date.localeCompare(b.checkin_date));
+
+  const mrsRows = sortedCheckins
     .filter(hasMRSData)
     .map((c) => {
       const total = getTrustedMrsTotal(c);
@@ -109,26 +215,32 @@ export function buildAiFactsPacket(input: AiFactsPacketInput): AiFactsPacket {
       };
     })
     .filter((r): r is NonNullable<typeof r> => r !== null)
-    .sort((a, b) => a.date.localeCompare(b.date))
     .slice(-16);
 
-  const pulseWindow = input.checkins
-    .slice()
-    .sort((a, b) => a.checkin_date.localeCompare(b.checkin_date))
-    .slice(-28);
-
+  const pulseWindow = sortedCheckins.slice(-28);
   const energy: number[] = [];
   const mood: number[] = [];
   const sleep: number[] = [];
   for (const c of pulseWindow) {
-    if (c.energy_level != null) energy.push(c.energy_level);
-    if (c.mood_level != null) mood.push(c.mood_level);
-    if (c.sleep_quality != null) sleep.push(c.sleep_quality);
-    else {
-      const legacy = getDailySignal(c);
-      if (legacy != null && c.energy_level == null) energy.push(legacy);
-    }
+    const levels = pulseLevels(c);
+    if (levels.energy != null) energy.push(levels.energy);
+    if (levels.mood != null) mood.push(levels.mood);
+    if (levels.sleep != null) sleep.push(levels.sleep);
   }
+
+  const pulseSeries = sortedCheckins
+    .slice(-PULSE_SERIES_DAYS)
+    .map((c) => {
+      const levels = pulseLevels(c);
+      if (levels.energy == null && levels.mood == null && levels.sleep == null) return null;
+      return {
+        date: c.checkin_date,
+        energy: levels.energy,
+        mood: levels.mood,
+        sleep: levels.sleep,
+      };
+    })
+    .filter((r): r is NonNullable<typeof r> => r !== null);
 
   const medById = new Map(input.medications.map((m) => [m.id, m]));
 
@@ -141,6 +253,48 @@ export function buildAiFactsPacket(input: AiFactsPacketInput): AiFactsPacket {
       changeType: ch.change_type,
       notes: ch.notes,
     }));
+
+  const energyPoints = sortedCheckins
+    .map((c) => {
+      const v = pulseLevels(c).energy;
+      return v == null ? null : { date: c.checkin_date, value: v };
+    })
+    .filter((r): r is { date: string; value: number } => r !== null);
+  const moodPoints = sortedCheckins
+    .map((c) => {
+      const v = pulseLevels(c).mood;
+      return v == null ? null : { date: c.checkin_date, value: v };
+    })
+    .filter((r): r is { date: string; value: number } => r !== null);
+  const sleepPoints = sortedCheckins
+    .map((c) => {
+      const v = pulseLevels(c).sleep;
+      return v == null ? null : { date: c.checkin_date, value: v };
+    })
+    .filter((r): r is { date: string; value: number } => r !== null);
+  const mrsPoints = mrsRows.map((r) => ({ date: r.date, value: r.total }));
+
+  const doseChangeWindows = [...input.medicationChanges]
+    .sort((a, b) => a.change_date.localeCompare(b.change_date))
+    .slice(-DOSE_CHANGE_WINDOW_LIMIT)
+    .map((ch) => {
+      const energyW = windowMeans(energyPoints, ch.change_date, DOSE_BEFORE_DAYS, DOSE_AFTER_DAYS);
+      const moodW = windowMeans(moodPoints, ch.change_date, DOSE_BEFORE_DAYS, DOSE_AFTER_DAYS);
+      const sleepW = windowMeans(sleepPoints, ch.change_date, DOSE_BEFORE_DAYS, DOSE_AFTER_DAYS);
+      const mrsW = windowMeans(mrsPoints, ch.change_date, DOSE_BEFORE_DAYS, DOSE_AFTER_DAYS);
+      return {
+        date: ch.change_date,
+        medicationName: medById.get(ch.medication_id ?? '')?.medication_name ?? null,
+        changeType: ch.change_type,
+        beforeDays: DOSE_BEFORE_DAYS,
+        afterDays: DOSE_AFTER_DAYS,
+        energy: energyW,
+        mood: moodW,
+        sleep: sleepW,
+        mrsTotal: mrsW,
+      };
+    });
+
   const recentAdministrations = [...(input.administrations ?? [])]
     .sort((a, b) => a.taken_at.localeCompare(b.taken_at))
     .slice(-30)
@@ -152,13 +306,28 @@ export function buildAiFactsPacket(input: AiFactsPacketInput): AiFactsPacket {
   const labs = [...input.labResults]
     .sort((a, b) => a.draw_date.localeCompare(b.draw_date))
     .slice(-8)
-    .map((lab) => ({
-      drawDate: lab.draw_date,
-      estradiol: getBiomarkerValue(lab, 'estradiol'),
-      progesterone: getBiomarkerValue(lab, 'progesterone'),
-      testosterone: getBiomarkerValue(lab, 'testosterone'),
-      fsh: getBiomarkerValue(lab, 'fsh'),
-    }));
+    .map((lab) => {
+      const values: Record<(typeof LAB_PACKET_KEYS)[number], number | null> = {
+        estradiol: null,
+        progesterone: null,
+        total_testosterone: null,
+        fsh: null,
+        tsh: null,
+        shbg: null,
+      };
+      for (const key of LAB_PACKET_KEYS) {
+        values[key] = getBiomarkerValue(lab, key);
+      }
+      return {
+        drawDate: lab.draw_date,
+        estradiol: values.estradiol,
+        progesterone: values.progesterone,
+        testosterone: values.total_testosterone,
+        fsh: values.fsh,
+        tsh: values.tsh,
+        shbg: values.shbg,
+      };
+    });
 
   const engineInsights = input.insights
     .filter((i) => !isAiForbiddenCategory(i.category))
@@ -172,7 +341,7 @@ export function buildAiFactsPacket(input: AiFactsPacketInput): AiFactsPacket {
       confidence: String(i.confidence),
     }));
 
-  return {
+  const packet: AiFactsPacket = {
     generatedAt: new Date().toISOString(),
     timezone: input.timezone,
     profile: {
@@ -187,6 +356,7 @@ export function buildAiFactsPacket(input: AiFactsPacketInput): AiFactsPacket {
       avgMood: mean(mood),
       avgSleep: mean(sleep),
     },
+    pulseSeries,
     medications: input.medications
       .filter((m) => m.is_active && !m.end_date)
       .slice(0, 12)
@@ -198,8 +368,11 @@ export function buildAiFactsPacket(input: AiFactsPacketInput): AiFactsPacket {
         endDate: m.end_date,
       })),
     recentDoseChanges,
+    doseChangeWindows,
     recentAdministrations,
     labs,
     engineInsights,
   };
+
+  return trimPulseSeriesToFit(packet);
 }

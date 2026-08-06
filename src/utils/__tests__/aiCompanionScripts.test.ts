@@ -4,7 +4,6 @@ import {
   classifyCompanionShape,
   classifyCrisisTier,
   priorCrisisReplyCount,
-  routeMentalDeclineChat,
 } from '../aiCompanionScripts';
 
 const facts = {
@@ -31,10 +30,9 @@ const facts = {
 };
 
 describe('threat levels', () => {
-  it('splits mental decline vs ideation vs imminent', () => {
-    expect(classifyCrisisTier("its making me feel depressed i cant fix this")).toBe(
-      'mental_decline',
-    );
+  it('splits ordinary low mood vs ideation vs imminent', () => {
+    expect(classifyCrisisTier("its making me feel depressed i cant fix this")).toBeNull();
+    expect(classifyCrisisTier('i feel tired')).toBeNull();
     expect(classifyCrisisTier('im going to kill myself')).toBe('crisis');
     expect(classifyCrisisTier('im going to kill myself with a gun')).toBe('crisis_imminent');
     expect(classifyCrisisTier('im going to do it tonight')).toBe('crisis_imminent');
@@ -51,12 +49,9 @@ describe('threat levels', () => {
     expect(priorCrisisReplyCount([{ role: 'assistant', content: first!.reply }])).toBe(1);
   });
 
-  it('mental decline cites mood and does not dump full crisis script', () => {
-    const out = buildCompanionScriptReply("its making me feel depressed i cant fix this", facts);
-    expect(out?.shape).toBe('mental_decline');
-    expect(out?.reply).toMatch(/mood ~3\.8/);
-    expect(out?.reply).toMatch(/progesterone|Prometrium/i);
-    expect(out?.reply).not.toMatch(/I can't be your crisis counselor/);
+  it('low mood without SI is ordinary chat (no scripted reply)', () => {
+    expect(buildCompanionScriptReply("its making me feel depressed i cant fix this", facts)).toBeNull();
+    expect(buildCompanionScriptReply('i feel tired', facts)).toBeNull();
   });
 
   it('answers why progesterone hurt energy', () => {
@@ -73,54 +68,27 @@ describe('threat levels', () => {
   });
 });
 
-describe('treatment-context exception for mental_decline', () => {
-  it('HRT/menopause language suppresses mental_decline', () => {
-    // Each case uses a keyword that WOULD match mental_decline without the exception.
+describe('low mood without SI never opens crisis', () => {
+  it('HRT/menopause + low mood is ordinary (null tier)', () => {
     expect(classifyCrisisTier('HRT is making me feel hopeless')).toBeNull();
     expect(classifyCrisisTier('i feel hopeless about menopause')).toBeNull();
     expect(classifyCrisisTier('estradiol is making me numb and empty')).toBeNull();
     expect(classifyCrisisTier('perimenopause has me overwhelmed')).toBeNull();
-    expect(classifyCrisisTier('progesterone makes me feel so low and awful')).toBeNull();
-    expect(classifyCrisisTier('these hormones are making everything worse mentally')).toBeNull();
-    expect(classifyCrisisTier('night sweats have me feeling hopeless')).toBeNull();
-    expect(classifyCrisisTier('hot flashes and i cant do this anymore')).toBeNull();
     expect(classifyCrisisTier('this HRT is making me feel so depressed')).toBeNull();
   });
 
-  it('matches depress stem forms (depressed / depressing)', () => {
-    expect(classifyCrisisTier('i feel so depressed')).toBe('mental_decline');
-    expect(classifyCrisisTier('i have been feeling depressed lately')).toBe('mental_decline');
-    expect(classifyCrisisTier('everything feels depressing')).toBe('mental_decline');
-  });
-
-  it('bare emotional language without treatment context still triggers', () => {
-    expect(classifyCrisisTier('i feel hopeless')).toBe('mental_decline');
-    expect(classifyCrisisTier('everything is empty and numb')).toBe('mental_decline');
-    expect(classifyCrisisTier('i cant do this anymore')).toBe('mental_decline');
-    expect(classifyCrisisTier('im overwhelm by everything')).toBe('mental_decline');
-    expect(classifyCrisisTier('broken inside and cant go on')).toBe('mental_decline');
-  });
-
-  it('generic medical words do NOT suppress mental_decline', () => {
-    expect(classifyCrisisTier('i feel hopeless my doctor doesnt care')).toBe('mental_decline');
-    expect(classifyCrisisTier('i feel empty after therapy')).toBe('mental_decline');
-    expect(classifyCrisisTier('feeling numb from all the pills')).toBe('mental_decline');
-    expect(classifyCrisisTier('this medication has me feeling hopeless')).toBe('mental_decline');
-    expect(classifyCrisisTier('cant do this treatment anymore')).toBe('mental_decline');
+  it('bare emotional language without SI is ordinary', () => {
+    expect(classifyCrisisTier('i feel so depressed')).toBeNull();
+    expect(classifyCrisisTier('i feel hopeless')).toBeNull();
+    expect(classifyCrisisTier('everything is empty and numb')).toBeNull();
+    expect(classifyCrisisTier('i cant do this anymore')).toBeNull();
+    expect(classifyCrisisTier('i feel tired')).toBeNull();
   });
 
   it('genuine SI is never suppressed by treatment context', () => {
     expect(classifyCrisisTier('i want to kill myself because of this HRT')).toBe('crisis');
     expect(classifyCrisisTier('menopause makes me want to die')).toBe('crisis');
     expect(classifyCrisisTier('im going to end it, estradiol isnt helping')).toBe('crisis');
-  });
-
-  it('mental_decline reply does not preemptively mention 988 or suicide', () => {
-    const out = buildCompanionScriptReply('i feel hopeless and empty', facts);
-    expect(out?.shape).toBe('mental_decline');
-    expect(out?.reply).not.toMatch(/988/);
-    expect(out?.reply).not.toMatch(/wanting to die/);
-    expect(out?.reply).toMatch(/clinician/);
   });
 });
 
@@ -136,24 +104,33 @@ describe('clear SI euphemisms', () => {
   });
 });
 
-describe('routeMentalDeclineChat', () => {
-  it('sends treatment complaints to free-chat risk_watch', () => {
-    expect(routeMentalDeclineChat('HRT is making me feel hopeless')).toBe(
-      'free_chat_risk_watch',
-    );
-    expect(routeMentalDeclineChat('this HRT is making me feel so depressed')).toBe(
-      'free_chat_risk_watch',
-    );
-    expect(routeMentalDeclineChat('estradiol leaves me numb and empty')).toBe(
-      'free_chat_risk_watch',
-    );
+describe('passive SI: wish I was dead', () => {
+  it.each([
+    'i wish i was dead',
+    'i wish i were dead',
+    'i wish i was dead sometimes',
+    'sometimes i wished i were dead',
+  ])('classifies passive SI as crisis: %s', (message) => {
+    expect(classifyCrisisTier(message)).toBe('crisis');
+  });
+});
+
+describe('recovery with re-assertion', () => {
+  it('pure recovery suppresses crisis', () => {
+    expect(classifyCrisisTier('i used to want to die but im doing better now')).toBeNull();
   });
 
-  it('keeps bare low mood on the one-shot script path', () => {
-    expect(routeMentalDeclineChat('i feel hopeless')).toBe('one_shot_script');
-    expect(routeMentalDeclineChat('i feel so depressed')).toBe('one_shot_script');
-    expect(routeMentalDeclineChat('i feel hopeless my doctor doesnt care')).toBe(
-      'one_shot_script',
-    );
+  it('re-assertion overrides recovery', () => {
+    expect(classifyCrisisTier('i used to want to die, im better now, but i want to die again')).toBe('crisis');
+    expect(classifyCrisisTier('i wanted to kill myself last month, im okay now, but i still want to die')).toBe('crisis');
+  });
+});
+
+describe('low mood without SI', () => {
+  it('low mood is not classified as a crisis tier', () => {
+    expect(classifyCrisisTier('i feel hopeless')).toBeNull();
+    expect(classifyCrisisTier('i feel so depressed')).toBeNull();
+    expect(classifyCrisisTier('HRT is making me feel hopeless')).toBeNull();
+    expect(classifyCrisisTier('estradiol leaves me numb and empty')).toBeNull();
   });
 });

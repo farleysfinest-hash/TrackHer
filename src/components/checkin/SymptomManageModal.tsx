@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Check, Plus, Search } from 'lucide-react';
+import { Check, Minus, Plus, Search } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import {
@@ -125,9 +125,20 @@ export function SymptomManageModal({
           MRS scale on its own. Removing a symptom stops future prompts without deleting its
           history.
         </p>
-        <p className="mt-2 text-sm font-medium text-sage-700">
-          {localTracked.length} tracked
-        </p>
+        <div className="mt-2 flex items-center justify-between">
+          <p className="text-sm font-medium text-sage-700">
+            {localTracked.length} tracked
+          </p>
+          {localTracked.length > 3 && (
+            <button
+              type="button"
+              onClick={() => setLocalTracked([])}
+              className="text-xs text-sage-500 underline hover:text-sage-700"
+            >
+              Remove all
+            </button>
+          )}
+        </div>
       </div>
 
       <label className="relative block">
@@ -256,6 +267,16 @@ export function SymptomManageModal({
                             )}
                           </span>
                         </button>
+                        {tracked && !showingLibrary && (
+                          <button
+                            type="button"
+                            onClick={() => toggleTracked(symptom.key)}
+                            className="mr-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sage-400 hover:bg-sage-100 hover:text-sage-600"
+                            aria-label={`Remove ${symptom.label}`}
+                          >
+                            <Minus className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     );
                   })}

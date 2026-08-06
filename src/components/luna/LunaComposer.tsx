@@ -1,6 +1,7 @@
 import type { RefObject } from 'react';
 import { Plus, Send } from 'lucide-react';
 import type { LunaThread } from '../../types/database';
+import { useVisualViewportBounds } from '../../hooks/useKeyboardBottomInset';
 
 interface LunaComposerProps {
   inputRef: RefObject<HTMLTextAreaElement | null>;
@@ -29,12 +30,24 @@ export function LunaComposer({
   onSend,
   onStartFresh,
 }: LunaComposerProps) {
+  const { inset: keyboardInset } = useVisualViewportBounds();
+  const keyboardOpen = keyboardInset > 0;
+
   return (
-    <div className="shrink-0 border-t border-sand-200 bg-sand-50 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6">
+    <div
+      className={[
+        'shrink-0 border-t border-sand-200 bg-sand-50 px-4 py-3 sm:px-6',
+        keyboardOpen ? 'pb-1' : 'pb-[max(0.75rem,env(safe-area-inset-bottom))]',
+      ].join(' ')}
+    >
       {(storageError || assistantError) && (
         <p className="mb-2 text-sm text-sage-600">
           {storageError ??
-            (assistantError?.includes('OPENAI') ? 'Luna is not configured yet.' : assistantError)}
+            (assistantError?.includes('OPENAI')
+              ? 'Luna is not configured yet.'
+              : assistantError?.includes('non-2xx') || assistantError?.includes('Edge Function')
+                ? 'Luna is temporarily unavailable — please try again in a moment.'
+                : assistantError)}
         </p>
       )}
       {thread?.kind === 'dashboard' && messageCount > 0 && (

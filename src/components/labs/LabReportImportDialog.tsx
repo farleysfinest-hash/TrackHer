@@ -104,21 +104,22 @@ export function LabReportImportDialog({
       );
       onImported({ ...draft, previewDataUrl: dataUrl }, unknownMentions);
     } catch (readError) {
-      setError(readError instanceof Error ? readError.message : 'Could not read that report.');
+      setError('Could not read that report. Please check the file format and try again.');
     } finally {
       setIsReading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center overscroll-contain bg-black/40 sm:items-center sm:p-4" style={{ touchAction: 'none' }}>
       <div
         ref={dialogRef}
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="lab-import-title"
-        className="safe-area-bottom max-h-[94vh] w-full overflow-y-auto rounded-t-2xl bg-sand-50 p-5 outline-none sm:max-w-xl sm:rounded-2xl sm:p-6"
+        className="safe-area-bottom max-h-[94vh] w-full overflow-y-auto overscroll-contain rounded-t-2xl bg-sand-50 p-5 outline-none sm:max-w-xl sm:rounded-2xl sm:p-6"
+        style={{ touchAction: 'pan-y' }}
       >
         <div className="flex items-start gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sage-100 text-sage-600">
@@ -135,7 +136,7 @@ export function LabReportImportDialog({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-2 text-sage-400 hover:bg-sage-50"
+            className="flex h-11 w-11 items-center justify-center rounded-lg text-sage-400 hover:bg-sage-50 hover:text-sage-600"
             aria-label="Close lab report import"
           >
             <X className="h-5 w-5" />

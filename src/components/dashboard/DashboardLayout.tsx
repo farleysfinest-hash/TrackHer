@@ -149,6 +149,8 @@ export function DashboardLayout() {
 
         {!ready ? null : (
           <>
+            <WelcomeMessage checkinCount={mrsCheckinCount} />
+
             {safeguardingCards}
 
             <LunaDashboardCard />
@@ -156,8 +158,6 @@ export function DashboardLayout() {
             <QuickLogWidget />
 
             <UnlockProgress checkinCount={mrsCheckinCount} />
-
-            <WelcomeMessage />
 
             {showCharts ? (
               <ScoreSummaryCards checkins={summaryCheckins} dateRange={dateRange} />

@@ -20,7 +20,6 @@ import { useAuthStore } from '../../stores/authStore';
 import { useInsights } from '../../hooks/useInsights';
 import {
   invokeThreadSummary,
-  localCrisisStateFromChatResult,
   useAiAssistant,
   type AiChatTurn,
 } from '../../hooks/useAiAssistant';
@@ -40,13 +39,11 @@ import type {
 import {
   addLunaMemory,
   addLunaMessage,
-  clearLunaCrisisState,
   deleteLunaThread,
   getOrCreateDashboardLunaThread,
   getOrCreateFocusedLunaThread,
   listLunaMemories,
   listLunaThreads,
-  loadLunaCrisisState,
   loadLunaMessages,
   lunaPersistenceError,
   markLunaMessageCrisis,
@@ -85,7 +82,6 @@ function sortThreads(rows: LunaThread[]): LunaThread[] {
 
 function isCrisisShape(shape: string | undefined): LunaMessage['crisis_tier'] {
   if (
-    shape === 'mental_decline' ||
     shape === 'crisis' ||
     shape === 'crisis_imminent' ||
     shape === 'loved_one'
@@ -93,10 +89,6 @@ function isCrisisShape(shape: string | undefined): LunaMessage['crisis_tier'] {
     return shape;
   }
   if (shape === 'loved_one_crisis') return 'loved_one';
-  if (shape === 'crisis_followup_resolved') return 'crisis';
-  // Classifier outage on a risk-signal message: tag conservatively so the turn
-  // is redacted from summaries and the safety panel state holds.
-  if (shape === 'risk_classifier_unavailable') return 'crisis';
   return null;
 }
 
@@ -147,6 +139,7 @@ function LunaSessionProvider({
   const indexRequestRef = useRef(0);
   const sendRequestRef = useRef(0);
   const submitLockedRef = useRef(false);
+  const [sendInFlight, setSendInFlight] = useState(false);
   const summaryRequestsRef = useRef(new Map<string, number>());
 
   useEffect(() => {
@@ -158,6 +151,7 @@ function LunaSessionProvider({
       indexRequestRef.current += 1;
       sendRequestRef.current += 1;
       submitLockedRef.current = false;
+      setSendInFlight(false);
       summaryRequests.clear();
     };
   }, []);
@@ -168,19 +162,13 @@ function LunaSessionProvider({
     (item) => item.kind === 'dashboard' && item.is_dashboard_primary,
   );
 
-  const refreshIndex = useCallback(async (preserveCrisisOnMissing = false) => {
+  const refreshIndex = useCallback(async () => {
     if (!userId) return;
     const requestId = ++indexRequestRef.current;
     try {
-      const [threadRows, memoryRows, activeCrisis] = await Promise.all([
-        listLunaThreads(userId),
-        listLunaMemories(userId),
-        loadLunaCrisisState(userId),
-      ]);
+      const threadRows = await listLunaThreads(userId);
       if (!sessionActiveRef.current || requestId !== indexRequestRef.current) return;
       setThreads(sortThreads(threadRows));
-      setMemories(memoryRows);
-      if (!preserveCrisisOnMissing || activeCrisis) setCrisisState(activeCrisis);
       setStorageError(null);
     } catch (loadError) {
       if (!sessionActiveRef.current || requestId !== indexRequestRef.current) return;
@@ -188,9 +176,25 @@ function LunaSessionProvider({
     }
   }, [userId]);
 
+  // Memories are loaded once on mount and updated locally by add/edit/delete.
+  // No need to re-fetch from DB on every send — mutations already update React state.
+  const memoriesLoadedRef = useRef(false);
+  useEffect(() => {
+    if (!userId || memoriesLoadedRef.current) return;
+    memoriesLoadedRef.current = true;
+    listLunaMemories(userId)
+      .then((rows) => {
+        if (sessionActiveRef.current) setMemories(rows);
+      })
+      .catch((err) => {
+        if (sessionActiveRef.current) setStorageError(lunaPersistenceError(err));
+      });
+  }, [userId]);
+
   useEffect(() => {
     if (!userId) {
       selectedThreadIdRef.current = null;
+      memoriesLoadedRef.current = false;
       setThreads([]);
       setThread(null);
       setMessages([]);
@@ -255,10 +259,7 @@ function LunaSessionProvider({
       setThread(target);
       setMessages([]);
       try {
-        const [rows, activeCrisis] = await Promise.all([
-          loadLunaMessages(userId, target.id),
-          loadLunaCrisisState(userId),
-        ]);
+        const rows = await loadLunaMessages(userId, target.id);
         if (
           !sessionActiveRef.current ||
           requestId !== openRequestRef.current ||
@@ -267,7 +268,7 @@ function LunaSessionProvider({
           return;
         }
         setMessages(rows);
-        setCrisisState(activeCrisis);
+        setCrisisState(null);
       } catch (loadError) {
         if (
           !sessionActiveRef.current ||
@@ -401,6 +402,7 @@ function LunaSessionProvider({
     if (!text || !thread || !userId || submitLockedRef.current) return;
 
     submitLockedRef.current = true;
+    setSendInFlight(true);
     const requestId = ++sendRequestRef.current;
     const clientRequestId = createClientRequestId();
     const originThread = thread;
@@ -411,7 +413,10 @@ function LunaSessionProvider({
     const isOriginVisible = () =>
       isCurrentSession() && selectedThreadIdRef.current === originThread.id;
     const releaseSubmit = () => {
-      if (requestId === sendRequestRef.current) submitLockedRef.current = false;
+      if (requestId === sendRequestRef.current) {
+        submitLockedRef.current = false;
+        setSendInFlight(false);
+      }
     };
 
     clearError();
@@ -476,10 +481,21 @@ function LunaSessionProvider({
     }
     setAssistantErrorThreadId(null);
 
-    const localCrisis = localCrisisStateFromChatResult(userId, result.crisis);
-    if (localCrisis) setCrisisState(localCrisis);
-
     const crisisTier = isCrisisShape(result.shape);
+
+    // Crisis state comes purely from the Edge response — no persistent DB state.
+    if (result.crisis?.showSafetyPanel) {
+      setCrisisState({
+        user_id: userId,
+        tier: crisisTier ?? 'crisis',
+        response_count: 1,
+        presented_actions: ['support_panel'],
+        asked_questions: [],
+        escalated: false,
+        last_activity_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 3600_000).toISOString(),
+      });
+    }
     try {
       if (crisisTier) {
         await markLunaMessageCrisis(userId, userMessage.id, crisisTier);
@@ -511,17 +527,10 @@ function LunaSessionProvider({
         setMemoryProposal(result.memoryProposal?.trim() || null);
       }
 
-      if (result.crisis) {
-        const activeCrisis = await loadLunaCrisisState(userId);
-        if (isCurrentSession() && activeCrisis) setCrisisState(activeCrisis);
-      } else if (result.shape === 'crisis_followup_resolved') {
-        setCrisisState(null);
-      }
-
       maybeRefreshSummary(originThread, nextMessages).catch(() => {
         if (import.meta.env.DEV) console.warn('Background summary refresh failed');
       });
-      void refreshIndex(Boolean(localCrisis));
+      void refreshIndex();
     } catch (saveError) {
       if (isOriginVisible()) setStorageError(lunaPersistenceError(saveError));
     } finally {
@@ -617,8 +626,8 @@ function LunaSessionProvider({
     ? createPortal(
         <div
           data-vv-frame
-          className="fixed inset-x-0 z-50 flex items-stretch justify-center sm:items-center sm:p-4"
-          style={{ top: offsetTop, height: viewportHeight }}
+          className="fixed inset-x-0 z-[55] flex items-stretch justify-center overscroll-contain sm:items-center sm:p-4"
+          style={{ top: offsetTop, height: viewportHeight, touchAction: 'none' }}
         >
           <button
             type="button"
@@ -632,7 +641,8 @@ function LunaSessionProvider({
             aria-modal="true"
             aria-labelledby="luna-panel-title"
             tabIndex={-1}
-            className="relative z-10 flex h-full w-full flex-col overflow-hidden bg-sand-50 outline-none sm:h-[min(760px,92vh)] sm:max-w-2xl sm:rounded-2xl sm:border sm:border-sand-200 sm:shadow-2xl"
+            className="relative z-10 flex h-full w-full flex-col overflow-hidden overscroll-contain bg-sand-50 outline-none sm:h-[min(760px,92vh)] sm:max-w-2xl sm:rounded-2xl sm:border sm:border-sand-200 sm:shadow-2xl"
+            style={{ touchAction: 'pan-y' }}
           >
             <header className="safe-area-modal-header flex shrink-0 items-center gap-3 border-b border-sand-200">
               {view !== 'chat' ? (
@@ -714,7 +724,7 @@ function LunaSessionProvider({
                   thread={thread}
                   messages={messages}
                   crisisState={crisisState}
-                  sending={isSending}
+                  sending={sendInFlight}
                   memoryProposal={memoryProposal}
                   ratedMessages={ratedMessages}
                   messageEndRef={messageEndRef}
@@ -722,15 +732,16 @@ function LunaSessionProvider({
                   onRemember={(content) => void remember(content)}
                   onDismissMemory={() => setMemoryProposal(null)}
                   onDismissCrisis={() => {
-                    if (!userId) return;
                     setCrisisState(null);
-                    void clearLunaCrisisState(userId).catch((clearError: unknown) => {
-                      setStorageError(lunaPersistenceError(clearError));
-                    });
                   }}
                   onRate={(messageId, rating) => {
                     if (!rating || !userId || !thread) return;
                     setRatedMessages((current) => ({ ...current, [messageId]: rating }));
+                    // Episode reset only — clears a false-alarm panel. Clear SI tomorrow
+                    // (e.g. a plan or means) still opens crisis support again.
+                    if (rating === 'false_crisis_perception') {
+                      setCrisisState(null);
+                    }
                     void saveLunaFeedback({
                       userId,
                       threadId: thread.id,
@@ -749,7 +760,7 @@ function LunaSessionProvider({
                   thread={thread}
                   messageCount={messages.length}
                   loading={loadingThread}
-                  sending={isSending}
+                  sending={sendInFlight}
                   storageError={storageError}
                   assistantError={visibleAssistantError}
                   onSend={() => void send()}

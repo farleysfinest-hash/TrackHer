@@ -87,7 +87,7 @@ export function InstrumentSection({ instrument, onNext, onBack }: InstrumentSect
             <button
               type="button"
               onClick={dismissTooltip}
-              className="shrink-0 rounded p-1 text-sage-400 hover:bg-sage-100"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded text-sage-400 hover:bg-sage-100"
               aria-label="Dismiss"
             >
               <X className="h-4 w-4" />

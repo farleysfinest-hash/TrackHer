@@ -7,6 +7,7 @@ import { getLocalDateISO, getResolvedTimezone } from '../../utils/checkinHelpers
 import { formatLoggingDate } from '../../utils/formatters';
 import { clearCheckinDraft, saveCheckinDraft } from '../../lib/checkinDraft';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useVisualViewportBounds } from '../../hooks/useKeyboardBottomInset';
 import { useTabActive } from '../layout/TabActiveContext';
 import { StepIndicator } from '../ui/StepIndicator';
 import { DailyChannels } from './DailyChannels';
@@ -56,6 +57,7 @@ export function CheckinFlow({ onClose, onComplete }: CheckinFlowProps) {
   const isBackdated = targetDate !== todayStr;
   const totalSteps = getStepCount();
   const [saveState, setSaveState] = useState<SaveState>('idle');
+  const { inset: keyboardInset } = useVisualViewportBounds();
 
   useEffect(() => {
     setInstrumentId(getPrimaryInstrument(strawStage).id);
@@ -181,7 +183,7 @@ export function CheckinFlow({ onClose, onComplete }: CheckinFlowProps) {
     <div
       ref={dialogRef}
       tabIndex={-1}
-      className="fixed inset-0 z-50 flex flex-col bg-sand-50 outline-none"
+      className="fixed inset-0 z-50 flex flex-col overscroll-contain bg-sand-50 outline-none"
       role="dialog"
       aria-modal="true"
       aria-label={mode === 'quick' ? 'Quick pulse' : 'Full check-in'}
@@ -200,14 +202,17 @@ export function CheckinFlow({ onClose, onComplete }: CheckinFlowProps) {
         <button
           type="button"
           onClick={handleClose}
-          className="rounded-lg p-2 text-sage-400 hover:bg-sage-50"
+          className="flex h-11 w-11 items-center justify-center rounded-lg text-sage-400 hover:bg-sage-50 hover:text-sage-600"
           aria-label="Close check-in"
         >
           <X className="h-5 w-5" />
         </button>
       </header>
 
-      <div className="safe-area-bottom flex-1 overflow-y-auto px-6 py-8">
+      <div
+        className="safe-area-bottom flex-1 overflow-y-auto px-6 py-8"
+        style={keyboardInset > 0 ? { paddingBottom: keyboardInset + 16 } : undefined}
+      >
         <div className="mx-auto max-w-[640px]">
           <StepIndicator
             currentStep={currentStep}

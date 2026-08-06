@@ -122,14 +122,15 @@ export function PartnerLetterSheet({ context, open, onClose }: PartnerLetterShee
   return createPortal(
     <div
       data-vv-frame
-      className="fixed inset-x-0 z-50 sm:flex sm:items-center sm:justify-center"
-      style={{ top: offsetTop, height: vvHeight }}
+      className="fixed inset-x-0 z-50 overscroll-contain sm:flex sm:items-center sm:justify-center"
+      style={{ top: offsetTop, height: vvHeight, touchAction: 'none' }}
     >
       <button
         type="button"
-        className="absolute inset-0 bg-sage-900/40"
+        className="absolute inset-0 bg-sage-900/40 overscroll-contain"
         aria-label="Close"
         onClick={onClose}
+        style={{ touchAction: 'none' }}
       />
       <div
         ref={sheetRef}
@@ -138,10 +139,10 @@ export function PartnerLetterSheet({ context, open, onClose }: PartnerLetterShee
         aria-labelledby="partner-letter-title"
         tabIndex={-1}
 
-        className="absolute inset-x-0 bottom-0 z-10 mx-auto flex max-h-full w-full max-w-lg flex-col rounded-t-2xl border border-sand-200 bg-sand-50 shadow-2xl outline-none sm:relative sm:bottom-auto sm:m-4 sm:max-h-[min(90%,640px)] sm:rounded-2xl"
-        style={{ maxHeight: 'min(100%, 640px)' }}
+        className="absolute inset-x-0 bottom-0 z-10 mx-auto flex max-h-full w-full max-w-lg flex-col overscroll-contain rounded-t-2xl border border-sand-200 bg-sand-50 shadow-2xl outline-none sm:relative sm:bottom-auto sm:m-4 sm:max-h-[min(90%,640px)] sm:rounded-2xl"
+        style={{ maxHeight: 'min(100%, 640px)', touchAction: 'pan-y' }}
       >
-        <div className="flex items-center justify-between border-b border-sand-100 px-5 py-4">
+        <div className="safe-area-modal-header flex items-center justify-between border-b border-sand-100 pb-4">
           <div className="flex items-center gap-2">
             <HeartHandshake className="h-5 w-5 text-sage-600" />
             <h2 id="partner-letter-title" className="font-display text-lg text-sage-800">
@@ -151,14 +152,14 @@ export function PartnerLetterSheet({ context, open, onClose }: PartnerLetterShee
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-2 text-sage-400 hover:bg-sage-50"
+            className="flex h-11 w-11 items-center justify-center rounded-lg text-sage-400 hover:bg-sage-50 hover:text-sage-600"
             aria-label="Close"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
+        <div className="safe-area-modal-body min-h-0 flex-1 space-y-4 overflow-y-auto py-4">
           <p className="text-sm leading-relaxed text-sage-600">
             A warm, plain-language note explaining what you&apos;ve been experiencing — grounded
             in your logged symptoms. Disbelief is common; your data is real.

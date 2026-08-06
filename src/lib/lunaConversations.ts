@@ -1,7 +1,6 @@
 import { supabase } from './supabase';
 import { isMemorySafeContent } from '../utils/aiCompanionScripts';
 import type {
-  LunaCrisisState,
   LunaFeedbackRating,
   LunaMemory,
   LunaMessage,
@@ -66,7 +65,7 @@ export function lunaPersistenceError(error: unknown): string {
   ) {
     return 'Luna history is waiting for the beta database update.';
   }
-  return message || 'Luna could not save that yet.';
+  return 'Luna could not save that yet.';
 }
 
 export async function listLunaThreads(userId: string): Promise<LunaThread[]> {
@@ -314,7 +313,8 @@ export async function listLunaMemories(userId: string): Promise<LunaMemory[]> {
     .from('luna_memories')
     .select('*')
     .eq('user_id', userId)
-    .order('updated_at', { ascending: false });
+    .order('updated_at', { ascending: false })
+    .limit(200);
   if (error) throw error;
   return (data as LunaMemory[]) ?? [];
 }
@@ -368,33 +368,6 @@ export async function clearLunaMemories(userId: string): Promise<void> {
   const { error } = await supabase.from('luna_memories').delete().eq('user_id', userId);
   if (error) throw error;
   notifyLunaMemoryChanged();
-}
-
-export async function loadLunaCrisisState(
-  userId: string,
-): Promise<LunaCrisisState | null> {
-  const { data, error } = await supabase
-    .from('luna_crisis_state')
-    .select('*')
-    .eq('user_id', userId)
-    .maybeSingle();
-  if (error) throw error;
-  if (!data) return null;
-  const state = data as LunaCrisisState;
-  if (new Date(state.expires_at).getTime() <= Date.now()) return null;
-  // mental_decline is one-shot and must never own the sticky panel / lock.
-  // Clear leftover pre-deploy rows the same way the Edge read path does.
-  if (state.tier === 'mental_decline') {
-    void supabase.from('luna_crisis_state').delete().eq('user_id', userId);
-    return null;
-  }
-  return state;
-}
-
-/** Clear sticky safety state when she asks to stop the follow-ups. */
-export async function clearLunaCrisisState(userId: string): Promise<void> {
-  const { error } = await supabase.from('luna_crisis_state').delete().eq('user_id', userId);
-  if (error) throw error;
 }
 
 export async function saveLunaFeedback(input: {

@@ -132,7 +132,7 @@ export function KeepWatchingPrompt({
         <button
           type="button"
           onClick={onDismiss}
-          className="rounded-full px-3 py-1 text-xs text-sage-500 hover:text-sage-700"
+          className="flex h-11 w-11 items-center justify-center rounded-full text-sage-500 hover:text-sage-700"
           aria-label="Dismiss"
         >
           <X className="h-4 w-4" />

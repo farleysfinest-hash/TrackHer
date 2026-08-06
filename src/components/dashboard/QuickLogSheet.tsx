@@ -177,7 +177,7 @@ export function QuickLogSheet() {
     setOffset(0);
   }, []);
 
-  const handleSave = async () => {
+  const handleSave = async (andLogAnother = false) => {
     if (!selectedSymptomId) return;
     setIsSaving(true);
     const result = await createEvent({
@@ -192,7 +192,12 @@ export function QuickLogSheet() {
     if (result) {
       void tapLight();
       toast.success(buildQuickLogEcho(result, events));
-      handleClose();
+      if (andLogAnother) {
+        resetForm();
+        selectSymptom(null);
+      } else {
+        handleClose();
+      }
     } else {
       toast.error('Failed to log symptom');
     }
@@ -346,7 +351,7 @@ export function QuickLogSheet() {
           <button
             type="button"
             onClick={handleClose}
-            className="rounded-lg p-2 text-sage-400 hover:bg-sage-50"
+            className="flex h-11 w-11 items-center justify-center rounded-lg text-sage-400 hover:bg-sage-50 hover:text-sage-600"
             aria-label="Close"
           >
             <X className="h-5 w-5" />
@@ -624,15 +629,27 @@ export function QuickLogSheet() {
               Logged as a one-off. You can add it to weekly tracking from the Check In page.
             </p>
           )}
-          <Button
-            onClick={handleSave}
-            isLoading={isSaving}
-            loadingText="Logging..."
-            disabled={!selectedSymptomId}
-            className="w-full"
-          >
-            Log it
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              onClick={() => void handleSave(true)}
+              isLoading={isSaving}
+              loadingText="Logging..."
+              disabled={!selectedSymptomId}
+              className="flex-1"
+            >
+              Log &amp; add another
+            </Button>
+            <Button
+              onClick={() => void handleSave(false)}
+              isLoading={isSaving}
+              loadingText="Logging..."
+              disabled={!selectedSymptomId}
+              className="flex-1"
+            >
+              Log it
+            </Button>
+          </div>
         </div>
       </div>
     </div>,

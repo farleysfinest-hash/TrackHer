@@ -119,7 +119,7 @@ export function LunaSynthesisList({
             <button
               type="button"
               onClick={() => onDismiss(candidate.id)}
-              className="absolute right-3 top-3 rounded-full p-1 text-sage-400 hover:bg-sage-50 hover:text-sage-600"
+              className="absolute right-1 top-1 flex h-11 w-11 items-center justify-center rounded-full text-sage-400 hover:bg-sage-50 hover:text-sage-600"
               aria-label="Dismiss this Luna finding"
             >
               <X className="h-4 w-4" />

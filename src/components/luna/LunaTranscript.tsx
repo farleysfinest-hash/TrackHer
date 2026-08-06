@@ -16,6 +16,7 @@ const FEEDBACK_OPTIONS: LunaFeedbackRating[] = [
   'incorrect',
   'too_obvious',
   'missing_context',
+  'false_crisis_perception',
 ];
 
 function feedbackLabel(value: LunaFeedbackRating): string {
@@ -26,6 +27,7 @@ function feedbackLabel(value: LunaFeedbackRating): string {
     case 'too_obvious': return 'Too obvious';
     case 'missing_context': return 'Missing context';
     case 'new_understanding': return 'Made me understand something new';
+    case 'false_crisis_perception': return 'False crisis perception — clear this alert';
   }
 }
 
@@ -158,7 +160,7 @@ export function LunaTranscript({
                       {thread?.kind === 'checkin' && <LunaCaptureReview text={message.content} />}
                     </>
                   )}
-                  {message.role === 'assistant' && !message.crisis_tier && (
+                  {message.role === 'assistant' && (
                     <select
                       aria-label="Rate Luna's reply"
                       value={ratedMessages[message.id] ?? ''}

@@ -1,7 +1,6 @@
 /** Journal extract — client clamp matching Edge journal_extract validation. */
 
 export type JournalRiskTier =
-  | 'mental_decline'
   | 'crisis'
   | 'crisis_imminent'
   | 'loved_one';
@@ -27,8 +26,7 @@ export interface JournalExtractResult {
 }
 
 function parseRisk(raw: unknown): JournalRiskTier | null {
-  return raw === 'mental_decline' ||
-    raw === 'crisis' ||
+  return raw === 'crisis' ||
     raw === 'crisis_imminent' ||
     raw === 'loved_one'
     ? raw

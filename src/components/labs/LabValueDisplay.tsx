@@ -6,8 +6,15 @@ import {
   formatRangeLine,
   getRangeBarPosition,
 } from '../../utils/labHelpers';
-import type { LabReportedValue } from '../../types/labs';
+import type { LabBiomarker, LabReportedValue } from '../../types/labs';
 import { TrendArrow } from '../ui/TrendArrow';
+
+const CATEGORY_COLORS: Record<LabBiomarker['category'], string> = {
+  core_hrt: 'var(--color-sage-500)',
+  thyroid: '#6B8E7B',
+  metabolic: '#8B7355',
+  lipid: '#7B6B8E',
+};
 
 interface LabValueDisplayProps {
   biomarkerKey: string;
@@ -41,6 +48,11 @@ export function LabValueDisplay({
   return (
     <div className={compact ? 'text-sm' : ''}>
       <div className="flex flex-wrap items-center gap-2">
+        <span
+          aria-hidden="true"
+          className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+          style={{ backgroundColor: CATEGORY_COLORS[biomarker.category] ?? 'var(--color-sage-400)' }}
+        />
         <span className="font-medium text-sage-800">{biomarker.label}</span>
         {/* Selectable on purpose: lab values get copied into notes and messages
             to providers. Selection is blocked app-wide in index.css. */}

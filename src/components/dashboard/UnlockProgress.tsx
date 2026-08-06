@@ -30,7 +30,7 @@ export function UnlockProgress({ checkinCount }: UnlockProgressProps) {
       <button
         type="button"
         onClick={() => setUiFlag('charts_growth_tip_seen')}
-        className="absolute right-2 top-2 rounded-full p-1 text-sage-400 transition-colors hover:bg-sage-100 hover:text-sage-600"
+        className="absolute right-0 top-0 flex h-11 w-11 items-center justify-center rounded-full text-sage-400 transition-colors hover:bg-sage-100 hover:text-sage-600"
         aria-label="Dismiss tip"
       >
         <X className="h-4 w-4" />

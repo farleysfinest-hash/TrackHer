@@ -2,17 +2,15 @@
  * Structured companion replies for high-risk / high-dodge chat shapes.
  * Keep in sync with supabase/functions/ai-assistant/companionScripts.ts
  *
- * Mental-health threat levels (do not collapse into one stale 988 blob):
- * - mental_decline: low mood / “can’t fix this” / HRT making her feel depressed — answer the
- *   feeling + her logs; soft safety net; NOT identical to active SI.
- * - crisis (ideation): suicidal language without plan/time — warm, clear, resources once.
- * - crisis_imminent: tonight / method / “going to do it” — shorter, urgent, acknowledge
- *   specificity without graphic coaching.
+ * Crisis tiers (do not collapse into one stale 988 blob):
+ * - crisis (ideation): suicidal language without plan/time.
+ * - crisis_imminent: tonight / method / “going to do it”.
  * - Follow-ups after a crisis reply: never paste the same paragraph again.
+ *
+ * Low mood / fatigue / depression without clear SI is ordinary free chat.
  */
 
 export type ScriptShape =
-  | 'mental_decline'
   | 'crisis'
   | 'crisis_imminent'
   | 'emergency'
@@ -28,7 +26,7 @@ export type ScriptShape =
   | 'life_support'
   | 'loved_one_crisis';
 
-export type CrisisTier = 'mental_decline' | 'crisis' | 'crisis_imminent' | 'loved_one';
+export type CrisisTier = 'crisis' | 'crisis_imminent' | 'loved_one';
 
 export type FactsLite = {
   profile?: {
@@ -172,64 +170,30 @@ export function classifyCrisisTier(message: string): CrisisTier | null {
       m,
     ) ||
     /\b(want(ed)? to|gonna|going to) end it( all)?\b/.test(m) ||
-    /\bi('m| am) going to (kill|end)\b/.test(m);
+    /\bi('m| am) going to (kill|end)\b/.test(m) ||
+    /\bwish(?:ed)?\s+(?:i\s+)?(?:was|were|i'?m|i\s+am)\s+dead\b/.test(m);
 
   if (imminent && (ideation || overdoseSeek || /\b(do it|kill|end|die|gun)\b/.test(m))) {
     return 'crisis_imminent';
   }
 
-  // Past-tense SI she says has eased ("last month i wanted to end it all but im doing
-  // better now") — honor the recovery, don't blast the full crisis script at it.
+  // Past-tense SI with recovery language — ordinary chat, not a crisis script.
+  // Re-assertion ("again", "still", "but I want to") overrides recovery so
+  // "I used to want to die, I'm better now, but I want to die again" stays crisis.
   const recovery =
     /\b(doing better|better now|feeling better|i'?m (ok|okay) now|not any ?more|no longer)\b/.test(
       m,
     ) && /\b(want(ed)? to|used to|last (week|month|year)|back then)\b/.test(m);
-  if (ideation && recovery) return 'mental_decline';
+  const reassertion =
+    /\b(again|still|but i|right now|today|tonight|this time)\b/.test(m) &&
+    /\b(want to die|kill my ?self|end it|end my life|hurt myself|wish i (?:was|were) dead)\b/.test(m);
+  if (ideation && recovery && !reassertion) return null;
 
   if (ideation) return 'crisis';
 
-  // Mental decline without active SI — still serious, different script.
-  // BUT: perimenopause/HRT language alongside these emotional words is a
-  // treatment complaint, not a mental-health crisis. Let the LLM handle
-  // those with data-grounded empathy instead of a deterministic crisis script.
-  // Match depress / depressed / depressing — stem, not only the bare root.
-  const mentalDeclineMatch =
-    /\b(depress(?:ed|ing|ion)?|hopeless|can'?t (fix|go on|do this)|overwhelm|broken inside|numb|empty)\b/.test(
-      m,
-    ) ||
-    (/\b(making me feel|feel(ing)?|got)\b/.test(m) &&
-      /\b(depress(?:ed|ing|ion)?|so low|awful|miserable|worse mentally)\b/.test(m)) ||
-    /\bmental (decline|health).{0,20}(worse|bad|crash)\b/.test(m);
-
-  if (mentalDeclineMatch) {
-    if (MENOPAUSE_TREATMENT_RE.test(m)) return null;
-    return 'mental_decline';
-  }
-
+  // Low mood, fatigue, depression language without clear SI never opens crisis UI.
+  // Luna answers those in ordinary chat.
   return null;
-}
-
-const MENOPAUSE_TREATMENT_RE =
-  /\b(hrt|hormone|estrogen|oestrogen|estradiol|progesterone|testosterone|perimenopause|menopause|hot\s?flash(es)?|night\s?sweats?)\b/;
-
-/**
- * Does the message contain unambiguous HRT/menopause language?
- * Used by the chat handler to route classifier-`decline` + treatment context
- * to risk_watch instead of the deterministic mental_decline script.
- */
-export function hasMenopauseTreatmentContext(message: string): boolean {
-  return MENOPAUSE_TREATMENT_RE.test(normalize(message));
-}
-
-/**
- * How chat should handle a mental_decline decision.
- * Treatment complaints get data-grounded free chat; bare low mood gets a
- * one-shot script with no DB lock and no safety panel.
- */
-export type MentalDeclineChatRoute = 'one_shot_script' | 'free_chat_risk_watch';
-
-export function routeMentalDeclineChat(message: string): MentalDeclineChatRoute {
-  return hasMenopauseTreatmentContext(message) ? 'free_chat_risk_watch' : 'one_shot_script';
 }
 
 /** Loose risk-adjacent check for fail-open decisions when the tier classifier is down. */
@@ -295,7 +259,6 @@ export function classifyCompanionShape(message: string): ScriptShape | null {
   const crisisTier = classifyCrisisTier(message);
   if (crisisTier === 'crisis_imminent') return 'crisis_imminent';
   if (crisisTier === 'crisis') return 'crisis';
-  // mental_decline checked after emergency so chest-pain etc. still wins
 
   if (
     /\b(blood clot|dvt|pulmonary embolism|pe\b|stroke)\b/.test(m) ||
@@ -311,8 +274,6 @@ export function classifyCompanionShape(message: string): ScriptShape | null {
   ) {
     return 'emergency';
   }
-
-  if (crisisTier === 'mental_decline') return 'mental_decline';
 
   if (
     (/\b(double|triple)\b/.test(m) && hormoneish) ||
@@ -605,35 +566,6 @@ function buildCrisisReply(
   );
 }
 
-function buildMentalDeclineReply(message: string, facts: FactsLite): string {
-  const progChange = doseChangeHint(facts, /progesterone|prometrium/i);
-  const progMeds = progesteroneMeds(facts);
-  const pulse = moodEnergyLine(facts);
-  const trend = mrsTrendLine(facts);
-  // Mirror HER words — never quote a phrase she didn’t type.
-  const mDecline = normalize(message);
-  const opener = /\b(doing better|better now|feeling better)\b/.test(mDecline)
-    ? `It means a lot that you told me where you’ve been — and I’m glad things feel a little lighter than they did.`
-    : /can'?t fix/.test(mDecline)
-    ? `I’m sorry you’re in this much pain — “I can’t fix this” is a heavy place to sit.`
-    : /hopeless/.test(mDecline)
-      ? `Hopeless is a heavy word to be carrying — I’m glad you told me instead of holding it alone.`
-      : /depress/.test(mDecline)
-        ? `Feeling this depressed is not a footnote — I’m taking it seriously, not just your charts.`
-        : `I’m sorry it’s this heavy right now — I hear you.`;
-  return join(
-    opener,
-    pulse || trend || null,
-    progChange ||
-      (progMeds.length > 0
-        ? `I see progesterone on your list (${progMeds.join('; ')}). Some women feel flatter, sleepier, or lower mood when progesterone goes up — that doesn’t prove it’s the only cause, but it’s a real pattern to take to your clinician.`
-        : null),
-    `This isn’t the same as me diagnosing depression — it’s me taking your words and your logs seriously.`,
-    `Please tell your clinician how you’re feeling — bring your pulse/mood trend and any dose-change dates so they can see the full picture.`,
-    `You don’t have to figure it all out tonight.`,
-  );
-}
-
 /**
  * Build the deterministic scripted reply for a risk tier decided elsewhere —
  * e.g. the Edge LLM backstop when regex classification found nothing.
@@ -645,9 +577,6 @@ export function buildTierScriptReply(
   facts: FactsLite,
   history?: Array<{ role: string; content: string }>,
 ): { reply: string; shape: ScriptShape } {
-  if (tier === 'mental_decline') {
-    return { shape: 'mental_decline', reply: buildMentalDeclineReply(message, facts) };
-  }
   if (tier === 'loved_one') {
     // Use the same loved-one script that buildCompanionScriptReply produces.
     const lovedOneReply = buildCompanionScriptReply(message, facts, { history });
@@ -676,7 +605,8 @@ export function parseRiskTierLabel(text: string | null | undefined): RiskTierLab
   const w = (text ?? '').trim().toLowerCase();
   if (/^(?:imminent|crisis[_ -]?imminent)\b/.test(w)) return 'crisis_imminent';
   if (/^(?:ideation|crisis)\b/.test(w)) return 'crisis';
-  if (/^(?:decline|mental[_ -]?decline)\b/.test(w)) return 'mental_decline';
+  // Low mood without SI is ordinary chat — never a crisis tier.
+  if (/^(?:decline|mental[_ -]?decline)\b/.test(w)) return 'none';
   if (/^loved[_ -]?one(?:[_ -]?crisis)?\b/.test(w)) return 'loved_one';
   if (/^none\b/.test(w)) return 'none';
   return null;
@@ -734,10 +664,6 @@ export function buildCompanionScriptReply(
 
   if (shape === 'crisis' || shape === 'crisis_imminent') {
     return { shape, reply: buildCrisisReply(shape, message, history) };
-  }
-
-  if (shape === 'mental_decline') {
-    return { shape, reply: buildMentalDeclineReply(message, facts) };
   }
 
   if (shape === 'loved_one_crisis') {

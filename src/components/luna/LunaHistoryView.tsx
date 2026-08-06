@@ -47,7 +47,7 @@ export function LunaHistoryView({
             <button
               type="button"
               onClick={() => setConfirmThread(thread)}
-              className="rounded-lg p-2 text-sage-400 hover:bg-sage-50 hover:text-sage-600"
+              className="flex h-11 w-11 items-center justify-center rounded-lg text-sage-400 hover:bg-sage-50 hover:text-sage-600"
               aria-label={`Delete ${thread.title}`}
             >
               <Trash2 className="h-4 w-4" />

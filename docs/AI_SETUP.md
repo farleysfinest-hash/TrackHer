@@ -8,7 +8,7 @@ Luna uses the Supabase Edge Function `ai-assistant`. The OpenAI key stays on the
 |---|---|
 | Deterministic TrackHer engine | Safeguarding decisions, thresholds, arithmetic, and verified analysis-tool results |
 | Luna | Shared conversation UI, consent-gated memory, explanations, and narration of verified results |
-| Supabase | User-scoped threads, messages, memories, feedback, crisis continuity, and cached insights under RLS |
+| Supabase | User-scoped threads, messages, memories, feedback, and cached insights under RLS |
 
 Luna never receives or explains the forbidden categories `safeguarding`, `psych_trajectory`, `cardiac_persistence`, or `bleeding_red_flag`.
 
@@ -18,6 +18,13 @@ Luna never receives or explains the forbidden categories `safeguarding`, `psych_
 2. Open the TrackHer project in the [Supabase Dashboard](https://supabase.com/dashboard).
 3. Go to **Edge Functions → Secrets**.
 4. Add `OPENAI_API_KEY` and paste the key once.
+
+Optional model secrets (defaults are cost-first):
+- `OPENAI_MODEL` — primary (default `gpt-5.6-luna`).
+- `OPENAI_FALLBACK_MODEL` — only after a transient 429/5xx on Luna (one retry, then one fallback). Default `gpt-4o-mini`. Never used for 4xx. Do not set this to terra for routine reliability.
+- `OPENAI_COMPLEX_MODEL` — optional; only for future explicit heavy-analysis escalation. Leave unset so terra is never auto-selected.
+
+The in-app companion is named Luna; the OpenAI model id is an infrastructure choice.
 
 Optional: add `TRACKHER_ALLOWED_ORIGINS` as a comma-separated list when a web preview uses an origin outside TrackHer's built-in production, Capacitor, and local-development allowlist.
 
@@ -76,17 +83,13 @@ Luna appears as:
 
 ## Safety and privacy
 
-- Deterministic detection and a model classifier backstop set the crisis tier.
-- `mental_decline` is one-shot: no DB persistence, no safety panel, no 72-hour lock. Two paths depending on context: if HRT/menopause language appears alongside the emotional words (e.g. "this estradiol is making me feel hopeless"), the message routes to data-grounded free chat as `risk_watch` — the LLM gets her facts packet and can cite her data. If no treatment context, a deterministic script fires once. Pre-deploy `mental_decline` rows in `luna_crisis_state` are cleared on read.
-- `crisis`, `crisis_imminent`, and `loved_one` tiers persist to `luna_crisis_state` with a 72-hour sliding window and a visible safety panel. Crisis state is user-level and survives thread changes.
+- Deterministic regex detection sets the crisis tier per message (`deterministicCurrentCrisisTier`). There is no LLM risk classifier; safety routing is regex-only.
+- Low mood, fatigue, and depression language without clear suicidal intent is handled by ordinary free chat — never a crisis tier, never a safety panel.
+- `crisis`, `crisis_imminent`, and `loved_one` tiers trigger the safety panel on the client for the current session. Crisis state is ephemeral (React state in LunaProvider); it does not persist to the database and does not survive page reloads.
 - Clear euphemisms for self-harm (e.g. "off myself", "take myself out", "do myself in") are treated as real danger, same as "kill myself".
-- Crisis state clears when she affirms safety ("I'm safe now") or asks to stop the follow-ups ("I don't want this help", "leave me alone", or the panel button). Soft dismiss respects the boundary without requiring her to say she is safe; clear danger in the same message still wins.
-- A crisis-state read failure pauses ordinary Luna work; it does not silently continue without prior-tier context. A message that itself carries a hard crisis signal still proceeds to crisis handling.
-- If the risk classifier is unavailable while a message carries a risk signal, Luna answers with a deterministic script, shows the support panel, and the turn is crisis-tagged client-side so it never enters thread summaries.
-- Risk-watch middle tier: when risk-adjacent trip words fire but the classifier judges the message non-crisis, chat proceeds with a system note so the reply can acknowledge emotional weight in context instead of discarding the signal. No panel, no crisis state.
-- Chat with an active crisis or a hard crisis signal bypasses the AI throttle entirely; risk-adjacent-only chat uses a raised 120-unit ceiling.
-- The persistent support panel remains visible for every active persisted tier (crisis, crisis_imminent, loved_one).
-- Free text sent to `journal_extract`, `visit_debrief`, `symptom_translate`, and `partner_letter` is risk-screened before any free-form model call. Only clear self-harm / loved-one danger blocks those flows; bare low mood (`mental_decline`) does not.
+- If the model or facts packet is unavailable during a crisis message, the Edge falls back to a deterministic scripted reply (`buildTierScriptReply`) with `showSafetyPanel: true`. Clear SI never depends on a successful model call.
+- Crisis turns are tagged client-side so they never enter thread summaries. Crisis content is never proposed as memory.
+- Free text sent to `journal_extract`, `visit_debrief`, `symptom_translate`, and `partner_letter` is risk-screened before any free-form model call. Only clear self-harm / loved-one danger blocks those flows; low mood does not.
 - Chat messages are capped at 4,000 characters and each history turn at 2,000 characters server-side.
 - Conversation memory is saved only after explicit user consent. Crisis content is never proposed as memory or used for synthesis.
 - Browser CORS uses an explicit origin allowlist. Auth and RLS remain the data-access boundary.
@@ -94,7 +97,7 @@ Luna appears as:
 
 ## Rate limiting
 
-The Edge Function uses an atomic Supabase token bucket shared across cold starts and Edge isolates, plus a bounded in-isolate burst backstop. The ordinary bucket refills 45 weighted units over 10 minutes; risk-adjacent chat uses a raised 120-unit ceiling (`p_high_ceiling`, migration `037`); expensive synthesis and image extraction consume more capacity than ordinary chat. Authenticated identity comes from `auth.uid()`, and clients have no direct table access. Only chat during an active crisis or with a hard crisis signal in the current message bypasses the limiter entirely.
+The Edge Function uses an atomic Supabase token bucket shared across cold starts and Edge isolates, plus a bounded in-isolate burst backstop. The ordinary bucket refills 45 weighted units over 10 minutes; risk-adjacent chat uses a raised 120-unit ceiling (`p_high_ceiling`, migration `037`); expensive synthesis and image extraction consume more capacity than ordinary chat. Authenticated identity comes from `auth.uid()`, and clients have no direct table access. Chat with a hard crisis signal in the current message bypasses the limiter entirely.
 
 ## Caching
 
@@ -108,15 +111,14 @@ The Edge Function uses an atomic Supabase token bucket shared across cold starts
 |---|---|
 | `supabase/functions/ai-assistant/index.ts` | Authenticated Edge request routing and model/tool orchestration |
 | `supabase/functions/ai-assistant/analysisTools.ts` | Deterministic user-scoped calculations |
-| `supabase/functions/ai-assistant/crisisController.ts` | Deterministic safety policy and validation |
-| `supabase/functions/ai-assistant/crisisContinuityPolicy.ts` | Fail-closed dispositions when crisis state cannot be read |
+| `supabase/functions/ai-assistant/crisisController.ts` | Deterministic regex crisis detection and danger-signal checks |
 | `supabase/functions/ai-assistant/rateLimitPolicy.ts` | Shared limiter capacities, action costs, and burst policy |
 | `supabase/functions/ai-assistant/httpSecurity.ts` | CORS origin allowlist and response headers |
 | `supabase/functions/ai-assistant/boundedTtlCache.ts` | Bounded in-isolate TTL cache for analysis-tool results |
 | `src/utils/aiFactsPacket.ts` | Bounded structured context packet |
 | `src/utils/aiForbiddenCategories.ts` | Never-touch categories |
 | `src/hooks/useAiAssistant.ts` | Client invoke helpers |
-| `src/lib/lunaConversations.ts` | Thread, message, memory, feedback, and crisis persistence |
+| `src/lib/lunaConversations.ts` | Thread, message, memory, and feedback persistence |
 | `src/components/luna/LunaProvider.tsx` | Shared Luna session and conversation state |
 | `src/components/luna/LunaTranscript.tsx` | Message list, safety panel, and feedback surface |
 | `src/components/luna/LunaComposer.tsx` | Message input and send controls |

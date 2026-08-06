@@ -4,6 +4,7 @@ import { useLabEntryStore } from '../../stores/labEntryStore';
 import { useLabResults } from '../../hooks/useLabResults';
 import { useToast } from '../../stores/toastStore';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useVisualViewportBounds } from '../../hooks/useKeyboardBottomInset';
 import { useTabActive } from '../layout/TabActiveContext';
 import { getBiomarkerByKey, getBiomarkersByCategory, LAB_BIOMARKERS } from '../../data/labRanges';
 import { LAB_CATEGORIES } from '../../utils/labHelpers';
@@ -50,6 +51,7 @@ export function LabEntryForm({ onClose, onSuccess }: LabEntryFormProps) {
 
   const { createLabResult, updateLabResult, getPreviousValue } = useLabResults();
   const toast = useToast();
+  const { inset: keyboardInset } = useVisualViewportBounds();
   const [isSaving, setIsSaving] = useState(false);
   const [validationError, setValidationError] = useState('');
 
@@ -142,7 +144,7 @@ export function LabEntryForm({ onClose, onSuccess }: LabEntryFormProps) {
     <div
       ref={dialogRef}
       tabIndex={-1}
-      className="fixed inset-0 z-50 flex flex-col bg-sand-50 outline-none"
+      className="fixed inset-0 z-50 flex flex-col overscroll-contain bg-sand-50 outline-none"
       role="dialog"
       aria-modal="true"
       aria-label={isEditing ? 'Edit lab results' : 'Add lab results'}
@@ -154,14 +156,17 @@ export function LabEntryForm({ onClose, onSuccess }: LabEntryFormProps) {
         <button
           type="button"
           onClick={handleClose}
-          className="rounded-lg p-2 text-sage-400 hover:bg-sage-50"
+          className="flex h-11 w-11 items-center justify-center rounded-lg text-sage-400 hover:bg-sage-50 hover:text-sage-600"
           aria-label="Close"
         >
           <X className="h-5 w-5" />
         </button>
       </header>
 
-      <div className="safe-area-bottom flex-1 overflow-y-auto px-6 py-8">
+      <div
+        className="safe-area-bottom flex-1 overflow-y-auto px-6 py-8"
+        style={keyboardInset > 0 ? { paddingBottom: keyboardInset + 16 } : undefined}
+      >
         <div className="mx-auto max-w-[640px] space-y-8">
           {sourceType !== 'manual' && (
             <section aria-labelledby="luna-import-review" className="space-y-4">

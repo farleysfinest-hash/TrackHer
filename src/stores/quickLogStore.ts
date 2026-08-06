@@ -5,7 +5,7 @@ interface QuickLogState {
   selectedSymptomId: string | null;
   openSheet: (symptomId?: string) => void;
   closeSheet: () => void;
-  selectSymptom: (symptomId: string) => void;
+  selectSymptom: (symptomId: string | null) => void;
 }
 
 export const useQuickLogStore = create<QuickLogState>((set) => ({
