@@ -6,6 +6,7 @@ import { Keyboard } from '@capacitor/keyboard';
 import { App } from './App';
 import './index.css';
 import { useAuthStore } from './stores/authStore';
+import { useHealthStore } from './stores/healthStore';
 import { initializeSubscriptions } from './lib/subscriptions';
 
 /** System appearance → `.dark` on <html> + status bar icons. Runs before React to avoid a light flash. */
@@ -45,6 +46,7 @@ useAuthStore.subscribe((state, prev) => {
 });
 
 void initializeSubscriptions(useAuthStore.getState().user?.id);
+void useHealthStore.getState().checkAvailability();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

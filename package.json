@@ -22,6 +22,7 @@
     "@capacitor/local-notifications": "^8.2.1",
     "@capacitor/share": "^8.0.1",
     "@capacitor/status-bar": "^8.0.3",
+    "@capgo/capacitor-health": "^8.10.0",
     "@fontsource-variable/fraunces": "^5.3.0",
     "@revenuecat/purchases-capacitor": "^13.2.3",
     "@supabase/supabase-js": "^2.110.0",

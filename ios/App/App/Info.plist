@@ -49,6 +49,10 @@
 	<true/>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSHealthShareUsageDescription</key>
+	<string>TrackHer reads your sleep duration and resting heart rate to auto-fill your daily check-in. This data stays in your account and is never shared.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>TrackHer does not write to Apple Health. This permission is required by the system but will not be used.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>TrackHer only uses the camera if you choose to take a profile photo. Photos stay in your account.</string>
 	<key>NSUserNotificationsUsageDescription</key>

@@ -1,7 +1,9 @@
 // PULSE CEILING: three fixed channels + optional bleeding + flare row. Never add fixed MRS questions to the pulse.
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Watch } from 'lucide-react';
 import { useCheckinStore } from '../../stores/checkinStore';
+import { useHealthStore } from '../../stores/healthStore';
 import { useProfile } from '../../hooks/useProfile';
 import type { BleedingFlow } from '../../types/database';
 import { selectionTick } from '../../lib/haptics';
@@ -107,8 +109,26 @@ export function DailyChannels({ onNext }: DailyChannelsProps) {
   const setBleedingFlow = useCheckinStore((s) => s.setBleedingFlow);
   const skipBleeding = useCheckinStore((s) => s.skipBleeding);
   const allChannelsComplete = useCheckinStore((s) => s.allChannelsComplete);
+  const healthSnapshot = useHealthStore((s) => s.snapshot);
+  const healthEnabled = useHealthStore((s) => s.enabled);
   const { profile } = useProfile();
   const [bleedingExpanded, setBleedingExpanded] = useState(false);
+  const [sleepPrefilled, setSleepPrefilled] = useState(false);
+
+  // Auto-populate sleep quality from Apple Health when entering the pulse
+  // screen for the first time (don't overwrite a user's manual selection).
+  useEffect(() => {
+    if (
+      healthEnabled &&
+      healthSnapshot?.sleep &&
+      !sleepComplete &&
+      sleepQuality === null &&
+      !sleepPrefilled
+    ) {
+      setSleepQuality(healthSnapshot.sleep.qualityScore);
+      setSleepPrefilled(true);
+    }
+  }, [healthEnabled, healthSnapshot, sleepComplete, sleepQuality, sleepPrefilled, setSleepQuality]);
 
   const bleedingDefaultOpen = profile?.has_uterus !== false;
   const showBleedingOptions = bleedingDefaultOpen || bleedingExpanded || bleedingComplete;
@@ -155,6 +175,18 @@ export function DailyChannels({ onNext }: DailyChannelsProps) {
           onSkip={skipSleepQuality}
           ariaPrefix="Sleep quality"
         />
+        {healthEnabled && healthSnapshot?.sleep && (
+          <div className="-mt-4 flex items-center gap-2 rounded-lg bg-sage-50/60 px-3 py-2 text-xs text-sage-500">
+            <Watch className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <span>
+              Apple Health: {Math.floor(healthSnapshot.sleep.totalMinutes / 60)}h{' '}
+              {healthSnapshot.sleep.totalMinutes % 60}m sleep
+              {healthSnapshot.restingHR
+                ? ` · ${healthSnapshot.restingHR.bpm} bpm resting`
+                : ''}
+            </span>
+          </div>
+        )}
 
         {showBleedingOptions ? (
           <div className="space-y-3 border-b border-sand-100 pb-6">

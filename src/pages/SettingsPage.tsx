@@ -10,6 +10,7 @@ import { HapticDiagnosticsCard } from '../components/settings/HapticDiagnosticsC
 import { AccountSettingsCard } from '../components/settings/AccountSettingsCard';
 import { DataSettingsCard } from '../components/settings/DataSettingsCard';
 import { AboutSettingsCard } from '../components/settings/AboutSettingsCard';
+import { HealthSettingsCard } from '../components/settings/HealthSettingsCard';
 import { useAuth } from '../hooks/useAuth';
 
 export function SettingsPage() {
@@ -32,6 +33,7 @@ export function SettingsPage() {
 
       <ProfileSettingsCard />
       <RemindersSettingsCard />
+      <HealthSettingsCard />
       <SubscriptionSettingsCard />
       <HapticDiagnosticsCard />
       <AccountSettingsCard />
