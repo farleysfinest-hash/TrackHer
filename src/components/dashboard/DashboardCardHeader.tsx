@@ -29,7 +29,7 @@ export function DashboardCardHeader({
       <Leading
         className={[
           'h-5 w-5 shrink-0',
-          done ? 'text-success' : 'text-sage-500',
+          done ? 'text-moss-600' : 'text-sage-500',
         ].join(' ')}
         aria-hidden
       />

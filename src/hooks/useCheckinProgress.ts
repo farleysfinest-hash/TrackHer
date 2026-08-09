@@ -22,7 +22,7 @@ import type { CheckinProgressItem } from '../components/checkin/CheckinProgressB
  * so this hook does not trigger additional network requests.
  */
 export function useCheckinProgress(): CheckinProgressItem[] {
-  const { hasCheckedInToday, weeklyMinimumMet, hasFullMrsToday, isDue } = useCheckinStatus();
+  const { hasCheckedInToday, weeklyMinimumMet, hasFullMrsToday, hasPulseToday, isDue } = useCheckinStatus();
   const { medications } = useMedications();
   const { administrations } = useMedicationAdministrations();
   const profile = useAuthStore((s) => s.profile);
@@ -35,7 +35,10 @@ export function useCheckinProgress(): CheckinProgressItem[] {
     return countDosesOutstandingToday(statuses) === 0;
   }, [medications, administrations, today, timezone]);
 
-  const weeklyRelevant = isDue || hasFullMrsToday;
+  // Show the weekly pip when it's owed or already completed today.
+  const didNonPulseToday = hasCheckedInToday && !hasPulseToday;
+  const weeklyDone = weeklyMinimumMet || hasFullMrsToday || didNonPulseToday;
+  const weeklyRelevant = isDue || hasFullMrsToday || didNonPulseToday;
 
   return useMemo(() => {
     const items: CheckinProgressItem[] = [
@@ -43,8 +46,8 @@ export function useCheckinProgress(): CheckinProgressItem[] {
       { label: 'Pulse', done: hasCheckedInToday },
     ];
     if (weeklyRelevant) {
-      items.splice(1, 0, { label: 'Weekly', done: weeklyMinimumMet || hasFullMrsToday });
+      items.splice(1, 0, { label: 'Weekly', done: weeklyDone });
     }
     return items;
-  }, [dosesComplete, weeklyRelevant, weeklyMinimumMet, hasFullMrsToday, hasCheckedInToday]);
+  }, [dosesComplete, weeklyRelevant, weeklyDone, hasCheckedInToday]);
 }

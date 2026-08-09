@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2 } from 'lucide-react';
+import { Check } from 'lucide-react';
 
 export interface CheckinProgressItem {
   label: string;
@@ -12,23 +12,47 @@ interface CheckinProgressBarProps {
   compact?: boolean;
 }
 
-function ItemPip({ item }: { item: CheckinProgressItem }) {
+function StepDot({ item }: { item: CheckinProgressItem }) {
   return (
-    <div className="flex flex-1 flex-col items-center gap-1">
+    <div className="flex flex-col items-center gap-1.5">
       <div
         className={[
-          'h-1.5 w-full rounded-full transition-colors',
-          item.done ? 'bg-success' : 'bg-sage-200',
+          'flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors',
+          item.done
+            ? 'border-moss-500 bg-moss-500'
+            : 'border-sand-300 bg-transparent',
         ].join(' ')}
-      />
+      >
+        {item.done && <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} aria-hidden />}
+      </div>
       <span
         className={[
           'text-[10px] leading-none',
-          item.done ? 'text-success' : 'text-sage-400',
+          item.done ? 'text-moss-600' : 'text-sage-400',
         ].join(' ')}
       >
         {item.label}
       </span>
+    </div>
+  );
+}
+
+function Stepper({ items }: { items: CheckinProgressItem[] }) {
+  return (
+    <div className="flex items-start justify-center gap-0">
+      {items.map((item, i) => (
+        <div key={item.label} className="flex items-start">
+          <StepDot item={item} />
+          {i < items.length - 1 && (
+            <div
+              className={[
+                'mt-[11px] h-0.5 w-8 flex-shrink-0 transition-colors sm:w-12',
+                item.done && items[i + 1].done ? 'bg-moss-500' : 'bg-sand-300',
+              ].join(' ')}
+            />
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -45,9 +69,9 @@ export function CheckinProgressBar({ items, compact = false }: CheckinProgressBa
         type="button"
         onClick={() => navigate('/checkin')}
         className={[
-          'flex w-full flex-col gap-2 rounded-xl border px-4 py-3 text-left transition-colors',
+          'flex w-full flex-col items-center gap-2 rounded-xl border px-4 py-3 transition-colors',
           allDone
-            ? 'border-success/40 bg-success/10 hover:border-success/60'
+            ? 'border-moss-300/60 bg-moss-100/60 hover:border-moss-300'
             : 'border-sage-300 bg-sage-50 hover:border-sage-400',
         ].join(' ')}
       >
@@ -55,22 +79,16 @@ export function CheckinProgressBar({ items, compact = false }: CheckinProgressBa
           <span
             className={[
               'text-xs font-medium uppercase tracking-wide',
-              allDone ? 'text-success' : 'text-sage-500',
+              allDone ? 'text-moss-600' : 'text-sage-500',
             ].join(' ')}
           >
-            {allDone ? 'Today’s check-ins complete' : 'Today’s check-ins'}
+            {allDone ? 'All done today' : 'Today’s check-ins'}
           </span>
-          {allDone ? (
-            <CheckCircle2 className="h-4 w-4 text-success" aria-hidden />
-          ) : (
-            <span className="text-xs text-sage-400">{done}/{total}</span>
-          )}
+          <span className={['text-xs', allDone ? 'text-moss-600' : 'text-sage-400'].join(' ')}>
+            {done}/{total}
+          </span>
         </div>
-        <div className="flex w-full gap-2">
-          {items.map((item) => (
-            <ItemPip key={item.label} item={item} />
-          ))}
-        </div>
+        <Stepper items={items} />
       </button>
     );
   }
@@ -78,32 +96,26 @@ export function CheckinProgressBar({ items, compact = false }: CheckinProgressBa
   return (
     <div
       className={[
-        'flex flex-col gap-2 rounded-xl border px-4 py-3',
+        'flex flex-col items-center gap-2 rounded-xl border px-4 py-3',
         allDone
-          ? 'border-success/40 bg-success/10'
+          ? 'border-moss-300/60 bg-moss-100/60'
           : 'border-sand-200 bg-sand-100',
       ].join(' ')}
     >
-      <div className="flex items-center justify-between">
+      <div className="flex w-full items-center justify-between">
         <span
           className={[
             'text-xs font-medium uppercase tracking-wide',
-            allDone ? 'text-success' : 'text-sage-500',
+            allDone ? 'text-moss-600' : 'text-sage-500',
           ].join(' ')}
         >
           {allDone ? 'All done today' : 'Today’s check-ins'}
         </span>
-        {allDone ? (
-          <CheckCircle2 className="h-4 w-4 text-success" aria-hidden />
-        ) : (
-          <span className="text-xs text-sage-400">{done}/{total}</span>
-        )}
+        <span className={['text-xs', allDone ? 'text-moss-600' : 'text-sage-400'].join(' ')}>
+          {done}/{total}
+        </span>
       </div>
-      <div className="flex gap-2">
-        {items.map((item) => (
-          <ItemPip key={item.label} item={item} />
-        ))}
-      </div>
+      <Stepper items={items} />
     </div>
   );
 }

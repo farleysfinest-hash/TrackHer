@@ -46,7 +46,7 @@ function chipClassName(status: DoseStatus): string {
       return `${base} border-sage-400 bg-sage-100 text-sage-800 hover:border-sage-500 hover:bg-sage-200`;
     case 'complete_today':
     case 'covered':
-      return `${base} border-success/40 bg-success/10 text-success`;
+      return `${base} border-moss-300/60 bg-moss-100/60 text-moss-600`;
     default:
       return `${base} border-sand-200 bg-sand-50 text-sage-500 hover:border-sage-300`;
   }
@@ -159,7 +159,7 @@ export function DoseTapWidget({ title }: DoseTapWidgetProps) {
   if (doseStatuses.length === 0) return null;
 
   const cardUrgency = outstanding === 0
-    ? 'border-success/40 bg-success/10'
+    ? 'border-moss-300/60 bg-moss-100/60'
     : 'border-sage-300 bg-sage-50';
 
   return (

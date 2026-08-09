@@ -31,9 +31,9 @@ export interface WeeklyCheckinPromptCardProps {
   onStart?: () => void;
 }
 
-/** Card-level urgency classes: due = sage pink tint, done = green tint. */
+/** Card-level urgency classes: due = sage pink tint, done = moss tint. */
 const CARD_DUE = 'border-sage-300 bg-sage-50';
-const CARD_DONE = 'border-success/40 bg-success/10';
+const CARD_DONE = 'border-moss-300/60 bg-moss-100/60';
 
 export function PulsePromptCard({
   hasCheckedInToday,

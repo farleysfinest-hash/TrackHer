@@ -24,7 +24,7 @@ export function LunaContextCard({
       className={[
         'flex w-full items-start gap-3 rounded-xl border px-4 py-3 text-left transition-colors',
         lunaActiveToday
-          ? 'border-success/40 bg-success/10 hover:border-success/60'
+          ? 'border-moss-300/60 bg-moss-100/60 hover:border-moss-300'
           : 'border-sage-300 bg-sage-50 hover:border-sage-400',
       ].join(' ')}
     >
@@ -32,7 +32,7 @@ export function LunaContextCard({
         className={[
           'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full',
           lunaActiveToday
-            ? 'bg-success/20 text-success'
+            ? 'bg-moss-100 text-moss-600'
             : 'bg-sage-100 text-sage-600',
         ].join(' ')}
       >
