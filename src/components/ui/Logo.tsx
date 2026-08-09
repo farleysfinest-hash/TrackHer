@@ -20,6 +20,9 @@ export function Logo({ size = 'md', className = '' }: LogoProps) {
       style={{ letterSpacing: '-0.02em' }}
     >
       {APP_NAME}
+      <span className="ml-2 align-middle text-[10px] font-normal uppercase tracking-widest text-sage-400">
+        beta v1.0
+      </span>
     </span>
   );
 }
