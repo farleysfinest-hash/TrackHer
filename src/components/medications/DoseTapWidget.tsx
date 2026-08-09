@@ -158,13 +158,18 @@ export function DoseTapWidget({ title }: DoseTapWidgetProps) {
   }
   if (doseStatuses.length === 0) return null;
 
+  const cardUrgency = outstanding === 0
+    ? 'border-success/40 bg-success/10'
+    : 'border-sage-300 bg-sage-50';
+
   return (
-    <Card variant="elevated">
+    <Card variant="elevated" className={cardUrgency}>
       <DashboardCardHeader
         icon={Pill}
         eyebrow="Dose log"
-        title={title ?? 'Tap when you take your dose'}
+        title={title ?? (outstanding === 0 ? 'All doses logged' : "Did you take today's doses?")}
         description={summaryCopy(outstanding, doseStatuses.length)}
+        done={outstanding === 0}
       />
 
       <div className="mt-4 flex flex-wrap gap-2">

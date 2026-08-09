@@ -30,12 +30,15 @@ import { hasMRSData } from '../../utils/checkinHelpers';
 import { LunaDashboardCard } from './LunaDashboardCard';
 import { QuickLogWidget } from './QuickLogWidget';
 import { useQuickLogStore } from '../../stores/quickLogStore';
+import { CheckinProgressBar } from '../checkin/CheckinProgressBar';
+import { useCheckinProgress } from '../../hooks/useCheckinProgress';
 
 export function DashboardLayout() {
   const { pathname } = useLocation();
   const dateRange = useDashboardStore((s) => s.dateRange);
   const refreshDateRange = useDashboardStore((s) => s.refreshDateRange);
   const quickLogOpen = useQuickLogStore((s) => s.isSheetOpen);
+  const progressItems = useCheckinProgress();
   const checkinStatus = useCheckinStatus();
   const { insights, safeguardingInsights, dismissInsight, extendedSymptoms } = useInsights();
   const {
@@ -152,6 +155,8 @@ export function DashboardLayout() {
             <WelcomeMessage checkinCount={mrsCheckinCount} />
 
             {safeguardingCards}
+
+            <CheckinProgressBar items={progressItems} compact />
 
             <LunaDashboardCard />
 

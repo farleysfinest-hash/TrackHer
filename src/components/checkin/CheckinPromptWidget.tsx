@@ -31,6 +31,10 @@ export interface WeeklyCheckinPromptCardProps {
   onStart?: () => void;
 }
 
+/** Card-level urgency classes: due = sage pink tint, done = green tint. */
+const CARD_DUE = 'border-sage-300 bg-sage-50';
+const CARD_DONE = 'border-success/40 bg-success/10';
+
 export function PulsePromptCard({
   hasCheckedInToday,
   hasPulseToday,
@@ -49,7 +53,7 @@ export function PulsePromptCard({
 
   if (hasCheckedInToday && todaysCheckin) {
     return (
-      <Card variant="elevated">
+      <Card variant="elevated" className={CARD_DONE}>
         <DashboardCardHeader
           icon={Leaf}
           eyebrow="Daily pulse"
@@ -71,7 +75,7 @@ export function PulsePromptCard({
   }
 
   return (
-    <Card variant="elevated">
+    <Card variant="elevated" className={CARD_DUE}>
       <DashboardCardHeader
         icon={Leaf}
         eyebrow="Daily pulse"
@@ -104,10 +108,6 @@ export function WeeklyCheckinPromptCard({
   onStart,
 }: WeeklyCheckinPromptCardProps) {
   const isComeback = daysSinceLastCheckin !== null && daysSinceLastCheckin >= 7;
-  const emphasize = highlighted && !weeklyMinimumMet && !hasFullMrsToday;
-  const highlightClass = emphasize
-    ? 'border border-sage-400/70 ring-2 ring-sage-500/25'
-    : '';
 
   if (isLoading) {
     return (
@@ -119,7 +119,7 @@ export function WeeklyCheckinPromptCard({
 
   if (hasFullMrsToday && todaysCheckin) {
     return (
-      <Card variant="elevated" padding="lg" className={highlightClass}>
+      <Card variant="elevated" padding="lg" className={CARD_DONE}>
         <DashboardCardHeader
           icon={ClipboardList}
           eyebrow="Weekly check-in"
@@ -151,7 +151,7 @@ export function WeeklyCheckinPromptCard({
 
   if (weeklyMinimumMet) {
     return (
-      <Card variant="elevated" padding="lg" className={highlightClass}>
+      <Card variant="elevated" padding="lg" className={CARD_DONE}>
         <DashboardCardHeader
           icon={ClipboardList}
           eyebrow="Weekly check-in"
@@ -176,8 +176,13 @@ export function WeeklyCheckinPromptCard({
     );
   }
 
+  const emphasize = highlighted && !weeklyMinimumMet && !hasFullMrsToday;
+  const dueClass = emphasize
+    ? `${CARD_DUE} ring-2 ring-sage-500/25`
+    : CARD_DUE;
+
   return (
-    <Card variant="elevated" padding="lg" className={highlightClass}>
+    <Card variant="elevated" padding="lg" className={dueClass}>
       <DashboardCardHeader
         icon={ClipboardList}
         eyebrow="Weekly check-in"

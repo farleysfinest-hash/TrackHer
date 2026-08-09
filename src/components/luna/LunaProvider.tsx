@@ -72,6 +72,8 @@ interface LunaContextValue {
   openLuna: (request: OpenLunaRequest) => Promise<void>;
   dashboardPreview: string | null;
   hasDashboardConversation: boolean;
+  /** True when the dashboard thread was updated today (any timezone-local date). */
+  lunaActiveToday: boolean;
 }
 
 const LunaContext = createContext<LunaContextValue | null>(null);
@@ -612,14 +614,22 @@ function LunaSessionProvider({
   const visibleAssistantError =
     assistantErrorThreadId === thread?.id ? assistantError : null;
 
+  const lunaActiveToday = useMemo(() => {
+    if (!dashboardThread?.updated_at) return false;
+    const threadDate = new Date(dashboardThread.updated_at).toLocaleDateString('en-CA');
+    const localToday = new Date().toLocaleDateString('en-CA');
+    return threadDate === localToday && Boolean(dashboardThread.last_message_preview);
+  }, [dashboardThread?.updated_at, dashboardThread?.last_message_preview]);
+
   const value = useMemo<LunaContextValue>(
     () => ({
       openDashboardLuna,
       openLuna,
       dashboardPreview: dashboardThread?.last_message_preview ?? null,
       hasDashboardConversation: Boolean(dashboardThread?.last_message_preview),
+      lunaActiveToday,
     }),
-    [dashboardThread?.last_message_preview, openDashboardLuna, openLuna],
+    [dashboardThread?.last_message_preview, openDashboardLuna, openLuna, lunaActiveToday],
   );
 
   const panel = open

@@ -26,10 +26,13 @@ import { clearCheckinDraft, loadCheckinDraft } from '../lib/checkinDraft';
 import { useSymptomSelections } from '../hooks/useSymptomSelections';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { LunaContextCard } from '../components/luna/LunaContextCard';
+import { CheckinProgressBar } from '../components/checkin/CheckinProgressBar';
+import { useCheckinProgress } from '../hooks/useCheckinProgress';
 
 export function CheckinPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const progressItems = useCheckinProgress();
   const {
     hasCheckedInToday,
     todaysCheckin,
@@ -209,6 +212,8 @@ export function CheckinPage() {
       <div className="min-w-0">
         <h1 className="font-display text-3xl text-sage-800">Check In</h1>
       </div>
+
+      <CheckinProgressBar items={progressItems} />
 
       <LunaContextCard
         title="Check in with Luna"
