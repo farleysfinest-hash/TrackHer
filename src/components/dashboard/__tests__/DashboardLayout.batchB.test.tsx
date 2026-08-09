@@ -55,7 +55,19 @@ vi.mock('../../../utils/labHelpers', () => ({ getDefaultBiomarkerKey: () => 'est
 vi.mock('../../../utils/earlyStoryChartWindow', () => ({
   storyChartWindow: () => ({ start: '2026-01-01', end: '2026-08-01' }),
 }));
-vi.mock('../../../utils/checkinHelpers', () => ({ hasMRSData: () => false }));
+vi.mock('../../../utils/checkinHelpers', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../utils/checkinHelpers')>();
+  return { ...actual, hasMRSData: () => false };
+});
+vi.mock('../../../hooks/useCheckinProgress', () => ({
+  useCheckinProgress: () => [
+    { label: 'Doses', done: false },
+    { label: 'Pulse', done: false },
+  ],
+}));
+vi.mock('../../checkin/CheckinProgressBar', () => ({
+  CheckinProgressBar: () => null,
+}));
 vi.mock('../../ui/PullToRefresh', () => ({
   PullToRefresh: ({ enabled, children }: { enabled?: boolean; children: React.ReactNode }) => (
     <div data-testid="pull-to-refresh" data-enabled={String(enabled)}>
