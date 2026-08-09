@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, Circle } from 'lucide-react';
 
 export interface CheckinProgressItem {
   label: string;
