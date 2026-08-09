@@ -5,7 +5,7 @@ export const APP_VERSION = '0.1.0';
  * Monitored support inbox. Referenced by the sidebar, the Privacy Policy and the Terms, so all
  * three stay in step — the policy commits to answering access and deletion requests here.
  */
-export const SUPPORT_EMAIL = 'trackhersupport@gmail.com';
+export const SUPPORT_EMAIL = 'support@trackher.app';
 
 export const PASSWORD_MIN_LENGTH = 8;
 
