@@ -4,7 +4,6 @@ import { useMedications } from './useMedications';
 import { useMedicationAdministrations } from './useMedicationAdministrations';
 import { useLocalToday } from './useLocalToday';
 import { useAuthStore } from '../stores/authStore';
-import { useLuna } from '../components/luna/LunaProvider';
 import { getResolvedTimezone } from '../utils/checkinHelpers';
 import {
   countDosesOutstandingToday,
@@ -13,15 +12,17 @@ import {
 import type { CheckinProgressItem } from '../components/checkin/CheckinProgressBar';
 
 /**
- * Aggregates completion state for the four check-in page items:
- * Luna, doses, weekly check-in, daily pulse.
+ * Aggregates completion state for the three core check-in tasks:
+ * doses, weekly check-in, daily pulse.
+ *
+ * Luna is intentionally excluded — it's an alternative conversational
+ * interface for checking in, not a separate task.
  *
  * Data comes from stores that are already populated by the widgets on the page,
  * so this hook does not trigger additional network requests.
  */
 export function useCheckinProgress(): CheckinProgressItem[] {
-  const { lunaActiveToday } = useLuna();
-  const { hasCheckedInToday, weeklyMinimumMet, hasFullMrsToday } = useCheckinStatus();
+  const { hasCheckedInToday, weeklyMinimumMet, hasFullMrsToday, isDue } = useCheckinStatus();
   const { medications } = useMedications();
   const { administrations } = useMedicationAdministrations();
   const profile = useAuthStore((s) => s.profile);
@@ -34,13 +35,16 @@ export function useCheckinProgress(): CheckinProgressItem[] {
     return countDosesOutstandingToday(statuses) === 0;
   }, [medications, administrations, today, timezone]);
 
-  return useMemo(
-    () => [
-      { label: 'Luna', done: lunaActiveToday },
+  const weeklyRelevant = isDue || hasFullMrsToday;
+
+  return useMemo(() => {
+    const items: CheckinProgressItem[] = [
       { label: 'Doses', done: dosesComplete },
-      { label: 'Weekly', done: weeklyMinimumMet || hasFullMrsToday },
       { label: 'Pulse', done: hasCheckedInToday },
-    ],
-    [lunaActiveToday, dosesComplete, weeklyMinimumMet, hasFullMrsToday, hasCheckedInToday],
-  );
+    ];
+    if (weeklyRelevant) {
+      items.splice(1, 0, { label: 'Weekly', done: weeklyMinimumMet || hasFullMrsToday });
+    }
+    return items;
+  }, [dosesComplete, weeklyRelevant, weeklyMinimumMet, hasFullMrsToday, hasCheckedInToday]);
 }
